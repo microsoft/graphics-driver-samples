@@ -1,0 +1,38 @@
+P0
+
+- complete basic resource handling support
+  - handle sub-resources
+  - leverage resource exchange data structure to pass necessary information from UMD to KMD
+  - implement DdiDescribeAllocation
+
+- complete submission code paths
+
+- handle multiple outstanding submissions (need to track outstanding submissions)
+
+- document why we do not want to use DMA buffer (which will cause aperture to be used ... which we don't want to use)
+	- we could in theory use up to one page of storage without a problem
+
+- implement transfer operation in building paging buffer
+
+- implement size calculation for resources
+
+P1
+
+- add basic state object creation and state tracking
+
+- clean up UMD to appropriately use inplace new, add magic to add objects, use cast operator to validate magic
+
+P2
+
+- implement logging mechanism removing existing debug break and debug print usage
+  - potentially use ETW logging in its place
+
+- fix warning we getting when building rosumd " warning  : Platform '[ARM, 0]' referenced in the project file 'rosumd' cannot be found"
+
+- track down why we are not getting our device and adapters closed
+
+- implement the cpu size linear to tiled, tiled to linear and linear to linear resource copies
+
+- add mip map level to 2D textures in test
+
+- implement support for mip maps

@@ -1,0 +1,9 @@
+*.sdf
+.vs
+*.opensdf
+x64
+ARM
+Debug
+Release
+*.vcxproj.user
+*.suo
