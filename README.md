@@ -22,24 +22,32 @@ and include how you wish to contribute.
 
 # Roles
 
-Project Coordinator - There is only one active project coordinator who oversees
+##Project Coordinator
+
+There is only one active project coordinator who oversees
 all other aspects of the project.  This role is currently filled by the
 graphics driver development lead at Microsoft.
 
-Team Lead -  The project has several teams contributing to the project.  In
+##Team Lead
+
+The project has several teams contributing to the project.  In
 order to coordinate the activities of these different teams, each team has
 assigned a team lead who is responsible for managing and overseeing the
 development activities within the team.
 
 Currently, the teams are:
-    Microsoft Graphics Driver (MGD) Team
-	Microsoft Internet of Things (IOT) Team
-    Raspberry Pi Foundation (RPF) Team
+- Microsoft Graphics Driver (MGD) Team
+- Microsoft Internet of Things (IOT) Team
+- Raspberry Pi Foundation (RPF) Team
 
-Team Developer - Individual team developers contribute source to the project
+##Team Developer
+
+Individual team developers contribute source to the project
 following the submission process outlined below without further review.
 
-Solo Developer - Individuals not part of a team contribute source to the
+##Solo Developer
+
+Individuals not part of a team contribute source to the
 project following the submission process outlined below but those submissions
 will be reviewed by the Project Coordinator before inclusion in the project. It
 is highly recommended that solo developers work with the project coordinator
@@ -49,8 +57,7 @@ likely to be accepted once the work is complete.
 
 # Support
 
-<Determine how we will answer questions on using the driver and its 
-limitations>
+There is currently no active support for how to use the sample driver.
 
 # Decision-Making Process
 
@@ -65,7 +72,9 @@ teams at a weekly conference call until a general agreement is reached.
 
 # Contribution Process By Team Developers
 
-<Document submission process including testing requirement>
+Every team member is expected to ensure that the driver compiles (X64&ARM)
+and successfully passes both RosTest and BasicTests when run on both within a
+virtual machine (X64) and a Raspberry Pi 2 (ARM).
 
 # Contribution Process By Solo Developers
 
@@ -74,7 +83,9 @@ implementing unassigned tasks within an area of the driver, extending the
 existing testing coverage and adding additional documentation which helps 
 describe the existing drivers functionality.
 
-<Document submission process additions needed by solo developers>
+All submissions by solo developers should be done via a pull request
+submission that includes a description of the change and for code changes
+the set of tests that were run.
 
 If a part or all of a submission is rejected, a clear explaination will be
 provided to the contributor along with guidance on what issues if any can be
