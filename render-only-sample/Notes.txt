@@ -8,7 +8,7 @@ To run the sample within a VM, you will need to modify the ACPI information to r
 a render only device.  Here are the steps you need to follow to modify the ACIP information:
   a. launch an administrator prompt within the VM
   b. turn on test signing
-    > bcdeit -set testsigning on
+    > bcdedit -set testsigning on
   c. get a copy of the asl.exe tool (you can pull this from the bin\idw directory of a build, from MSDN or from WDK\Tools\x64\ACPIVerify)
   d. Use asl.exe to get a copy of the DSDT.ASL source (this the ACPI file used to report devices)
     > asl.exe /tab=DSDT
@@ -49,7 +49,7 @@ Windows Registry Editor Version 5.00
 
 or:
 
-reg.exe add HKLM\SOFTWARE\Microsoft\XAML /v ForceWARP /y REG_DWORD /d 1
+reg.exe add HKLM\SOFTWARE\Microsoft\XAML /v ForceWARP /t REG_DWORD /d 1
 
   b. Please don't use "Enhanced Session" when running the driver in the VM
   c. devcon.exe is in o:\WDK\Tools\x64\devcon.exe
