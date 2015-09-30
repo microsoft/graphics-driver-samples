@@ -41,6 +41,7 @@
     <ClCompile Include="RosKmdDevice.cpp" />
     <ClCompile Include="RosKmdGlobal.cpp" />
     <ClCompile Include="RosKmdUtil.cpp" />
+    <ClCompile Include="RosKmdPower.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\roscommon\RosAllocation.h" />

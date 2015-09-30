@@ -1750,24 +1750,6 @@ RosKmAdapter::DdiQueryDeviceDescriptor(
 }
 
 NTSTATUS
-RosKmAdapter::DdiSetPowerState(
-    IN_CONST_PVOID          MiniportDeviceContext,
-    IN_ULONG                DeviceUid,
-    IN_DEVICE_POWER_STATE   DevicePowerState,
-    IN_POWER_ACTION         ActionType)
-{
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s MiniportDeviceContext=%lx\n",
-        __FUNCTION__, MiniportDeviceContext);
-
-    MiniportDeviceContext;
-    DeviceUid;
-    DevicePowerState;
-    ActionType;
-
-    return STATUS_SUCCESS;
-}
-
-NTSTATUS
 RosKmAdapter::DdiNotifyAcpiEvent(
     IN_CONST_PVOID      MiniportDeviceContext,
     IN_DXGK_EVENT_TYPE  EventType,

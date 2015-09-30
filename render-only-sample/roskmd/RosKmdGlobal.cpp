@@ -155,6 +155,12 @@ NTSTATUS RosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
     //
     DriverInitializationData.DxgkDdiCancelCommand = RosKmAdapter::DdiCancelCommand;
 
+    //
+    // Fill in DDI for component power management
+    //
+    DriverInitializationData.DxgkDdiSetPowerComponentFState = RosKmAdapter::DdiSetPowerComponentFState;
+    DriverInitializationData.DxgkDdiPowerRuntimeControlRequest = RosKmAdapter::DdiPowerRuntimeControlRequest;
+
     DriverInitializationData.DxgkDdiGetNodeMetadata = RosKmAdapter::DdiGetNodeMetadata;
 
     DriverInitializationData.DxgkDdiSubmitCommandVirtual = RosKmAdapter::DdiSubmitCommandVirtual;

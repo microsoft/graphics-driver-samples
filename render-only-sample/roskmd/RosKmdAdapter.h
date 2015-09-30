@@ -297,6 +297,22 @@ public:
             IN_POWER_ACTION         ActionType);
 
     static NTSTATUS
+        DdiSetPowerComponentFState(
+            IN_CONST_PVOID       MiniportDeviceContext,
+            IN UINT              ComponentIndex,
+            IN UINT              FState);
+
+	static NTSTATUS
+		DdiPowerRuntimeControlRequest(
+			IN_CONST_PVOID       MiniportDeviceContext,
+			IN LPCGUID           PowerControlCode,
+			IN OPTIONAL PVOID    InBuffer,
+			IN SIZE_T            InBufferSize,
+			OUT OPTIONAL PVOID   OutBuffer,
+			IN SIZE_T            OutBufferSize,
+			OUT OPTIONAL PSIZE_T BytesReturned);
+
+    static NTSTATUS
         DdiNotifyAcpiEvent(
             IN_CONST_PVOID      MiniportDeviceContext,
             IN_DXGK_EVENT_TYPE  EventType,
