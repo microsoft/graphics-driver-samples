@@ -18,10 +18,14 @@ RosKmAdapter::DdiSetPowerState(
     DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s MiniportDeviceContext=%lx\n",
         __FUNCTION__, MiniportDeviceContext);
 
-    MiniportDeviceContext;
-    DeviceUid;
-    DevicePowerState;
-    ActionType;
+    RosKmAdapter  *pRosKmAdapter = RosKmAdapter::Cast(MiniportDeviceContext);
+
+    if (DeviceUid == DISPLAY_ADAPTER_HW_ID)
+    {
+        pRosKmAdapter->m_AdapterPowerDState = DevicePowerState;
+    }
+
+	ActionType;
 
     return STATUS_SUCCESS;
 }
@@ -35,10 +39,9 @@ RosKmAdapter::DdiSetPowerComponentFState(
     DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s MiniportDeviceContext=%lx\n",
         __FUNCTION__, MiniportDeviceContext);
 
-    ComponentIndex;
-    FState;
+    RosKmAdapter  *pRosKmAdapter = RosKmAdapter::Cast(MiniportDeviceContext);
 
-    return STATUS_SUCCESS;
+    return pRosKmAdapter->SetPowerComponentFState(ComponentIndex,FState);
 }
 
 NTSTATUS
@@ -54,7 +57,20 @@ RosKmAdapter::DdiPowerRuntimeControlRequest(
     DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s MiniportDeviceContext=%lx\n",
         __FUNCTION__, MiniportDeviceContext);
 
-    PowerControlCode;
+    RosKmAdapter  *pRosKmAdapter = RosKmAdapter::Cast(MiniportDeviceContext);
+
+    if (IsEqualGUID(*PowerControlCode, GUID_DXGKDDI_POWER_MANAGEMENT_PREPARE_TO_START))
+    {
+    }
+    else if (IsEqualGUID(*PowerControlCode, GUID_DXGKDDI_POWER_MANAGEMENT_STARTED))
+    {
+        pRosKmAdapter->m_PowerManagementStarted = TRUE;
+    }
+    else if (IsEqualGUID(*PowerControlCode, GUID_DXGKDDI_POWER_MANAGEMENT_STOPPED))
+    {
+        pRosKmAdapter->m_PowerManagementStarted = FALSE;
+    }
+
     InBuffer;
     InBufferSize;
     OutBuffer;
@@ -64,4 +80,31 @@ RosKmAdapter::DdiPowerRuntimeControlRequest(
     return STATUS_SUCCESS;
 }
 
+NTSTATUS
+RosKmAdapter::SetPowerComponentFState(
+    IN UINT ComponentIndex,
+    IN UINT FState)
+{
+	//
+	// Validate component index.
+	//
+	if (ComponentIndex >= m_NumNodes)
+	{
+		return STATUS_INVALID_PARAMETER;
+	}
 
+    //
+	// Update Fstate.
+    //
+    m_EnginePowerFState[ComponentIndex] = FState;
+
+    //
+    // Notify power transition is completed. 
+    // (Driver can perform this within this call, or scheduler workitem later if not possible to do now).
+    //
+    m_DxgkInterface.DxgkCbCompleteFStateTransition(
+        m_DxgkInterface.DeviceHandle,
+        ComponentIndex);
+	
+    return STATUS_SUCCESS;
+}

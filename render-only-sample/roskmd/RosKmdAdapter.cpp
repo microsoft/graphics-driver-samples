@@ -1,3 +1,5 @@
+
+#define INITGUID
 #include <ntifs.h>
 #include "RosKmd.h"
 #include "RosKmdAdapter.h"
@@ -25,6 +27,11 @@ RosKmAdapter::RosKmAdapter(IN_CONST_PDEVICE_OBJECT PhysicalDeviceObject, OUT_PPV
 
     // Enable in RosKmAdapter::Start() when device is ready for interrupt
     m_bReadyToHandleInterrupt = FALSE;
+
+    // Set initial power management state.
+    m_PowerManagementStarted = FALSE;
+    m_AdapterPowerDState = PowerDeviceD0; // Device is at D0 at startup
+    RtlZeroMemory(&m_EnginePowerFState[0], sizeof(m_EnginePowerFState)); // Components are F0 at startup.
 
     *MiniportDeviceContext = this;
 }
@@ -410,7 +417,7 @@ RosKmAdapter::Start(
     //
     m_WDDMVersion = DXGKDDI_WDDMv1_3;
 
-    m_NumNodes = 1;
+    m_NumNodes = C_ROSD_GPU_ENGINE_COUNT;
 
     //
     // Initialize worker
@@ -1094,8 +1101,9 @@ RosKmAdapter::DdiQueryAdapterInfo(
         //
 
         //
-        // TODO[bhouse] SupportRuntimePowerManagement
+        // Support SupportRuntimePowerManagement
         //
+        pDriverCaps->SupportRuntimePowerManagement = 1;
 
         //
         // TODO[bhouse] SupportSurpriseRemovalInHibernation
@@ -1193,7 +1201,78 @@ RosKmAdapter::DdiQueryAdapterInfo(
     break;
 
     case DXGKQAITYPE_NUMPOWERCOMPONENTS:
-        break;
+    {
+        if (pQueryAdapterInfo->OutputDataSize != sizeof(UINT))
+        {
+            Status = STATUS_INVALID_PARAMETER;
+            break;
+        }
+
+        //
+        // Support only one 3D engine(s).
+        //
+        *(reinterpret_cast<UINT*>(pQueryAdapterInfo->pOutputData)) = pRosKmAdapter->m_NumNodes;
+
+        Status = STATUS_SUCCESS;
+    }
+    break;
+
+    case DXGKQAITYPE_POWERCOMPONENTINFO:
+    {
+        if (pQueryAdapterInfo->InputDataSize != sizeof(UINT) ||
+			pQueryAdapterInfo->OutputDataSize < sizeof(DXGK_POWER_RUNTIME_COMPONENT))
+        {
+            Status = STATUS_INVALID_PARAMETER;
+            break;
+        }
+
+        UINT ComponentIndex = *(reinterpret_cast<UINT*>(pQueryAdapterInfo->pInputData));
+		
+		//
+        // Only component index for 3D engine is supported.
+        //
+        if (ComponentIndex >= pRosKmAdapter->m_NumNodes)
+        {
+            Status = STATUS_INVALID_PARAMETER;
+            break;
+        }
+
+        DXGK_POWER_RUNTIME_COMPONENT* pPowerComponent = reinterpret_cast<DXGK_POWER_RUNTIME_COMPONENT*>(pQueryAdapterInfo->pOutputData);
+        RtlZeroMemory(pPowerComponent, sizeof(DXGK_POWER_RUNTIME_COMPONENT));
+
+		pPowerComponent->StateCount = 3; // three F states; F0/1/2.
+
+        // These are fake/temporary numbers, it has to be adjusted with real h/w numbers.
+        // F0
+		pPowerComponent->States[0].TransitionLatency = 0; // must be 0
+		pPowerComponent->States[0].ResidencyRequirement = 0; // must be 0.
+		pPowerComponent->States[0].NominalPower = 4;
+        // F1
+		pPowerComponent->States[1].TransitionLatency = 10000;
+		pPowerComponent->States[1].ResidencyRequirement = 0;
+		pPowerComponent->States[1].NominalPower = 2;
+		// F2
+		pPowerComponent->States[2].TransitionLatency = 40000;
+		pPowerComponent->States[2].ResidencyRequirement = 0;
+		pPowerComponent->States[2].NominalPower = 1;
+
+        // Component Mapping to 3D engine(s).
+		pPowerComponent->ComponentMapping.ComponentType = DXGK_POWER_COMPONENT_ENGINE;
+		pPowerComponent->ComponentMapping.EngineDesc.NodeIndex = ComponentIndex; // currently nodeIndex == componentIndex since only 3D engines are exposed as power component.
+
+        // Driver makes callback to complete transition.
+		pPowerComponent->Flags.DriverCompletesFStateTransition = 1;
+
+        // [hideyukn:TODO]
+        // Component[i]->ComponentGuid is required to communicate with PEP.
+
+        RtlStringCbPrintfA(reinterpret_cast<NTSTRSAFE_PSTR>(&pPowerComponent->ComponentName[0]), sizeof(pPowerComponent->ComponentName), "3D_Engine_%02X_Power", ComponentIndex);
+
+		pPowerComponent->ProviderCount = 0; // no dependent provider
+
+		Status = STATUS_SUCCESS;
+    }
+    break;
 
     case DXGKQAITYPE_HISTORYBUFFERPRECISION:
     {

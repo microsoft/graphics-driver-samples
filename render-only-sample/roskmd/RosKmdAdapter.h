@@ -417,6 +417,10 @@ private:
 
 public:
 
+    DEVICE_POWER_STATE      m_AdapterPowerDState;
+    BOOLEAN                 m_PowerManagementStarted;
+    UINT                    m_EnginePowerFState[C_ROSD_GPU_ENGINE_COUNT];
+	
     UINT                    m_NumNodes;
     DXGK_WDDMVERSION        m_WDDMVersion;
 
@@ -428,6 +432,11 @@ public:
     NTSTATUS
         QueryEngineStatus(
             DXGKARG_QUERYENGINESTATUS  *pQueryEngineStatus);
+
+    NTSTATUS
+        SetPowerComponentFState(
+            IN UINT ComponentIndex,
+            IN UINT FState);
 
 };
 
