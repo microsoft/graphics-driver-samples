@@ -50,6 +50,7 @@
     <ClCompile Include="RosUmdResource.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\roscommon\RosAdapter.h" />
     <ClInclude Include="..\roscommon\RosAllocation.h" />
     <ClInclude Include="..\roscommon\RosGpuCommand.h" />
     <ClInclude Include="d3dumddi_.h" />

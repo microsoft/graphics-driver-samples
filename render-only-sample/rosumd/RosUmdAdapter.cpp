@@ -1,6 +1,7 @@
 #include "RosUmdAdapter.h"
 #include "RosUmdDevice.h"
 #include "RosUmdLogging.h"
+#include "RosAdapter.h"
 
 #include <new>
 
@@ -34,6 +35,20 @@ void RosUmdAdapter::Open( D3D10DDIARG_OPENADAPTER* pArgs )
     m_Interface = pArgs->Interface;
     m_Version = pArgs->Version;
     m_pMSCallbacks = pArgs->pAdapterCallbacks;
+
+    D3DDDICB_QUERYADAPTERINFO   queryAdapterInfo = { 0 };
+    HRESULT hr;
+
+    queryAdapterInfo.pPrivateDriverData = &m_rosAdapterInfo;
+    queryAdapterInfo.PrivateDriverDataSize = sizeof(m_rosAdapterInfo);
+
+    hr = m_pMSCallbacks->pfnQueryAdapterInfoCb(
+        m_hRTAdapter.handle,
+        &queryAdapterInfo);
+    if (FAILED(hr))
+    {
+        throw RosUmdException(hr);
+    }
 
     const D3D10_2DDI_ADAPTERFUNCS AdapterFuncs =
     {
@@ -228,7 +243,17 @@ HRESULT APIENTRY OpenAdapter10_2( D3D10DDIARG_OPENADAPTER* pArgs )
         return E_OUTOFMEMORY;
     }
 
-    pAdapter->Open( pArgs );
+    try
+    {
+        pAdapter->Open(pArgs);
+    }
+
+    catch (RosUmdException & e)
+    {
+        pAdapter->Close();
+        delete pAdapter;
+        return e.m_hr;
+    }
 
     return S_OK;
 }

@@ -16,6 +16,7 @@ extern "C" {
 }
 
 #include "RosAllocation.h"
+#include "RosAdapter.h"
 
 #define ROSD_SEGMENT_APERTURE 1
 #define ROSD_SEGMENT_VIDEO_MEMORY 2
@@ -23,16 +24,7 @@ extern "C" {
 
 #define ROSD_COMMAND_BUFFER_SIZE    PAGE_SIZE
 
-//
-// Structure returned from DXGKQAITYPE_UMDRIVERPRIVATE
-//
-typedef struct _ROSPRIVATEINFO
-{
-    UINT             Version;
-    DXGK_WDDMVERSION WDDMVersion;
-} ROSPRIVATEINFO;
-
-typedef struct _ROSPRIVATEINFO2 : public _ROSPRIVATEINFO
+typedef struct _ROSPRIVATEINFO2 : public _ROSADAPTERINFO
 {
     UINT             m_Dummy;
 } ROSPRIVATEINFO2;

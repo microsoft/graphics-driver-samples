@@ -415,6 +415,8 @@ private:
 
     BOOL                    m_bReadyToHandleInterrupt;
 
+    DXGK_DEVICE_INFO        m_deviceInfo;
+
 public:
 
     DEVICE_POWER_STATE      m_AdapterPowerDState;

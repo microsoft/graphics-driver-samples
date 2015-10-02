@@ -461,6 +461,18 @@ RosKmAdapter::Start(
         return status;
     }
 
+#if HW_GPU
+    //
+    // m_deviceInfo.TranslatedResourceList has the HW resource information
+    // (MMIO register file, interrupt, etc)
+    //
+#endif
+
+    status = m_DxgkInterface.DxgkCbGetDeviceInformation(
+        m_DxgkInterface.DeviceHandle,
+        &m_deviceInfo);
+    NT_ASSERT(status == STATUS_SUCCESS);
+
     //
     // Initialize apperture state
     //
@@ -919,14 +931,16 @@ RosKmAdapter::DdiQueryAdapterInfo(
     {
     case DXGKQAITYPE_UMDRIVERPRIVATE:
     {
-        if (pQueryAdapterInfo->OutputDataSize < sizeof(ROSPRIVATEINFO))
+        if (pQueryAdapterInfo->OutputDataSize < sizeof(ROSADAPTERINFO))
         {
             Status = STATUS_INVALID_PARAMETER;
             break;
         }
-        ROSPRIVATEINFO* pRosPrivateInfo = (ROSPRIVATEINFO*)pQueryAdapterInfo->pOutputData;
-        pRosPrivateInfo->Version = ROSD_VERSION;
-        pRosPrivateInfo->WDDMVersion = pRosKmAdapter->m_WDDMVersion;
+        ROSADAPTERINFO* pRosAdapterInfo = (ROSADAPTERINFO*)pQueryAdapterInfo->pOutputData;
+        pRosAdapterInfo->m_version = ROSD_VERSION;
+        pRosAdapterInfo->m_wddmVersion = pRosKmAdapter->m_WDDMVersion;
+        // Software APCI device only claims an interrupt resource
+        pRosAdapterInfo->m_isSoftwareDevice = (pRosKmAdapter->m_deviceInfo.TranslatedResourceList->List->PartialResourceList.Count < 2);
 
         Status = STATUS_SUCCESS;
     }
