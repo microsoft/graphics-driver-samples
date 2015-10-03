@@ -33,6 +33,10 @@ RosKmAdapter::RosKmAdapter(IN_CONST_PDEVICE_OBJECT PhysicalDeviceObject, OUT_PPV
     m_AdapterPowerDState = PowerDeviceD0; // Device is at D0 at startup
     RtlZeroMemory(&m_EnginePowerFState[0], sizeof(m_EnginePowerFState)); // Components are F0 at startup.
 
+    // Set up device ID pointer
+    m_pDeviceId = (ACPI_EVAL_OUTPUT_BUFFER *)&m_deviceIdBuf;
+    RtlZeroMemory(&m_deviceIdBuf, sizeof(m_deviceIdBuf));
+
     *MiniportDeviceContext = this;
 }
 
@@ -472,6 +476,30 @@ RosKmAdapter::Start(
         m_DxgkInterface.DeviceHandle,
         &m_deviceInfo);
     NT_ASSERT(status == STATUS_SUCCESS);
+
+    //
+    // Query APCI device ID
+    //
+    ACPI_EVAL_INPUT_BUFFER_COMPLEX acpiInputBuffer;
+
+    acpiInputBuffer.Signature = ACPI_EVAL_INPUT_BUFFER_COMPLEX_SIGNATURE;
+    acpiInputBuffer.MethodNameAsUlong = ACPI_METHOD_HARDWARE_ID;
+    acpiInputBuffer.Size = acpiInputBuffer.ArgumentCount = 0;
+
+    status = m_DxgkInterface.DxgkCbEvalAcpiMethod(
+        m_DxgkInterface.DeviceHandle,
+        DISPLAY_ADAPTER_HW_ID,
+        &acpiInputBuffer,
+        sizeof(acpiInputBuffer),
+        m_pDeviceId,
+        sizeof(m_deviceIdBuf));
+    if ((status != STATUS_SUCCESS) ||
+        (m_pDeviceId->Count != 1) ||
+        (m_pDeviceId->Argument[0].Type != ACPI_METHOD_ARGUMENT_STRING) ||
+        (m_pDeviceId->Argument[0].DataLength < 2))
+    {
+        return status;
+    }
 
     //
     // Initialize apperture state
@@ -921,7 +949,7 @@ RosKmAdapter::DdiQueryAdapterInfo(
     IN_CONST_HANDLE                         hAdapter,
     IN_CONST_PDXGKARG_QUERYADAPTERINFO      pQueryAdapterInfo)
 {
-    RosKmAdapter  *pRosKmAdapter = RosKmAdapter::Cast(hAdapter);
+    RosKmAdapter   *pRosKmAdapter = RosKmAdapter::Cast(hAdapter);
     NTSTATUS        Status = STATUS_INVALID_PARAMETER;
 
     DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "RosKmdQueryAdapterInfo hAdapter=%lx Type=%d\n",
@@ -937,10 +965,17 @@ RosKmAdapter::DdiQueryAdapterInfo(
             break;
         }
         ROSADAPTERINFO* pRosAdapterInfo = (ROSADAPTERINFO*)pQueryAdapterInfo->pOutputData;
+        
         pRosAdapterInfo->m_version = ROSD_VERSION;
         pRosAdapterInfo->m_wddmVersion = pRosKmAdapter->m_WDDMVersion;
+
         // Software APCI device only claims an interrupt resource
         pRosAdapterInfo->m_isSoftwareDevice = (pRosKmAdapter->m_deviceInfo.TranslatedResourceList->List->PartialResourceList.Count < 2);
+
+        RtlCopyMemory(
+            pRosAdapterInfo->m_deviceId,
+            pRosKmAdapter->m_pDeviceId->Argument[0].Data,
+            pRosKmAdapter->m_pDeviceId->Argument[0].DataLength);
 
         Status = STATUS_SUCCESS;
     }

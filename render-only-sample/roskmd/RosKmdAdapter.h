@@ -387,44 +387,47 @@ private:
 
     static const UINT32 kMagic = 'ADPT';
 
-    UINT32                  m_magic;
-    DEVICE_OBJECT          *m_pPhysicalDevice;
-    DXGKRNL_INTERFACE       m_DxgkInterface;
-    DXGK_START_INFO         m_DxgkStartInfo;
+    UINT32                      m_magic;
+    DEVICE_OBJECT              *m_pPhysicalDevice;
+    DXGKRNL_INTERFACE           m_DxgkInterface;
+    DXGK_START_INFO             m_DxgkStartInfo;
 
-    ROSKMERRORCONDITION     m_ErrorHit;
+    ROSKMERRORCONDITION         m_ErrorHit;
 
-    PKTHREAD                m_pWorkerThread;
-    KEVENT                  m_workerThreadEvent;
-    bool                    m_workerExit;
+    PKTHREAD                    m_pWorkerThread;
+    KEVENT                      m_workerThreadEvent;
+    bool                        m_workerExit;
 
     // TODO[indyz]: Switch to use the m_DxgkStartInfo::RequiredDmaQueueEntry
-    const static UINT       m_maxDmaBufQueueLength = 32;
-    ROSDMABUFSUBMISSION     m_dmaBufSubssions[m_maxDmaBufQueueLength];
+    const static UINT           m_maxDmaBufQueueLength = 32;
+    ROSDMABUFSUBMISSION         m_dmaBufSubssions[m_maxDmaBufQueueLength];
 
-    LIST_ENTRY              m_dmaBufSubmissionFree;
-    LIST_ENTRY              m_dmaBufQueue;
-    KSPIN_LOCK              m_dmaBufQueueLock;
+    LIST_ENTRY                  m_dmaBufSubmissionFree;
+    LIST_ENTRY                  m_dmaBufQueue;
+    KSPIN_LOCK                  m_dmaBufQueueLock;
 
-    KDPC                    m_hwDmaBufCompletionDpc;
-    KEVENT                  m_hwDmaBufCompletionEvent;
+    KDPC                        m_hwDmaBufCompletionDpc;
+    KEVENT                      m_hwDmaBufCompletionEvent;
 
     DXGKARGCB_NOTIFY_INTERRUPT_DATA m_interruptData;
 
-    DXGKARG_RESETENGINE    *m_pResetEngine;
+    DXGKARG_RESETENGINE        *m_pResetEngine;
 
-    BOOL                    m_bReadyToHandleInterrupt;
+    BOOL                        m_bReadyToHandleInterrupt;
 
-    DXGK_DEVICE_INFO        m_deviceInfo;
+    DXGK_DEVICE_INFO            m_deviceInfo;
+
+    BYTE                        m_deviceIdBuf[sizeof(ACPI_EVAL_OUTPUT_BUFFER) + MAX_DEVICE_ID_LENGTH];
+    ACPI_EVAL_OUTPUT_BUFFER    *m_pDeviceId;
 
 public:
 
-    DEVICE_POWER_STATE      m_AdapterPowerDState;
-    BOOLEAN                 m_PowerManagementStarted;
-    UINT                    m_EnginePowerFState[C_ROSD_GPU_ENGINE_COUNT];
+    DEVICE_POWER_STATE          m_AdapterPowerDState;
+    BOOLEAN                     m_PowerManagementStarted;
+    UINT                        m_EnginePowerFState[C_ROSD_GPU_ENGINE_COUNT];
 	
-    UINT                    m_NumNodes;
-    DXGK_WDDMVERSION        m_WDDMVersion;
+    UINT                        m_NumNodes;
+    DXGK_WDDMVERSION            m_WDDMVersion;
 
 public:
 
