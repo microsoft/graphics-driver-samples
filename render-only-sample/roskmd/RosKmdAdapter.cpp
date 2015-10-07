@@ -486,13 +486,13 @@ RosKmAdapter::Start(
 
         RosKmAcpiReader acpiReader(this, DISPLAY_ADAPTER_HW_ID);
         acpiStatus = acpiReader.Read(ACPI_METHOD_HARDWARE_ID);
-		if (NT_SUCCESS(acpiStatus))
+		if (NT_SUCCESS(acpiStatus) && (acpiReader.GetOutputArgumentCount() == 1))
 		{
 			RosKmAcpiArgumentParser acpiParser(&acpiReader, NULL);
 			char *pDeviceId;
 			ULONG DeviceIdLength;
 			acpiStatus = acpiParser.GetAnsiString(&pDeviceId, &DeviceIdLength);
-			if (NT_SUCCESS(acpiStatus))
+			if (NT_SUCCESS(acpiStatus) && DeviceIdLength)
 			{
 				m_deviceIdLength = min(DeviceIdLength, sizeof(m_deviceId));
 				RtlCopyMemory(&m_deviceId[0], pDeviceId, m_deviceIdLength);

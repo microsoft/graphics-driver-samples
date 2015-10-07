@@ -37,12 +37,12 @@ public:
 		return EvalAcpiMethod();
     }
 
-    UNALIGNED ACPI_METHOD_ARGUMENT* GetArgument()
+    UNALIGNED ACPI_METHOD_ARGUMENT* GetOutputArgument()
     {
         return &(m_pOutputBuffer->Argument[0]);
     }
 
-    ULONG GetArgumentCount()
+    ULONG GetOutputArgumentCount()
     {
         return m_pOutputBuffer->Count;
     }
@@ -84,7 +84,7 @@ public:
         }
         else
         {
-            m_pCurrentArgument = m_pReader->GetArgument();
+            m_pCurrentArgument = m_pReader->GetOutputArgument();
         }
     }
 
@@ -96,7 +96,7 @@ public:
         }
         else
         {
-            return m_pReader->GetArgumentCount() > m_CurrentArgumentIndex;
+            return m_pReader->GetOutputArgumentCount() > m_CurrentArgumentIndex;
         }
     }
 
