@@ -218,20 +218,17 @@ public:
             OUT_PDXGKARG_CALIBRATEGPUCLOCK              pClockCalibration
             );
 
-
     static NTSTATUS
         __stdcall
         DdiRenderKm(
             IN_CONST_HANDLE         hContext,
             INOUT_PDXGKARG_RENDER   pRender);
 
-
     static NTSTATUS
         __stdcall
         DdiEscape(
             IN_CONST_HANDLE                 hAdapter,
             IN_CONST_PDXGKARG_ESCAPE        pEscape);
-
 
     static NTSTATUS
         __stdcall
@@ -343,6 +340,11 @@ public:
         return rosKmAdapter;
     }
 
+	DXGKRNL_INTERFACE* GetDxgkInterface()
+	{
+		return &m_DxgkInterface;
+	}
+
     void QueueDmaBuffer(IN_CONST_PDXGKARG_SUBMITCOMMAND pSubmitCommand);
 
 private:
@@ -373,7 +375,7 @@ private:
 
 private:
 
-    static const size_t kPageSize = 4096;
+	static const size_t kPageSize = 4096;
 
     static const size_t kApertureSegmentId = 1;
     static const size_t kApertureSegmentPageCount = 1024;
@@ -417,13 +419,14 @@ private:
 
     DXGK_DEVICE_INFO            m_deviceInfo;
 
-    BYTE                        m_deviceIdBuf[sizeof(ACPI_EVAL_OUTPUT_BUFFER) + MAX_DEVICE_ID_LENGTH];
-    ACPI_EVAL_OUTPUT_BUFFER    *m_pDeviceId;
+    BYTE                        m_deviceId[MAX_DEVICE_ID_LENGTH];
+    ULONG                       m_deviceIdLength;
 
 public:
 
     DEVICE_POWER_STATE          m_AdapterPowerDState;
     BOOLEAN                     m_PowerManagementStarted;
+	UINT                        m_NumPowerComponents;
     UINT                        m_EnginePowerFState[C_ROSD_GPU_ENGINE_COUNT];
 	
     UINT                        m_NumNodes;
@@ -438,10 +441,17 @@ public:
         QueryEngineStatus(
             DXGKARG_QUERYENGINESTATUS  *pQueryEngineStatus);
 
+    NTSTATUS 
+        GetNumPowerComponents();
+
+    NTSTATUS
+        GetPowerComponentInfo(
+            IN UINT ComponentIndex,
+            OUT DXGK_POWER_RUNTIME_COMPONENT* pPowerComponent);
+
     NTSTATUS
         SetPowerComponentFState(
             IN UINT ComponentIndex,
             IN UINT FState);
 
 };
-

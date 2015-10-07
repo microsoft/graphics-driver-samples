@@ -40,6 +40,12 @@
     <ClCompile Include="RosKmdUtil.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="RosKmdPower.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RosKmdAcpi.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="RosKmd.h">
@@ -67,6 +73,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="RosKmdUtil.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RosKmdAcpi.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -9,6 +9,7 @@
 #include "RosKmdGlobal.h"
 #include "RosKmdUtil.h"
 #include "RosGpuCommand.h"
+#include "RosKmdAcpi.h"
 
 void * RosKmAdapter::operator new(size_t size)
 {
@@ -31,11 +32,11 @@ RosKmAdapter::RosKmAdapter(IN_CONST_PDEVICE_OBJECT PhysicalDeviceObject, OUT_PPV
     // Set initial power management state.
     m_PowerManagementStarted = FALSE;
     m_AdapterPowerDState = PowerDeviceD0; // Device is at D0 at startup
+	m_NumPowerComponents = 0;
     RtlZeroMemory(&m_EnginePowerFState[0], sizeof(m_EnginePowerFState)); // Components are F0 at startup.
 
-    // Set up device ID pointer
-    m_pDeviceId = (ACPI_EVAL_OUTPUT_BUFFER *)&m_deviceIdBuf;
-    RtlZeroMemory(&m_deviceIdBuf, sizeof(m_deviceIdBuf));
+    RtlZeroMemory(&m_deviceId, sizeof(m_deviceId));
+    m_deviceIdLength = 0;
 
     *MiniportDeviceContext = this;
 }
@@ -480,25 +481,23 @@ RosKmAdapter::Start(
     //
     // Query APCI device ID
     //
-    ACPI_EVAL_INPUT_BUFFER_COMPLEX acpiInputBuffer;
-
-    acpiInputBuffer.Signature = ACPI_EVAL_INPUT_BUFFER_COMPLEX_SIGNATURE;
-    acpiInputBuffer.MethodNameAsUlong = ACPI_METHOD_HARDWARE_ID;
-    acpiInputBuffer.Size = acpiInputBuffer.ArgumentCount = 0;
-
-    status = m_DxgkInterface.DxgkCbEvalAcpiMethod(
-        m_DxgkInterface.DeviceHandle,
-        DISPLAY_ADAPTER_HW_ID,
-        &acpiInputBuffer,
-        sizeof(acpiInputBuffer),
-        m_pDeviceId,
-        sizeof(m_deviceIdBuf));
-    if ((status != STATUS_SUCCESS) ||
-        (m_pDeviceId->Count != 1) ||
-        (m_pDeviceId->Argument[0].Type != ACPI_METHOD_ARGUMENT_STRING) ||
-        (m_pDeviceId->Argument[0].DataLength < 2))
     {
-        return status;
+        NTSTATUS acpiStatus;
+
+        RosKmAcpiReader acpiReader(this, DISPLAY_ADAPTER_HW_ID);
+        acpiStatus = acpiReader.Read(ACPI_METHOD_HARDWARE_ID);
+		if (NT_SUCCESS(acpiStatus))
+		{
+			RosKmAcpiArgumentParser acpiParser(&acpiReader, NULL);
+			char *pDeviceId;
+			ULONG DeviceIdLength;
+			acpiStatus = acpiParser.GetAnsiString(&pDeviceId, &DeviceIdLength);
+			if (NT_SUCCESS(acpiStatus))
+			{
+				m_deviceIdLength = min(DeviceIdLength, sizeof(m_deviceId));
+				RtlCopyMemory(&m_deviceId[0], pDeviceId, m_deviceIdLength);
+			}
+		}
     }
 
     //
@@ -974,8 +973,8 @@ RosKmAdapter::DdiQueryAdapterInfo(
 
         RtlCopyMemory(
             pRosAdapterInfo->m_deviceId,
-            pRosKmAdapter->m_pDeviceId->Argument[0].Data,
-            pRosKmAdapter->m_pDeviceId->Argument[0].DataLength);
+            pRosKmAdapter->m_deviceId,
+            pRosKmAdapter->m_deviceIdLength);
 
         Status = STATUS_SUCCESS;
     }
@@ -1260,7 +1259,7 @@ RosKmAdapter::DdiQueryAdapterInfo(
         //
         // Support only one 3D engine(s).
         //
-        *(reinterpret_cast<UINT*>(pQueryAdapterInfo->pOutputData)) = pRosKmAdapter->m_NumNodes;
+        *(reinterpret_cast<UINT*>(pQueryAdapterInfo->pOutputData)) = pRosKmAdapter->GetNumPowerComponents();
 
         Status = STATUS_SUCCESS;
     }
@@ -1275,51 +1274,10 @@ RosKmAdapter::DdiQueryAdapterInfo(
             break;
         }
 
-        UINT ComponentIndex = *(reinterpret_cast<UINT*>(pQueryAdapterInfo->pInputData));
-		
-		//
-        // Only component index for 3D engine is supported.
-        //
-        if (ComponentIndex >= pRosKmAdapter->m_NumNodes)
-        {
-            Status = STATUS_INVALID_PARAMETER;
-            break;
-        }
-
+        ULONG ComponentIndex = *(reinterpret_cast<UINT*>(pQueryAdapterInfo->pInputData));
         DXGK_POWER_RUNTIME_COMPONENT* pPowerComponent = reinterpret_cast<DXGK_POWER_RUNTIME_COMPONENT*>(pQueryAdapterInfo->pOutputData);
-        RtlZeroMemory(pPowerComponent, sizeof(DXGK_POWER_RUNTIME_COMPONENT));
 
-		pPowerComponent->StateCount = 3; // three F states; F0/1/2.
-
-        // These are fake/temporary numbers, it has to be adjusted with real h/w numbers.
-        // F0
-		pPowerComponent->States[0].TransitionLatency = 0; // must be 0
-		pPowerComponent->States[0].ResidencyRequirement = 0; // must be 0.
-		pPowerComponent->States[0].NominalPower = 4;
-        // F1
-		pPowerComponent->States[1].TransitionLatency = 10000;
-		pPowerComponent->States[1].ResidencyRequirement = 0;
-		pPowerComponent->States[1].NominalPower = 2;
-		// F2
-		pPowerComponent->States[2].TransitionLatency = 40000;
-		pPowerComponent->States[2].ResidencyRequirement = 0;
-		pPowerComponent->States[2].NominalPower = 1;
-
-        // Component Mapping to 3D engine(s).
-		pPowerComponent->ComponentMapping.ComponentType = DXGK_POWER_COMPONENT_ENGINE;
-		pPowerComponent->ComponentMapping.EngineDesc.NodeIndex = ComponentIndex; // currently nodeIndex == componentIndex since only 3D engines are exposed as power component.
-
-        // Driver makes callback to complete transition.
-		pPowerComponent->Flags.DriverCompletesFStateTransition = 1;
-
-        // [hideyukn:TODO]
-        // Component[i]->ComponentGuid is required to communicate with PEP.
-
-        RtlStringCbPrintfA(reinterpret_cast<NTSTRSAFE_PSTR>(&pPowerComponent->ComponentName[0]), sizeof(pPowerComponent->ComponentName), "3D_Engine_%02X_Power", ComponentIndex);
-
-		pPowerComponent->ProviderCount = 0; // no dependent provider
-
-		Status = STATUS_SUCCESS;
+        Status = pRosKmAdapter->GetPowerComponentInfo(ComponentIndex, pPowerComponent); 
     }
     break;
 

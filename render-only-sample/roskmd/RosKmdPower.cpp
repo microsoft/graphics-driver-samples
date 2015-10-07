@@ -81,6 +81,65 @@ RosKmAdapter::DdiPowerRuntimeControlRequest(
 }
 
 NTSTATUS
+RosKmAdapter::GetNumPowerComponents()
+{
+    //
+    // Only component index for 3D engine is supported.
+    //
+	m_NumPowerComponents = m_NumNodes;
+
+    return m_NumPowerComponents;
+}
+
+NTSTATUS
+RosKmAdapter::GetPowerComponentInfo(
+    IN UINT ComponentIndex,
+    OUT DXGK_POWER_RUNTIME_COMPONENT* pPowerComponent)
+{
+    if ((ComponentIndex >= m_NumPowerComponents) || 
+         (pPowerComponent == NULL))
+    {
+        return STATUS_INVALID_PARAMETER;
+    }
+
+    RtlZeroMemory(pPowerComponent, sizeof(DXGK_POWER_RUNTIME_COMPONENT));
+
+    pPowerComponent->StateCount = 3; // three F states; F0/1/2.
+
+    // These are fake/temporary numbers, it has to be adjusted with real h/w numbers.
+    // F0
+    pPowerComponent->States[0].TransitionLatency = 0; // must be 0
+    pPowerComponent->States[0].ResidencyRequirement = 0; // must be 0.
+    pPowerComponent->States[0].NominalPower = 4;
+    // F1
+    pPowerComponent->States[1].TransitionLatency = 10000;
+    pPowerComponent->States[1].ResidencyRequirement = 0;
+    pPowerComponent->States[1].NominalPower = 2;
+    // F2
+    pPowerComponent->States[2].TransitionLatency = 40000;
+    pPowerComponent->States[2].ResidencyRequirement = 0;
+    pPowerComponent->States[2].NominalPower = 1;
+
+    // Component Mapping to 3D engine(s).
+    pPowerComponent->ComponentMapping.ComponentType = DXGK_POWER_COMPONENT_ENGINE;
+    pPowerComponent->ComponentMapping.EngineDesc.NodeIndex = ComponentIndex; // currently nodeIndex == componentIndex since only 3D engines are exposed as power component.
+
+    // Driver makes callback to complete transition.
+    pPowerComponent->Flags.DriverCompletesFStateTransition = 1;
+
+    // [hideyukn:TODO]
+    // Component[i]->ComponentGuid is required to communicate with PEP.
+
+    RtlStringCbPrintfA(reinterpret_cast<NTSTRSAFE_PSTR>(&pPowerComponent->ComponentName[0]),
+                       sizeof(pPowerComponent->ComponentName),
+                       "3D_Engine_%02X_Power", ComponentIndex);
+
+    pPowerComponent->ProviderCount = 0; // no dependent provider
+
+    return STATUS_SUCCESS;
+}
+
+NTSTATUS
 RosKmAdapter::SetPowerComponentFState(
     IN UINT ComponentIndex,
     IN UINT FState)
@@ -88,7 +147,7 @@ RosKmAdapter::SetPowerComponentFState(
 	//
 	// Validate component index.
 	//
-	if (ComponentIndex >= m_NumNodes)
+	if (ComponentIndex >= m_NumPowerComponents)
 	{
 		return STATUS_INVALID_PARAMETER;
 	}
