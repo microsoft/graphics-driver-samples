@@ -55,7 +55,7 @@ NTSTATUS RosKmAcpiReader::EvalAcpiMethod()
     return Status;
 }
 
-RosKmAcpiArgumentParser::RosKmAcpiArgumentParser(RosKmAcpiReader* pReader, ACPI_METHOD_ARGUMENT* pParentArgument) :
+RosKmAcpiArgumentParser::RosKmAcpiArgumentParser(RosKmAcpiReader* pReader, UNALIGNED ACPI_METHOD_ARGUMENT* pParentArgument) :
     m_pReader(pReader),
     m_pParentArgument(pParentArgument)
 {

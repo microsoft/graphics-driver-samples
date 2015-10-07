@@ -7,6 +7,7 @@
 #include "RosKmdGlobal.h"
 #include "RosKmdUtil.h"
 #include "RosGpuCommand.h"
+#include "RosKmdAcpi.h"
 
 NTSTATUS
 RosKmAdapter::DdiSetPowerState(
@@ -81,60 +82,142 @@ RosKmAdapter::DdiPowerRuntimeControlRequest(
 }
 
 NTSTATUS
+RosKmAdapter::InitializePowerComponentInfo()
+{
+	NTSTATUS Status;
+
+	RosKmAcpiReader acpiReader(this, DISPLAY_ADAPTER_HW_ID);
+	Status = acpiReader.Read('DCMP'); // Invoke Method(PMCD).
+	if (NT_SUCCESS(Status) &&
+		(acpiReader.GetOutputArgumentCount() == 3)) // must return 3 output arguments
+	{
+		RosKmAcpiArgumentParser acpiParser(&acpiReader, NULL);
+
+		// Validate Version.
+		ULONG Version;
+		Status = acpiParser.GetValue<ULONG>(&Version);
+		if (!NT_SUCCESS(Status) || (Version != 1)) // currently Version must be 1.
+		{
+			return STATUS_ACPI_INVALID_DATA;
+		}
+
+		// Validate number of power compoment
+		ULONG numPowerCompoment;
+		Status = acpiParser.GetValue<ULONG>(&numPowerCompoment);
+		if (!NT_SUCCESS(Status) || (numPowerCompoment != C_ROSD_GPU_ENGINE_COUNT)) // currently only GPU node
+		{
+			return STATUS_ACPI_INVALID_DATA;
+		}
+
+		UNALIGNED ACPI_METHOD_ARGUMENT* pPowerComponentPackage;
+		pPowerComponentPackage = acpiParser.GetPackage();
+		NT_ASSERT(pPowerComponentPackage);
+		
+		RosKmAcpiArgumentParser acpiPowerComponentParser(&acpiReader, pPowerComponentPackage);
+		for (ULONG i = 0; i < numPowerCompoment; i++)
+		{
+			UNALIGNED ACPI_METHOD_ARGUMENT* pComponentPackage;
+			pComponentPackage = acpiPowerComponentParser.GetPackage();
+			NT_ASSERT(pComponentPackage);
+
+			RosKmAcpiArgumentParser acpiComponentParser(&acpiReader, pComponentPackage);
+
+			ULONG componentIndex;
+			Status = acpiComponentParser.GetValue<ULONG>(&componentIndex);
+			NT_ASSERT(componentIndex == 0);
+
+			Status = acpiComponentParser.GetValue<DXGK_POWER_COMPONENT_TYPE>(&m_PowerComponents[componentIndex].ComponentMapping.ComponentType);
+			NT_ASSERT(NT_SUCCESS(Status));
+
+			Status = acpiComponentParser.GetValue<UINT>(&m_PowerComponents[componentIndex].ComponentMapping.EngineDesc.NodeIndex);
+			NT_ASSERT(NT_SUCCESS(Status));
+
+			GUID* pComponentGuid = NULL;
+			ULONG ComponentGuidLength = 0;
+			Status = acpiComponentParser.GetBuffer((BYTE**)&pComponentGuid, &ComponentGuidLength);
+			NT_ASSERT(NT_SUCCESS(Status));
+			NT_ASSERT(pComponentGuid != NULL);
+			NT_ASSERT(ComponentGuidLength == sizeof(GUID));
+			RtlCopyMemory(&m_PowerComponents[componentIndex].ComponentGuid, pComponentGuid, sizeof(GUID));
+
+			char *pComponentName = NULL;
+			ULONG ComponentNameLength = 0;
+			Status = acpiComponentParser.GetAnsiString(&pComponentName, &ComponentNameLength);
+			NT_ASSERT(NT_SUCCESS(Status));
+			NT_ASSERT(pComponentName);
+			RtlCopyMemory(
+				&m_PowerComponents[componentIndex].ComponentName[0],
+				pComponentName,
+				min(ComponentNameLength, sizeof(m_PowerComponents[componentIndex].ComponentName)));
+
+			Status = acpiComponentParser.GetValue<ULONG>(&m_PowerComponents[componentIndex].StateCount);
+			NT_ASSERT(NT_SUCCESS(Status));
+			NT_ASSERT(m_PowerComponents[componentIndex].StateCount);
+
+			UNALIGNED ACPI_METHOD_ARGUMENT* pPowerStatePackage;
+			pPowerStatePackage = acpiComponentParser.GetPackage();
+			NT_ASSERT(pPowerStatePackage);
+			
+			RosKmAcpiArgumentParser acpiPowerStateParser(&acpiReader, pPowerStatePackage);
+			for (ULONG j = 0; j < m_PowerComponents[componentIndex].StateCount; j++)
+			{
+				UNALIGNED ACPI_METHOD_ARGUMENT* pStatePackage;
+				pStatePackage = acpiPowerStateParser.GetPackage();
+				NT_ASSERT(pStatePackage);
+
+				RosKmAcpiArgumentParser acpiStateParser(&acpiReader, pStatePackage);
+				
+				Status = acpiStateParser.GetValue<ULONGLONG>(&m_PowerComponents[componentIndex].States[j].TransitionLatency);
+				NT_ASSERT(NT_SUCCESS(Status));
+
+				Status = acpiStateParser.GetValue<ULONGLONG>(&m_PowerComponents[componentIndex].States[j].ResidencyRequirement);
+				NT_ASSERT(NT_SUCCESS(Status));
+
+				Status = acpiStateParser.GetValue<ULONG>(&m_PowerComponents[componentIndex].States[j].NominalPower);
+				NT_ASSERT(NT_SUCCESS(Status));
+			}
+			
+			//
+			// No dependent provider.
+			//
+			m_PowerComponents[componentIndex].ProviderCount = 0;
+			RtlZeroMemory(&m_PowerComponents[componentIndex].Providers, sizeof(m_PowerComponents[componentIndex].Providers));
+
+			//
+			// Driver makes callback to complete transition.
+			//
+			m_PowerComponents[componentIndex].Flags.DriverCompletesFStateTransition = 1;
+		}
+
+		//
+		// If everything work out good, set number of power components.
+		//
+		m_NumPowerComponents = numPowerCompoment;
+
+		return STATUS_SUCCESS;
+	}
+
+	return  STATUS_ACPI_INVALID_DATA;
+}
+
+NTSTATUS
 RosKmAdapter::GetNumPowerComponents()
 {
-    //
-    // Only component index for 3D engine is supported.
-    //
-	m_NumPowerComponents = m_NumNodes;
-
-    return m_NumPowerComponents;
+	return m_NumPowerComponents;
 }
 
 NTSTATUS
 RosKmAdapter::GetPowerComponentInfo(
-    IN UINT ComponentIndex,
-    OUT DXGK_POWER_RUNTIME_COMPONENT* pPowerComponent)
+	IN UINT ComponentIndex,
+	OUT DXGK_POWER_RUNTIME_COMPONENT* pPowerComponent)
 {
-    if ((ComponentIndex >= m_NumPowerComponents) || 
-         (pPowerComponent == NULL))
-    {
-        return STATUS_INVALID_PARAMETER;
-    }
+	if ((ComponentIndex >= m_NumPowerComponents) ||
+		(pPowerComponent == NULL))
+	{
+		return STATUS_INVALID_PARAMETER;
+	}
 
-    RtlZeroMemory(pPowerComponent, sizeof(DXGK_POWER_RUNTIME_COMPONENT));
-
-    pPowerComponent->StateCount = 3; // three F states; F0/1/2.
-
-    // These are fake/temporary numbers, it has to be adjusted with real h/w numbers.
-    // F0
-    pPowerComponent->States[0].TransitionLatency = 0; // must be 0
-    pPowerComponent->States[0].ResidencyRequirement = 0; // must be 0.
-    pPowerComponent->States[0].NominalPower = 4;
-    // F1
-    pPowerComponent->States[1].TransitionLatency = 10000;
-    pPowerComponent->States[1].ResidencyRequirement = 0;
-    pPowerComponent->States[1].NominalPower = 2;
-    // F2
-    pPowerComponent->States[2].TransitionLatency = 40000;
-    pPowerComponent->States[2].ResidencyRequirement = 0;
-    pPowerComponent->States[2].NominalPower = 1;
-
-    // Component Mapping to 3D engine(s).
-    pPowerComponent->ComponentMapping.ComponentType = DXGK_POWER_COMPONENT_ENGINE;
-    pPowerComponent->ComponentMapping.EngineDesc.NodeIndex = ComponentIndex; // currently nodeIndex == componentIndex since only 3D engines are exposed as power component.
-
-    // Driver makes callback to complete transition.
-    pPowerComponent->Flags.DriverCompletesFStateTransition = 1;
-
-    // [hideyukn:TODO]
-    // Component[i]->ComponentGuid is required to communicate with PEP.
-
-    RtlStringCbPrintfA(reinterpret_cast<NTSTRSAFE_PSTR>(&pPowerComponent->ComponentName[0]),
-                       sizeof(pPowerComponent->ComponentName),
-                       "3D_Engine_%02X_Power", ComponentIndex);
-
-    pPowerComponent->ProviderCount = 0; // no dependent provider
+	RtlCopyMemory(pPowerComponent, &m_PowerComponents[ComponentIndex], sizeof(DXGK_POWER_RUNTIME_COMPONENT));
 
     return STATUS_SUCCESS;
 }

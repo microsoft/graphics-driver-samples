@@ -72,7 +72,7 @@ class RosKmAcpiArgumentParser
 { 
 public:
 
-    RosKmAcpiArgumentParser(RosKmAcpiReader* pReader, ACPI_METHOD_ARGUMENT* pParentArgument);
+    RosKmAcpiArgumentParser(RosKmAcpiReader* pReader, UNALIGNED ACPI_METHOD_ARGUMENT* pParentArgument);
     ~RosKmAcpiArgumentParser();
 
     void Reset()
@@ -80,7 +80,7 @@ public:
         m_CurrentArgumentIndex = 0;
         if (m_pParentArgument)
         {
-            m_pCurrentArgument = (ACPI_METHOD_ARGUMENT*)(&m_pParentArgument->Data[0]);
+            m_pCurrentArgument = (UNALIGNED ACPI_METHOD_ARGUMENT*)(&m_pParentArgument->Data[0]);
         }
         else
         {
@@ -92,7 +92,7 @@ public:
     {
         if (m_pParentArgument)
         {
-            return m_pParentArgument->DataLength > m_CurrentArgumentIndex;
+            return m_pParentArgument->DataLength > ((PBYTE)m_pCurrentArgument - (PBYTE)(&m_pParentArgument->Data[0]));
         }
         else
         {
@@ -100,12 +100,13 @@ public:
         }
     }
 
-    UNALIGNED ACPI_METHOD_ARGUMENT *GetNextArgument()
+    UNALIGNED ACPI_METHOD_ARGUMENT *NextArgument()
     {
         if (IsCurrentArgumentValid())
         {
             m_CurrentArgumentIndex++;
             m_pCurrentArgument = ACPI_METHOD_NEXT_ARGUMENT(m_pCurrentArgument);
+			NT_ASSERT((PBYTE)m_pCurrentArgument > (PBYTE)(&m_pParentArgument->Data[0]));
             if (IsCurrentArgumentValid())
             {
                 return m_pCurrentArgument;
@@ -119,6 +120,17 @@ public:
         return m_pCurrentArgument;
     }
 
+	UNALIGNED ACPI_METHOD_ARGUMENT *GetPackage()
+	{
+		if (IsCurrentArgumentValid() && (GetCurrentArgument()->Type == ACPI_METHOD_ARGUMENT_PACKAGE))
+		{
+			UNALIGNED ACPI_METHOD_ARGUMENT *currentArgument = GetCurrentArgument();
+			NextArgument();
+			return currentArgument;
+		}
+		return NULL;
+	}
+	
     NTSTATUS GetAnsiString(char** ppString, ULONG *pLength)
     {
         NT_ASSERT(ppString);
@@ -129,6 +141,7 @@ public:
         {
             *ppString = reinterpret_cast<char *>(&m_pCurrentArgument->Data[0]);
             *pLength = m_pCurrentArgument->DataLength;
+			NextArgument();
         }
         else
         {
@@ -138,71 +151,60 @@ public:
         }
 		return Status;
 	}
-	
-    NTSTATUS GetInteger64(ULONGLONG* pValue)
-    {
-        NT_ASSERT(pValue);
 
-        NTSTATUS Status = STATUS_SUCCESS;
-        if (IsCurrentArgumentValid() && (GetCurrentArgument()->Type == ACPI_METHOD_ARGUMENT_INTEGER))
-        {
-            if (GetCurrentArgument()->DataLength >= 64)
-            {
-                *pValue = (ULONGLONG)(*((reinterpret_cast<UNALIGNED ULONGLONG*>(&m_pCurrentArgument->Data[0]))));
-            }
-            else if (GetCurrentArgument()->DataLength >= 32)
-            {
-                *pValue = (ULONGLONG)(*((reinterpret_cast<UNALIGNED ULONG*>(&m_pCurrentArgument->Data[0]))));
-            }
-            else if (GetCurrentArgument()->DataLength >= 16)
-            {
-                *pValue = (ULONGLONG)(*((reinterpret_cast<UNALIGNED USHORT*>(&m_pCurrentArgument->Data[0]))));
-            }
-            else if (GetCurrentArgument()->DataLength >= 8)
-            {
-                *pValue = (ULONGLONG)(*((reinterpret_cast<BYTE*>(&m_pCurrentArgument->Data[0]))));
-            }
-            else
-            {
-                *pValue = 0;
-                Status = STATUS_ACPI_INVALID_DATA;
-            }
-        }
-        return Status;
-    }
+	NTSTATUS GetBuffer(BYTE **ppData, ULONG *pLength)
+	{
+		NT_ASSERT(ppData);
+		NT_ASSERT(pLength);
 
-    NTSTATUS GetInteger32(ULONG* pValue)
-    {
+		NTSTATUS Status = STATUS_SUCCESS;
+		if (IsCurrentArgumentValid() && (GetCurrentArgument()->Type == ACPI_METHOD_ARGUMENT_BUFFER))
+		{
+			*ppData = reinterpret_cast<BYTE *>(&m_pCurrentArgument->Data[0]);
+			*pLength = m_pCurrentArgument->DataLength;
+			NextArgument();
+		}
+		else
+		{
+			*ppData = NULL;
+			*pLength = 0;
+			Status = STATUS_ACPI_INVALID_DATA;
+		}
+		return Status;
+	}
+
+	template <typename _Ty>
+	NTSTATUS GetValue(_Ty* pValue)
+	{
 		NT_ASSERT(pValue);
 		NTSTATUS Status = STATUS_SUCCESS;
-
-        if (IsCurrentArgumentValid() && (GetCurrentArgument()->Type == ACPI_METHOD_ARGUMENT_INTEGER))
-        {
-            if (GetCurrentArgument()->DataLength >= 64)
-            {
-                *pValue = (ULONG)(*((reinterpret_cast<UNALIGNED ULONGLONG*>(&m_pCurrentArgument->Data[0]))));
-            }
-            else if (GetCurrentArgument()->DataLength >= 32)
-            {
-                *pValue = (ULONG)(*((reinterpret_cast<UNALIGNED ULONG*>(&m_pCurrentArgument->Data[0]))));
-            }
-            else if (GetCurrentArgument()->DataLength >= 16)
-            {
-                *pValue = (ULONG)(*((reinterpret_cast<UNALIGNED USHORT*>(&m_pCurrentArgument->Data[0]))));
-            }
-            else if (GetCurrentArgument()->DataLength >= 8)
-            {
-                *pValue = (ULONG)(*((reinterpret_cast<BYTE*>(&m_pCurrentArgument->Data[0]))));
-            }
-            else
-            {
-                *pValue = 0;
-                Status = STATUS_ACPI_INVALID_DATA;
-            }
-        }
+		if (IsCurrentArgumentValid() && (GetCurrentArgument()->Type == ACPI_METHOD_ARGUMENT_INTEGER))
+		{
+			if (GetCurrentArgument()->DataLength >= 8)
+			{
+				*pValue = (_Ty)(*((reinterpret_cast<UNALIGNED ULONGLONG*>(&m_pCurrentArgument->Data[0]))));
+			}
+			else if (GetCurrentArgument()->DataLength >= 4)
+			{
+				*pValue = (_Ty)(*((reinterpret_cast<UNALIGNED ULONG*>(&m_pCurrentArgument->Data[0]))));
+			}
+			else if (GetCurrentArgument()->DataLength >= 2)
+			{
+				*pValue = (_Ty)(*((reinterpret_cast<UNALIGNED USHORT*>(&m_pCurrentArgument->Data[0]))));
+			}
+			else if (GetCurrentArgument()->DataLength >= 1)
+			{
+				*pValue = (_Ty)(*((reinterpret_cast<BYTE*>(&m_pCurrentArgument->Data[0]))));
+			}
+			else
+			{
+				Status = STATUS_ACPI_INVALID_DATA;
+			}
+			NextArgument();
+		}
 		return Status;
-    }
-
+	}
+ 
 private:
 
     RosKmAcpiReader* m_pReader;

@@ -500,6 +500,11 @@ RosKmAdapter::Start(
 		}
     }
 
+	//
+	// Initialize power component data.
+	//
+	InitializePowerComponentInfo();
+
     //
     // Initialize apperture state
     //
