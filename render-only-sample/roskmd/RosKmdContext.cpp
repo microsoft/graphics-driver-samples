@@ -1,7 +1,10 @@
 #include "RosKmdAdapter.h"
+#include "RosKmdDevice.h"
 #include "RosKmdContext.h"
 #include "RosKmdAllocation.h"
 #include "RosGpuCommand.h"
+#include "RosKmdGlobal.h"
+#include "RosKmdUtil.h"
 
 NTSTATUS
 __stdcall
@@ -12,7 +15,7 @@ RosKmContext::DdiRender(
     DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "RosKmdRender hAdapter=%lx\n", hContext);
 
     RosKmContext  *pRosKmContext = (RosKmContext *)hContext;
-    pRosKmContext;
+    RosKmAdapter  *pRosKmAdapter = pRosKmContext->m_pDevice->m_pRosKmAdapter;
 
     pRender->MultipassOffset;
     pRender->DmaBufferSegmentId;
@@ -23,9 +26,15 @@ RosKmContext::DdiRender(
     // Copy command buffer
     NT_ASSERT(pRender->DmaSize >= pRender->CommandLength);
 
+#ifdef SSR_END_DMA
+    __try {
+        memcpy(pRender->pDmaBuffer, pRender->pCommand, ROSD_COMMAND_BUFFER_SIZE);
+    }
+#else
     __try {
         memcpy(pRender->pDmaBuffer, pRender->pCommand, pRender->CommandLength);
     }
+#endif
     __except (EXCEPTION_EXECUTE_HANDLER)
     {
         return STATUS_INVALID_PARAMETER;
@@ -57,44 +66,47 @@ RosKmContext::DdiRender(
     // Must update pPatchLocationListOut to reflect what space was used
     pRender->pPatchLocationListOut += pRender->PatchLocationListInSize;
 
-    // Perform pre-patch
-    PBYTE   pDmaBuf = (BYTE *)pCmdBufHeader;
-    for (UINT i = 0; i < pRender->PatchLocationListInSize; i++)
-    {
-        auto patch = &pPatchLocationList[i];
-        NT_ASSERT(patch->AllocationIndex < pRender->AllocationListSize);
-        auto allocation = &pRender->pAllocationList[patch->AllocationIndex];
-
-        if (allocation->SegmentId != 0)
-        {
-            RosKmdDeviceAllocation * pRosKmdDeviceAllocation = (RosKmdDeviceAllocation *)allocation->hDeviceSpecificAllocation;
-
-            DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "Pre-patch RosKmdDeviceAllocation %lx at %lx\n", pRosKmdDeviceAllocation, allocation->PhysicalAddress);
-            DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "Pre-patch buffer offset %lx allocation offset %lx\n", patch->PatchOffset, patch->AllocationOffset);
-
-            // Patch in dma buffer
-            NT_ASSERT(allocation->SegmentId == ROSD_SEGMENT_VIDEO_MEMORY);
-            if (pCmdBufHeader->m_commandBufferHeader.m_swCommandBuffer)
-            {
-                *((PHYSICAL_ADDRESS *)(pDmaBuf + patch->PatchOffset)) = allocation->PhysicalAddress;
-            }
-            else
-            {
-                // Patch HW command buffer
-            }
-        }
-
-    }
-
     // Record DMA buffer information
     ROSDMABUFINFO * pDmaBufInfo = (ROSDMABUFINFO *)pRender->pDmaBufferPrivateData;
 
     pDmaBufInfo->m_DmaBufState.m_Value = 0;
-    pDmaBufInfo->m_DmaBufState.m_Render = 1;
+    pDmaBufInfo->m_DmaBufState.m_bRender = 1;
     pDmaBufInfo->m_DmaBufState.m_bSwCommandBuffer = pCmdBufHeader->m_commandBufferHeader.m_swCommandBuffer;
 
     pDmaBufInfo->m_pDmaBuffer = (PBYTE)pRender->pDmaBuffer;
+    pDmaBufInfo->m_DmaBufferPhysicalAddress.QuadPart = 0;
     pDmaBufInfo->m_DmaBufferSize = pRender->DmaSize;
+
+    pDmaBufInfo->m_pRenderTarget = NULL;
+
+    // Validate DMA buffer
+    bool isValidDmaBuffer;
+
+    isValidDmaBuffer = pRosKmAdapter->ValidateDmaBuffer(
+        pDmaBufInfo,
+        pRender->pAllocationList,
+        pRender->AllocationListSize,
+        pPatchLocationList,
+        pRender->PatchLocationListInSize);
+
+    if (! isValidDmaBuffer)
+    {
+        return STATUS_INVALID_PARAMETER;
+    }
+
+    if (pCmdBufHeader->m_commandBufferHeader.m_hasVC4ClearColors)
+    {
+        pDmaBufInfo->m_DmaBufState.m_HasVC4ClearColors = 1;
+        pDmaBufInfo->m_VC4ClearColors = pCmdBufHeader->m_commandBufferHeader.m_vc4ClearColors;
+    }
+
+    // Perform pre-patch
+    pRosKmAdapter->PatchDmaBuffer(
+        pDmaBufInfo,
+        pRender->pAllocationList,
+        pRender->AllocationListSize,
+        pPatchLocationList,
+        pRender->PatchLocationListInSize);
 
     // Must update pDmaBuffer to reflect what space we used
     pRender->pDmaBuffer = (char *)pRender->pDmaBuffer + pRender->CommandLength;
@@ -133,7 +145,7 @@ RosKmContext::DdiCreateContext(
 
     pContextInfo->DmaBufferSegmentSet = 1 << (ROSD_SEGMENT_APERTURE - 1);
     pContextInfo->DmaBufferSize = ROSD_COMMAND_BUFFER_SIZE;
-    pContextInfo->DmaBufferPrivateDataSize = sizeof(ROSUMDDMAPRIVATEDATA2);
+    pContextInfo->DmaBufferPrivateDataSize = sizeof(ROSDMABUFINFO);
 
     if (pCreateContext->Flags.GdiContext)
     {

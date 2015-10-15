@@ -2,6 +2,8 @@
 
 #pragma warning(disable:4201)
 
+#include "Vc4Hw.h"
+
 enum GpuCommandId
 {
     Nop,
@@ -16,10 +18,21 @@ struct GpuCommandBufferHeader
         struct
         {
             UINT    m_swCommandBuffer   : 1;
+#if VC4
+
+            UINT    m_hasVC4ClearColors : 1;
+
+#endif
         };
 
         UINT        m_value;
     };
+
+#if VC4
+
+    VC4ClearColors  m_vc4ClearColors;
+
+#endif
 };
 
 struct GpuResourceCopy

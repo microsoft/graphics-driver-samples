@@ -11,7 +11,7 @@ BOOL WINAPI DllMain(
     UINT dwReason,
     LPVOID lpvReserved )
 {
-	lpvReserved; // unused
+    lpvReserved; // unused
 
     RosUmdLogging::Entry(__FUNCTION__);
 

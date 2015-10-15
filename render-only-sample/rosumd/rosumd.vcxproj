@@ -48,11 +48,15 @@
     <ClCompile Include="RosUmdDevice.cpp" />
     <ClCompile Include="RosUmdDeviceDdi.cpp" />
     <ClCompile Include="RosUmdResource.cpp" />
+    <ClCompile Include="RosUmdShader.cpp" />
+    <ClCompile Include="RosUmdUtil.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\roscommon\RosAdapter.h" />
     <ClInclude Include="..\roscommon\RosAllocation.h" />
     <ClInclude Include="..\roscommon\RosGpuCommand.h" />
+    <ClInclude Include="..\roscommon\Vc4Ddi.h" />
+    <ClInclude Include="..\roscommon\Vc4Hw.h" />
     <ClInclude Include="d3dumddi_.h" />
     <ClInclude Include="pixel.hpp" />
     <ClInclude Include="RosContext.h" />
@@ -217,6 +221,7 @@
       <ExceptionHandling>Sync</ExceptionHandling>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <DisableSpecificWarnings>4201;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <PreprocessorDefinitions>VC4=1;_X86_=1;i386=1;STD_CALL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <ModuleDefinitionFile>RosUmd.def</ModuleDefinitionFile>
@@ -234,6 +239,7 @@
       <WppScanConfigurationData Condition="'%(ClCompile.ScanConfigurationData)' == ''">trace.h</WppScanConfigurationData>
       <ExceptionHandling>Sync</ExceptionHandling>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <PreprocessorDefinitions>VC4=1;_X86_=1;i386=1;STD_CALL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <ModuleDefinitionFile>RosUmd.def</ModuleDefinitionFile>
@@ -247,6 +253,7 @@
       <ExceptionHandling>Sync</ExceptionHandling>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <DisableSpecificWarnings>4201;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <PreprocessorDefinitions>VC4=1;_WIN64;_AMD64_;AMD64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <ModuleDefinitionFile>RosUmd.def</ModuleDefinitionFile>
@@ -264,6 +271,7 @@
       <WppScanConfigurationData Condition="'%(ClCompile.ScanConfigurationData)' == ''">trace.h</WppScanConfigurationData>
       <ExceptionHandling>Sync</ExceptionHandling>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <PreprocessorDefinitions>VC4=1;_WIN64;_AMD64_;AMD64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <ModuleDefinitionFile>RosUmd.def</ModuleDefinitionFile>
@@ -277,6 +285,7 @@
       <ExceptionHandling>Sync</ExceptionHandling>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <DisableSpecificWarnings>4201;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <PreprocessorDefinitions>VC4=1;_ARM_;ARM;_USE_DECLSPECS_FOR_SAL=1;STD_CALL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <ModuleDefinitionFile>RosUmd.def</ModuleDefinitionFile>
@@ -294,6 +303,7 @@
       <WppScanConfigurationData Condition="'%(ClCompile.ScanConfigurationData)' == ''">trace.h</WppScanConfigurationData>
       <ExceptionHandling>Sync</ExceptionHandling>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <PreprocessorDefinitions>VC4=1;_ARM_;ARM;_USE_DECLSPECS_FOR_SAL=1;STD_CALL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <ModuleDefinitionFile>RosUmd.def</ModuleDefinitionFile>
@@ -307,6 +317,7 @@
       <ExceptionHandling>Sync</ExceptionHandling>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <DisableSpecificWarnings>4201;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <PreprocessorDefinitions>VC4=1;_ARM64_;ARM64;_USE_DECLSPECS_FOR_SAL=1;STD_CALL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <ModuleDefinitionFile>RosUmd.def</ModuleDefinitionFile>
@@ -324,6 +335,7 @@
       <WppScanConfigurationData Condition="'%(ClCompile.ScanConfigurationData)' == ''">trace.h</WppScanConfigurationData>
       <ExceptionHandling>Sync</ExceptionHandling>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <PreprocessorDefinitions>VC4=1;_ARM64_;ARM64;_USE_DECLSPECS_FOR_SAL=1;STD_CALL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <ModuleDefinitionFile>RosUmd.def</ModuleDefinitionFile>

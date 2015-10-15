@@ -45,6 +45,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\roscommon\RosAllocation.h" />
+    <ClInclude Include="..\roscommon\RosGpuCommand.h" />
+    <ClInclude Include="..\roscommon\Vc4Ddi.h" />
+    <ClInclude Include="..\roscommon\Vc4Hw.h" />
     <ClInclude Include="RosKmd.h" />
     <ClInclude Include="RosKmdAdapter.h" />
     <ClInclude Include="RosKmdAllocation.h" />
@@ -202,6 +205,9 @@
       <WppScanConfigurationData Condition="'%(ClCompile.ScanConfigurationData)' == ''">trace.h</WppScanConfigurationData>
       <WppKernelMode>true</WppKernelMode>
       <WarningLevel>Level4</WarningLevel>
+      <AdditionalUsingDirectories>
+      </AdditionalUsingDirectories>
+      <PreprocessorDefinitions>VC4=1;_X86_=1;i386=1;STD_CALL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>%(AdditionalDependencies);usbdex.lib;$(DDK_LIB_PATH)displib.lib</AdditionalDependencies>
@@ -214,6 +220,9 @@
       <WppScanConfigurationData Condition="'%(ClCompile.ScanConfigurationData)' == ''">trace.h</WppScanConfigurationData>
       <WppKernelMode>true</WppKernelMode>
       <WarningLevel>Level4</WarningLevel>
+      <AdditionalUsingDirectories>
+      </AdditionalUsingDirectories>
+      <PreprocessorDefinitions>VC4=1;_X86_=1;i386=1;STD_CALL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>%(AdditionalDependencies);usbdex.lib;$(DDK_LIB_PATH)displib.lib</AdditionalDependencies>
@@ -226,6 +235,9 @@
       <WppScanConfigurationData Condition="'%(ClCompile.ScanConfigurationData)' == ''">trace.h</WppScanConfigurationData>
       <WppKernelMode>true</WppKernelMode>
       <WarningLevel>Level4</WarningLevel>
+      <AdditionalUsingDirectories>
+      </AdditionalUsingDirectories>
+      <PreprocessorDefinitions>VC4=1;_WIN64;_AMD64_;AMD64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>%(AdditionalDependencies);usbdex.lib;$(DDK_LIB_PATH)displib.lib</AdditionalDependencies>
@@ -239,6 +251,9 @@
       <WppScanConfigurationData Condition="'%(ClCompile.ScanConfigurationData)' == ''">trace.h</WppScanConfigurationData>
       <WppKernelMode>true</WppKernelMode>
       <WarningLevel>Level4</WarningLevel>
+      <AdditionalUsingDirectories>
+      </AdditionalUsingDirectories>
+      <PreprocessorDefinitions>VC4=1;_WIN64;_AMD64_;AMD64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>%(AdditionalDependencies);usbdex.lib;$(DDK_LIB_PATH)displib.lib</AdditionalDependencies>
@@ -252,6 +267,9 @@
       <WppScanConfigurationData Condition="'%(ClCompile.ScanConfigurationData)' == ''">trace.h</WppScanConfigurationData>
       <WppKernelMode>true</WppKernelMode>
       <WarningLevel>Level4</WarningLevel>
+      <AdditionalUsingDirectories>
+      </AdditionalUsingDirectories>
+      <PreprocessorDefinitions>VC4=1;_ARM_;ARM;_USE_DECLSPECS_FOR_SAL=1;STD_CALL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>%(AdditionalDependencies);usbdex.lib;$(DDK_LIB_PATH)displib.lib</AdditionalDependencies>
@@ -264,6 +282,9 @@
       <WppScanConfigurationData Condition="'%(ClCompile.ScanConfigurationData)' == ''">trace.h</WppScanConfigurationData>
       <WppKernelMode>true</WppKernelMode>
       <WarningLevel>Level4</WarningLevel>
+      <AdditionalUsingDirectories>
+      </AdditionalUsingDirectories>
+      <PreprocessorDefinitions>VC4=1;_ARM_;ARM;_USE_DECLSPECS_FOR_SAL=1;STD_CALL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>%(AdditionalDependencies);usbdex.lib;$(DDK_LIB_PATH)displib.lib</AdditionalDependencies>
@@ -276,6 +297,9 @@
       <WppScanConfigurationData Condition="'%(ClCompile.ScanConfigurationData)' == ''">trace.h</WppScanConfigurationData>
       <WppKernelMode>true</WppKernelMode>
       <WarningLevel>Level4</WarningLevel>
+      <AdditionalUsingDirectories>
+      </AdditionalUsingDirectories>
+      <PreprocessorDefinitions>VC4=1;_ARM64_;ARM64;_USE_DECLSPECS_FOR_SAL=1;STD_CALL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>%(AdditionalDependencies);usbdex.lib;$(DDK_LIB_PATH)displib.lib</AdditionalDependencies>
@@ -288,6 +312,9 @@
       <WppScanConfigurationData Condition="'%(ClCompile.ScanConfigurationData)' == ''">trace.h</WppScanConfigurationData>
       <WppKernelMode>true</WppKernelMode>
       <WarningLevel>Level4</WarningLevel>
+      <AdditionalUsingDirectories>
+      </AdditionalUsingDirectories>
+      <PreprocessorDefinitions>VC4=1;_ARM64_;ARM64;_USE_DECLSPECS_FOR_SAL=1;STD_CALL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <AdditionalDependencies>%(AdditionalDependencies);usbdex.lib;$(DDK_LIB_PATH)displib.lib</AdditionalDependencies>

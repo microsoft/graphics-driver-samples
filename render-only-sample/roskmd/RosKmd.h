@@ -24,6 +24,8 @@ extern "C" {
 
 #define ROSD_COMMAND_BUFFER_SIZE    PAGE_SIZE
 
+#define ROSD_PAGING_BUFFER_SIZE     PAGE_SIZE
+
 typedef struct _ROSPRIVATEINFO2 : public _ROSADAPTERINFO
 {
     UINT             m_Dummy;
@@ -49,3 +51,10 @@ typedef struct _ROSDUMDMAPRIVATEDATA2 : public ROSUMDDMAPRIVATEDATA
 const int C_ROSD_ALLOCATION_LIST_SIZE = 16;
 
 const int C_ROSD_GPU_ENGINE_COUNT = 1;
+
+#if DBG
+
+#define BINNER_DBG  1
+
+#endif
+

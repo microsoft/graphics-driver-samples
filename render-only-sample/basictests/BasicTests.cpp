@@ -12,10 +12,44 @@
 
 //using namespace DirectX;
 
+#if VC4
+
+#pragma pack(push, 1)
+
+struct SimpleVertex
+{
+    USHORT  x;
+    USHORT  y;
+    FLOAT   z;
+    FLOAT   w;
+    FLOAT   r;
+    FLOAT   g;
+    FLOAT   b;
+};
+
+#pragma pack(pop)
+
+#else
+
 struct SimpleVertex
 {
     DirectX::XMFLOAT3 Pos;
 };
+
+#endif
+
+#if 0
+
+static const int kWidth = 1920;
+static const int kHeight = 1080;
+
+#else
+
+static const int kWidth = 256;
+static const int kHeight = 256;
+
+#endif
+
 
 template<class T> class D3DPointer
 {
@@ -182,7 +216,7 @@ public:
     {
         FILE * fp = NULL;
 
-        errno_t result = fopen_s(&fp, inFilePath, "w");
+        errno_t result = fopen_s(&fp, inFilePath, "wb");
 
         if (result != 0) throw std::exception("Failed to open file");
 
@@ -377,7 +411,16 @@ public:
     {
         ID3DBlob* pVSBlob = nullptr;
 
+#if VC4
+
+        HRESULT hr = CompileShaderFromFile(L"VC4Test.fx", "VS", "vs_4_0", &pVSBlob);
+
+#else
+
         HRESULT hr = CompileShaderFromFile(L"Tutorial02.fx", "VS", "vs_4_0", &pVSBlob);
+
+#endif
+
         if (FAILED(hr)) throw std::exception("Failed to compile shader from file");
 
         D3DPointer<ID3DBlob> vsBlob;
@@ -395,6 +438,11 @@ public:
         D3D11_INPUT_ELEMENT_DESC layout[] =
         {
             { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+#if VC4
+
+            { "COLOR",    0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+
+#endif
         };
         UINT numElements = ARRAYSIZE(layout);
 
@@ -432,7 +480,15 @@ public:
         // Compile the pixel shader
         ID3DBlob* pPSBlob = nullptr;
 
+#if VC4
+
+        HRESULT hr = CompileShaderFromFile(L"VC4Test.fx", "PS", "ps_4_0", &pPSBlob);
+
+#else
+
         HRESULT hr = CompileShaderFromFile(L"Tutorial02.fx", "PS", "ps_4_0", &pPSBlob);
+
+#endif
         if (FAILED(hr)) throw std::exception("Unable to compile pixel shader");
 
         D3DPointer<ID3DBlob> psBlob;
@@ -466,12 +522,25 @@ public:
 
     D3DVertexBuffer(std::shared_ptr<D3DDevice> & inDevice)
     {
+#if VC4
+
+        SimpleVertex vertices[] =
+        {
+            {   (kWidth/2) << 4,   (kHeight/4) << 4, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f },
+            {   (kWidth/4) << 4, (kHeight*3/4) << 4, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f },
+            { (kWidth*3/4) << 4, (kHeight*3/4) << 4, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f }
+        };
+
+#else
+
         SimpleVertex vertices[] =
         {
             DirectX::XMFLOAT3(0.0f, 0.5f, 0.5f),
             DirectX::XMFLOAT3(0.5f, -0.5f, 0.5f),
             DirectX::XMFLOAT3(-0.5f, -0.5f, 0.5f),
         };
+
+#endif
 
         D3D11_BUFFER_DESC bd;
         ZeroMemory(&bd, sizeof(bd));
@@ -504,6 +573,50 @@ private:
 
 };
 
+class D3DIndexBuffer
+{
+public:
+
+    D3DIndexBuffer(std::shared_ptr<D3DDevice> & inDevice)
+    {
+        USHORT indices[] =
+        {
+            0,
+            1,
+            2,
+        };
+
+        D3D11_BUFFER_DESC bd;
+        ZeroMemory(&bd, sizeof(bd));
+        bd.Usage = D3D11_USAGE_DEFAULT;
+        bd.ByteWidth = sizeof(indices);
+        bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
+        bd.CPUAccessFlags = 0;
+
+        D3D11_SUBRESOURCE_DATA InitData;
+        ZeroMemory(&InitData, sizeof(InitData));
+        InitData.pSysMem = indices;
+
+        ID3D11Buffer * pIndexBuffer;
+        HRESULT hr = inDevice->GetDevice()->CreateBuffer(&bd, &InitData, &pIndexBuffer);
+        if (FAILED(hr)) throw std::exception("Unable to create Index buffer");
+
+        m_pIndexBuffer = pIndexBuffer;
+    }
+
+    ~D3DIndexBuffer()
+    {
+        // do nothing
+    }
+
+    ID3D11Buffer * GetIndexBuffer() { return m_pIndexBuffer; }
+
+private:
+
+    D3DPointer<ID3D11Buffer> m_pIndexBuffer;
+
+};
+
 class D3DEngine
 {
 public:
@@ -511,6 +624,7 @@ public:
     D3DEngine()
     {
         m_pDevice = std::shared_ptr<D3DDevice>(new D3DDevice(L"Render Only Sample Driver"));
+        // m_pDevice = std::shared_ptr<D3DDevice>(new D3DDevice(L"Microsoft Basic Render Driver"));
 
         // Create and set render target
 
@@ -538,11 +652,17 @@ public:
 
         m_pVertexBuffer = std::unique_ptr<D3DVertexBuffer>(new D3DVertexBuffer(m_pDevice));
 
+        m_pIndexBuffer = std::unique_ptr<D3DIndexBuffer>(new D3DIndexBuffer(m_pDevice));
+
         // Set vertex buffer
         UINT stride = sizeof(SimpleVertex);
         UINT offset = 0;
         ID3D11Buffer * pVertexBuffer = m_pVertexBuffer->GetVertexBuffer();
         m_pDevice->GetContext()->IASetVertexBuffers(0, 1, &pVertexBuffer, &stride, &offset);
+
+        // Set index buffer
+        ID3D11Buffer * pIndexBuffer = m_pIndexBuffer->GetIndexBuffer();
+        m_pDevice->GetContext()->IASetIndexBuffer(pIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
 
         // Set primitive topology
         m_pDevice->GetContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -556,7 +676,8 @@ public:
 
         m_pDevice->GetContext()->VSSetShader(m_pVertexShader->GetVertexShader(), nullptr, 0);
         m_pDevice->GetContext()->PSSetShader(m_pPixelShader->GetPixelShader(), nullptr, 0);
-        m_pDevice->GetContext()->Draw(3, 0);
+
+        m_pDevice->GetContext()->DrawIndexed(3, 0, 0);
 
         m_pDevice->GetContext()->CopyResource(m_pTexture->GetTexture(), m_pRenderTarget->GetRenderTarget());
 
@@ -572,14 +693,12 @@ public:
 
 private:
 
-    static const int kWidth = 256;
-    static const int kHeight = 256;
-
     std::shared_ptr<D3DDevice>         m_pDevice;
     std::unique_ptr<D3DRenderTarget>   m_pRenderTarget;
     std::unique_ptr<D3DVertexShader>   m_pVertexShader;
     std::unique_ptr<D3DPixelShader>    m_pPixelShader;
     std::unique_ptr<D3DVertexBuffer>   m_pVertexBuffer;
+    std::unique_ptr<D3DIndexBuffer>    m_pIndexBuffer;
     std::unique_ptr<D3DTexture>        m_pTexture;
 };
 

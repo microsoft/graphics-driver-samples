@@ -4,6 +4,8 @@
 
 class RosUmdRenderTargetView
 {
+friend class RosUmdDevice;
+
 public:
 
     RosUmdRenderTargetView(const D3D10DDIARG_CREATERENDERTARGETVIEW * pCreate, D3D10DDI_HRTRENDERTARGETVIEW & hRT) :
