@@ -21,3 +21,4 @@ extern "C" {
 D3DDDIFORMAT
 TranslateDxgiFormat(
     DXGI_FORMAT dxgiFormat);
+

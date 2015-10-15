@@ -2,6 +2,16 @@
 
 #include "RosKmd.h"
 
+#if VC4
+
+#include "Vc4Hw.h"
+#include "VC4Ddi.h"
+
+#endif
+
+#include "RosKmdAllocation.h"
+#include "RosKmdGlobal.h"
+
 typedef struct __ROSKMERRORCONDITION
 {
     union
@@ -26,7 +36,16 @@ typedef struct _ROSDMABUFSTATE
     {
         struct
         {
-            UINT    m_Render            : 1;
+            UINT    m_bRender           : 1;
+#if VC4
+
+            UINT    m_bRenderTargetRef  : 1;
+            UINT    m_bTileAllocMemRef  : 1;
+            UINT    m_bTileStateDataRef : 1;
+            UINT    m_NumDmaBufSelfRef  : 5;    // Up to 32 DMA buffer self reference
+            UINT    m_HasVC4ClearColors : 1;
+
+#endif
             UINT    m_bPresent          : 1;
             UINT    m_bPaging           : 1;
             UINT    m_bSwCommandBuffer  : 1;
@@ -44,9 +63,21 @@ typedef struct _ROSDMABUFSTATE
 
 typedef struct _ROSDMABUFINFO
 {
-    PBYTE           m_pDmaBuffer;
-    UINT            m_DmaBufferSize;
-    ROSDMABUFSTATE  m_DmaBufState;
+    PBYTE                       m_pDmaBuffer;
+    LARGE_INTEGER               m_DmaBufferPhysicalAddress;
+    UINT                        m_DmaBufferSize;
+    ROSDMABUFSTATE              m_DmaBufState;
+
+#if VC4
+
+    RosKmdAllocation           *m_pRenderTarget;
+    UINT                        m_RenderTargetPhysicalAddress;
+
+    D3DDDI_PATCHLOCATIONLIST    m_DmaBufSelfRef[VC4_MAX_DMA_BUFFER_SELF_REF];
+
+    VC4ClearColors              m_VC4ClearColors;
+
+#endif
 } ROSDMABUFINFO;
 
 typedef struct _ROSDMABUFSUBMISSION
@@ -57,6 +88,16 @@ typedef struct _ROSDMABUFSUBMISSION
     UINT            m_EndOffset;
     UINT            m_SubmissionFenceId;
 } ROSDMABUFSUBMISSION;
+
+typedef union _RosKmAdapterFlags
+{
+    struct
+    {
+        UINT    m_isVC4     : 1;
+    };
+
+    UINT        m_value;
+} RosKmAdapterFlags;
 
 class RosKmAdapter
 {
@@ -299,15 +340,15 @@ public:
             IN UINT              ComponentIndex,
             IN UINT              FState);
 
-	static NTSTATUS
-		DdiPowerRuntimeControlRequest(
-			IN_CONST_PVOID       MiniportDeviceContext,
-			IN LPCGUID           PowerControlCode,
-			IN OPTIONAL PVOID    InBuffer,
-			IN SIZE_T            InBufferSize,
-			OUT OPTIONAL PVOID   OutBuffer,
-			IN SIZE_T            OutBufferSize,
-			OUT OPTIONAL PSIZE_T BytesReturned);
+    static NTSTATUS
+        DdiPowerRuntimeControlRequest(
+            IN_CONST_PVOID       MiniportDeviceContext,
+            IN LPCGUID           PowerControlCode,
+            IN OPTIONAL PVOID    InBuffer,
+            IN SIZE_T            InBufferSize,
+            OUT OPTIONAL PVOID   OutBuffer,
+            IN SIZE_T            OutBufferSize,
+            OUT OPTIONAL PSIZE_T BytesReturned);
 
     static NTSTATUS
         DdiNotifyAcpiEvent(
@@ -347,6 +388,22 @@ public:
 
     void QueueDmaBuffer(IN_CONST_PDXGKARG_SUBMITCOMMAND pSubmitCommand);
 
+    bool
+    ValidateDmaBuffer(
+        ROSDMABUFINFO*                  pDmaBufInfo,
+        CONST DXGK_ALLOCATIONLIST*      pAllocationList,
+        UINT                            allocationListSize,
+        CONST D3DDDI_PATCHLOCATIONLIST* pPatchLocationList,
+        UINT                            patchAllocationList);
+
+    void
+    PatchDmaBuffer(
+        ROSDMABUFINFO*                  pDmaBufInfo,
+        CONST DXGK_ALLOCATIONLIST*      pAllocationList,
+        UINT                            allocationListSize,
+        CONST D3DDDI_PATCHLOCATIONLIST* pPatchLocationList,
+        UINT                            patchAllocationList);
+
 private:
 
     NTSTATUS Start(
@@ -373,15 +430,58 @@ private:
     void ProcessRenderBuffer(ROSDMABUFSUBMISSION * pDmaBufSubmission);
     static void HwDmaBufCompletionDpcRoutine(KDPC *, PVOID, PVOID, PVOID);
 
+    void SubmitControlList(bool bBinningControlist, UINT startAddress, UINT endAddress);
+    UINT GetAperturePhysicalAddress(UINT apertureAddress)
+    {
+        UINT pageIndex = (apertureAddress - ROSD_SEGMENT_APERTURE_BASE_ADDRESS) / kPageSize;
+
+        return ((UINT)m_aperturePageTable[pageIndex])*kPageSize + (apertureAddress & (kPageSize - 1));
+    };
+
+    UINT GenerateRenderingControlList(ROSDMABUFINFO *pDmaBufInf);
+
+    void MoveToNextBinnerRenderMemChunk(UINT controlListLength)
+    {
+        controlListLength = (controlListLength + (kPageSize - 1)) & (~(kPageSize - 1));
+
+#if BINNER_DBG
+
+        m_pRenderingControlList               += controlListLength;
+        m_renderingControlListPhysicalAddress += controlListLength;
+
+        if ((m_renderingControlListPhysicalAddress + 64*kPageSize) > (m_controlListPoolPhysicalAddress + VC4_RENDERING_CTRL_LIST_POOL_SIZE))
+        {
+            m_pRenderingControlList               = m_pControlListPool;
+            m_renderingControlListPhysicalAddress = m_controlListPoolPhysicalAddress;
+        }
+
+        m_tileAllocationMemoryPhysicalAddress += 64*kPageSize;
+
+        if ((m_tileAllocationMemoryPhysicalAddress + 64*kPageSize) >= m_tileStatePoolPhysicalAddress)
+        {
+            m_tileAllocationMemoryPhysicalAddress = m_tileAllocPoolPhysicalAddress;
+        }
+
+        m_tileStateDataArrayPhysicalAddress += 64 * kPageSize;
+
+        if ((m_tileStateDataArrayPhysicalAddress + 64*kPageSize) >= (RosKmdGlobal::s_videoMemoryPhysicalAddress.LowPart + RosKmdGlobal::s_videoMemorySize))
+        {
+            m_tileStateDataArrayPhysicalAddress = m_tileStatePoolPhysicalAddress;
+        }
+
+#endif
+    }
+
 private:
 
-	static const size_t kPageSize = 4096;
+    static const size_t kPageSize = 4096;
+    static const size_t kPageShift = 12;
 
     static const size_t kApertureSegmentId = 1;
     static const size_t kApertureSegmentPageCount = 1024;
     static const size_t kApertureSegmentSize = kApertureSegmentPageCount * kPageSize;
 
-    void * m_aperturePages[kApertureSegmentPageCount];
+    PFN_NUMBER  m_aperturePageTable[kApertureSegmentPageCount];
 
     static const size_t kVideoMemorySegmentId = 2;
 
@@ -390,6 +490,9 @@ private:
     static const UINT32 kMagic = 'ADPT';
 
     UINT32                      m_magic;
+
+    RosKmAdapterFlags           m_flags;
+
     DEVICE_OBJECT              *m_pPhysicalDevice;
     DXGKRNL_INTERFACE           m_DxgkInterface;
     DXGK_START_INFO             m_DxgkStartInfo;
@@ -422,6 +525,23 @@ private:
     BYTE                        m_deviceId[MAX_DEVICE_ID_LENGTH];
     ULONG                       m_deviceIdLength;
 
+#if VC4
+
+    VC4_REGISTER_FILE          *m_pVC4RegFile;
+    UINT                        m_localVidMemSegmentSize;
+
+    BYTE                       *m_pRenderingControlList;
+    UINT                        m_renderingControlListPhysicalAddress;
+    UINT                        m_tileAllocationMemoryPhysicalAddress;
+    UINT                        m_tileStateDataArrayPhysicalAddress;
+
+    BYTE                       *m_pControlListPool;
+    UINT                        m_controlListPoolPhysicalAddress;
+    UINT                        m_tileAllocPoolPhysicalAddress;
+    UINT                        m_tileStatePoolPhysicalAddress;
+
+#endif
+
 public:
 
     DEVICE_POWER_STATE          m_AdapterPowerDState;
@@ -436,11 +556,11 @@ public:
 public:
 
     NTSTATUS
-        ResetFromTdr();
+    ResetFromTdr();
 
     NTSTATUS
-        QueryEngineStatus(
-            DXGKARG_QUERYENGINESTATUS  *pQueryEngineStatus);
+    QueryEngineStatus(
+        DXGKARG_QUERYENGINESTATUS  *pQueryEngineStatus);
 
 	NTSTATUS
 		InitializePowerComponentInfo();
@@ -454,8 +574,15 @@ public:
             OUT DXGK_POWER_RUNTIME_COMPONENT* pPowerComponent);
 
     NTSTATUS
-        SetPowerComponentFState(
-            IN UINT ComponentIndex,
-            IN UINT FState);
+    SetPowerComponentFState(
+        IN UINT ComponentIndex,
+        IN UINT FState);
 
 };
+
+template<typename TypeCur, typename TypeNext>
+void MoveToNextCommand(TypeCur pCurCommand, TypeNext &pNextCommand)
+{
+    pNextCommand = (TypeNext)(pCurCommand + 1);
+}
+

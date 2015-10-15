@@ -15,6 +15,8 @@
 #include "RosUmdUtil.h"
 #include "RosUmdDebug.h"
 
+#include "RosUmdResource.h"
+
 #ifndef PAGE_SIZE
 #define PAGE_SIZE 4096
 #endif
@@ -27,6 +29,22 @@ class RosUmdElementLayout;
 class RosUmdDepthStencilState;
 class RosUmdRasterizerState;
 class RosUmdSampler;
+
+typedef union _RosUmdDeviceFlags
+{
+    struct
+    {
+#if VC4
+
+        UINT    m_binningStarted : 1;       // Command buffer has binng start command
+
+#endif
+
+        UINT    m_hasDrawCall       : 1;    // Command buffer has draw call
+    };
+
+    UINT        m_value;
+} RosUmdDeviceFlags;
 
 //==================================================================================================================================
 //
@@ -50,6 +68,14 @@ public:
     void CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResource, D3D10DDI_HRESOURCE hResource, D3D10DDI_HRTRESOURCE hRTResource);
     void DestroyResource(RosUmdResource * pResource);
     void ResourceCopy(RosUmdResource *pDestinationResource, RosUmdResource * pSourceResource);
+
+    void CreatePixelShader(const UINT* pCode, D3D10DDI_HSHADER hShader, D3D10DDI_HRTSHADER hRTShader, const D3D11_1DDIARG_STAGE_IO_SIGNATURES* pSignatures);
+    void CreateVertexShader(const UINT* pCode, D3D10DDI_HSHADER hShader, D3D10DDI_HRTSHADER hRTShader, const D3D11_1DDIARG_STAGE_IO_SIGNATURES* pSignatures);
+    void CreateGeometryShader(const UINT* pCode, D3D10DDI_HSHADER hShader, D3D10DDI_HRTSHADER hRTShader, const D3D11_1DDIARG_STAGE_IO_SIGNATURES* pSignatures);
+    void CreateComputeShader(const UINT* pCode, D3D10DDI_HSHADER hShader, D3D10DDI_HRTSHADER hRTShader);
+    void CreateTessellationShader(const UINT * pCode, D3D10DDI_HSHADER hShader, D3D10DDI_HRTSHADER hRTShader, const D3D11_1DDIARG_TESSELLATION_IO_SIGNATURES* pSignatures);
+
+    void DestroyShader(D3D10DDI_HSHADER hShader);
 
     void StagingResourceMap(RosUmdResource * pResource, UINT subResource, D3D10_DDI_MAP mapType, UINT mapFlags, D3D10DDI_MAPPED_SUBRESOURCE* pMappedSubRes);
     void StagingResourceUnmap(RosUmdResource * pResource, UINT subResource);
@@ -114,6 +140,9 @@ public:
     };
 
     RosUmdCommandBuffer             m_commandBuffer;
+    RosUmdDeviceFlags               m_flags;
+
+    RosUmdResource                  m_dummyBuffer;
 
 public:
 
@@ -121,7 +150,8 @@ public:
     // Draw Support
     //
 
-    void Draw(UINT VertexCount, UINT StartVertexLocation);
+    void Draw(UINT vertexCount, UINT startVertexLocation);
+    void DrawIndexed(UINT indexCount, UINT startIndexLocation, INT baseVertexLocation);
     void ClearRenderTargetView(RosUmdRenderTargetView * pRenderTargetView, FLOAT clearColor[4]);
 
 public:
@@ -135,6 +165,7 @@ public:
     static const UINT kMaxSamplers = D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT;
 
     void SetVertexBuffers(UINT startBuffer, UINT numBuffers, const D3D10DDI_HRESOURCE* phBuffers, const UINT* pStrides,  const UINT* pOffsets);
+    void SetIndexBuffer(const D3D10DDI_HRESOURCE indexBuffer, DXGI_FORMAT indexFormat, UINT offset);
     void SetTopology(D3D10_DDI_PRIMITIVE_TOPOLOGY topology);
     void SetViewports(UINT numViewports, UINT clearViewports, const D3D10_DDI_VIEWPORT* pViewports);
     void SetRenderTargets(const D3D10DDI_HRENDERTARGETVIEW* phRenderTargetView, UINT NumRTVs, UINT RTVNumbertoUnbind,
@@ -162,6 +193,10 @@ public:
     UINT                            m_vertexStrides[kMaxVertexBuffers];
     UINT                            m_vertexOffsets[kMaxVertexBuffers];
     UINT                            m_numVertexBuffers;
+
+    RosUmdResource *                m_indexBuffer;
+    DXGI_FORMAT                     m_indexFormat;
+    UINT                            m_indexOffset;
 
     D3D10_DDI_PRIMITIVE_TOPOLOGY    m_topology;
 
@@ -200,7 +235,20 @@ public:
 
     RosUmdRasterizerState *         m_rasterizerState;
 
+public:
 
+    void CreateInternalBuffer(RosUmdResource * pRes, UINT size);
+
+private:
+
+    //
+    // Internal support routines
+    //
+
+    void RefreshPipelineState(UINT vertexOffset);
+
+public:
+    void WriteEpilog();
 };
 
 inline RosUmdDevice* RosUmdDevice::CastFrom(D3D10DDI_HDEVICE hDevice)

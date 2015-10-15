@@ -2,6 +2,7 @@
 #include "RosKmdDevice.h"
 #include "RosKmdAdapter.h"
 #include "RosKmdContext.h"
+#include "ntverp.h"
 
 bool RosKmdGlobal::s_bDoNotInstall = false;
 size_t RosKmdGlobal::s_videoMemorySize = 0;
@@ -68,13 +69,35 @@ NTSTATUS RosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
     // Allocate physically contiguous memory to represent cpu visible video memory
     //
 
+    PHYSICAL_ADDRESS lowestAcceptableAddress;
+    lowestAcceptableAddress.QuadPart = 0;
+
     PHYSICAL_ADDRESS highestAcceptableAddress;
     highestAcceptableAddress.QuadPart = -1;
+    
+    PHYSICAL_ADDRESS boundaryAddressMultiple;
+    boundaryAddressMultiple.QuadPart = 0;
+
     s_videoMemorySize = kMaxVideoMemorySize;
+
     while (s_pVideoMemory == NULL)
     {
-        if ((s_pVideoMemory = MmAllocateContiguousMemory(s_videoMemorySize, highestAcceptableAddress)) != NULL)
+        //
+        // The allocated contiguous memory is as NonCached
+        // TODO[indyz]: Evaluate if cached memory and flush is a better option
+        //
+
+        s_pVideoMemory = MmAllocateContiguousMemorySpecifyCache(
+                            s_videoMemorySize,
+                            lowestAcceptableAddress,
+                            highestAcceptableAddress,
+                            boundaryAddressMultiple,
+                            MmNonCached);
+        if (s_pVideoMemory != NULL)
+        {
             break;
+        }
+
         s_videoMemorySize >>= 1;
     }
 

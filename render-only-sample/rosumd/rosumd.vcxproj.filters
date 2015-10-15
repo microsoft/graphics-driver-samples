@@ -90,6 +90,12 @@
     <ClInclude Include="..\roscommon\RosAdapter.h">
       <Filter>Common</Filter>
     </ClInclude>
+    <ClInclude Include="..\roscommon\Vc4Hw.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\roscommon\Vc4Ddi.h">
+      <Filter>Common</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="RosUmd.cpp">
@@ -111,6 +117,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="RosUmdDeviceDdi.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RosUmdUtil.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RosUmdShader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

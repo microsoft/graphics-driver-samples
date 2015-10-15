@@ -77,6 +77,14 @@
     </ClInclude>
     <ClInclude Include="RosKmdAcpi.h">
       <Filter>Header Files</Filter>
+    <ClInclude Include="..\roscommon\Vc4Hw.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\roscommon\Vc4Ddi.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="..\roscommon\RosGpuCommand.h">
+      <Filter>Common</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

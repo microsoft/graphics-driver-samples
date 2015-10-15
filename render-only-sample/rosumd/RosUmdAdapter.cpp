@@ -110,10 +110,10 @@ SIZE_T APIENTRY RosUmdAdapter::CalcPrivateDeviceSize(
     D3D10DDI_HADAPTER hAdapter,
     const D3D10DDIARG_CALCPRIVATEDEVICESIZE* pArgs )
 {
-	pArgs;
+    pArgs;
 
     RosUmdAdapter* pThis = RosUmdAdapter::CastFrom( hAdapter );
-	pThis;
+    pThis;
 
     return sizeof( RosUmdDevice );
 }
@@ -131,7 +131,7 @@ HRESULT APIENTRY RosUmdAdapter::GetSupportedVersions(
     __out_ecount_part_opt( *puEntries, *puEntries ) UINT64* pSupportedDDIInterfaceVersions )
 {
     RosUmdAdapter* pAdapter = RosUmdAdapter::CastFrom( hAdapter );
-	pAdapter;
+    pAdapter;
 
     UINT32 uEntries = ARRAYSIZE( c_aSupportedVersions );
     const UINT64* pSupportedVersions = c_aSupportedVersions;
@@ -156,7 +156,7 @@ HRESULT APIENTRY RosUmdAdapter::GetCaps(
     D3D10DDI_HADAPTER hAdapter,
     __in const D3D10_2DDIARG_GETCAPS* pCaps )
 {
-	hAdapter;
+    hAdapter;
 
     switch (pCaps->Type)
     {

@@ -56,24 +56,19 @@ void RosUmdCommandBuffer::CopyResource(RosUmdResource * pDstResource, RosUmdReso
 {
     assert(m_pRosUmdDevice != NULL);
 
-    // Flush the current batch if it contains HW command
-    if (0 == m_pCmdBufHeader->m_commandBufferHeader.m_swCommandBuffer)
-    {
-        Flush(0);
-    }
-
-    UINT    curCommandOffset;
     BYTE *  pCommandBuffer;
+    UINT    curCommandOffset;
     D3DDDI_PATCHLOCATIONLIST *  pPatchLocationList;
 
     GpuCommand * command;
 
     ReserveCommandBufferSpace(
+        true,                           // SW command
         sizeof(*command),
+        &pCommandBuffer,
         2,
         2,
         &curCommandOffset,
-        &pCommandBuffer,
         &pPatchLocationList);
 
     assert(pCommandBuffer != NULL);
@@ -89,8 +84,8 @@ void RosUmdCommandBuffer::CopyResource(RosUmdResource * pDstResource, RosUmdReso
     UINT dstAllocIndex = UseResource(pDstResource, true);
     UINT srcAllocIndex = UseResource(pSrcResource, false);
 
-    SetPatchLocation(pPatchLocationList,     dstAllocIndex, curCommandOffset + offsetof(GpuCommand, m_resourceCopy.m_dstGpuAddress));
-    SetPatchLocation(pPatchLocationList + 1, srcAllocIndex, curCommandOffset + offsetof(GpuCommand, m_resourceCopy.m_srcGpuAddress));
+    SetPatchLocation(pPatchLocationList, dstAllocIndex, curCommandOffset + offsetof(GpuCommand, m_resourceCopy.m_dstGpuAddress));
+    SetPatchLocation(pPatchLocationList, srcAllocIndex, curCommandOffset + offsetof(GpuCommand, m_resourceCopy.m_srcGpuAddress));
 
     CommitCommandBufferSpace(sizeof(*command), 2);
 }
@@ -99,18 +94,19 @@ void RosUmdCommandBuffer::WriteResource(RosUmdResource * pResource, void * pData
 {
     assert(m_pRosUmdDevice != NULL);
 
-    UINT    curCommandOffset;
     BYTE *  pCommandBuffer;
+    UINT    curCommandOffset;
     D3DDDI_PATCHLOCATIONLIST *  pPatchLocationList;
 
     __debugbreak();
 
     ReserveCommandBufferSpace(
+        true,                   // SW command
         100,
+        &pCommandBuffer,
         2,
         2,
         &curCommandOffset,
-        &pCommandBuffer,
         &pPatchLocationList);
 
     UNREFERENCED_PARAMETER(pData);
@@ -143,6 +139,11 @@ RosUmdCommandBuffer::Flush(
 {
     assert(m_pRosUmdDevice != NULL);
 
+    if (false == m_pCmdBufHeader->m_commandBufferHeader.m_swCommandBuffer)
+    {
+        m_pRosUmdDevice->WriteEpilog();
+    }
+
     D3DDDICB_RENDER render;
 
     memset(&render, 0, sizeof(render));
@@ -166,21 +167,39 @@ RosUmdCommandBuffer::Flush(
     m_patchLocationListPos = 0;
 
     // Reset type of command buffer to software
-    m_pCmdBufHeader->m_commandBufferHeader.m_swCommandBuffer = 1;
+    m_pCmdBufHeader->m_commandBufferHeader.m_swCommandBuffer   = 1;
+#if VC4
+
+    m_pCmdBufHeader->m_commandBufferHeader.m_hasVC4ClearColors = 0;
+    m_pCmdBufHeader->m_commandBufferHeader.m_vc4ClearColors = vc4ClearColors;
+
+#endif
 
     render.QueuedBufferCount; // unused
 }
 
 void
 RosUmdCommandBuffer::ReserveCommandBufferSpace(
+    bool                        bSwCommand,
     UINT                        commandSize,
+    BYTE **                     ppCommandBuffer,
     UINT                        allocationListSize,
     UINT                        patchLocationSize,
     UINT *                      pCurCommandOffset,
-    BYTE **                     ppCommandBuffer,
     D3DDDI_PATCHLOCATIONLIST ** ppPatchLocationList)
 {
     assert(m_pRosUmdDevice != NULL);
+
+    if (IsSwCommandBuffer() != bSwCommand)
+    {
+        if (IsCommandBufferEmpty() == false)
+        {
+            Flush(0);
+        }
+
+        // Command buffer contains either SW or HW commands
+        m_pCmdBufHeader->m_commandBufferHeader.m_swCommandBuffer = bSwCommand;
+    }
 
     if (((m_commandBufferPos + commandSize + COMMAND_BUFFER_FLUSH_THRESHOLD) > m_commandBufferSize) ||
         ((m_allocationListPos + allocationListSize + ALLOCATION_LIST_FLUSH_THRESHOLD) > m_allocationListSize) ||
@@ -189,9 +208,13 @@ RosUmdCommandBuffer::ReserveCommandBufferSpace(
         Flush(0);
     }
 
-    *pCurCommandOffset = m_commandBufferPos;
     *ppCommandBuffer = m_pCommandBuffer + m_commandBufferPos;
-    *ppPatchLocationList = m_pPatchLocationList + m_patchLocationListPos;
+
+    if (allocationListSize)
+    {
+        *pCurCommandOffset = m_commandBufferPos;
+        *ppPatchLocationList = m_pPatchLocationList + m_patchLocationListPos;
+    }
 }
 
 void
@@ -243,3 +266,19 @@ RosUmdCommandBuffer::UseResource(
     return pResource->m_allocationListIndex;
 }
 
+#if VC4
+
+void RosUmdCommandBuffer::UpdateClearColors(
+    UINT clearColor)
+{
+    m_pCmdBufHeader->m_commandBufferHeader.m_hasVC4ClearColors = 1;
+
+    VC4ClearColors *    pVC4ClearColor = &m_pCmdBufHeader->m_commandBufferHeader.m_vc4ClearColors;
+
+    pVC4ClearColor->CommandCode    = VC4_CMD_CLEAR_COLOR;
+
+    pVC4ClearColor->ClearColor8    = clearColor;
+    pVC4ClearColor->ClearColor8Dup = clearColor;
+}
+
+#endif

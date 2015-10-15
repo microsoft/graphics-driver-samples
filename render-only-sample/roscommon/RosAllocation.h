@@ -13,6 +13,7 @@ enum RosHwLayout
 
 enum RosHwFormat
 {
+    X565d,
     X8888,
     X565,
     X32,
@@ -48,10 +49,10 @@ struct RosAllocationExchange
 
     // HW specific information calculated based on the fields above
     RosHwLayout             m_hwLayout;
-#if 0
-    UINT                    m_hwWidth;
-    UINT                    m_hwHeigh;
+    UINT                    m_hwWidthPixels;
+    UINT                    m_hwHeightPixels;
     RosHwFormat             m_hwFormat;
+#if 0
     UINT                    m_hwPitch;
 #endif
 

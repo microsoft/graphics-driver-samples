@@ -2,8 +2,11 @@
 
 #include "d3dumddi_.h"
 
+
 class RosUmdRasterizerState
 {
+    friend class RosUmdDevice;
+
 public:
 
     RosUmdRasterizerState(const D3D11_1_DDI_RASTERIZER_DESC * desc, D3D10DDI_HRTRASTERIZERSTATE & hRT) :

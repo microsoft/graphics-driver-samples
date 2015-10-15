@@ -17,8 +17,7 @@ public:
 
     static void APIENTRY Draw_Default(D3D10DDI_HDEVICE, UINT, UINT) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY DdiDraw(D3D10DDI_HDEVICE, UINT, UINT);
-    static void APIENTRY DrawIndexed_Default(D3D10DDI_HDEVICE, UINT, UINT, INT) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
-    static void APIENTRY DrawIndexed_Dirty(D3D10DDI_HDEVICE, UINT, UINT, INT) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
+    static void APIENTRY DdiDrawIndexed(D3D10DDI_HDEVICE, UINT, UINT, INT);
     static void APIENTRY DrawInstanced_Default(D3D10DDI_HDEVICE, UINT, UINT, UINT, UINT) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY DrawInstanced_Dirty(D3D10DDI_HDEVICE, UINT, UINT, UINT, UINT) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY DrawIndexedInstanced_Default(D3D10DDI_HDEVICE, UINT, UINT, UINT, INT, UINT) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
@@ -35,7 +34,8 @@ public:
     static void APIENTRY DispatchIndirect_Dirty(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY DdiIaSetVertexBuffers(D3D10DDI_HDEVICE, UINT, UINT, const D3D10DDI_HRESOURCE*, const UINT*, const UINT*);
 //    static void APIENTRY IaSetVertexBuffers_Preamble(D3D10DDI_HDEVICE, UINT, UINT, const D3D10DDI_HRESOURCE*, const UINT*, const UINT*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
-    static void APIENTRY IaSetIndexBuffer_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, DXGI_FORMAT, UINT) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
+    static void APIENTRY DdiIaSetIndexBuffer(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, DXGI_FORMAT, UINT);
+//    static void APIENTRY IaSetIndexBuffer_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, DXGI_FORMAT, UINT) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY IaSetIndexBuffer_Preamble(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, DXGI_FORMAT, UINT) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY VSSetShaderResources_Default(D3D10DDI_HDEVICE, UINT, UINT, const D3D10DDI_HSHADERRESOURCEVIEW*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY VSSetShaderResources_Preamble(D3D10DDI_HDEVICE, UINT, UINT, const D3D10DDI_HSHADERRESOURCEVIEW*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }

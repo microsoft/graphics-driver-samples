@@ -6,6 +6,14 @@
 class RosUmdDevice;
 class RosUmdResource;
 
+#if VC4
+
+//
+// UMD only writes the Binning Control List
+//
+
+#endif
+
 class RosUmdCommandBuffer
 {
 public:
@@ -21,17 +29,18 @@ public:
 
     void
     ReserveCommandBufferSpace(
+        bool                        bSwCommand,
         UINT                        commandSize,
-        UINT                        allocationListSize,
-        UINT                        patchLocationSize,
-        UINT *                      pCurCommandOffset, 
         BYTE **                     ppCommandBuffer,
-        D3DDDI_PATCHLOCATIONLIST ** ppPatchLocationList);
+        UINT                        allocationListSize = 0,
+        UINT                        patchLocationSize = 0,
+        UINT *                      pCurCommandOffset = NULL,
+        D3DDDI_PATCHLOCATIONLIST ** ppPatchLocationList = NULL);
 
     void
     CommitCommandBufferSpace(
         UINT    commandSize,
-        UINT    patchLocationSize);
+        UINT    patchLocationSize = 0);
 
     UINT
     UseResource(
@@ -40,11 +49,11 @@ public:
 
     void
     SetPatchLocation(
-        D3DDDI_PATCHLOCATIONLIST *  pPatchLocation,
+        D3DDDI_PATCHLOCATIONLIST *  &pPatchLocation,
         UINT                        allocationIndex,
         UINT                        dmaBufferPatchOffset,
-        UINT                        allocationOffset = 0,
         UINT                        slotId = 0,
+        UINT                        allocationOffset = 0,
         UINT                        driverId = 0,
         UINT                        dmaBufferSplitOffset = 0)
     {
@@ -61,7 +70,9 @@ public:
 
         // With driver support, kernel runtime can run DMA buffer in multiple pieces
         // We will not support splitting of dma buffers and will always provide zero
-        pPatchLocation->SplitOffset = dmaBufferSplitOffset; 
+        pPatchLocation->SplitOffset = dmaBufferSplitOffset;
+
+        pPatchLocation++;
     }
 
     // FlushIfMatching will block flushing the current command buffer if the given fence
@@ -70,6 +81,12 @@ public:
 
     bool IsCommandBufferEmpty();
     bool IsSwCommandBuffer();
+
+#if VC4
+
+    void UpdateClearColors(UINT clearColor);
+
+#endif
 
     //
     // Fence constants
@@ -108,3 +125,10 @@ private:
     CONST UINT  PACTH_LOCATION_LIST_FLUSH_THRESHOLD = 2;
 };
 
+template<typename TypeCur, typename TypeNext>
+void MoveToNextCommand(TypeCur pCurCommand, TypeNext &pNextCommand, UINT &curComamndOffset)
+{
+    curComamndOffset += sizeof(*pCurCommand);
+
+    pNextCommand = (TypeNext)(pCurCommand + 1);
+}

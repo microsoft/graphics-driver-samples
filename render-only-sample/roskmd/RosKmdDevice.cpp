@@ -1,3 +1,4 @@
+#include "RosKmdAdapter.h"
 #include "RosKmdDevice.h"
 #include "RosKmdAllocation.h"
 
@@ -57,9 +58,8 @@ RosKmDevice::DdiOpenAllocation(
     DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hDevice=%lx\n",
         __FUNCTION__, hDevice);
 
-    RosKmDevice   *pRosKmDevice = (RosKmDevice *)hDevice;
-
-    pRosKmDevice;
+    RosKmDevice    *pRosKmDevice = (RosKmDevice *)hDevice;
+    RosKmAdapter   *pRosKmAdapter = pRosKmDevice->m_pRosKmAdapter;
 
     NT_ASSERT(pOpenAllocation->PrivateDriverSize == sizeof(RosAllocationGroupExchange));
     RosAllocationGroupExchange * pRosAllocationGroupExchange = (RosAllocationGroupExchange *)pOpenAllocation->pPrivateDriverData;
@@ -88,8 +88,15 @@ RosKmDevice::DdiOpenAllocation(
 
     pRosKmdDeviceAllocation->m_hKMAllocation = pOpenAllocationInfo->hAllocation;
 
-    pOpenAllocationInfo->hDeviceSpecificAllocation = pRosKmdDeviceAllocation;
+    DXGKARGCB_GETHANDLEDATA getHandleData;
 
+    getHandleData.hObject = pRosKmdDeviceAllocation->m_hKMAllocation;
+    getHandleData.Type = DXGK_HANDLE_ALLOCATION;
+    getHandleData.Flags.DeviceSpecific = 0;
+
+    pRosKmdDeviceAllocation->m_pRosKmdAllocation = (RosKmdAllocation *)pRosKmAdapter->GetDxgkInterface()->DxgkCbGetHandleData(&getHandleData);
+
+    pOpenAllocationInfo->hDeviceSpecificAllocation = pRosKmdDeviceAllocation;
 
     return STATUS_SUCCESS;
 }

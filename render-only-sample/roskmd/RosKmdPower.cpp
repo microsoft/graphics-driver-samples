@@ -26,7 +26,7 @@ RosKmAdapter::DdiSetPowerState(
         pRosKmAdapter->m_AdapterPowerDState = DevicePowerState;
     }
 
-	ActionType;
+    ActionType;
 
     return STATUS_SUCCESS;
 }
@@ -236,7 +236,7 @@ RosKmAdapter::SetPowerComponentFState(
 	}
 
     //
-	// Update Fstate.
+    // Update Fstate.
     //
     m_EnginePowerFState[ComponentIndex] = FState;
 
@@ -247,6 +247,6 @@ RosKmAdapter::SetPowerComponentFState(
     m_DxgkInterface.DxgkCbCompleteFStateTransition(
         m_DxgkInterface.DeviceHandle,
         ComponentIndex);
-	
+    
     return STATUS_SUCCESS;
 }

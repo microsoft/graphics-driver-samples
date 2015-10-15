@@ -12,7 +12,10 @@
 
 #include "RosContext.h"
 
-RosUmdResource::RosUmdResource()
+#include "Vc4Hw.h"
+
+RosUmdResource::RosUmdResource() :
+    m_hKMAllocation(NULL)
 {
     // do nothing
 }
@@ -67,7 +70,7 @@ RosUmdResource::Standup(
 void
 RosUmdResource::Teardown(void)
 {
-    // do nothing
+    // TODO[indyz]: Implement
 }
 
 void
@@ -78,7 +81,7 @@ RosUmdResource::Map(
     UINT mapFlags,
     D3D10DDI_MAPPED_SUBRESOURCE* pMappedSubRes)
 {
-    assert(m_mipLevels == 1);
+    assert(m_mipLevels <= 1);
     assert(m_arraySize == 1);
 
     UNREFERENCED_PARAMETER(subResource);
@@ -176,12 +179,33 @@ RosUmdResource::CalculateMemoryLayout(
                 m_hwLayout = RosHwLayout::Linear;
             }
 
+#if VC4
+
+            // TODO[indyz]: Enable tiled render target
+            if (m_bindFlags & D3D10_DDI_BIND_RENDER_TARGET)
+            {
+                m_hwLayout = RosHwLayout::Linear;
+            }
+
+#endif
+
             // TODO(bhouse) Need mapping code from resource DXGI format to hw format
-            m_hwFormat = RosHwFormat::X32;
+            m_hwFormat = RosHwFormat::X8888;
 
             // Using system memory linear MipMap as example
             m_hwWidthPixels = m_mip0Info.TexelWidth;
             m_hwHeightPixels = m_mip0Info.TexelHeight;
+
+#if VC4
+            // Align width and height to VC4_BINNING_TILE_PIXELS for binning
+#endif
+
+            m_hwWidthTilePixels = VC4_BINNING_TILE_PIXELS;
+            m_hwHeightTilePixels = VC4_BINNING_TILE_PIXELS;
+            m_hwWidthTiles = (m_hwWidthPixels + m_hwWidthTilePixels - 1) / m_hwWidthTilePixels;
+            m_hwHeightTiles = (m_hwHeightPixels + m_hwHeightTilePixels - 1) / m_hwHeightTilePixels;
+            m_hwWidthPixels = m_hwWidthTiles*m_hwWidthTilePixels;
+            m_hwHeightPixels = m_hwHeightTiles*m_hwHeightTilePixels;
 
             if (m_hwLayout == RosHwLayout::Linear)
             {
@@ -200,15 +224,10 @@ RosUmdResource::CalculateMemoryLayout(
                 assert(m_hwLayout == RosHwLayout::Tiled);
                 assert(m_mipLevels == 1);
 
-                m_hwWidthTilePixels = 64;
-                m_hwHeightTilePixels = 64;
-                m_hwWidthTiles = (m_hwWidthPixels + m_hwWidthTilePixels - 1) / m_hwWidthTilePixels;
-                m_hwHeightTiles = (m_hwHeightPixels + m_hwHeightTilePixels - 1) / m_hwHeightTilePixels;
-
-                assert(m_hwFormat == RosHwFormat::X32);
+                assert(m_hwFormat == RosHwFormat::X8888);
                 UINT sizeTileBytes = 64 * 64 * 4;
 
-                m_hwSizeBytes = m_hwWidthTiles * m_hwWidthTiles * sizeTileBytes;
+                m_hwSizeBytes = m_hwWidthTiles * m_hwHeightTiles * sizeTileBytes;
                 m_hwPitchBytes = 0;
             }
         }
@@ -244,10 +263,10 @@ void RosUmdResource::GetAllocationExchange(
 #endif
     pOutAllocationExchange->m_primaryDesc = m_primaryDesc;
     pOutAllocationExchange->m_hwLayout = m_hwLayout;
-#if 0
-    pOutAllocationExchange->m_hwWidth = m_hwWidth;
-    pOutAllocationExchange->m_hwHeigh = m_hwHeigh;
+    pOutAllocationExchange->m_hwWidthPixels = m_hwWidthPixels;
+    pOutAllocationExchange->m_hwHeightPixels = m_hwHeightPixels;
     pOutAllocationExchange->m_hwFormat = m_hwFormat;
+#if 0
     pOutAllocationExchange->m_hwPitch = m_hwPitch;
 #endif
 

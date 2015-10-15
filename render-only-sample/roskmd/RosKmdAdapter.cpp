@@ -10,6 +10,8 @@
 #include "RosKmdUtil.h"
 #include "RosGpuCommand.h"
 #include "RosKmdAcpi.h"
+#include "Vc4Hw.h"
+#include "Vc4Ddi.h"
 
 void * RosKmAdapter::operator new(size_t size)
 {
@@ -37,6 +39,14 @@ RosKmAdapter::RosKmAdapter(IN_CONST_PDEVICE_OBJECT PhysicalDeviceObject, OUT_PPV
 
     RtlZeroMemory(&m_deviceId, sizeof(m_deviceId));
     m_deviceIdLength = 0;
+
+    m_flags.m_value = 0;
+
+#if VC4
+
+    m_pVC4RegFile = NULL;
+
+#endif
 
     *MiniportDeviceContext = this;
 }
@@ -325,28 +335,252 @@ RosKmAdapter::ProcessRenderBuffer(
     else
     {
         //
-        // Submit HW DMA buffer to the GPU
-        // Make sure command buffer header at buffer's beginning is skipped
+        // Submit HW command buffer to the GPU
         //
 
-#if HW_GPU
+#if VC4
+        if (m_flags.m_isVC4)
+        {
+            //
+            // TODO[indyz]:
+            //
+            // 1. Submit the Binning and Rendering Control list simultaneously
+            //    and use semaphore for synchronization
+            // 2. Enable interrupt to signal end of frame
+            //
 
-        //
-        // Completion of DMA buffer is acknowledged with interrupt and 
-        // subsequent DPC signals m_hwDmaBufCompletionEvent
-        //
+            //
+            // Generate the Rendering Control List
+            //
+            UINT    renderingControlListLength;
+            renderingControlListLength = GenerateRenderingControlList(pDmaBufInfo);
 
-        NTSTATUS status = KeWaitForSingleObject(
+#if 1
+
+            // TODO[indyz]: Decide the best way to handle the cache 
+            //
+            KeInvalidateAllCaches();
+
+#endif
+
+            //
+            // Submit the Binning Control List from UMD to the GPU
+            //
+            NT_ASSERT(pDmaBufInfo->m_DmaBufferPhysicalAddress.HighPart == 0);
+            NT_ASSERT(pDmaBufInfo->m_DmaBufferSize <= kPageSize);
+
+            UINT dmaBufBaseAddress;
+            
+            dmaBufBaseAddress = GetAperturePhysicalAddress(pDmaBufInfo->m_DmaBufferPhysicalAddress.LowPart);
+
+            // Skip the command buffer header at the beginning
+            SubmitControlList(
+                true,
+                dmaBufBaseAddress + pDmaBufSubmission->m_StartOffset + sizeof(GpuCommand),
+                dmaBufBaseAddress + pDmaBufSubmission->m_EndOffset);
+
+            //
+            // Submit the Rendering Control List to the GPU
+            //
+            SubmitControlList(
+                false,
+                m_renderingControlListPhysicalAddress,
+                m_renderingControlListPhysicalAddress + renderingControlListLength);
+
+            MoveToNextBinnerRenderMemChunk(renderingControlListLength);
+        }
+#endif  // VC4
+    }
+}
+
+void
+RosKmAdapter::SubmitControlList(
+    bool bBinningControlList, 
+    UINT startAddress,
+    UINT endAddress)
+{
+    //
+    // Setting End Address register kicks off execution of the Control List
+    // Current Address register starts with CL start address and reaches
+    // CL end address upon completion
+    //
+
+    if (bBinningControlList)
+    {
+        m_pVC4RegFile->V3D_CT0CA = startAddress;
+        m_pVC4RegFile->V3D_CT0EA = endAddress;
+    }
+    else
+    {
+        m_pVC4RegFile->V3D_CT1CA = startAddress;
+        m_pVC4RegFile->V3D_CT1EA = endAddress;
+    }
+
+    //
+    // Completion of DMA buffer is acknowledged with interrupt and 
+    // subsequent DPC signals m_hwDmaBufCompletionEvent
+    //
+    // TODO[indyz]: Enable interrupt and handle TDR
+    //
+
+    NTSTATUS status;
+
+#if 1
+    //
+    // Set time out to 64 millisecond
+    //
+
+    LARGE_INTEGER timeOut;
+    timeOut.QuadPart = -64 * 1000 * 1000 / 10;
+
+    UINT i;
+    for (i = 0; i < 32; i++)
+    {
+        status = KeWaitForSingleObject(
             &m_hwDmaBufCompletionEvent,
             Executive,
             KernelMode,
             FALSE,
-            NULL);
+            &timeOut);
 
-        NT_ASSERT(status == STATUS_SUCCESS);
+        NT_ASSERT(status == STATUS_TIMEOUT);
+
+        // Check Control List Executor Thread 0 Control and Status
+        V3D_REG_CT0CS regCTnCS;
+
+        if (bBinningControlList)
+        {
+            regCTnCS.Value = m_pVC4RegFile->V3D_CT0CS;
+        }
+        else
+        {
+            regCTnCS.Value = m_pVC4RegFile->V3D_CT1CS;
+        }
+
+        if (regCTnCS.CTRUN == 0)
+        {
+            break;
+        }
+    }
+
+    // Check for TDR condition
+    NT_ASSERT(i < 32);
+
+#else
+
+    status = KeWaitForSingleObject(
+        &m_hwDmaBufCompletionEvent,
+        Executive,
+        KernelMode,
+        FALSE,
+        NULL);
+
+    NT_ASSERT(status == STATUS_SUCCESS);
 
 #endif
+
+}
+
+UINT
+RosKmAdapter::GenerateRenderingControlList(
+    ROSDMABUFINFO *pDmaBufInfo)
+{
+    RosKmdAllocation *pRenderTarget = pDmaBufInfo->m_pRenderTarget;
+
+    // Write Clear Colors command from UMD
+    VC4ClearColors *pVC4ClearColors;
+    VC4TileRenderingModeConfig *pVC4TileRenderingModeConfig;
+
+    if (pDmaBufInfo->m_DmaBufState.m_HasVC4ClearColors)
+    {
+        pVC4ClearColors = (VC4ClearColors *)m_pRenderingControlList;
+
+        *pVC4ClearColors = pDmaBufInfo->m_VC4ClearColors;
+
+        MoveToNextCommand(pVC4ClearColors, pVC4TileRenderingModeConfig);
     }
+    else
+    {
+        pVC4TileRenderingModeConfig = (VC4TileRenderingModeConfig *)m_pRenderingControlList;
+    }
+
+    // Write Tile Rendering Mode Config command
+
+    VC4TileRenderingModeConfig  tileRenderingModeConfig = vc4TileRenderingModeConfig;
+
+    tileRenderingModeConfig.MemoryAddress = pDmaBufInfo->m_RenderTargetPhysicalAddress;
+
+    tileRenderingModeConfig.WidthInPixels  = (USHORT)pRenderTarget->m_mip0Info.TexelWidth;
+    tileRenderingModeConfig.HeightInPixels = (USHORT)pRenderTarget->m_mip0Info.TexelHeight;
+
+    NT_ASSERT(pRenderTarget->m_hwFormat == X8888);
+    tileRenderingModeConfig.NonHDRFrameBufferColorFormat = 1;
+
+    *pVC4TileRenderingModeConfig = tileRenderingModeConfig;
+
+    // Clear the tile buffer by store the 1st tile
+    VC4TileCoordinates *pVC4TileCoordinates;
+    MoveToNextCommand(pVC4TileRenderingModeConfig, pVC4TileCoordinates);
+
+    *pVC4TileCoordinates = vc4TileCoordinates;
+
+    VC4StoreTileBufferGeneral  *pVC4StoreTileBufferGeneral;
+    MoveToNextCommand(pVC4TileCoordinates, pVC4StoreTileBufferGeneral);
+
+    *pVC4StoreTileBufferGeneral = vc4StoreTileBufferGeneral;
+
+    //
+    // Calling control list generated by the Binning Control List
+    //
+    UINT    widthInTiles  = pRenderTarget->m_hwWidthPixels  / VC4_BINNING_TILE_PIXELS;
+    UINT    heightInTiles = pRenderTarget->m_hwHeightPixels / VC4_BINNING_TILE_PIXELS;
+
+    VC4TileCoordinates  tileCoordinates = vc4TileCoordinates;
+    VC4BranchToSubList  branchToSubList = vc4BranchToSubList;
+    UINT    tileAllocationPhysicalAddress = m_tileAllocationMemoryPhysicalAddress;
+    VC4BranchToSubList *pVC4BranchToSubList;
+    VC4StoreMSResolvedTileColorBuf *pVC4StoreMSResolvedTileColorBuf;
+    VC4StoreMSResolvedTileColorBufAndSignalEndOfFrame  *pVC4StoreMSResolvedTileColorBufAndSignalEndOfFrame;
+
+    MoveToNextCommand(pVC4StoreTileBufferGeneral, pVC4TileCoordinates);
+    pVC4StoreMSResolvedTileColorBufAndSignalEndOfFrame = (VC4StoreMSResolvedTileColorBufAndSignalEndOfFrame *)pVC4TileCoordinates;
+
+    for (UINT x = 0; x < widthInTiles; x++)
+    {
+        for (UINT y = 0; y < heightInTiles; y++)
+        {
+            tileCoordinates.TileColumnNumber = (BYTE)x;
+            tileCoordinates.TileRowNumber    = (BYTE)y;
+
+            *pVC4TileCoordinates = tileCoordinates;
+
+            MoveToNextCommand(pVC4TileCoordinates, pVC4BranchToSubList);
+
+            branchToSubList.BranchAddress = tileAllocationPhysicalAddress + (y*widthInTiles + x)*VC4_TILE_ALLOCATION_BLOCK_SIZE;
+
+            *pVC4BranchToSubList = branchToSubList;
+
+            if ((x == (widthInTiles - 1)) &&
+                (y == (heightInTiles - 1)))
+            {
+                MoveToNextCommand(pVC4BranchToSubList, pVC4StoreMSResolvedTileColorBufAndSignalEndOfFrame);
+
+                *pVC4StoreMSResolvedTileColorBufAndSignalEndOfFrame = vc4StoreMSResolvedTileColorBufAndSignalEndOfFrame;
+
+                pVC4StoreMSResolvedTileColorBufAndSignalEndOfFrame++;
+            }
+            else
+            {
+                MoveToNextCommand(pVC4BranchToSubList, pVC4StoreMSResolvedTileColorBuf);
+
+                *pVC4StoreMSResolvedTileColorBuf = vc4StoreMSResolvedTileColorBuf;
+
+                MoveToNextCommand(pVC4StoreMSResolvedTileColorBuf, pVC4TileCoordinates);
+            }
+        }
+    }
+
+    return ((UINT)(((PBYTE)pVC4StoreMSResolvedTileColorBufAndSignalEndOfFrame) - m_pRenderingControlList));
 }
 
 void
@@ -504,12 +738,61 @@ RosKmAdapter::Start(
 	// Initialize power component data.
 	//
 	InitializePowerComponentInfo();
+    CM_PARTIAL_RESOURCE_LIST       *pResourceList = &m_deviceInfo.TranslatedResourceList->List->PartialResourceList;
+    CM_PARTIAL_RESOURCE_DESCRIPTOR *pResource = &pResourceList->PartialDescriptors[0];
+
+
+    // Indicate if we are running on VC4 hardware
+    if ((pResourceList->Count == 2) &&
+        (pResource->Type == CmResourceTypeMemory))
+    {
+        m_flags.m_isVC4 = pResourceList->Count == 2;
+    }
+
+#if VC4
+
+    if (m_flags.m_isVC4)
+    {
+        status = m_DxgkInterface.DxgkCbMapMemory(
+            m_DxgkInterface.DeviceHandle,
+            pResource->u.Memory.Start,
+            pResource->u.Memory.Length,
+            FALSE,
+            FALSE,
+            MmNonCached,
+            (PVOID *)&m_pVC4RegFile);
+
+        if (status != STATUS_SUCCESS)
+        {
+            return status;
+        }
+    }
+
+    m_localVidMemSegmentSize = ((UINT)RosKmdGlobal::s_videoMemorySize) -
+        (VC4_RENDERING_CTRL_LIST_POOL_SIZE +
+         VC4_TILE_ALLOCATION_MEMORY_SIZE   +
+         VC4_TILE_STATE_DATA_ARRAY_SIZE);
+
+    m_pControlListPool = ((PBYTE)RosKmdGlobal::s_pVideoMemory) + m_localVidMemSegmentSize;
+
+    NT_ASSERT(0 == RosKmdGlobal::s_videoMemoryPhysicalAddress.HighPart);
+    m_controlListPoolPhysicalAddress      = RosKmdGlobal::s_videoMemoryPhysicalAddress.LowPart + m_localVidMemSegmentSize;
+    m_tileAllocPoolPhysicalAddress        = m_controlListPoolPhysicalAddress + VC4_RENDERING_CTRL_LIST_POOL_SIZE;
+    m_tileStatePoolPhysicalAddress        = m_tileAllocPoolPhysicalAddress + VC4_TILE_ALLOCATION_MEMORY_SIZE;
+
+    m_pRenderingControlList               = m_pControlListPool;
+    m_renderingControlListPhysicalAddress = m_controlListPoolPhysicalAddress;
+
+    m_tileAllocationMemoryPhysicalAddress = m_tileAllocPoolPhysicalAddress;
+    m_tileStateDataArrayPhysicalAddress   = m_tileStatePoolPhysicalAddress;
+
+#endif
 
     //
     // Initialize apperture state
     //
 
-    memset(m_aperturePages, 0, sizeof(m_aperturePages));
+    memset(m_aperturePageTable, 0, sizeof(m_aperturePageTable));
 
     //
     // Intialize DMA buffer queue and lock
@@ -627,49 +910,14 @@ RosKmAdapter::BuildPagingBuffer(
 
             NT_ASSERT(pageIndex + pageCount <= kApertureSegmentPageCount);
 
-            size_t mdlOffset = pArgs->MapApertureSegment.MdlOffset;
-            NT_ASSERT((mdlOffset & (kPageSize - 1)) == 0);
-            size_t mdlPageOffset = mdlOffset / kPageSize;
+            size_t mdlPageOffset = pArgs->MapApertureSegment.MdlOffset;
 
             PMDL pMdl = pArgs->MapApertureSegment.pMdl;
 
-            while (pageCount > 0 && pMdl != NULL)
+            for (UINT i = 0; i < pageCount; i++)
             {
-                char * mdlPage = (char *) MmGetMdlVirtualAddress(pMdl);
-                size_t mdlSize = MmGetMdlByteCount(pMdl);
-
-                NT_ASSERT((mdlSize & (kPageSize - 1)) == 0);
-
-                size_t mdlPageCount = mdlSize / kPageSize;
-
-                if (mdlPageOffset != 0)
-                {
-                    size_t skipPages = min(mdlPageOffset, mdlPageCount);
-
-                    mdlPageOffset -= skipPages;
-                    mdlPageCount -= skipPages;
-                    mdlPage += (skipPages * kPageSize);
-                }
-
-                if (mdlPageCount > 0)
-                {
-                    size_t setPages = min(pageCount, mdlPageCount);
-
-                    pageCount -= setPages;
-                    mdlPageCount -= setPages;
-
-                    while (setPages-- > 0)
-                    {
-                        m_aperturePages[pageIndex++] = mdlPage;
-                        mdlPage += kPageSize;
-                    }
-
-                }
-
-                pMdl = pMdl->Next;
+                m_aperturePageTable[pageIndex + i] = MmGetMdlPfnArray(pMdl)[mdlPageOffset + i];
             }
-
-            NT_ASSERT(pageCount == 0);
         }
 
     }
@@ -685,7 +933,9 @@ RosKmAdapter::BuildPagingBuffer(
             NT_ASSERT(pageIndex + pageCount <= kApertureSegmentPageCount);
 
             while (pageCount--)
-                m_aperturePages[pageIndex++] = NULL;
+            {
+                m_aperturePageTable[pageIndex++] = 0;
+            }
         }
     }
 
@@ -751,13 +1001,13 @@ RosKmAdapter::BuildPagingBuffer(
 
     // Record DMA buffer information only when it is newly used
     ROSDMABUFINFO * pDmaBufInfo = (ROSDMABUFINFO *)pArgs->pDmaBufferPrivateData;
-    if (pDmaBufInfo && (pArgs->DmaSize == ROSD_COMMAND_BUFFER_SIZE))
+    if (pDmaBufInfo && (pArgs->DmaSize == ROSD_PAGING_BUFFER_SIZE))
     {
         pDmaBufInfo->m_DmaBufState.m_Value = 0;
         pDmaBufInfo->m_DmaBufState.m_bPaging = 1;
 
-        pDmaBufInfo->m_DmaBufferSize = pArgs->DmaSize;
         pDmaBufInfo->m_pDmaBuffer = pDmaBufStart;
+        pDmaBufInfo->m_DmaBufferSize = pArgs->DmaSize;
     }
 
     return Status;
@@ -774,6 +1024,31 @@ RosKmAdapter::DdiSubmitCommand(
     DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n", __FUNCTION__, hAdapter);
 
     NTSTATUS        Status = STATUS_SUCCESS;
+
+#if VC4
+
+    if (!pSubmitCommand->Flags.Paging)
+    {
+        //
+        // Patch DMA buffer self-reference
+        //
+        ROSDMABUFINFO  *pDmaBufInfo = (ROSDMABUFINFO *)pSubmitCommand->pDmaBufferPrivateData;
+        BYTE           *pDmaBuf = pDmaBufInfo->m_pDmaBuffer;
+        UINT            dmaBufPhysicalAddress;
+
+        dmaBufPhysicalAddress = pRosKmAdapter->GetAperturePhysicalAddress(
+            pSubmitCommand->DmaBufferPhysicalAddress.LowPart);
+
+        for (UINT i = 0; i < pDmaBufInfo->m_DmaBufState.m_NumDmaBufSelfRef; i++)
+        {
+            D3DDDI_PATCHLOCATIONLIST   *pPatchLoc = &pDmaBufInfo->m_DmaBufSelfRef[i];
+
+            *((UINT *)(pDmaBuf + pPatchLoc->PatchOffset)) = dmaBufPhysicalAddress +
+                pPatchLoc->AllocationOffset;
+        }
+    }
+
+#endif
 
     // NOTE: pRosKmContext will be NULL for paging operations
     RosKmContext *pRosKmContext = (RosKmContext *)pSubmitCommand->hContext;
@@ -804,34 +1079,14 @@ RosKmAdapter::DdiPatch(
     RosKmContext * pRosKmContext = (RosKmContext *)pPatch->hContext;
     pRosKmContext;
 
-    UINT sentinel = pPatch->PatchLocationListSubmissionStart + pPatch->PatchLocationListSubmissionLength;
-    NT_ASSERT(sentinel <= pPatch->PatchLocationListSize);
-    for (UINT i = pPatch->PatchLocationListSubmissionStart; i <sentinel; i++)
-    {
-        auto patch = &pPatch->pPatchLocationList[i];
-        NT_ASSERT(patch->AllocationIndex < pPatch->AllocationListSize);
-        auto allocation = &pPatch->pAllocationList[patch->AllocationIndex];
+    pDmaBufInfo->m_DmaBufferPhysicalAddress = pPatch->DmaBufferPhysicalAddress;
 
-        if (allocation->SegmentId != 0)
-        {
-            RosKmdDeviceAllocation * pRosKmdDeviceAllocation = (RosKmdDeviceAllocation *)allocation->hDeviceSpecificAllocation;
-
-            DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "Pre-patch RosKmdDeviceAllocation %lx at %lx\n", pRosKmdDeviceAllocation, allocation->PhysicalAddress);
-            DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "Pre-patch buffer offset %lx allocation offset %lx\n", patch->PatchOffset, patch->AllocationOffset);
-
-            // Patch in dma buffer
-            NT_ASSERT(allocation->SegmentId == ROSD_SEGMENT_VIDEO_MEMORY);
-            if (pDmaBufInfo->m_DmaBufState.m_bSwCommandBuffer)
-            {
-                *((PHYSICAL_ADDRESS *)(((BYTE *)pPatch->pDmaBuffer) + patch->PatchOffset)) = allocation->PhysicalAddress;
-            }
-            else
-            {
-                // Patch HW command buffer
-            }
-        }
-
-    }
+    pRosKmAdapter->PatchDmaBuffer(
+        pDmaBufInfo,
+        pPatch->pAllocationList,
+        pPatch->AllocationListSize,
+        pPatch->pPatchLocationList + pPatch->PatchLocationListSubmissionStart,
+        pPatch->PatchLocationListSubmissionLength);
 
     // Record DMA buffer information
     pDmaBufInfo->m_DmaBufState.m_bPatched = 1;
@@ -974,7 +1229,7 @@ RosKmAdapter::DdiQueryAdapterInfo(
         pRosAdapterInfo->m_wddmVersion = pRosKmAdapter->m_WDDMVersion;
 
         // Software APCI device only claims an interrupt resource
-        pRosAdapterInfo->m_isSoftwareDevice = (pRosKmAdapter->m_deviceInfo.TranslatedResourceList->List->PartialResourceList.Count < 2);
+        pRosAdapterInfo->m_isSoftwareDevice = (pRosKmAdapter->m_flags.m_isVC4 != 1);
 
         RtlCopyMemory(
             pRosAdapterInfo->m_deviceId,
@@ -1273,7 +1528,7 @@ RosKmAdapter::DdiQueryAdapterInfo(
     case DXGKQAITYPE_POWERCOMPONENTINFO:
     {
         if (pQueryAdapterInfo->InputDataSize != sizeof(UINT) ||
-			pQueryAdapterInfo->OutputDataSize < sizeof(DXGK_POWER_RUNTIME_COMPONENT))
+            pQueryAdapterInfo->OutputDataSize < sizeof(DXGK_POWER_RUNTIME_COMPONENT))
         {
             Status = STATUS_INVALID_PARAMETER;
             break;
@@ -1868,6 +2123,170 @@ RosKmAdapter::DdiResetDevice(
     DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s MiniportDeviceContext=%lx\n",
         __FUNCTION__, MiniportDeviceContext);
 
+}
+
+void
+RosKmAdapter::PatchDmaBuffer(
+    ROSDMABUFINFO*                  pDmaBufInfo,
+    CONST DXGK_ALLOCATIONLIST*      pAllocationList,
+    UINT                            allocationListSize,
+    CONST D3DDDI_PATCHLOCATIONLIST* pPatchLocationList,
+    UINT                            patchAllocationList)
+{
+    PBYTE       pDmaBuf = (PBYTE)pDmaBufInfo->m_pDmaBuffer;
+
+    for (UINT i = 0; i < patchAllocationList; i++)
+    {
+        auto patch = &pPatchLocationList[i];
+
+        allocationListSize;
+        NT_ASSERT(patch->AllocationIndex < allocationListSize);
+
+        auto allocation = &pAllocationList[patch->AllocationIndex];
+
+        RosKmdDeviceAllocation * pRosKmdDeviceAllocation = (RosKmdDeviceAllocation *)allocation->hDeviceSpecificAllocation;
+
+        if (allocation->SegmentId != 0)
+        {
+            DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "Patch RosKmdDeviceAllocation %lx at %lx\n", pRosKmdDeviceAllocation, allocation->PhysicalAddress);
+            DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "Patch buffer offset %lx allocation offset %lx\n", patch->PatchOffset, patch->AllocationOffset);
+
+            // Patch in dma buffer
+            NT_ASSERT(allocation->SegmentId == ROSD_SEGMENT_VIDEO_MEMORY);
+            if (pDmaBufInfo->m_DmaBufState.m_bSwCommandBuffer)
+            {
+                PHYSICAL_ADDRESS    allocAddress;
+
+                allocAddress.QuadPart = allocation->PhysicalAddress.QuadPart + (LONGLONG)patch->AllocationOffset;
+                *((PHYSICAL_ADDRESS *)(pDmaBuf + patch->PatchOffset)) = allocAddress;
+            }
+            else
+            {
+                // Patch HW command buffer
+#if VC4
+                UINT    gpuAddress = RosKmdGlobal::s_videoMemoryPhysicalAddress.LowPart + 
+                                     allocation->PhysicalAddress.LowPart +
+                                     patch->AllocationOffset;
+                
+                switch (patch->SlotId)
+                {
+                case VC4_SLOT_RT_BINNING_CONFIG:
+                    pDmaBufInfo->m_RenderTargetPhysicalAddress = gpuAddress;
+                    break;
+                case VC4_SLOT_TILE_ALLOCATION_MEMORY:
+                    *((UINT *)(pDmaBuf + patch->PatchOffset)) = m_tileAllocationMemoryPhysicalAddress;
+                    break;
+                case VC4_SLOT_TILE_STATE_DATA_ARRAY:
+                    *((UINT *)(pDmaBuf + patch->PatchOffset)) = m_tileStateDataArrayPhysicalAddress;
+                    break;
+                case VC4_SLOT_NV_SHADER_STATE:
+                case VC4_SLOT_BRANCH:
+                    // When PrePatch happens in DdiRender, DMA buffer physical
+                    // address is not available, so DMA buffer self-reference
+                    // patches are handled in DdiSubmitCommand
+                    break;
+                default:
+                    *((UINT *)(pDmaBuf + patch->PatchOffset)) = gpuAddress;
+                }
+#endif
+            }
+        }
+    }
+}
+
+//
+// TODO[indyz]: Add proper validation for DMA buffer
+//
+bool
+RosKmAdapter::ValidateDmaBuffer(
+    ROSDMABUFINFO*                  pDmaBufInfo,
+    CONST DXGK_ALLOCATIONLIST*      pAllocationList,
+    UINT                            allocationListSize,
+    CONST D3DDDI_PATCHLOCATIONLIST* pPatchLocationList,
+    UINT                            patchAllocationList)
+{
+    PBYTE           pDmaBuf = (PBYTE)pDmaBufInfo->m_pDmaBuffer;
+    bool            bValidateDmaBuffer = true;
+    ROSDMABUFSTATE* pDmaBufState = &pDmaBufInfo->m_DmaBufState;
+
+    pDmaBuf;
+
+    if (! pDmaBufInfo->m_DmaBufState.m_bSwCommandBuffer)
+    {
+        for (UINT i = 0; i < patchAllocationList; i++)
+        {
+            auto patch = &pPatchLocationList[i];
+
+            allocationListSize;
+            NT_ASSERT(patch->AllocationIndex < allocationListSize);
+
+            auto allocation = &pAllocationList[patch->AllocationIndex];
+
+            RosKmdDeviceAllocation * pRosKmdDeviceAllocation = (RosKmdDeviceAllocation *)allocation->hDeviceSpecificAllocation;
+
+#if VC4
+
+            switch (patch->SlotId)
+            {
+            case VC4_SLOT_TILE_ALLOCATION_MEMORY:
+                if (pDmaBufState->m_bTileAllocMemRef)
+                {
+                    return false;   // Allow one per DMA buffer
+                }
+                else
+                {
+                    pDmaBufState->m_bTileAllocMemRef = 1;
+                }
+                break;
+            case VC4_SLOT_TILE_STATE_DATA_ARRAY:
+                if (pDmaBufState->m_bTileStateDataRef)
+                {
+                    return false;   // Allow one per DMA buffer
+                }
+                else
+                {
+                    pDmaBufState->m_bTileStateDataRef = 1;
+                }
+                break;
+            case VC4_SLOT_RT_BINNING_CONFIG:
+                if (pDmaBufState->m_bRenderTargetRef)
+                {
+                    return false;   // Allow one per DMA buffer
+                }
+                else
+                {
+                    pDmaBufInfo->m_pRenderTarget = pRosKmdDeviceAllocation->m_pRosKmdAllocation;
+                    pDmaBufState->m_bRenderTargetRef = 1;
+                }
+                break;
+            case VC4_SLOT_NV_SHADER_STATE:
+            case VC4_SLOT_BRANCH:
+                if (pDmaBufState->m_NumDmaBufSelfRef == VC4_MAX_DMA_BUFFER_SELF_REF)
+                {
+                    return false;   // Allow up to VC4_MAX_DMA_BUFFER_SELF_REF
+                }
+                else
+                {
+                    pDmaBufInfo->m_DmaBufSelfRef[pDmaBufState->m_NumDmaBufSelfRef] = *patch;
+                    pDmaBufState->m_NumDmaBufSelfRef++;
+                }
+                break;
+            default:
+                break;
+            }
+
+#endif
+        }
+
+        if ((0 == pDmaBufState->m_bRenderTargetRef) || 
+            (0 == pDmaBufState->m_bTileAllocMemRef) ||
+            (0 == pDmaBufState->m_bTileStateDataRef))
+        {
+            bValidateDmaBuffer = false;
+        }
+    }
+
+    return bValidateDmaBuffer;
 }
 
 void

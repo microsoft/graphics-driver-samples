@@ -29,7 +29,7 @@ const D3D11_1DDI_DEVICEFUNCS RosUmdDeviceDdi::s_deviceFuncs11_1 =
     RosUmdDeviceDdi::DdiPsSetShader,
     RosUmdDeviceDdi::DdiPSSetSamplers,
     RosUmdDeviceDdi::DdiVsSetShader,
-    RosUmdDeviceDdi::DrawIndexed_Dirty,
+    RosUmdDeviceDdi::DdiDrawIndexed,
     RosUmdDeviceDdi::DdiDraw,
     RosUmdDeviceDdi::DynamicIABufferMapNoOverwrite_Default,
     RosUmdDeviceDdi::DynamicIABufferUnmap_Default,
@@ -39,7 +39,7 @@ const D3D11_1DDI_DEVICEFUNCS RosUmdDeviceDdi::s_deviceFuncs11_1 =
     RosUmdDeviceDdi::PsSetConstantBuffers11_1_Default,
     RosUmdDeviceDdi::DdiIaSetInputLayout,
     RosUmdDeviceDdi::DdiIaSetVertexBuffers,
-    RosUmdDeviceDdi::IaSetIndexBuffer_Default,
+    RosUmdDeviceDdi::DdiIaSetIndexBuffer,
 
     RosUmdDeviceDdi::DrawIndexedInstanced_Dirty,
     RosUmdDeviceDdi::DrawInstanced_Dirty,
@@ -362,7 +362,7 @@ void APIENTRY RosUmdDeviceDdi::DdiCheckFormatSupport(
     DXGI_FORMAT Format,
     UINT* pFormatSupport)
 {
-    RosUmdLogging::Call(__FUNCTION__);
+    // RosUmdLogging::Call(__FUNCTION__);
 
     RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
 
@@ -385,7 +385,7 @@ void APIENTRY RosUmdDeviceDdi::DdiCheckMultisampleQualityLevels(
     UINT SampleCount,
     UINT* pNumQualityLevels)
 {
-    RosUmdLogging::Call(__FUNCTION__);
+    // RosUmdLogging::Call(__FUNCTION__);
 
     RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
     pRosUmdDevice->CheckMultisampleQualityLevels(Format, SampleCount, pNumQualityLevels);
@@ -707,13 +707,21 @@ void APIENTRY RosUmdDeviceDdi::DdiCreatePixelShader(
     D3D10DDI_HRTSHADER hRTShader,
     const D3D11_1DDIARG_STAGE_IO_SIGNATURES* pSignatures)
 {
-    RosUmdLogging::Call(__FUNCTION__);
+    RosUmdLogging::Entry(__FUNCTION__);
 
-    RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
-    pDevice; // unused
+    RosUmdDevice * pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
 
-    RosUmdPipelineShader* pPipelineShader = new (hShader.pDrvPrivate) RosUmdPipelineShader(pCode, hRTShader, pSignatures);
-    pPipelineShader; // unused
+    try
+    {
+        pRosUmdDevice->CreatePixelShader(pCode, hShader, hRTShader, pSignatures);
+    }
+
+    catch (std::exception & e)
+    {
+        pRosUmdDevice->SetException(e);
+    }
+
+    RosUmdLogging::Exit(__FUNCTION__);
 }
 
 void APIENTRY RosUmdDeviceDdi::DdiCreateVertexShader(
@@ -723,13 +731,21 @@ void APIENTRY RosUmdDeviceDdi::DdiCreateVertexShader(
     D3D10DDI_HRTSHADER hRTShader,
     const D3D11_1DDIARG_STAGE_IO_SIGNATURES* pSignatures)
 {
-    RosUmdLogging::Call(__FUNCTION__);
+    RosUmdLogging::Entry(__FUNCTION__);
 
-    RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
-    pDevice; // unused
+    RosUmdDevice * pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
 
-    RosUmdPipelineShader* pPipelineShader = new (hShader.pDrvPrivate) RosUmdPipelineShader(pCode, hRTShader, pSignatures);
-    pPipelineShader; // unused
+    try
+    {
+        pRosUmdDevice->CreateVertexShader(pCode, hShader, hRTShader, pSignatures);
+    }
+
+    catch (std::exception & e)
+    {
+        pRosUmdDevice->SetException(e);
+    }
+
+    RosUmdLogging::Exit(__FUNCTION__);
 }
 
 void APIENTRY RosUmdDeviceDdi::DdiCreateGeometryShader(
@@ -739,13 +755,21 @@ void APIENTRY RosUmdDeviceDdi::DdiCreateGeometryShader(
     D3D10DDI_HRTSHADER hRTShader,
     const D3D11_1DDIARG_STAGE_IO_SIGNATURES* pSignatures)
 {
-    RosUmdLogging::Call(__FUNCTION__);
+    RosUmdLogging::Entry(__FUNCTION__);
 
-    RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
-    pDevice; // unused
+    RosUmdDevice * pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
 
-    RosUmdPipelineShader* pPipelineShader = new (hShader.pDrvPrivate) RosUmdPipelineShader(pCode, hRTShader, pSignatures);
-    pPipelineShader; // unused
+    try
+    {
+        pRosUmdDevice->CreateGeometryShader(pCode, hShader, hRTShader, pSignatures);
+    }
+
+    catch (std::exception & e)
+    {
+        pRosUmdDevice->SetException(e);
+    }
+
+    RosUmdLogging::Exit(__FUNCTION__);
 }
 
 void APIENTRY RosUmdDeviceDdi::DdiCreateComputeShader(
@@ -754,13 +778,21 @@ void APIENTRY RosUmdDeviceDdi::DdiCreateComputeShader(
     D3D10DDI_HSHADER hShader,
     D3D10DDI_HRTSHADER hRTShader)
 {
-    RosUmdLogging::Call(__FUNCTION__);
+    RosUmdLogging::Entry(__FUNCTION__);
 
-    RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
-    pDevice; // unused
+    RosUmdDevice * pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
 
-    RosUmdPipelineShader* pPipelineShader = new (hShader.pDrvPrivate) RosUmdPipelineShader(pCode, hRTShader, nullptr);
-    pPipelineShader; // unused
+    try
+    {
+        pRosUmdDevice->CreateComputeShader(pCode, hShader, hRTShader);
+    }
+
+    catch (std::exception & e)
+    {
+        pRosUmdDevice->SetException(e);
+    }
+
+    RosUmdLogging::Exit(__FUNCTION__);
 }
 
 SIZE_T APIENTRY RosUmdDeviceDdi::DdiCalcPrivateTessellationShaderSize(
@@ -786,13 +818,21 @@ void APIENTRY RosUmdDeviceDdi::DdiCreateHullShader(
     D3D10DDI_HRTSHADER hRTShader,
     const D3D11_1DDIARG_TESSELLATION_IO_SIGNATURES* pSignatures)
 { 
-    RosUmdLogging::Call(__FUNCTION__);
+    RosUmdLogging::Entry(__FUNCTION__);
 
-    RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
-    pDevice; // unused
+    RosUmdDevice * pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
 
-    RosUmdTesselationShader* pTesselationShader = new (hShader.pDrvPrivate) RosUmdTesselationShader(pCode, hRTShader, pSignatures);
-    pTesselationShader; // unused
+    try
+    {
+        pRosUmdDevice->CreateTessellationShader(pCode, hShader, hRTShader, pSignatures);
+    }
+
+    catch (std::exception & e)
+    {
+        pRosUmdDevice->SetException(e);
+    }
+
+    RosUmdLogging::Exit(__FUNCTION__);
 }
 
 void APIENTRY RosUmdDeviceDdi::DdiCreateDomainShader(
@@ -802,13 +842,21 @@ void APIENTRY RosUmdDeviceDdi::DdiCreateDomainShader(
     D3D10DDI_HRTSHADER hRTShader,
     const D3D11_1DDIARG_TESSELLATION_IO_SIGNATURES* pSignatures)
 { 
-    RosUmdLogging::Call(__FUNCTION__); 
+    RosUmdLogging::Entry(__FUNCTION__);
 
-    RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
-    pDevice; // unused
+    RosUmdDevice * pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
 
-    RosUmdTesselationShader* pTesselationShader = new (hShader.pDrvPrivate) RosUmdTesselationShader(pCode, hRTShader, pSignatures);
-    pTesselationShader; // unused
+    try
+    {
+        pRosUmdDevice->CreateTessellationShader(pCode, hShader, hRTShader, pSignatures);
+    }
+
+    catch (std::exception & e)
+    {
+        pRosUmdDevice->SetException(e);
+    }
+
+    RosUmdLogging::Exit(__FUNCTION__);
 }
 
 void APIENTRY RosUmdDeviceDdi::DdiDestroyShader(
@@ -818,11 +866,8 @@ void APIENTRY RosUmdDeviceDdi::DdiDestroyShader(
     RosUmdLogging::Call(__FUNCTION__);
 
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
-    pDevice; // unused
 
-    RosUmdShader * pShader = RosUmdShader::CastFrom(hShader);
-    pShader->~RosUmdShader();
-
+    pDevice->DestroyShader(hShader);
 }
 
 void APIENTRY RosUmdDeviceDdi::DdiPsSetShader(D3D10DDI_HDEVICE hDevice, D3D10DDI_HSHADER hShader) { 
@@ -1047,6 +1092,16 @@ void APIENTRY RosUmdDeviceDdi::DdiDraw(
     pDevice->Draw(vertexCount, startVertexLocation);
 }
 
+void APIENTRY RosUmdDeviceDdi::DdiDrawIndexed(
+    D3D10DDI_HDEVICE hDevice,
+    UINT indexCount,
+    UINT startIndexLocation,
+    INT baseVertexLocation)
+{
+    RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
+    pDevice->DrawIndexed(indexCount, startIndexLocation, baseVertexLocation);
+}
+
 //
 // Vertex Buffers
 //
@@ -1063,5 +1118,21 @@ void APIENTRY RosUmdDeviceDdi::DdiIaSetVertexBuffers(
 
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     pDevice->SetVertexBuffers(startBuffer, numBuffers, phBuffers, pStrides, pOffsets);
-
 }
+
+//
+// Index Buffer
+//
+
+void APIENTRY RosUmdDeviceDdi::DdiIaSetIndexBuffer(
+    D3D10DDI_HDEVICE hDevice,
+    D3D10DDI_HRESOURCE hIndexBuffer,
+    DXGI_FORMAT hIndexFormat,
+    UINT offset)
+{
+    RosUmdLogging::Call(__FUNCTION__);
+
+    RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
+    pDevice->SetIndexBuffer(hIndexBuffer, hIndexFormat, offset);
+}
+

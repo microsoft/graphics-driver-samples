@@ -6,7 +6,18 @@
 //
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+#include "RosKmdAdapter.h"
+#include "RosKmdContext.h"
+#include "RosKmdAllocation.h"
+#include "RosGpuCommand.h"
+#include "RosKmdGlobal.h"
 #include "RosKmdUtil.h"
+
+#if VC4
+
+#include "Vc4Hw.h"
+
+#endif
 
 D3DDDIFORMAT
 TranslateDxgiFormat(
@@ -83,3 +94,47 @@ TranslateDxgiFormat(
         return D3DDDIFMT_UNKNOWN;
     }
 }
+
+#if VC4
+
+//
+// Make sure PDB file has type definition for VC4 Control List commands
+//
+
+// Code: 28
+static VC4StoreTileBufferGeneral   *pVC4StoreTileBufferGeneral = NULL;
+
+// Code: 32
+static VC4IndexedPrimitiveList     *pVC4IndexedPrimitiveList = NULL;
+
+// Code: 56
+static VC4PrimitiveListFormat      *pVC4PrimitiveListFormat = NULL;
+
+// Code: 65
+static VC4NVShaderState            *pVC4NVShaderState = NULL;
+
+static VC4NVShaderStateRecord      *pVC4NVShaderStateRecord = NULL;
+
+// Code: 96
+static VC4ConfigBits               *pVC4ConfigBits = NULL;
+
+// Code: 102
+static VC4ClipWindow               *pVC4ClipWindow = NULL;
+
+// Code: 103
+static VC4ViewportOffset           *pVC4ViewportOffset = NULL; 
+
+// Code: 112,   Binning only
+static VC4TileBinningModeConfig    *pVC4TileBinningModeConfig = NULL; 
+
+// Code 113,    Rendering only
+static VC4TileRenderingModeConfig  *pVC4TileRenderingModeConfig = NULL; 
+
+// Code 114,    Rendering only
+static VC4ClearColors              *pVC4ClearColors = NULL; 
+
+// Code 115,    Rendering only
+static VC4TileCoordinates          *pVC4TileCoordinates = NULL;
+
+#endif
+
