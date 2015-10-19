@@ -66,6 +66,9 @@
     <ClInclude Include="..\roscommon\Vc4Hw.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="RosKmdDdi.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Inf Include="Ros.inf" />

@@ -99,33 +99,15 @@ typedef union _RosKmAdapterFlags
     UINT        m_value;
 } RosKmAdapterFlags;
 
+class RosKmdDdi;
+
 class RosKmAdapter
 {
 public:
 
-    static NTSTATUS __stdcall DdiAddAdapter(
+    static NTSTATUS __stdcall AddAdapter(
         IN_CONST_PDEVICE_OBJECT     PhysicalDeviceObject,
         OUT_PPVOID                  MiniportDeviceContext);
-
-    static NTSTATUS __stdcall DdiStartAdapter(
-        IN_CONST_PVOID          MiniportDeviceContext,
-        IN_PDXGK_START_INFO     DxgkStartInfo,
-        IN_PDXGKRNL_INTERFACE   DxgkInterface,
-        OUT_PULONG              NumberOfVideoPresentSources,
-        OUT_PULONG              NumberOfChildren);
-
-    static NTSTATUS __stdcall DdiStopAdapter(
-        IN_CONST_PVOID  MiniportDeviceContext);
-
-    static NTSTATUS __stdcall DdiRemoveAdapter(
-        IN_CONST_PVOID  MiniportDeviceContext);
-
-    static NTSTATUS __stdcall DdiBuildPagingBuffer(
-        IN_CONST_HANDLE                 hAdapter,
-        IN_PDXGKARG_BUILDPAGINGBUFFER   pArgs);
-
-    static void __stdcall DdiDpcRoutine(
-        IN_CONST_PVOID  MiniportDeviceContext);
 
     static NTSTATUS __stdcall DdiSubmitCommand(
         IN_CONST_HANDLE                     hAdapter,
@@ -300,17 +282,6 @@ public:
             IN_PQUERY_INTERFACE     QueryInterface);
 
     static NTSTATUS
-        DdiDispatchIoRequest(
-            IN_CONST_PVOID              MiniportDeviceContext,
-            IN_ULONG                    VidPnSourceId,
-            IN_PVIDEO_REQUEST_PACKET    VideoRequestPacket);
-
-    static BOOLEAN
-        DdiInterruptRoutine(
-            IN_CONST_PVOID  MiniportDeviceContext,
-            IN_ULONG        MessageNumber);
-
-    static NTSTATUS
         DdiQueryChildRelations(
             IN_CONST_PVOID                  MiniportDeviceContext,
             INOUT_PDXGK_CHILD_DESCRIPTOR    ChildRelations,
@@ -405,6 +376,8 @@ public:
         UINT                            patchAllocationList);
 
 private:
+
+    friend class RosKmdDdi;
 
     NTSTATUS Start(
         IN_PDXGK_START_INFO     DxgkStartInfo,
