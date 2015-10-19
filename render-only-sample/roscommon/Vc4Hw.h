@@ -8,123 +8,153 @@
 
 typedef struct _VC4_REGISTER_FILE
 {
-    UINT V3D_IDENT0;    // 0x0000   V3D Identification 0 (V3D block identity
-    UINT V3D_IDENT1;    // 0x0004   V3D Identification 1 (V3D Configuration A)
-    UINT V3D_IDENT2;    // 0x0008   V3D Identification 1 (V3D Configuration B
+    volatile UINT V3D_IDENT0;   // 0x0000   V3D Identification 0 (V3D block identity
+    volatile UINT V3D_IDENT1;   // 0x0004   V3D Identification 1 (V3D Configuration A)
+    volatile UINT V3D_IDENT2;   // 0x0008   V3D Identification 1 (V3D Configuration B
 
-    UINT RESERVED0;
+    volatile UINT RESERVED0;
 
-    UINT V3D_SCRATCH;   // 0x0010   Scratch Register
+    volatile UINT V3D_SCRATCH;  // 0x0010   Scratch Register
 
-    UINT RESERVED1[3];
+    volatile UINT RESERVED1[3];
 
-    UINT V3D_L2CACTL;   // 0x0020   L2 Cache Control
-    UINT V3D_SLCACTL;   // 0x0024   Slices Cache Control
+    volatile UINT V3D_L2CACTL;  // 0x0020   L2 Cache Control
+    volatile UINT V3D_SLCACTL;  // 0x0024   Slices Cache Control
 
-    UINT RESERVED2[2];
+    volatile UINT RESERVED2[2];
 
-    UINT V3D_INTCTL;    // 0x0030   Interrupt Control
-    UINT V3D_INTENA;    // 0x0034   Interrupt Enables
-    UINT V3D_INTDIS;    // 0x0038   Interrupt Disables
+    volatile UINT V3D_INTCTL;   // 0x0030   Interrupt Control
+    volatile UINT V3D_INTENA;   // 0x0034   Interrupt Enables
+    volatile UINT V3D_INTDIS;   // 0x0038   Interrupt Disables
 
-    UINT RESERVED3[49];
+    volatile UINT RESERVED3[49];
 
-    UINT V3D_CT0CS;     // 0x0100   Control List Executor Thread 0 Control and Status.
-    UINT V3D_CT1CS;     // 0x0104   Control List Executor Thread 1 Control and Status.
-    UINT V3D_CT0EA;     // 0x0108   Control List Executor Thread 0 End Address.
-    UINT V3D_CT1EA;     // 0x010c   Control List Executor Thread 1 End Address.
-    UINT V3D_CT0CA;     // 0x0110   Control List Executor Thread 0 Current Address.
-    UINT V3D_CT1CA;     // 0x0114   Control List Executor Thread 1 Current Address.
-    UINT V3D_CT00RA0;   // 0x0118   Control List Executor Thread 0 Return Address.
-    UINT V3D_CT01RA0;   // 0x011c   Control List Executor Thread 1 Return Address.
-    UINT V3D_CT0LC;     // 0x0120   Control List Executor Thread 0 List Counter
-    UINT V3D_CT1LC;     // 0x0124   Control List Executor Thread 1 List Counter
-    UINT V3D_CT0PC;     // 0x0128   Control List Executor Thread 0 Primitive List Counter
-    UINT V3D_CT1PC;     // 0x012c   Control List Executor Thread 1 Primitive List Counter
+    volatile UINT V3D_CT0CS;    // 0x0100   Control List Executor Thread 0 Control and Status.
+    volatile UINT V3D_CT1CS;    // 0x0104   Control List Executor Thread 1 Control and Status.
+    volatile UINT V3D_CT0EA;    // 0x0108   Control List Executor Thread 0 End Address.
+    volatile UINT V3D_CT1EA;    // 0x010c   Control List Executor Thread 1 End Address.
+    volatile UINT V3D_CT0CA;    // 0x0110   Control List Executor Thread 0 Current Address.
+    volatile UINT V3D_CT1CA;    // 0x0114   Control List Executor Thread 1 Current Address.
+    volatile UINT V3D_CT00RA0;  // 0x0118   Control List Executor Thread 0 Return Address.
+    volatile UINT V3D_CT01RA0;  // 0x011c   Control List Executor Thread 1 Return Address.
+    volatile UINT V3D_CT0LC;    // 0x0120   Control List Executor Thread 0 List Counter
+    volatile UINT V3D_CT1LC;    // 0x0124   Control List Executor Thread 1 List Counter
+    volatile UINT V3D_CT0PC;    // 0x0128   Control List Executor Thread 0 Primitive List Counter
+    volatile UINT V3D_CT1PC;    // 0x012c   Control List Executor Thread 1 Primitive List Counter
 
-    UINT V3D_PCS;       // 0x0130   V3D Pipeline Control and Status
-    UINT V3D_BFC;       // 0x0134   Binning Mode Flush Count
-    UINT V3D_RFC;       // 0x0138   Rendering Mode Frame Count
+    volatile UINT V3D_PCS;      // 0x0130   V3D Pipeline Control and Status
+    volatile UINT V3D_BFC;      // 0x0134   Binning Mode Flush Count
+    volatile UINT V3D_RFC;      // 0x0138   Rendering Mode Frame Count
 
-    UINT RESERVED4[113];
+    volatile UINT RESERVED4[113];
 
-    UINT V3D_BPCA;      // 0x0300   Current Address of Binning Memory Pool
-    UINT V3D_BPCS;      // 0x0304   Remaining Size of Binning Memory Pool
-    UINT V3D_BPOA;      // 0x0308   Address of Overspill Binning Memory Block
-    UINT V3D_BPOS;      // 0x030c   Size of Overspill Binning Memory Block
-    UINT V3D_BXCF;      // 0x0310   Binner Debug
+    volatile UINT V3D_BPCA;     // 0x0300   Current Address of Binning Memory Pool
+    volatile UINT V3D_BPCS;     // 0x0304   Remaining Size of Binning Memory Pool
+    volatile UINT V3D_BPOA;     // 0x0308   Address of Overspill Binning Memory Block
+    volatile UINT V3D_BPOS;     // 0x030c   Size of Overspill Binning Memory Block
+    volatile UINT V3D_BXCF;     // 0x0310   Binner Debug
 
-    UINT RESERVED5[63];
+    volatile UINT RESERVED5[63];
 
-    UINT V3D_SQRSV0;    // 0x0410   Reserve QPUs 0-7
-    UINT V3D_SQRSV1;    // 0x0414   Reserve QPUs 8-15
-    UINT V3D_SQCNTL;    // 0x0418   QPU Scheduler Control
+    volatile UINT V3D_SQRSV0;   // 0x0410   Reserve QPUs 0-7
+    volatile UINT V3D_SQRSV1;   // 0x0414   Reserve QPUs 8-15
+    volatile UINT V3D_SQCNTL;   // 0x0418   QPU Scheduler Control
 
-    UINT RESERVED6[5];
+    volatile UINT RESERVED6[5];
 
-    UINT V3D_SRQPC;     // 0x0430   QPU User Program Request Program Address
-    UINT V3D_SRQUA;     // 0x0434   QPU User Program Request Uniforms Address
-    UINT V3D_SRQUL;     // 0x0438   QPU User Program Request Uniforms Length
-    UINT V3D_SRQCS;     // 0x043c   QPU User Program Request Control and Status
+    volatile UINT V3D_SRQPC;    // 0x0430   QPU User Program Request Program Address
+    volatile UINT V3D_SRQUA;    // 0x0434   QPU User Program Request Uniforms Address
+    volatile UINT V3D_SRQUL;    // 0x0438   QPU User Program Request Uniforms Length
+    volatile UINT V3D_SRQCS;    // 0x043c   QPU User Program Request Control and Status
 
-    UINT RESERVED7[48];
+    volatile UINT RESERVED7[48];
 
-    UINT V3D_VPACNTL;   // 0x0500   VPM Allocator Control
-    UINT V3D_VPMBASE;   // 0x0504   VPM base (user) memory reservation
+    volatile UINT V3D_VPACNTL;  // 0x0500   VPM Allocator Control
+    volatile UINT V3D_VPMBASE;  // 0x0504   VPM base (user) memory reservation
 
-    UINT RESERVED8[90];
+    volatile UINT RESERVED8[90];
 
-    UINT V3D_PCTRC;     // 0x0670   Performance Counter Clear
-    UINT V3D_PCTRE;     // 0x0674   Performance Counter Enables
+    volatile UINT V3D_PCTRC;    // 0x0670   Performance Counter Clear
+    volatile UINT V3D_PCTRE;    // 0x0674   Performance Counter Enables
 
-    UINT RESERVED9[2];
+    volatile UINT RESERVED9[2];
 
-    UINT V3D_PCTR0;     // 0x0680   Performance Counter Count 0
-    UINT V3D_PCTRS0;    // 0x0684   Performance Counter Mapping 0
-    UINT V3D_PCTR1;     // 0x0688   Performance Counter Count 1
-    UINT V3D_PCTRS1;    // 0x068c   Performance Counter Mapping 1
-    UINT V3D_PCTR2;     // 0x0690   Performance Counter Count 2
-    UINT V3D_PCTRS2;    // 0x0694   Performance Counter Mapping 2
-    UINT V3D_PCTR3;     // 0x0698   Performance Counter Count 3
-    UINT V3D_PCTRS3;    // 0x069c   Performance Counter Mapping 3
-    UINT V3D_PCTR4;     // 0x06a0   Performance Counter Count 4
-    UINT V3D_PCTRS4;    // 0x06a4   Performance Counter Mapping 4
-    UINT V3D_PCTR5;     // 0x06a8   Performance Counter Count 5
-    UINT V3D_PCTRS5;    // 0x06ac   Performance Counter Mapping 5
-    UINT V3D_PCTR6;     // 0x06b0   Performance Counter Count 6
-    UINT V3D_PCTRS6;    // 0x06b4   Performance Counter Mapping 6
-    UINT V3D_PCTR7;     // 0x06b8   Performance Counter Count 7
-    UINT V3D_PCTRS7;    // 0x06bc   Performance Counter Mapping 7 
-    UINT V3D_PCTR8;     // 0x06c0   Performance Counter Count 8
-    UINT V3D_PCTRS8;    // 0x06c4   Performance Counter Mapping 8
-    UINT V3D_PCTR9;     // 0x06c8   Performance Counter Count 9
-    UINT V3D_PCTRS9;    // 0x06cc   Performance Counter Mapping 9
-    UINT V3D_PCTR10;    // 0x06d0   Performance Counter Count 10
-    UINT V3D_PCTRS10;   // 0x06d4   Performance Counter Mapping 10
-    UINT V3D_PCTR11;    // 0x06d8   Performance Counter Count 11
-    UINT V3D_PCTRS11;   // 0x06dc   Performance Counter Mapping 11
-    UINT V3D_PCTR12;    // 0x06e0   Performance Counter Count 12
-    UINT V3D_PCTRS12;   // 0x06e4   Performance Counter Mapping 12
-    UINT V3D_PCTR13;    // 0x06e8   Performance Counter Count 13
-    UINT V3D_PCTRS13;   // 0x06ec   Performance Counter Mapping 13
-    UINT V3D_PCTR14;    // 0x06f0   Performance Counter Count 14
-    UINT V3D_PCTRS14;   // 0x06f4   Performance Counter Mapping 14
-    UINT V3D_PCTR15;    // 0x06f8   Performance Counter Count 15
-    UINT V3D_PCTRS15;   // 0x06fc   Performance Counter Mapping 15
+    volatile UINT V3D_PCTR0;    // 0x0680   Performance Counter Count 0
+    volatile UINT V3D_PCTRS0;   // 0x0684   Performance Counter Mapping 0
+    volatile UINT V3D_PCTR1;    // 0x0688   Performance Counter Count 1
+    volatile UINT V3D_PCTRS1;   // 0x068c   Performance Counter Mapping 1
+    volatile UINT V3D_PCTR2;    // 0x0690   Performance Counter Count 2
+    volatile UINT V3D_PCTRS2;   // 0x0694   Performance Counter Mapping 2
+    volatile UINT V3D_PCTR3;    // 0x0698   Performance Counter Count 3
+    volatile UINT V3D_PCTRS3;   // 0x069c   Performance Counter Mapping 3
+    volatile UINT V3D_PCTR4;    // 0x06a0   Performance Counter Count 4
+    volatile UINT V3D_PCTRS4;   // 0x06a4   Performance Counter Mapping 4
+    volatile UINT V3D_PCTR5;    // 0x06a8   Performance Counter Count 5
+    volatile UINT V3D_PCTRS5;   // 0x06ac   Performance Counter Mapping 5
+    volatile UINT V3D_PCTR6;    // 0x06b0   Performance Counter Count 6
+    volatile UINT V3D_PCTRS6;   // 0x06b4   Performance Counter Mapping 6
+    volatile UINT V3D_PCTR7;    // 0x06b8   Performance Counter Count 7
+    volatile UINT V3D_PCTRS7;   // 0x06bc   Performance Counter Mapping 7 
+    volatile UINT V3D_PCTR8;    // 0x06c0   Performance Counter Count 8
+    volatile UINT V3D_PCTRS8;   // 0x06c4   Performance Counter Mapping 8
+    volatile UINT V3D_PCTR9;    // 0x06c8   Performance Counter Count 9
+    volatile UINT V3D_PCTRS9;   // 0x06cc   Performance Counter Mapping 9
+    volatile UINT V3D_PCTR10;   // 0x06d0   Performance Counter Count 10
+    volatile UINT V3D_PCTRS10;  // 0x06d4   Performance Counter Mapping 10
+    volatile UINT V3D_PCTR11;   // 0x06d8   Performance Counter Count 11
+    volatile UINT V3D_PCTRS11;  // 0x06dc   Performance Counter Mapping 11
+    volatile UINT V3D_PCTR12;   // 0x06e0   Performance Counter Count 12
+    volatile UINT V3D_PCTRS12;  // 0x06e4   Performance Counter Mapping 12
+    volatile UINT V3D_PCTR13;   // 0x06e8   Performance Counter Count 13
+    volatile UINT V3D_PCTRS13;  // 0x06ec   Performance Counter Mapping 13
+    volatile UINT V3D_PCTR14;   // 0x06f0   Performance Counter Count 14
+    volatile UINT V3D_PCTRS14;  // 0x06f4   Performance Counter Mapping 14
+    volatile UINT V3D_PCTR15;   // 0x06f8   Performance Counter Count 15
+    volatile UINT V3D_PCTRS15;  // 0x06fc   Performance Counter Mapping 15
 
-    UINT RESERVED10[512];
+    volatile UINT RESERVED10[512];
 
-    UINT V3D_DBGE;      // 0x0f00   PSE Error Signals
-    UINT V3D_FDBGO;     // 0x0f04   FEP Overrun Error Signals
-    UINT V3D_FDBGB;     // 0x0f08   FEP Interface Ready and Stall Signals, FEP Busy Signals
-    UINT V3D_FDBGR;     // 0x0f0c   FEP Internal Ready Signals
-    UINT V3D_FDBGS;     // 0x0f10   FEP Internal Stall Input Signals
+    volatile UINT V3D_DBGE;     // 0x0f00   PSE Error Signals
+    volatile UINT V3D_FDBGO;    // 0x0f04   FEP Overrun Error Signals
+    volatile UINT V3D_FDBGB;    // 0x0f08   FEP Interface Ready and Stall Signals, FEP Busy Signals
+    volatile UINT V3D_FDBGR;    // 0x0f0c   FEP Internal Ready Signals
+    volatile UINT V3D_FDBGS;    // 0x0f10   FEP Internal Stall Input Signals
 
-    UINT RESERVED11[3];
+    volatile UINT RESERVED11[3];
 
-    UINT V3D_ERRSTAT;   // 0x0f20   Miscellaneous Error Signals (VPM, VDW, VCD, VCM, L2C)
+    volatile UINT V3D_ERRSTAT;  // 0x0f20   Miscellaneous Error Signals (VPM, VDW, VCD, VCM, L2C)
 
 } VC4_REGISTER_FILE;
+
+// 0x0020   L2 Cache Control
+typedef union _V3D_REG_L2CACTL
+{
+    struct
+    {
+        UINT    L2CENA      : 1;
+        UINT    L2CDIS      : 1;
+        UINT    L2CCLR      : 1;
+    };
+
+    UINT        Value;
+} V3D_REG_L2CACTL;
+
+// 0x0024   Slices Cache Control
+typedef union _V3D_REG_SLCACTL
+{
+    struct
+    {
+        UINT    ICCS0123    : 4;
+        UINT                : 4;
+        UINT    UCCS0123    : 4;
+        UINT                : 4;
+        UINT    T0CCS0123   : 4;
+        UINT                : 4;
+        UINT    T1CCS0123   : 4;
+    };
+
+    UINT        Value;
+} V3D_REG_SLCACTL;
 
 // 0x0100   Control List Executor Thread 0 Control and Status
 typedef union _V3D_REG_CT0CS

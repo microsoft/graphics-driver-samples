@@ -361,6 +361,25 @@ RosKmAdapter::ProcessRenderBuffer(
             //
             KeInvalidateAllCaches();
 
+            //
+            // Flush the VC4 GPU caches
+            //
+
+            V3D_REG_L2CACTL regL2CACTL = { 0 };
+
+            regL2CACTL.L2CCLR = 1;
+            
+            m_pVC4RegFile->V3D_L2CACTL = regL2CACTL.Value;
+
+            V3D_REG_SLCACTL regSLCACTL = { 0 };
+
+            regSLCACTL.ICCS0123  = 0xF;
+            regSLCACTL.UCCS0123  = 0xF;
+            regSLCACTL.T0CCS0123 = 0xF;
+            regSLCACTL.T1CCS0123 = 0xF;
+
+            m_pVC4RegFile->V3D_SLCACTL = regSLCACTL.Value;
+
 #endif
 
             //
@@ -388,6 +407,13 @@ RosKmAdapter::ProcessRenderBuffer(
                 m_renderingControlListPhysicalAddress + renderingControlListLength);
 
             MoveToNextBinnerRenderMemChunk(renderingControlListLength);
+
+            //
+            // Flush the VC4 GPU caches
+            //
+
+            m_pVC4RegFile->V3D_L2CACTL = regL2CACTL.Value;
+            m_pVC4RegFile->V3D_SLCACTL = regSLCACTL.Value;
         }
 #endif  // VC4
     }
@@ -405,15 +431,31 @@ RosKmAdapter::SubmitControlList(
     // CL end address upon completion
     //
 
+    V3D_REG_CT0CS regCTnCS = { 0 };
+
+    regCTnCS.CTRUN = 1;
+
     if (bBinningControlList)
     {
+        m_pVC4RegFile->V3D_CT0CS = regCTnCS.Value;
+        KeMemoryBarrier();
+
         m_pVC4RegFile->V3D_CT0CA = startAddress;
+        KeMemoryBarrier();
+
         m_pVC4RegFile->V3D_CT0EA = endAddress;
+        KeMemoryBarrier();
     }
     else
     {
+        m_pVC4RegFile->V3D_CT1CS = regCTnCS.Value;
+        KeMemoryBarrier();
+
         m_pVC4RegFile->V3D_CT1CA = startAddress;
+        KeMemoryBarrier();
+
         m_pVC4RegFile->V3D_CT1EA = endAddress;
+        KeMemoryBarrier();
     }
 
     //
@@ -445,8 +487,7 @@ RosKmAdapter::SubmitControlList(
 
         NT_ASSERT(status == STATUS_TIMEOUT);
 
-        // Check Control List Executor Thread 0 Control and Status
-        V3D_REG_CT0CS regCTnCS;
+        // Check Control List Executor Thread 0 or 1 Control and Status
 
         if (bBinningControlList)
         {
