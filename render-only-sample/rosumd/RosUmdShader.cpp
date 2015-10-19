@@ -7,7 +7,6 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #include "RosUmdDevice.h"
 #include "RosUmdShader.h"
-#include "d3d11tokenizedprogramformat.hpp"
 
 void
 RosUmdShader::Standup(
@@ -54,70 +53,54 @@ RosUmdPipelineShader::Standup(
         m_pOutputSignatureEntries = nullptr;
     }
 
-    //
-    // TODO: Calculate the size of VC4 shader instead using PAGE_SIZE
-    //
-    m_pDevice->CreateInternalBuffer(
-        &m_hwShaderCode,
-        PAGE_SIZE);
+    m_pCompiler = RosCompilerCreate(m_pCode,
+                                    m_numInputSignatureEntries,
+                                    m_pInputSignatureEntries,
+									m_numOutputSignatureEntries,
+                                    m_pOutputSignatureEntries);
 
-    UINT versionToken = pCode[0];
-    UINT programType = (versionToken & D3D10_SB_TOKENIZED_PROGRAM_TYPE_MASK) >> D3D10_SB_TOKENIZED_PROGRAM_TYPE_SHIFT;
-
-    if (D3D10_SB_PIXEL_SHADER == programType)
+    if (m_pCompiler &&
+        m_pCompiler->Compile(&m_hwShaderCodeSize) &&
+        m_hwShaderCodeSize)
     {
-        D3D10DDI_MAPPED_SUBRESOURCE mappedSubRes;
+        m_pDevice->CreateInternalBuffer(
+            &m_hwShaderCode,
+            m_hwShaderCodeSize);
 
-        m_hwShaderCode.Map(
-            m_pDevice,
-            0,
-            D3D10_DDI_MAP_WRITE,
-            0,
-            &mappedSubRes);
+        {
+		    D3D10DDI_MAPPED_SUBRESOURCE mappedSubRes = { 0 };
 
-        UINT *  pShaderCode = (UINT *)mappedSubRes.pData;
+            m_hwShaderCode.Map(
+                m_pDevice,
+                0,
+                D3D10_DDI_MAP_WRITE,
+                0,
+                &mappedSubRes);
 
-        //
-        // TODO: Before shader compiler is online, use a hard-coded shader for testing
-        //
+            if (mappedSubRes.pData)
+            {
+                UINT* pShaderCode = (UINT *)mappedSubRes.pData;
 
-        *pShaderCode++ = 0x958e0dbf;
-        *pShaderCode++ = 0xd1724823;    // mov r0, vary; mov r3.8d, 1.0
-        *pShaderCode++ = 0x818e7176;
-        *pShaderCode++ = 0x40024821;    // fadd r0, r0, r5; mov r1, vary
-        *pShaderCode++ = 0x818e7376;
-        *pShaderCode++ = 0x10024862;    // fadd r1, r1, r5; mov r2, vary
-        *pShaderCode++ = 0x819e7540;
-        *pShaderCode++ = 0x114248a3;    // fadd r2, r2, r5; mov r3.8a, r0
-        *pShaderCode++ = 0x809e7009;
-        *pShaderCode++ = 0x115049e3;    // nop; mov r3.8b, r1
-        *pShaderCode++ = 0x809e7012;
-        *pShaderCode++ = 0x116049e3;    // nop; mov r3.8c, r2
-        *pShaderCode++ = 0x159e76c0;
-        *pShaderCode++ = 0x30020ba7;    // mov tlbc, r3; nop; thrend
-        *pShaderCode++ = 0x009e7000;
-        *pShaderCode++ = 0x100009e7;    // nop; nop; nop
-        *pShaderCode++ = 0x009e7000;
-        *pShaderCode++ = 0x500009e7;    // nop; nop; sbdone
+                RtlCopyMemory(pShaderCode, m_pCompiler->GetShaderCode(), m_hwShaderCodeSize);
 
-        m_hwShaderCode.Unmap(
-            m_pDevice,
-            0);
+                m_hwShaderCode.Unmap(
+                    m_pDevice,
+                    0);
+
+                return;
+            }
+        }
     }
-    else if (D3D10_SB_PIXEL_SHADER == programType)
-    {
-        // Implement vertex shader compiling
-        __debugbreak();
-    }
-    else
-    {
-        // Other type of shader
-    }
+
+    // TODO: error ?
+    __debugbreak();
 }
 
 void
 RosUmdPipelineShader::Teardown()
 {
+    delete m_pCompiler;
+
     delete[] m_pInputSignatureEntries;
     delete[] m_pOutputSignatureEntries;
 

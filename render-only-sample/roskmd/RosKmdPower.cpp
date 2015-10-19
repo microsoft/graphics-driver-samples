@@ -186,6 +186,7 @@ RosKmAdapter::InitializePowerComponentInfo()
 			//
 			// Driver makes callback to complete transition.
 			//
+			m_PowerComponents[componentIndex].Flags.Value = 0;
 			m_PowerComponents[componentIndex].Flags.DriverCompletesFStateTransition = 1;
 		}
 

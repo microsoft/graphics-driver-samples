@@ -1,15 +1,16 @@
 #pragma once
 
 #include "d3dumddi_.h"
-//#include "D3d10tokenizedprogramformat.hpp"
 #include "RosUmdDevice.h"
+#include "..\roscompiler\roscompiler.h"
 
 class RosUmdShader
 {
 public:
 
     RosUmdShader(RosUmdDevice * pDevice)
-        : m_pDevice(pDevice)
+        : m_pDevice(pDevice),
+		  m_pCompiler(NULL)
     {
     }
 
@@ -35,6 +36,9 @@ protected:
 
     RosUmdDevice *                  m_pDevice;
     RosUmdResource                  m_hwShaderCode;
+	UINT							m_hwShaderCodeSize;
+	
+	RosCompiler *                   m_pCompiler;
 };
 
 inline RosUmdShader* RosUmdShader::CastFrom(D3D10DDI_HSHADER hShader)

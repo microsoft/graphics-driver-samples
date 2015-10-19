@@ -96,6 +96,9 @@
     <ClInclude Include="..\roscommon\Vc4Ddi.h">
       <Filter>Common</Filter>
     </ClInclude>
+    <ClInclude Include="..\roscompiler\roscompiler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="RosUmd.cpp">

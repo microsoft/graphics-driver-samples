@@ -57,6 +57,7 @@
     <ClInclude Include="..\roscommon\RosGpuCommand.h" />
     <ClInclude Include="..\roscommon\Vc4Ddi.h" />
     <ClInclude Include="..\roscommon\Vc4Hw.h" />
+    <ClInclude Include="..\roscompiler\roscompiler.h" />
     <ClInclude Include="d3dumddi_.h" />
     <ClInclude Include="pixel.hpp" />
     <ClInclude Include="RosContext.h" />
@@ -225,8 +226,9 @@
     </ClCompile>
     <Link>
       <ModuleDefinitionFile>RosUmd.def</ModuleDefinitionFile>
-      <AdditionalDependencies>%(AdditionalDependencies);OneCoreUAP.lib</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies);roscompiler.lib</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
+      <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
     </Link>
     <ProjectReference>
       <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
@@ -257,8 +259,9 @@
     </ClCompile>
     <Link>
       <ModuleDefinitionFile>RosUmd.def</ModuleDefinitionFile>
-      <AdditionalDependencies>%(AdditionalDependencies);OneCoreUAP.lib</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies);roscompiler.lib</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
+      <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
     </Link>
     <ProjectReference>
       <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
@@ -289,8 +292,9 @@
     </ClCompile>
     <Link>
       <ModuleDefinitionFile>RosUmd.def</ModuleDefinitionFile>
-      <AdditionalDependencies>%(AdditionalDependencies);OneCoreUAP.lib</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies);roscompiler.lib</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
+      <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
     </Link>
     <ProjectReference>
       <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
@@ -321,8 +325,9 @@
     </ClCompile>
     <Link>
       <ModuleDefinitionFile>RosUmd.def</ModuleDefinitionFile>
-      <AdditionalDependencies>%(AdditionalDependencies);OneCoreUAP.lib</AdditionalDependencies>
+      <AdditionalDependencies>%(AdditionalDependencies);roscompiler.lib</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
+      <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
     </Link>
     <ProjectReference>
       <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
