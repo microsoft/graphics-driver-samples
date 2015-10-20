@@ -57,7 +57,7 @@ RosKmAdapter::~RosKmAdapter()
 }
 
 NTSTATUS __stdcall
-RosKmAdapter::DdiAddAdapter(
+RosKmAdapter::AddAdapter(
     IN_CONST_PDEVICE_OBJECT     PhysicalDeviceObject,
     OUT_PPVOID                  MiniportDeviceContext)
 {
@@ -67,41 +67,6 @@ RosKmAdapter::DdiAddAdapter(
     {
         return STATUS_NO_MEMORY;
     }
-
-    return STATUS_SUCCESS;
-}
-
-NTSTATUS __stdcall
-RosKmAdapter::DdiStartAdapter(
-    IN_CONST_PVOID          MiniportDeviceContext,
-    IN_PDXGK_START_INFO     DxgkStartInfo,
-    IN_PDXGKRNL_INTERFACE   DxgkInterface,
-    OUT_PULONG              NumberOfVideoPresentSources,
-    OUT_PULONG              NumberOfChildren)
-{
-    RosKmAdapter  *pRosKmAdapter = RosKmAdapter::Cast(MiniportDeviceContext);
-
-    return pRosKmAdapter->Start(DxgkStartInfo, DxgkInterface, NumberOfVideoPresentSources, NumberOfChildren);
-}
-
-
-NTSTATUS __stdcall
-RosKmAdapter::DdiStopAdapter(
-    IN_CONST_PVOID  MiniportDeviceContext)
-{
-    RosKmAdapter  *pRosKmAdapter = RosKmAdapter::Cast(MiniportDeviceContext);
-
-    return pRosKmAdapter->Stop();
-}
-
-
-NTSTATUS __stdcall
-RosKmAdapter::DdiRemoveAdapter(
-    IN_CONST_PVOID  MiniportDeviceContext)
-{
-    RosKmAdapter  *pRosKmAdapter = RosKmAdapter::Cast(MiniportDeviceContext);
-
-    delete pRosKmAdapter;
 
     return STATUS_SUCCESS;
 }
@@ -361,6 +326,25 @@ RosKmAdapter::ProcessRenderBuffer(
             //
             KeInvalidateAllCaches();
 
+            //
+            // Flush the VC4 GPU caches
+            //
+
+            V3D_REG_L2CACTL regL2CACTL = { 0 };
+
+            regL2CACTL.L2CCLR = 1;
+            
+            m_pVC4RegFile->V3D_L2CACTL = regL2CACTL.Value;
+
+            V3D_REG_SLCACTL regSLCACTL = { 0 };
+
+            regSLCACTL.ICCS0123  = 0xF;
+            regSLCACTL.UCCS0123  = 0xF;
+            regSLCACTL.T0CCS0123 = 0xF;
+            regSLCACTL.T1CCS0123 = 0xF;
+
+            m_pVC4RegFile->V3D_SLCACTL = regSLCACTL.Value;
+
 #endif
 
             //
@@ -388,6 +372,13 @@ RosKmAdapter::ProcessRenderBuffer(
                 m_renderingControlListPhysicalAddress + renderingControlListLength);
 
             MoveToNextBinnerRenderMemChunk(renderingControlListLength);
+
+            //
+            // Flush the VC4 GPU caches
+            //
+
+            m_pVC4RegFile->V3D_L2CACTL = regL2CACTL.Value;
+            m_pVC4RegFile->V3D_SLCACTL = regSLCACTL.Value;
         }
 #endif  // VC4
     }
@@ -405,15 +396,31 @@ RosKmAdapter::SubmitControlList(
     // CL end address upon completion
     //
 
+    V3D_REG_CT0CS regCTnCS = { 0 };
+
+    regCTnCS.CTRUN = 1;
+
     if (bBinningControlList)
     {
+        m_pVC4RegFile->V3D_CT0CS = regCTnCS.Value;
+        KeMemoryBarrier();
+
         m_pVC4RegFile->V3D_CT0CA = startAddress;
+        KeMemoryBarrier();
+
         m_pVC4RegFile->V3D_CT0EA = endAddress;
+        KeMemoryBarrier();
     }
     else
     {
+        m_pVC4RegFile->V3D_CT1CS = regCTnCS.Value;
+        KeMemoryBarrier();
+
         m_pVC4RegFile->V3D_CT1CA = startAddress;
+        KeMemoryBarrier();
+
         m_pVC4RegFile->V3D_CT1EA = endAddress;
+        KeMemoryBarrier();
     }
 
     //
@@ -445,8 +452,7 @@ RosKmAdapter::SubmitControlList(
 
         NT_ASSERT(status == STATUS_TIMEOUT);
 
-        // Check Control List Executor Thread 0 Control and Status
-        V3D_REG_CT0CS regCTnCS;
+        // Check Control List Executor Thread 0 or 1 Control and Status
 
         if (bBinningControlList)
         {
@@ -849,37 +855,11 @@ RosKmAdapter::Stop()
     return STATUS_SUCCESS;
 }
 
-void
-RosKmAdapter::DdiDpcRoutine(
-    IN_CONST_PVOID  MiniportDeviceContext)
-{
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s MiniportDeviceContext=%lx\n",
-        __FUNCTION__, MiniportDeviceContext);
-
-    RosKmAdapter  *pRosKmAdapter = RosKmAdapter::Cast(MiniportDeviceContext);
-
-    pRosKmAdapter->DpcRoutine();
-}
-
-
 void RosKmAdapter::DpcRoutine(void)
 {
     // dp nothing other than calling back into dxgk
 
     m_DxgkInterface.DxgkCbNotifyDpc(m_DxgkInterface.DeviceHandle);
-}
-
-NTSTATUS
-__stdcall
-RosKmAdapter::DdiBuildPagingBuffer(
-    IN_CONST_HANDLE                 hAdapter,
-    IN_PDXGKARG_BUILDPAGINGBUFFER   pArgs)
-{
-    RosKmAdapter  *pRosKmAdapter = RosKmAdapter::Cast(hAdapter);
-
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n", __FUNCTION__, hAdapter);
-
-    return pRosKmAdapter->BuildPagingBuffer(pArgs);
 }
 
 NTSTATUS
@@ -1993,58 +1973,6 @@ RosKmAdapter::DdiQueryInterface(
     QueryInterface;
 
     return STATUS_NOT_SUPPORTED;
-}
-
-NTSTATUS
-RosKmAdapter::DdiDispatchIoRequest(
-    IN_CONST_PVOID              MiniportDeviceContext,
-    IN_ULONG                    VidPnSourceId,
-    IN_PVIDEO_REQUEST_PACKET    VideoRequestPacket)
-{
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s MiniportDeviceContext=%lx\n",
-        __FUNCTION__, MiniportDeviceContext);
-
-    MiniportDeviceContext;
-    VidPnSourceId;
-    VideoRequestPacket;
-
-    NT_ASSERT(FALSE);
-    return STATUS_SUCCESS;
-}
-
-BOOLEAN
-RosKmAdapter::DdiInterruptRoutine(
-    IN_CONST_PVOID  MiniportDeviceContext,
-    IN_ULONG        MessageNumber)
-{
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s MiniportDeviceContext=%lx\n",
-        __FUNCTION__, MiniportDeviceContext);
-
-    MiniportDeviceContext;
-    MessageNumber;
-
-#if HW_GPU
-
-    RosKmAdapter  *pRosKmAdapter = RosKmAdapter::Cast(MiniportDeviceContext);
-
-    if (! m_bReadyToHandleInterrupt)
-    {
-        return FALSE;
-    }
-    
-    // Acknowledge the interrupt
-
-    // If the interrupt is for DMA buffer completion,
-    // queue the DPC to wake up the worker thread
-    KeInsertQueueDpc(&pRosKmAdapter->m_hwDmaBufCompletionDpc, NULL, NULL);
-
-    return TRUE;
-
-#else
-
-    return FALSE;
-
-#endif
 }
 
 NTSTATUS

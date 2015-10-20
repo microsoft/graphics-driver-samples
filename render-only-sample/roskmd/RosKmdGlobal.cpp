@@ -2,6 +2,8 @@
 #include "RosKmdDevice.h"
 #include "RosKmdAdapter.h"
 #include "RosKmdContext.h"
+#include "RosKmdDdi.h"
+
 #include "ntverp.h"
 
 bool RosKmdGlobal::s_bDoNotInstall = false;
@@ -111,14 +113,15 @@ NTSTATUS RosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
 
     DriverInitializationData.Version = DXGKDDI_INTERFACE_VERSION;
 
-    DriverInitializationData.DxgkDdiAddDevice = RosKmAdapter::DdiAddAdapter;
-    DriverInitializationData.DxgkDdiStartDevice = RosKmAdapter::DdiStartAdapter;
-    DriverInitializationData.DxgkDdiStopDevice = RosKmAdapter::DdiStopAdapter;
-    DriverInitializationData.DxgkDdiRemoveDevice = RosKmAdapter::DdiRemoveAdapter;
+    DriverInitializationData.DxgkDdiAddDevice = RosKmdDdi::DdiAddAdapter;
+    DriverInitializationData.DxgkDdiStartDevice = RosKmdDdi::DdiStartAdapter;
+    DriverInitializationData.DxgkDdiStopDevice = RosKmdDdi::DdiStopAdapter;
+    DriverInitializationData.DxgkDdiRemoveDevice = RosKmdDdi::DdiRemoveAdapter;
 
-    DriverInitializationData.DxgkDdiDispatchIoRequest = RosKmAdapter::DdiDispatchIoRequest;
-    DriverInitializationData.DxgkDdiInterruptRoutine = RosKmAdapter::DdiInterruptRoutine;
-    DriverInitializationData.DxgkDdiDpcRoutine = RosKmAdapter::DdiDpcRoutine;
+    DriverInitializationData.DxgkDdiDispatchIoRequest = RosKmdDdi::DdiDispatchIoRequest;
+    DriverInitializationData.DxgkDdiInterruptRoutine = RosKmdDdi::DdiInterruptRoutine;
+    DriverInitializationData.DxgkDdiDpcRoutine = RosKmdDdi::DdiDpcRoutine;
+
     DriverInitializationData.DxgkDdiQueryChildRelations = RosKmAdapter::DdiQueryChildRelations;
     DriverInitializationData.DxgkDdiQueryChildStatus = RosKmAdapter::DdiQueryChildStatus;
     DriverInitializationData.DxgkDdiQueryDeviceDescriptor = RosKmAdapter::DdiQueryDeviceDescriptor;
@@ -147,7 +150,7 @@ NTSTATUS RosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
 
     DriverInitializationData.DxgkDdiPatch = RosKmAdapter::DdiPatch;
     DriverInitializationData.DxgkDdiSubmitCommand = RosKmAdapter::DdiSubmitCommand;
-    DriverInitializationData.DxgkDdiBuildPagingBuffer = RosKmAdapter::DdiBuildPagingBuffer;
+    DriverInitializationData.DxgkDdiBuildPagingBuffer = RosKmdDdi::DdiBuildPagingBuffer;
     DriverInitializationData.DxgkDdiPreemptCommand = RosKmAdapter::DdiPreemptCommand;
 
     DriverInitializationData.DxgkDdiDestroyDevice = RosKmDevice::DdiDestroyDevice;

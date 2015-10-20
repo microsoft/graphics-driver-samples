@@ -54,6 +54,7 @@
     <ClInclude Include="RosKmdAdapter.h" />
     <ClInclude Include="RosKmdAllocation.h" />
     <ClInclude Include="RosKmdContext.h" />
+    <ClInclude Include="RosKmdDdi.h" />
     <ClInclude Include="RosKmdDevice.h" />
     <ClInclude Include="RosKmdGlobal.h" />
     <ClInclude Include="RosKmdResource.h" />
