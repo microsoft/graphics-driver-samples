@@ -56,7 +56,7 @@ RosKmAdapter::~RosKmAdapter()
     // do nothing
 }
 
-NTSTATUS __stdcall
+NTSTATUS
 RosKmAdapter::AddAdapter(
     IN_CONST_PDEVICE_OBJECT     PhysicalDeviceObject,
     OUT_PPVOID                  MiniportDeviceContext)
@@ -706,7 +706,7 @@ RosKmAdapter::Start(
         return status;
     }
 
-#if HW_GPU
+#if VC4
     //
     // m_deviceInfo.TranslatedResourceList has the HW resource information
     // (MMIO register file, interrupt, etc)
@@ -820,7 +820,7 @@ RosKmAdapter::Start(
     KeInitializeEvent(&m_hwDmaBufCompletionEvent, SynchronizationEvent, FALSE);
     KeInitializeDpc(&m_hwDmaBufCompletionDpc, HwDmaBufCompletionDpcRoutine, this);
 
-#if HW_GPU
+#if VC4_TODO
 
     //
     // Enable interrupt handling when device is ready
@@ -993,16 +993,52 @@ RosKmAdapter::BuildPagingBuffer(
     return Status;
 }
 
-NTSTATUS __stdcall 
-RosKmAdapter::DdiSubmitCommand(
-    IN_CONST_HANDLE                     hAdapter,
+NTSTATUS
+RosKmAdapter::DispatchIoRequest(
+    IN_ULONG                    VidPnSourceId,
+    IN_PVIDEO_REQUEST_PACKET    VideoRequestPacket)
+{
+    VidPnSourceId;
+    VideoRequestPacket;
+
+    NT_ASSERT(FALSE);
+    return STATUS_SUCCESS;
+}
+
+BOOLEAN
+RosKmAdapter::InterruptRoutine(
+    IN_ULONG        MessageNumber)
+{
+    MessageNumber;
+
+#if VC4_TODO
+
+    RosKmAdapter  *pRosKmdAdapter = RosKmAdapter::Cast(MiniportDeviceContext);
+
+    if (!m_bReadyToHandleInterrupt)
+    {
+        return FALSE;
+    }
+
+    // Acknowledge the interrupt
+
+    // If the interrupt is for DMA buffer completion,
+    // queue the DPC to wake up the worker thread
+    KeInsertQueueDpc(&pRosKmAdapter->m_hwDmaBufCompletionDpc, NULL, NULL);
+
+    return TRUE;
+
+#else
+
+    return FALSE;
+
+#endif
+}
+
+NTSTATUS 
+RosKmAdapter::SubmitCommand(
     IN_CONST_PDXGKARG_SUBMITCOMMAND     pSubmitCommand)
 {
-    RosKmAdapter  *pRosKmAdapter = RosKmAdapter::Cast(hAdapter);
-    pRosKmAdapter;
-
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n", __FUNCTION__, hAdapter);
-
     NTSTATUS        Status = STATUS_SUCCESS;
 
 #if VC4
@@ -1016,7 +1052,7 @@ RosKmAdapter::DdiSubmitCommand(
         BYTE           *pDmaBuf = pDmaBufInfo->m_pDmaBuffer;
         UINT            dmaBufPhysicalAddress;
 
-        dmaBufPhysicalAddress = pRosKmAdapter->GetAperturePhysicalAddress(
+        dmaBufPhysicalAddress = GetAperturePhysicalAddress(
             pSubmitCommand->DmaBufferPhysicalAddress.LowPart);
 
         for (UINT i = 0; i < pDmaBufInfo->m_DmaBufState.m_NumDmaBufSelfRef; i++)
@@ -1034,34 +1070,28 @@ RosKmAdapter::DdiSubmitCommand(
     RosKmContext *pRosKmContext = (RosKmContext *)pSubmitCommand->hContext;
     pRosKmContext;
 
-    pRosKmAdapter->QueueDmaBuffer(pSubmitCommand);
+    QueueDmaBuffer(pSubmitCommand);
 
     //
     // Wake up the worker thread for the GPU node
     //
-    KeSetEvent(&pRosKmAdapter->m_workerThreadEvent, 0, FALSE);
+    KeSetEvent(&m_workerThreadEvent, 0, FALSE);
 
     return Status;
 }
 
-NTSTATUS __stdcall
-RosKmAdapter::DdiPatch(
-    IN_CONST_HANDLE             hAdapter,
+NTSTATUS
+RosKmAdapter::Patch(
     IN_CONST_PDXGKARG_PATCH     pPatch)
 {
-    RosKmAdapter  *pRosKmAdapter = RosKmAdapter::Cast(hAdapter);
     ROSDMABUFINFO *pDmaBufInfo = (ROSDMABUFINFO *)pPatch->pDmaBufferPrivateData;
-
-    pRosKmAdapter;
-
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n", __FUNCTION__, hAdapter);
 
     RosKmContext * pRosKmContext = (RosKmContext *)pPatch->hContext;
     pRosKmContext;
 
     pDmaBufInfo->m_DmaBufferPhysicalAddress = pPatch->DmaBufferPhysicalAddress;
 
-    pRosKmAdapter->PatchDmaBuffer(
+    PatchDmaBuffer(
         pDmaBufInfo,
         pPatch->pAllocationList,
         pPatch->AllocationListSize,
@@ -1075,14 +1105,9 @@ RosKmAdapter::DdiPatch(
 }
 
 NTSTATUS
-__stdcall
-RosKmAdapter::DdiCreateAllocation(
-    IN_CONST_HANDLE                     hAdapter,
+RosKmAdapter::CreateAllocation(
     INOUT_PDXGKARG_CREATEALLOCATION     pCreateAllocation)
 {
-    RosKmAdapter  *pRosKmAdapter = RosKmAdapter::Cast(hAdapter);
-    pRosKmAdapter;
-
     NT_ASSERT(pCreateAllocation->PrivateDriverDataSize == sizeof(RosAllocationGroupExchange));
     RosAllocationGroupExchange * pRosAllocationGroupExchange = (RosAllocationGroupExchange *)pCreateAllocation->pPrivateDriverData;
 
@@ -1157,14 +1182,9 @@ RosKmAdapter::DdiCreateAllocation(
 }
 
 NTSTATUS
-__stdcall
-RosKmAdapter::DdiDestroyAllocation(
-    IN_CONST_HANDLE                         hAdapter,
+RosKmAdapter::DestroyAllocation(
     IN_CONST_PDXGKARG_DESTROYALLOCATION     pDestroyAllocation)
 {
-    RosKmAdapter  *pRosKmAdapter = RosKmAdapter::Cast(hAdapter);
-    pRosKmAdapter;
-
     RosKmdResource * pRosKmdResource = NULL;
 
     if (pDestroyAllocation->Flags.DestroyResource)
@@ -1183,16 +1203,13 @@ RosKmAdapter::DdiDestroyAllocation(
 }
 
 NTSTATUS
-__stdcall
-RosKmAdapter::DdiQueryAdapterInfo(
-    IN_CONST_HANDLE                         hAdapter,
+RosKmAdapter::QueryAdapterInfo(
     IN_CONST_PDXGKARG_QUERYADAPTERINFO      pQueryAdapterInfo)
 {
-    RosKmAdapter   *pRosKmAdapter = RosKmAdapter::Cast(hAdapter);
     NTSTATUS        Status = STATUS_INVALID_PARAMETER;
 
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "RosKmdQueryAdapterInfo hAdapter=%lx Type=%d\n",
-        hAdapter, pQueryAdapterInfo->Type);
+    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "RosKmdQueryAdapterInfo Type=%d\n",
+        pQueryAdapterInfo->Type);
 
     switch (pQueryAdapterInfo->Type)
     {
@@ -1206,15 +1223,15 @@ RosKmAdapter::DdiQueryAdapterInfo(
         ROSADAPTERINFO* pRosAdapterInfo = (ROSADAPTERINFO*)pQueryAdapterInfo->pOutputData;
         
         pRosAdapterInfo->m_version = ROSD_VERSION;
-        pRosAdapterInfo->m_wddmVersion = pRosKmAdapter->m_WDDMVersion;
+        pRosAdapterInfo->m_wddmVersion = m_WDDMVersion;
 
         // Software APCI device only claims an interrupt resource
-        pRosAdapterInfo->m_isSoftwareDevice = (pRosKmAdapter->m_flags.m_isVC4 != 1);
+        pRosAdapterInfo->m_isSoftwareDevice = (m_flags.m_isVC4 != 1);
 
         RtlCopyMemory(
             pRosAdapterInfo->m_deviceId,
-            pRosKmAdapter->m_deviceId,
-            pRosKmAdapter->m_deviceIdLength);
+            m_deviceId,
+            m_deviceIdLength);
 
         Status = STATUS_SUCCESS;
     }
@@ -1338,13 +1355,13 @@ RosKmAdapter::DdiQueryAdapterInfo(
         // TODO[bhouse] GpuEngineTopology
         //
 
-        pDriverCaps->GpuEngineTopology.NbAsymetricProcessingNodes = pRosKmAdapter->m_NumNodes;
+        pDriverCaps->GpuEngineTopology.NbAsymetricProcessingNodes = m_NumNodes;
 
         //
         // TODO[bhouse] WDDMVersion
         //              Documentation states that we should not set this value if WDDM 1.3
         //
-        pDriverCaps->WDDMVersion = pRosKmAdapter->m_WDDMVersion;
+        pDriverCaps->WDDMVersion = m_WDDMVersion;
 
         //
         // TODO[bhouse] VirtualAddressCaps
@@ -1499,7 +1516,7 @@ RosKmAdapter::DdiQueryAdapterInfo(
         //
         // Support only one 3D engine(s).
         //
-        *(reinterpret_cast<UINT*>(pQueryAdapterInfo->pOutputData)) = pRosKmAdapter->GetNumPowerComponents();
+        *(reinterpret_cast<UINT*>(pQueryAdapterInfo->pOutputData)) = GetNumPowerComponents();
 
         Status = STATUS_SUCCESS;
     }
@@ -1517,7 +1534,7 @@ RosKmAdapter::DdiQueryAdapterInfo(
         ULONG ComponentIndex = *(reinterpret_cast<UINT*>(pQueryAdapterInfo->pInputData));
         DXGK_POWER_RUNTIME_COMPONENT* pPowerComponent = reinterpret_cast<DXGK_POWER_RUNTIME_COMPONENT*>(pQueryAdapterInfo->pOutputData);
 
-        Status = pRosKmAdapter->GetPowerComponentInfo(ComponentIndex, pPowerComponent); 
+        Status = GetPowerComponentInfo(ComponentIndex, pPowerComponent); 
     }
     break;
 
@@ -1545,14 +1562,9 @@ RosKmAdapter::DdiQueryAdapterInfo(
 }
 
 NTSTATUS
-__stdcall
-RosKmAdapter::DdiDescribeAllocation(
-    IN_CONST_HANDLE                         hAdapter,
+RosKmAdapter::DescribeAllocation(
     INOUT_PDXGKARG_DESCRIBEALLOCATION       pDescribeAllocation)
 {
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n",
-        __FUNCTION__, hAdapter);
-
     RosKmdAllocation *pAllocation = (RosKmdAllocation *)pDescribeAllocation;
 
     pDescribeAllocation->Width = pAllocation->m_mip0Info.TexelWidth;
@@ -1570,16 +1582,11 @@ RosKmAdapter::DdiDescribeAllocation(
 }
 
 NTSTATUS
-__stdcall
-RosKmAdapter::DdiGetNodeMetadata(
-    IN_CONST_HANDLE                 hAdapter,
+RosKmAdapter::GetNodeMetadata(
     UINT                            NodeOrdinal,
     OUT_PDXGKARG_GETNODEMETADATA    pGetNodeMetadata
     )
 {
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "RosKmdGetNodeMetadata hAdapter=%lx Node=%d\n",
-        hAdapter, NodeOrdinal);
-
     RtlZeroMemory(pGetNodeMetadata, sizeof(*pGetNodeMetadata));
 
     pGetNodeMetadata->EngineType = DXGK_ENGINE_TYPE_3D;
@@ -1594,13 +1601,9 @@ RosKmAdapter::DdiGetNodeMetadata(
 }
 
 NTSTATUS
-__stdcall
-RosKmAdapter::DdiGetStandardAllocationDriverData(
-    IN_CONST_HANDLE                                 hAdapter,
+RosKmAdapter::GetStandardAllocationDriverData(
     INOUT_PDXGKARG_GETSTANDARDALLOCATIONDRIVERDATA  pGetStandardAllocationDriverData)
 {
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n", __FUNCTION__, hAdapter);
-
     pGetStandardAllocationDriverData;
 
     NTSTATUS    Status = STATUS_SUCCESS;
@@ -1609,14 +1612,9 @@ RosKmAdapter::DdiGetStandardAllocationDriverData(
 }
 
 NTSTATUS
-__stdcall
-RosKmAdapter::DdiSubmitCommandVirtual(
-    IN_CONST_HANDLE                         hAdapter,
+RosKmAdapter::SubmitCommandVirtual(
     IN_CONST_PDXGKARG_SUBMITCOMMANDVIRTUAL  pSubmitCommandVirtual)
 {
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n", __FUNCTION__, hAdapter);
-
-    hAdapter;
     pSubmitCommandVirtual;
 
     NTSTATUS        Status = STATUS_SUCCESS;
@@ -1625,14 +1623,9 @@ RosKmAdapter::DdiSubmitCommandVirtual(
 }
 
 NTSTATUS
-__stdcall
-RosKmAdapter::DdiPreemptCommand(
-    IN_CONST_HANDLE                     hAdapter,
+RosKmAdapter::PreemptCommand(
     IN_CONST_PDXGKARG_PREEMPTCOMMAND    pPreemptCommand)
 {
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n", __FUNCTION__, hAdapter);
-
-    hAdapter;
     pPreemptCommand;
 
     NTSTATUS        Status = STATUS_SUCCESS;
@@ -1641,100 +1634,52 @@ RosKmAdapter::DdiPreemptCommand(
 }
 
 NTSTATUS
-__stdcall CALLBACK
-RosKmAdapter::DdiRestartFromTimeout(
-    IN_CONST_HANDLE     hAdapter)
+RosKmAdapter::RestartFromTimeout(void)
 {
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n",
-        __FUNCTION__, hAdapter);
-
     return STATUS_SUCCESS;
 }
 
 NTSTATUS
-__stdcall
-RosKmAdapter::DdiCancelCommand(
-    IN_CONST_HANDLE                 hAdapter,
+RosKmAdapter::CancelCommand(
     IN_CONST_PDXGKARG_CANCELCOMMAND pCancelCommand)
 {
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n",
-        __FUNCTION__, hAdapter);
-
-    hAdapter;
     pCancelCommand;
 
     return STATUS_SUCCESS;
 }
 
 NTSTATUS
-__stdcall
-RosKmAdapter::DdiQueryCurrentFence(
-    IN_CONST_HANDLE                    hAdapter,
+RosKmAdapter::QueryCurrentFence(
     INOUT_PDXGKARG_QUERYCURRENTFENCE   pCurrentFence)
 {
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n",
-        __FUNCTION__, hAdapter);
-
-    hAdapter;
     pCurrentFence;
 
     return STATUS_SUCCESS;
 }
 
 NTSTATUS
-__stdcall
-RosKmAdapter::DdiResetEngine(
-    IN_CONST_HANDLE             hAdapter,
+RosKmAdapter::ResetEngine(
     INOUT_PDXGKARG_RESETENGINE  pResetEngine)
 {
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n",
-        __FUNCTION__, hAdapter);
-
-    hAdapter;
     pResetEngine;
 
     return STATUS_SUCCESS;
 }
 
 NTSTATUS
-__stdcall
-RosKmAdapter::DdiQueryEngineStatus(
-    IN_CONST_HANDLE                     hAdapter,
-    INOUT_PDXGKARG_QUERYENGINESTATUS    pQueryEngineStatus)
-{
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n",
-        __FUNCTION__, hAdapter);
-
-    hAdapter;
-    pQueryEngineStatus;
-
-    return STATUS_SUCCESS;
-}
-
-
-NTSTATUS
-__stdcall
-RosKmAdapter::DdiQueryDependentEngineGroup(
-    IN_CONST_HANDLE                             hAdapter,
+RosKmAdapter::QueryDependentEngineGroup(
     INOUT_DXGKARG_QUERYDEPENDENTENGINEGROUP     pQueryDependentEngineGroup)
 {
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n",
-        __FUNCTION__, hAdapter);
-
-    hAdapter;
     pQueryDependentEngineGroup;
 
     return STATUS_SUCCESS;
 }
 
 NTSTATUS
-__stdcall
-RosKmAdapter::DdiGetScanLine(
-    IN_CONST_HANDLE             hAdapter,
-    INOUT_PDXGKARG_GETSCANLINE  /*pGetScanLine*/)
+RosKmAdapter::GetScanLine(
+    INOUT_PDXGKARG_GETSCANLINE  pGetScanLine)
 {
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n",
-        __FUNCTION__, hAdapter);
+    pGetScanLine;
 
     NT_ASSERT(FALSE);
     return STATUS_SUCCESS;
@@ -1742,16 +1687,10 @@ RosKmAdapter::DdiGetScanLine(
 
 
 NTSTATUS
-__stdcall
-RosKmAdapter::DdiControlInterrupt(
-    IN_CONST_HANDLE                 hAdapter,
+RosKmAdapter::ControlInterrupt(
     IN_CONST_DXGK_INTERRUPT_TYPE    InterruptType,
     IN_BOOLEAN                      EnableInterrupt)
 {
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n",
-        __FUNCTION__, hAdapter);
-
-    hAdapter;
     InterruptType;
     EnableInterrupt;
 
@@ -1760,85 +1699,44 @@ RosKmAdapter::DdiControlInterrupt(
 
 NTSTATUS
 __stdcall
-RosKmAdapter::DdiCollectDbgInfo(
-    IN_CONST_HANDLE                         hAdapter,
-    IN_CONST_PDXGKARG_COLLECTDBGINFO        /*pCollectDbgInfo*/)
+RosKmAdapter::CollectDbgInfo(
+    IN_CONST_PDXGKARG_COLLECTDBGINFO        pCollectDbgInfo)
 {
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n",
-        __FUNCTION__, hAdapter);
+    pCollectDbgInfo;
 
     return STATUS_SUCCESS;
 }
 
 NTSTATUS
-__stdcall
-RosKmAdapter::DdiPresent(
-    IN_CONST_HANDLE         hContext,
-    INOUT_PDXGKARG_PRESENT  pPresent)
-{
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "RosKmAdapter::DdiPresent hAdapter=%lx\n", hContext);
-
-    hContext;
-    pPresent;
-
-    return STATUS_SUCCESS;
-}
-
-NTSTATUS
-__stdcall
-RosKmAdapter::DdiCreateProcess(
-    IN_PVOID  pMiniportDeviceContext,
+RosKmAdapter::CreateProcess(
     IN DXGKARG_CREATEPROCESS* pArgs)
 {
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "RosKmdCreateProcess MiniportDeviceContext=%lx\n",
-        pMiniportDeviceContext);
-
-    UNREFERENCED_PARAMETER(pMiniportDeviceContext);
-
     pArgs->hKmdProcess = 0;
     return STATUS_SUCCESS;
 }
 
 NTSTATUS
-__stdcall
-RosKmAdapter::DdiDestroyProcess(
-    IN_PVOID pMiniportDeviceContext,
+RosKmAdapter::DestroyProcess(
     IN HANDLE KmdProcessHandle)
 {
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "RosKmdDestroyProcess MiniportDeviceContext=%lx\n",
-        pMiniportDeviceContext);
-
-    UNREFERENCED_PARAMETER(pMiniportDeviceContext);
     UNREFERENCED_PARAMETER(KmdProcessHandle);
     return STATUS_SUCCESS;
 }
 
 void
-__stdcall
-RosKmAdapter::DdiSetStablePowerState(
-    IN_CONST_HANDLE                        hAdapter,
+RosKmAdapter::SetStablePowerState(
     IN_CONST_PDXGKARG_SETSTABLEPOWERSTATE  pArgs)
 {
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "RosKmdSetStablePowerState=%lx\n",
-        hAdapter);
-
-    UNREFERENCED_PARAMETER(hAdapter);
     UNREFERENCED_PARAMETER(pArgs);
 }
 
 NTSTATUS
-__stdcall
-RosKmAdapter::DdiCalibrateGpuClock(
-    IN_CONST_HANDLE                             hAdapter,
+RosKmAdapter::CalibrateGpuClock(
     IN UINT32                                   NodeOrdinal,
     IN UINT32                                   EngineOrdinal,
     OUT_PDXGKARG_CALIBRATEGPUCLOCK              pClockCalibration
     )
 {
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n",
-        __FUNCTION__, hAdapter);
-
-    hAdapter;
     NodeOrdinal;
     EngineOrdinal;
     pClockCalibration;
@@ -1847,31 +1745,9 @@ RosKmAdapter::DdiCalibrateGpuClock(
 }
 
 NTSTATUS
-__stdcall
-RosKmAdapter::DdiRenderKm(
-    IN_CONST_HANDLE         hContext,
-    INOUT_PDXGKARG_RENDER   pRender)
-{
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "RosKmdRenderKm hAdapter=%lx\n", hContext);
-
-    hContext;
-    pRender;
-
-    NT_ASSERT(FALSE);
-    return STATUS_SUCCESS;
-}
-
-NTSTATUS
-__stdcall
-RosKmAdapter::DdiEscape(
-    IN_CONST_HANDLE                 hAdapter,
+RosKmAdapter::Escape(
     IN_CONST_PDXGKARG_ESCAPE        pEscape)
 {
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s\n",
-        __FUNCTION__);
-
-    hAdapter;
-
     NTSTATUS        Status;
 
     if (pEscape->PrivateDriverDataSize < sizeof(UINT))
@@ -1895,26 +1771,18 @@ RosKmAdapter::DdiEscape(
 }
 
 NTSTATUS
-__stdcall
-RosKmAdapter::DdiSetPalette(
-    IN_CONST_HANDLE                 hAdapter,
-    IN_CONST_PDXGKARG_SETPALETTE    /*pSetPalette*/)
+RosKmAdapter::SetPalette(
+    IN_CONST_PDXGKARG_SETPALETTE    pSetPalette)
 {
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n",
-        __FUNCTION__, hAdapter);
-
+    // TODO(bhouse) - do we expect this to get called?
+    pSetPalette;
     return STATUS_SUCCESS;
 }
 
 NTSTATUS
-__stdcall
-RosKmAdapter::DdiSetPointerPosition(
-    IN_CONST_HANDLE                         hAdapter,
+RosKmAdapter::SetPointerPosition(
     IN_CONST_PDXGKARG_SETPOINTERPOSITION    pSetPointerPosition)
 {
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n",
-        __FUNCTION__, hAdapter);
-
     if (pSetPointerPosition->Flags.Visible)
     {
         return STATUS_NOT_IMPLEMENTED;
@@ -1927,14 +1795,9 @@ RosKmAdapter::DdiSetPointerPosition(
 }
 
 NTSTATUS
-__stdcall
-RosKmAdapter::DdiSetPointerShape(
-    IN_CONST_HANDLE                     hAdapter,
+RosKmAdapter::SetPointerShape(
     IN_CONST_PDXGKARG_SETPOINTERSHAPE   pSetPointerShape)
 {
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n",
-        __FUNCTION__, hAdapter);
-
     if (!pSetPointerShape->Flags.Value)
     {
         return STATUS_INVALID_PARAMETER;
@@ -1944,47 +1807,25 @@ RosKmAdapter::DdiSetPointerShape(
 }
 
 NTSTATUS
-__stdcall CALLBACK
-RosKmAdapter::DdiResetFromTimeout(
-    IN_CONST_HANDLE     hAdapter)
-{
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n",
-        __FUNCTION__, hAdapter);
-
-    RosKmAdapter  *pRosKmAdapter = (RosKmAdapter *)hAdapter;
-
-    return pRosKmAdapter->ResetFromTdr();
-}
-
-NTSTATUS
-RosKmAdapter::ResetFromTdr()
+RosKmAdapter::ResetFromTimeout(void)
 {
     return STATUS_SUCCESS;
 }
 
 NTSTATUS
-RosKmAdapter::DdiQueryInterface(
-    IN_CONST_PVOID          MiniportDeviceContext,
+RosKmAdapter::QueryInterface(
     IN_PQUERY_INTERFACE     QueryInterface)
 {
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s MiniportDeviceContext=%lx\n",
-        __FUNCTION__, MiniportDeviceContext);
-
     QueryInterface;
 
     return STATUS_NOT_SUPPORTED;
 }
 
 NTSTATUS
-RosKmAdapter::DdiQueryChildRelations(
-    IN_CONST_PVOID                  MiniportDeviceContext,
+RosKmAdapter::QueryChildRelations(
     INOUT_PDXGK_CHILD_DESCRIPTOR    ChildRelations,
     IN_ULONG                        ChildRelationsSize)
 {
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s MiniportDeviceContext=%lx\n",
-        __FUNCTION__, MiniportDeviceContext);
-
-    MiniportDeviceContext;
     ChildRelations;
     ChildRelationsSize;
 
@@ -1992,15 +1833,10 @@ RosKmAdapter::DdiQueryChildRelations(
 }
 
 NTSTATUS
-RosKmAdapter::DdiQueryChildStatus(
-    IN_CONST_PVOID          MiniportDeviceContext,
+RosKmAdapter::QueryChildStatus(
     IN_PDXGK_CHILD_STATUS   ChildStatus,
     IN_BOOLEAN              NonDestructiveOnly)
 {
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s MiniportDeviceContext=%lx\n",
-        __FUNCTION__, MiniportDeviceContext);
-
-    MiniportDeviceContext;
     ChildStatus;
     NonDestructiveOnly;
 
@@ -2008,15 +1844,10 @@ RosKmAdapter::DdiQueryChildStatus(
 }
 
 NTSTATUS
-RosKmAdapter::DdiQueryDeviceDescriptor(
-    IN_CONST_PVOID                  MiniportDeviceContext,
+RosKmAdapter::QueryDeviceDescriptor(
     IN_ULONG                        ChildUid,
     INOUT_PDXGK_DEVICE_DESCRIPTOR   pDeviceDescriptor)
 {
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s MiniportDeviceContext=%lx\n",
-        __FUNCTION__, MiniportDeviceContext);
-
-    MiniportDeviceContext;
     ChildUid;
     pDeviceDescriptor;
 
@@ -2024,17 +1855,12 @@ RosKmAdapter::DdiQueryDeviceDescriptor(
 }
 
 NTSTATUS
-RosKmAdapter::DdiNotifyAcpiEvent(
-    IN_CONST_PVOID      MiniportDeviceContext,
+RosKmAdapter::NotifyAcpiEvent(
     IN_DXGK_EVENT_TYPE  EventType,
     IN_ULONG            Event,
     IN_PVOID            Argument,
     OUT_PULONG          AcpiFlags)
 {
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s MiniportDeviceContext=%lx\n",
-        __FUNCTION__, MiniportDeviceContext);
-
-    MiniportDeviceContext;
     EventType;
     Event;
     Argument;
@@ -2045,12 +1871,9 @@ RosKmAdapter::DdiNotifyAcpiEvent(
 }
 
 void
-RosKmAdapter::DdiResetDevice(
-    IN_CONST_PVOID  MiniportDeviceContext)
+RosKmAdapter::ResetDevice(void)
 {
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s MiniportDeviceContext=%lx\n",
-        __FUNCTION__, MiniportDeviceContext);
-
+    // Do nothing
 }
 
 void
@@ -2111,7 +1934,7 @@ RosKmAdapter::PatchDmaBuffer(
                 case VC4_SLOT_BRANCH:
                     // When PrePatch happens in DdiRender, DMA buffer physical
                     // address is not available, so DMA buffer self-reference
-                    // patches are handled in DdiSubmitCommand
+                    // patches are handled in SubmitCommand
                     break;
                 default:
                     *((UINT *)(pDmaBuf + patch->PatchOffset)) = gpuAddress;

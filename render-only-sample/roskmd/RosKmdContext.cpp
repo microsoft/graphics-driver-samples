@@ -14,7 +14,7 @@ RosKmContext::DdiRender(
 {
     DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "RosKmdRender hAdapter=%lx\n", hContext);
 
-    RosKmContext  *pRosKmContext = (RosKmContext *)hContext;
+    RosKmContext  *pRosKmContext = RosKmContext::Cast(hContext);
     RosKmAdapter  *pRosKmAdapter = pRosKmContext->m_pDevice->m_pRosKmAdapter;
 
     pRender->MultipassOffset;
@@ -133,6 +133,7 @@ RosKmContext::DdiCreateContext(
 
     RtlZeroMemory(pRosKmContext, sizeof(RosKmContext));
 
+    pRosKmContext->m_magic = kMagic;
     pRosKmContext->m_pDevice = (RosKmDevice *)hDevice;
     pRosKmContext->m_Node = pCreateContext->NodeOrdinal;
     pRosKmContext->m_hRTContext = pCreateContext->hContext;
@@ -168,7 +169,7 @@ __stdcall
 RosKmContext::DdiDestroyContext(
     IN_CONST_HANDLE     hContext)
 {
-    RosKmContext  *pRosKmContext = (RosKmContext *)hContext;
+    RosKmContext  *pRosKmContext = RosKmContext::Cast(hContext);
 
     DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "RosKmdDestroyContext hContext=%lx\n",
         hContext);
@@ -180,3 +181,21 @@ RosKmContext::DdiDestroyContext(
     return STATUS_SUCCESS;
 }
 
+NTSTATUS
+RosKmContext::Present(
+    INOUT_PDXGKARG_PRESENT  pPresent)
+{
+    pPresent;
+
+    return STATUS_SUCCESS;
+}
+
+NTSTATUS
+RosKmContext::RenderKm(
+    INOUT_PDXGKARG_RENDER   pRender)
+{
+    pRender;
+
+    NT_ASSERT(FALSE);
+    return STATUS_SUCCESS;
+}

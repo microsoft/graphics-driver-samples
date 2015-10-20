@@ -59,5 +59,28 @@ public:
         return m_Flags;
     }
 
+    static RosKmContext * Cast(IN_CONST_HANDLE hContext)
+    {
+        RosKmContext * rosKmContext = reinterpret_cast<RosKmContext *>(hContext);
+
+        NT_ASSERT(rosKmContext->m_magic == RosKmContext::kMagic);
+
+        return rosKmContext;
+    }
+
+public:
+
+    NTSTATUS
+        Present(
+            INOUT_PDXGKARG_PRESENT  pPresent);
+
+    NTSTATUS
+        RenderKm(
+            INOUT_PDXGKARG_RENDER   pRender);
+
+private:
+
+    static const UINT32 kMagic = 'CTXT';
+    UINT32 m_magic;
 
 };

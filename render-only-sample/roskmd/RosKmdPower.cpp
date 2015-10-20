@@ -10,44 +10,23 @@
 #include "RosKmdAcpi.h"
 
 NTSTATUS
-RosKmAdapter::DdiSetPowerState(
-    IN_CONST_PVOID          MiniportDeviceContext,
+RosKmAdapter::SetPowerState(
     IN_ULONG                DeviceUid,
     IN_DEVICE_POWER_STATE   DevicePowerState,
     IN_POWER_ACTION         ActionType)
 {
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s MiniportDeviceContext=%lx\n",
-        __FUNCTION__, MiniportDeviceContext);
-
-    RosKmAdapter  *pRosKmAdapter = RosKmAdapter::Cast(MiniportDeviceContext);
+    ActionType;
 
     if (DeviceUid == DISPLAY_ADAPTER_HW_ID)
     {
-        pRosKmAdapter->m_AdapterPowerDState = DevicePowerState;
+        m_AdapterPowerDState = DevicePowerState;
     }
-
-    ActionType;
 
     return STATUS_SUCCESS;
 }
 
 NTSTATUS
-RosKmAdapter::DdiSetPowerComponentFState(
-    IN_CONST_PVOID       MiniportDeviceContext,
-    IN UINT              ComponentIndex,
-    IN UINT              FState)
-{
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s MiniportDeviceContext=%lx\n",
-        __FUNCTION__, MiniportDeviceContext);
-
-    RosKmAdapter  *pRosKmAdapter = RosKmAdapter::Cast(MiniportDeviceContext);
-
-    return pRosKmAdapter->SetPowerComponentFState(ComponentIndex,FState);
-}
-
-NTSTATUS
-RosKmAdapter::DdiPowerRuntimeControlRequest(
-    IN_CONST_PVOID       MiniportDeviceContext,
+RosKmAdapter::PowerRuntimeControlRequest(
     IN LPCGUID           PowerControlCode,
     IN OPTIONAL PVOID    InBuffer,
     IN SIZE_T            InBufferSize,
@@ -55,21 +34,16 @@ RosKmAdapter::DdiPowerRuntimeControlRequest(
     IN SIZE_T            OutBufferSize,
     OUT OPTIONAL PSIZE_T BytesReturned)
 {
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s MiniportDeviceContext=%lx\n",
-        __FUNCTION__, MiniportDeviceContext);
-
-    RosKmAdapter  *pRosKmAdapter = RosKmAdapter::Cast(MiniportDeviceContext);
-
     if (IsEqualGUID(*PowerControlCode, GUID_DXGKDDI_POWER_MANAGEMENT_PREPARE_TO_START))
     {
     }
     else if (IsEqualGUID(*PowerControlCode, GUID_DXGKDDI_POWER_MANAGEMENT_STARTED))
     {
-        pRosKmAdapter->m_PowerManagementStarted = TRUE;
+        m_PowerManagementStarted = TRUE;
     }
     else if (IsEqualGUID(*PowerControlCode, GUID_DXGKDDI_POWER_MANAGEMENT_STOPPED))
     {
-        pRosKmAdapter->m_PowerManagementStarted = FALSE;
+        m_PowerManagementStarted = FALSE;
     }
 
     InBuffer;

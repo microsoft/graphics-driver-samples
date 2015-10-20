@@ -122,25 +122,25 @@ NTSTATUS RosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
     DriverInitializationData.DxgkDdiInterruptRoutine = RosKmdDdi::DdiInterruptRoutine;
     DriverInitializationData.DxgkDdiDpcRoutine = RosKmdDdi::DdiDpcRoutine;
 
-    DriverInitializationData.DxgkDdiQueryChildRelations = RosKmAdapter::DdiQueryChildRelations;
-    DriverInitializationData.DxgkDdiQueryChildStatus = RosKmAdapter::DdiQueryChildStatus;
-    DriverInitializationData.DxgkDdiQueryDeviceDescriptor = RosKmAdapter::DdiQueryDeviceDescriptor;
-    DriverInitializationData.DxgkDdiSetPowerState = RosKmAdapter::DdiSetPowerState;
-    DriverInitializationData.DxgkDdiNotifyAcpiEvent = RosKmAdapter::DdiNotifyAcpiEvent;
-    DriverInitializationData.DxgkDdiResetDevice = RosKmAdapter::DdiResetDevice;
+    DriverInitializationData.DxgkDdiQueryChildRelations = RosKmdDdi::DdiQueryChildRelations;
+    DriverInitializationData.DxgkDdiQueryChildStatus = RosKmdDdi::DdiQueryChildStatus;
+    DriverInitializationData.DxgkDdiQueryDeviceDescriptor = RosKmdDdi::DdiQueryDeviceDescriptor;
+    DriverInitializationData.DxgkDdiSetPowerState = RosKmdDdi::DdiSetPowerState;
+    DriverInitializationData.DxgkDdiNotifyAcpiEvent = RosKmdDdi::DdiNotifyAcpiEvent;
+    DriverInitializationData.DxgkDdiResetDevice = RosKmdDdi::DdiResetDevice;
     DriverInitializationData.DxgkDdiUnload = RosKmdGlobal::DdiUnload;
-    DriverInitializationData.DxgkDdiQueryInterface = RosKmAdapter::DdiQueryInterface;
+    DriverInitializationData.DxgkDdiQueryInterface = RosKmdDdi::DdiQueryInterface;
     DriverInitializationData.DxgkDdiControlEtwLogging = RosKmdGlobal::DdiControlEtwLogging;
 
-    DriverInitializationData.DxgkDdiQueryAdapterInfo = RosKmAdapter::DdiQueryAdapterInfo;
+    DriverInitializationData.DxgkDdiQueryAdapterInfo = RosKmdDdi::DdiQueryAdapterInfo;
 
     DriverInitializationData.DxgkDdiCreateDevice = RosKmDevice::DdiCreateDevice;
 
-    DriverInitializationData.DxgkDdiCreateAllocation = RosKmAdapter::DdiCreateAllocation;
-    DriverInitializationData.DxgkDdiDestroyAllocation = RosKmAdapter::DdiDestroyAllocation;
+    DriverInitializationData.DxgkDdiCreateAllocation = RosKmdDdi::DdiCreateAllocation;
+    DriverInitializationData.DxgkDdiDestroyAllocation = RosKmdDdi::DdiDestroyAllocation;
 
-    DriverInitializationData.DxgkDdiDescribeAllocation = RosKmAdapter::DdiDescribeAllocation;
-    DriverInitializationData.DxgkDdiGetStandardAllocationDriverData = RosKmAdapter::DdiGetStandardAllocationDriverData;
+    DriverInitializationData.DxgkDdiDescribeAllocation = RosKmdDdi::DdiDescribeAllocation;
+    DriverInitializationData.DxgkDdiGetStandardAllocationDriverData = RosKmdDdi::DdiGetStandardAllocationDriverData;
 
     // DriverInitializationData.DxgkDdiAcquireSwizzlingRange   = RosKmdAcquireSwizzlingRange;
     // DriverInitializationData.DxgkDdiReleaseSwizzlingRange   = RosKmdReleaseSwizzlingRange;
@@ -148,54 +148,54 @@ NTSTATUS RosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
     DriverInitializationData.DxgkDdiOpenAllocation = RosKmDevice::DdiOpenAllocation;
     DriverInitializationData.DxgkDdiCloseAllocation = RosKmDevice::DdiCloseAllocation;
 
-    DriverInitializationData.DxgkDdiPatch = RosKmAdapter::DdiPatch;
-    DriverInitializationData.DxgkDdiSubmitCommand = RosKmAdapter::DdiSubmitCommand;
+    DriverInitializationData.DxgkDdiPatch = RosKmdDdi::DdiPatch;
+    DriverInitializationData.DxgkDdiSubmitCommand = RosKmdDdi::DdiSubmitCommand;
     DriverInitializationData.DxgkDdiBuildPagingBuffer = RosKmdDdi::DdiBuildPagingBuffer;
-    DriverInitializationData.DxgkDdiPreemptCommand = RosKmAdapter::DdiPreemptCommand;
+    DriverInitializationData.DxgkDdiPreemptCommand = RosKmdDdi::DdiPreemptCommand;
 
     DriverInitializationData.DxgkDdiDestroyDevice = RosKmDevice::DdiDestroyDevice;
 
     DriverInitializationData.DxgkDdiRender = RosKmContext::DdiRender;
-    DriverInitializationData.DxgkDdiPresent = RosKmAdapter::DdiPresent;
-    DriverInitializationData.DxgkDdiResetFromTimeout = RosKmAdapter::DdiResetFromTimeout;
-    DriverInitializationData.DxgkDdiRestartFromTimeout = RosKmAdapter::DdiRestartFromTimeout;
-    DriverInitializationData.DxgkDdiEscape = RosKmAdapter::DdiEscape;
-    DriverInitializationData.DxgkDdiCollectDbgInfo = RosKmAdapter::DdiCollectDbgInfo;
-    DriverInitializationData.DxgkDdiQueryCurrentFence = RosKmAdapter::DdiQueryCurrentFence;
-    DriverInitializationData.DxgkDdiControlInterrupt = RosKmAdapter::DdiControlInterrupt;
+    DriverInitializationData.DxgkDdiPresent = RosKmdDdi::DdiPresent;
+    DriverInitializationData.DxgkDdiResetFromTimeout = RosKmdDdi::DdiResetFromTimeout;
+    DriverInitializationData.DxgkDdiRestartFromTimeout = RosKmdDdi::DdiRestartFromTimeout;
+    DriverInitializationData.DxgkDdiEscape = RosKmdDdi::DdiEscape;
+    DriverInitializationData.DxgkDdiCollectDbgInfo = RosKmdDdi::DdiCollectDbgInfo;
+    DriverInitializationData.DxgkDdiQueryCurrentFence = RosKmdDdi::DdiQueryCurrentFence;
+    DriverInitializationData.DxgkDdiControlInterrupt = RosKmdDdi::DdiControlInterrupt;
 
     DriverInitializationData.DxgkDdiCreateContext = RosKmContext::DdiCreateContext;
     DriverInitializationData.DxgkDdiDestroyContext = RosKmContext::DdiDestroyContext;
 
-    DriverInitializationData.DxgkDdiRenderKm = RosKmAdapter::DdiRenderKm;
+    DriverInitializationData.DxgkDdiRenderKm = RosKmdDdi::DdiRenderKm;
 
     //
     // Fill in DDI routines for resetting individual engine
     //
-    DriverInitializationData.DxgkDdiQueryDependentEngineGroup = RosKmAdapter::DdiQueryDependentEngineGroup;
-    DriverInitializationData.DxgkDdiQueryEngineStatus = RosKmAdapter::DdiQueryEngineStatus;
-    DriverInitializationData.DxgkDdiResetEngine = RosKmAdapter::DdiResetEngine;
+    DriverInitializationData.DxgkDdiQueryDependentEngineGroup = RosKmdDdi::DdiQueryDependentEngineGroup;
+    DriverInitializationData.DxgkDdiQueryEngineStatus = RosKmdDdi::DdiQueryEngineStatus;
+    DriverInitializationData.DxgkDdiResetEngine = RosKmdDdi::DdiResetEngine;
 
     //
     // Fill in DDI for canceling DMA buffers
     //
-    DriverInitializationData.DxgkDdiCancelCommand = RosKmAdapter::DdiCancelCommand;
+    DriverInitializationData.DxgkDdiCancelCommand = RosKmdDdi::DdiCancelCommand;
 
     //
     // Fill in DDI for component power management
     //
-    DriverInitializationData.DxgkDdiSetPowerComponentFState = RosKmAdapter::DdiSetPowerComponentFState;
-    DriverInitializationData.DxgkDdiPowerRuntimeControlRequest = RosKmAdapter::DdiPowerRuntimeControlRequest;
+    DriverInitializationData.DxgkDdiSetPowerComponentFState = RosKmdDdi::DdiSetPowerComponentFState;
+    DriverInitializationData.DxgkDdiPowerRuntimeControlRequest = RosKmdDdi::DdiPowerRuntimeControlRequest;
 
-    DriverInitializationData.DxgkDdiGetNodeMetadata = RosKmAdapter::DdiGetNodeMetadata;
+    DriverInitializationData.DxgkDdiGetNodeMetadata = RosKmdDdi::DdiGetNodeMetadata;
 
-    DriverInitializationData.DxgkDdiSubmitCommandVirtual = RosKmAdapter::DdiSubmitCommandVirtual;
+    DriverInitializationData.DxgkDdiSubmitCommandVirtual = RosKmdDdi::DdiSubmitCommandVirtual;
 
-    DriverInitializationData.DxgkDdiCreateProcess = RosKmAdapter::DdiCreateProcess;
-    DriverInitializationData.DxgkDdiDestroyProcess = RosKmAdapter::DdiDestroyProcess;
+    DriverInitializationData.DxgkDdiCreateProcess = RosKmdDdi::DdiCreateProcess;
+    DriverInitializationData.DxgkDdiDestroyProcess = RosKmdDdi::DdiDestroyProcess;
 
-    DriverInitializationData.DxgkDdiCalibrateGpuClock = RosKmAdapter::DdiCalibrateGpuClock;
-    DriverInitializationData.DxgkDdiSetStablePowerState = RosKmAdapter::DdiSetStablePowerState;
+    DriverInitializationData.DxgkDdiCalibrateGpuClock = RosKmdDdi::DdiCalibrateGpuClock;
+    DriverInitializationData.DxgkDdiSetStablePowerState = RosKmdDdi::DdiSetStablePowerState;
 
     Status = DxgkInitialize(pDriverObject, pRegistryPath, &DriverInitializationData);
 
