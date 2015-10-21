@@ -12,6 +12,7 @@
 #include "RosKmdAcpi.h"
 #include "Vc4Hw.h"
 #include "Vc4Ddi.h"
+#include "Vc4Mailbox.h"
 
 void * RosKmAdapter::operator new(size_t size)
 {
@@ -778,6 +779,24 @@ RosKmAdapter::Start(
         {
             return status;
         }
+
+        PFILE_OBJECT    fileObj;
+
+        DECLARE_CONST_UNICODE_STRING(rpiqDeviceName, L"\\DosDevices\\RPIQ");
+
+        status = IoGetDeviceObjectPointer(
+            (PUNICODE_STRING)&rpiqDeviceName,
+            FILE_ALL_ACCESS,
+            &fileObj,
+            &m_pRpiqDevice);
+
+        if (status != STATUS_SUCCESS)
+        {
+            return status;
+        }
+
+        ObReferenceObject(m_pRpiqDevice);
+        ObDereferenceObject(fileObj);
     }
 
     m_localVidMemSegmentSize = ((UINT)RosKmdGlobal::s_videoMemorySize) -
@@ -2117,5 +2136,51 @@ RosKmAdapter::HwDmaBufCompletionDpcRoutine(
 
     // Signal to the worker thread that a HW DMA buffer has completed
     KeSetEvent(&pRosKmAdapter->m_hwDmaBufCompletionEvent, 0, FALSE);
+}
+
+NTSTATUS
+RosKmAdapter::SetVC4Power(
+    bool    bOn)
+{
+    PIRP pIrp = NULL;
+    KEVENT ioCompleted;
+    IO_STATUS_BLOCK statusBlock;
+    MAILBOX_SET_POWER_VC4 setPowerVC4;
+
+    KeInitializeEvent(&ioCompleted, NotificationEvent, FALSE);
+
+    INIT_MAILBOX_SET_POWER_VC4(&setPowerVC4, bOn);
+
+    pIrp = IoBuildDeviceIoControlRequest(
+        IOCTL_MAILBOX_PROPERTY,
+        m_pRpiqDevice,
+        &setPowerVC4,
+        sizeof(setPowerVC4),
+        &setPowerVC4,
+        sizeof(setPowerVC4),
+        false,
+        &ioCompleted,
+        &statusBlock);
+    if (NULL == pIrp)
+    {
+        return STATUS_NO_MEMORY;
+    }
+
+    NTSTATUS status;
+
+    status = IoCallDriver(m_pRpiqDevice, pIrp);
+
+    if (status == STATUS_PENDING)
+    {
+        KeWaitForSingleObject(&ioCompleted, Executive, KernelMode, FALSE, NULL);
+        status = statusBlock.Status;
+    }
+
+    if (STATUS_SUCCESS != status)
+    {
+        return status;
+    }
+
+    return STATUS_SUCCESS;
 }
 

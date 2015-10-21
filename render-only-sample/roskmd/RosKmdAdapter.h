@@ -382,6 +382,8 @@ private:
 #endif
     }
 
+    NTSTATUS SetVC4Power(bool bOn);
+
 private:
 
     static const size_t kPageSize = 4096;
@@ -449,6 +451,9 @@ private:
     UINT                        m_controlListPoolPhysicalAddress;
     UINT                        m_tileAllocPoolPhysicalAddress;
     UINT                        m_tileStatePoolPhysicalAddress;
+
+    // Firmware device RPIQ
+    PDEVICE_OBJECT              m_pRpiqDevice;
 
 #if GPU_CACHE_WORKAROUND
 
