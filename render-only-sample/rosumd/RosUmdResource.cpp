@@ -251,10 +251,10 @@ void RosUmdResource::GetAllocationExchange(
     pOutAllocationExchange->m_mip0Info = m_mip0Info;
 #if 0
     pOutAllocationExchange->m_usage = m_usage;
-    pOutAllocationExchange->m_bindFlags = m_bindFlags;
     pOutAllocationExchange->m_mapFlags = m_mapFlags;
     pOutAllocationExchange->m_miscFlags = m_miscFlags;
 #endif
+    pOutAllocationExchange->m_bindFlags = m_bindFlags;
     pOutAllocationExchange->m_format = m_format;
     pOutAllocationExchange->m_sampleDesc = m_sampleDesc;
 #if 0

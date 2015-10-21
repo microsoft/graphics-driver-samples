@@ -450,6 +450,12 @@ private:
     UINT                        m_tileAllocPoolPhysicalAddress;
     UINT                        m_tileStatePoolPhysicalAddress;
 
+#if GPU_CACHE_WORKAROUND
+
+    UINT                        m_rtSizeJitter;
+
+#endif
+
 #endif
 
 public:

@@ -32,10 +32,11 @@ struct RosAllocationExchange
 
 #if 0
     UINT                    m_usage;        // D3D10_DDI_RESOURCE_USAGE
-    UINT                    m_bindFlags;    // D3D10_DDI_RESOURCE_BIND_FLAG
     UINT                    m_mapFlags;     // D3D10_DDI_MAP
     UINT                    m_miscFlags;    // D3D10_DDI_RESOURCE_MISC_FLAG
 #endif
+
+    UINT                    m_bindFlags;    // D3D10_DDI_RESOURCE_BIND_FLAG
 
     DXGI_FORMAT             m_format;
     DXGI_SAMPLE_DESC        m_sampleDesc;

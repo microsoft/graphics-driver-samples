@@ -46,6 +46,12 @@ RosKmAdapter::RosKmAdapter(IN_CONST_PDEVICE_OBJECT PhysicalDeviceObject, OUT_PPV
 
     m_pVC4RegFile = NULL;
 
+#if GPU_CACHE_WORKAROUND
+
+    m_rtSizeJitter = 0;
+
+#endif
+
 #endif
 
     *MiniportDeviceContext = this;
@@ -1172,6 +1178,22 @@ RosKmAdapter::CreateAllocation(
     pAllocationInfo->Size = pRosAllocation->m_hwSizeBytes;
     pAllocationInfo->SupportedReadSegmentSet = 1 << (ROSD_SEGMENT_VIDEO_MEMORY - 1);
     pAllocationInfo->SupportedWriteSegmentSet = 1 << (ROSD_SEGMENT_VIDEO_MEMORY - 1);
+
+#if GPU_CACHE_WORKAROUND
+
+    if (pRosAllocation->m_bindFlags & D3D10_DDI_BIND_RENDER_TARGET)
+    {
+        pAllocationInfo->Size += m_rtSizeJitter;
+
+        //
+        // Specific workaround for BasicTests.exe, ensures allocations use
+        // new memory range by enlarging the size of the render target
+        //
+
+        m_rtSizeJitter += (5*kPageSize);
+    }
+
+#endif
 
     if (pCreateAllocation->Flags.Resource && pCreateAllocation->hResource == NULL && pRosKmdResource != NULL)
     {
