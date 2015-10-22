@@ -797,6 +797,13 @@ RosKmAdapter::Start(
 
         ObReferenceObject(m_pRpiqDevice);
         ObDereferenceObject(fileObj);
+
+        status = SetVC4Power(true);
+
+        if (status != STATUS_SUCCESS)
+        {
+            return status;
+        }
     }
 
     m_localVidMemSegmentSize = ((UINT)RosKmdGlobal::s_videoMemorySize) -
@@ -2181,6 +2188,13 @@ RosKmAdapter::SetVC4Power(
         return status;
     }
 
-    return STATUS_SUCCESS;
+    if (setPowerVC4.Header.RequestResponse == RESPONSE_SUCCESS)
+    {
+        return STATUS_SUCCESS;
+    }
+    else
+    {
+        return STATUS_INVALID_PARAMETER;
+    }
 }
 

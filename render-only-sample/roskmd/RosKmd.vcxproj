@@ -49,6 +49,7 @@
     <ClInclude Include="..\roscommon\RosGpuCommand.h" />
     <ClInclude Include="..\roscommon\Vc4Ddi.h" />
     <ClInclude Include="..\roscommon\Vc4Hw.h" />
+    <ClInclude Include="..\roscommon\Vc4Mailbox.h" />
     <ClInclude Include="RosKmd.h" />
     <ClInclude Include="RosKmdAcpi.h" />
     <ClInclude Include="RosKmdAdapter.h" />

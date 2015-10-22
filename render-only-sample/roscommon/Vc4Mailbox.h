@@ -31,6 +31,12 @@ enum RPIQFunction
 
 #define TAG_REQUEST 0
 
+//
+// Response
+//
+#define RESPONSE_SUCCESS    0x80000000
+#define RESPONSE_ERROR      0x80000001
+
 #pragma pack(push, 1)
 
 typedef struct _MAILBOX_HEADER {
@@ -46,6 +52,7 @@ typedef struct _MAILBOX_HEADER {
 typedef struct _MAILBOX_LOCK_MEM {
     MAILBOX_HEADER Header;
     ULONG PowerOn;
+    ULONG EndTag;
 } MAILBOX_SET_POWER_VC4, *PMAILBOX_SET_POWER_VC4;
 
 __inline VOID INIT_MAILBOX_SET_POWER_VC4(
@@ -59,6 +66,7 @@ __inline VOID INIT_MAILBOX_SET_POWER_VC4(
     c->Header.ResponseLength = 4;
     c->Header.Request = TAG_REQUEST;
     c->PowerOn = PowerOn;
+    c->EndTag = 0;
 }
 
 #pragma pack(pop)
