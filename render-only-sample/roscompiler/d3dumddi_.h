@@ -30,19 +30,14 @@ typedef _Return_type_success_(return >= 0) LONG NTSTATUS;
 //
 // Must turn off warning 4201 due to dxgiddi.h which is included as part of d3d10umddi.h
 //
-#pragma warning(push)
 #pragma warning(disable : 4201)
 
 //
 // Must include KM WDK include path due to inclusion of d3dkmthk.h in d3d10umddi.h
 //
-
+#define D3D12_TOKENIZED_PROGRAM_FORMAT_HEADER
 #include <d3d10umddi.h>
+#undef D3D12_TOKENIZED_PROGRAM_FORMAT_HEADER
 #include <d3d11.h>
-#include <d3d11tokenizedprogramformat.hpp>
 
-//
-// Pop off our warning state
-//
-#pragma warning(pop)
-
+#include <stdio.h>

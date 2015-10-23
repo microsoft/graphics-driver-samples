@@ -36,9 +36,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="d3dumddi_.h" />
+    <ClInclude Include="HLSLBinary.hpp" />
     <ClInclude Include="roscompiler.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="HLSLBinary.cpp" />
+    <ClCompile Include="HLSLDisasm.cpp" />
     <ClCompile Include="roscompiler.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

@@ -21,9 +21,18 @@
     <ClInclude Include="d3dumddi_.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="HLSLBinary.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="roscompiler.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="HLSLDisasm.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="HLSLBinary.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

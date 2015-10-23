@@ -12,7 +12,7 @@ void
 RosUmdShader::Standup(
     const UINT * pCode, D3D10DDI_HRTSHADER hRTShader)
 {
-    UINT codeSize = pCode[1];
+    UINT codeSize = pCode[1] * sizeof(UINT);
 
     m_pCode = new UINT[codeSize];
     
@@ -24,7 +24,8 @@ RosUmdShader::Standup(
 void
 RosUmdShader::Teardown()
 {
-    delete[] m_pCode;
+	delete m_pCompiler;
+	delete[] m_pCode;
 
     m_hwShaderCode.Teardown();
 }
@@ -57,7 +58,9 @@ RosUmdPipelineShader::Standup(
                                     m_numInputSignatureEntries,
                                     m_pInputSignatureEntries,
 									m_numOutputSignatureEntries,
-                                    m_pOutputSignatureEntries);
+                                    m_pOutputSignatureEntries,
+		                            0,
+		                            NULL);
 
     if (m_pCompiler &&
         m_pCompiler->Compile(&m_hwShaderCodeSize) &&
@@ -99,8 +102,6 @@ RosUmdPipelineShader::Standup(
 void
 RosUmdPipelineShader::Teardown()
 {
-    delete m_pCompiler;
-
     delete[] m_pInputSignatureEntries;
     delete[] m_pOutputSignatureEntries;
 
