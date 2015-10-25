@@ -622,5 +622,14 @@ const VC4TileCoordinates vc4TileCoordinates = { VC4_CMD_TILE_COORDINATES, 0 };
 
 const UINT VC4_BINNING_TILE_PIXELS  = 64;
 
+//
+// VC4 bus address alias
+//
+
+const UINT VC4_BUS_ADDRESS_ALIAS_L1_L2_CACHED      = 0x00000000;
+const UINT VC4_BUS_ADDRESS_ALIAS_L2_CACHE_COHERENT = 0x40000000;
+const UINT VC4_BUS_ADDRESS_ALIAS_L2_CACHED         = 0x80000000;
+const UINT VC4_BUS_ADDRESS_ALIAS_UNCACHED          = 0xC0000000;
+
 #pragma pack(pop)
 

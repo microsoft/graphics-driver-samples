@@ -461,6 +461,8 @@ private:
 
 #endif
 
+    UINT                        m_busAddressOffset;
+
 #endif
 
 public:

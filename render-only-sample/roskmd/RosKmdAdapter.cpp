@@ -53,6 +53,8 @@ RosKmAdapter::RosKmAdapter(IN_CONST_PDEVICE_OBJECT PhysicalDeviceObject, OUT_PPV
 
 #endif
 
+    m_busAddressOffset = 0;
+
 #endif
 
     *MiniportDeviceContext = this;
@@ -363,6 +365,7 @@ RosKmAdapter::ProcessRenderBuffer(
             UINT dmaBufBaseAddress;
             
             dmaBufBaseAddress = GetAperturePhysicalAddress(pDmaBufInfo->m_DmaBufferPhysicalAddress.LowPart);
+            dmaBufBaseAddress += m_busAddressOffset;
 
             // Skip the command buffer header at the beginning
             SubmitControlList(
@@ -375,8 +378,8 @@ RosKmAdapter::ProcessRenderBuffer(
             //
             SubmitControlList(
                 false,
-                m_renderingControlListPhysicalAddress,
-                m_renderingControlListPhysicalAddress + renderingControlListLength);
+                m_renderingControlListPhysicalAddress + m_busAddressOffset,
+                m_renderingControlListPhysicalAddress + m_busAddressOffset + renderingControlListLength);
 
             MoveToNextBinnerRenderMemChunk(renderingControlListLength);
 
@@ -521,7 +524,7 @@ RosKmAdapter::GenerateRenderingControlList(
 
     VC4TileRenderingModeConfig  tileRenderingModeConfig = vc4TileRenderingModeConfig;
 
-    tileRenderingModeConfig.MemoryAddress = pDmaBufInfo->m_RenderTargetPhysicalAddress;
+    tileRenderingModeConfig.MemoryAddress = pDmaBufInfo->m_RenderTargetPhysicalAddress + m_busAddressOffset;
 
     tileRenderingModeConfig.WidthInPixels  = (USHORT)pRenderTarget->m_mip0Info.TexelWidth;
     tileRenderingModeConfig.HeightInPixels = (USHORT)pRenderTarget->m_mip0Info.TexelHeight;
@@ -550,7 +553,7 @@ RosKmAdapter::GenerateRenderingControlList(
 
     VC4TileCoordinates  tileCoordinates = vc4TileCoordinates;
     VC4BranchToSubList  branchToSubList = vc4BranchToSubList;
-    UINT    tileAllocationPhysicalAddress = m_tileAllocationMemoryPhysicalAddress;
+    UINT    tileAllocationPhysicalAddress = m_tileAllocationMemoryPhysicalAddress + m_busAddressOffset;
     VC4BranchToSubList *pVC4BranchToSubList;
     VC4StoreMSResolvedTileColorBuf *pVC4StoreMSResolvedTileColorBuf;
     VC4StoreMSResolvedTileColorBufAndSignalEndOfFrame  *pVC4StoreMSResolvedTileColorBufAndSignalEndOfFrame;
@@ -804,6 +807,16 @@ RosKmAdapter::Start(
         {
             return status;
         }
+
+        //
+        // Highest 2 bits of VC4 GPU address controls path through cache
+        //
+        // Use the "C" alias so that VC4 doesn't use the L2 cache
+        //
+        // See http://www.farnell.com/datasheets/1521578.pdf section 1.2
+        //
+
+        m_busAddressOffset = VC4_BUS_ADDRESS_ALIAS_UNCACHED;
     }
 
     m_localVidMemSegmentSize = ((UINT)RosKmdGlobal::s_videoMemorySize) -
@@ -1091,7 +1104,9 @@ RosKmAdapter::SubmitCommand(
         {
             D3DDDI_PATCHLOCATIONLIST   *pPatchLoc = &pDmaBufInfo->m_DmaBufSelfRef[i];
 
-            *((UINT *)(pDmaBuf + pPatchLoc->PatchOffset)) = dmaBufPhysicalAddress +
+            *((UINT *)(pDmaBuf + pPatchLoc->PatchOffset)) = 
+                dmaBufPhysicalAddress +
+                m_busAddressOffset +
                 pPatchLoc->AllocationOffset;
         }
     }
@@ -1963,20 +1978,21 @@ RosKmAdapter::PatchDmaBuffer(
             {
                 // Patch HW command buffer
 #if VC4
-                UINT    gpuAddress = RosKmdGlobal::s_videoMemoryPhysicalAddress.LowPart + 
-                                     allocation->PhysicalAddress.LowPart +
-                                     patch->AllocationOffset;
+                UINT    physicalAddress =
+                    RosKmdGlobal::s_videoMemoryPhysicalAddress.LowPart + 
+                    allocation->PhysicalAddress.LowPart +
+                    patch->AllocationOffset;
                 
                 switch (patch->SlotId)
                 {
                 case VC4_SLOT_RT_BINNING_CONFIG:
-                    pDmaBufInfo->m_RenderTargetPhysicalAddress = gpuAddress;
+                    pDmaBufInfo->m_RenderTargetPhysicalAddress = physicalAddress;
                     break;
                 case VC4_SLOT_TILE_ALLOCATION_MEMORY:
-                    *((UINT *)(pDmaBuf + patch->PatchOffset)) = m_tileAllocationMemoryPhysicalAddress;
+                    *((UINT *)(pDmaBuf + patch->PatchOffset)) = m_tileAllocationMemoryPhysicalAddress + m_busAddressOffset;
                     break;
                 case VC4_SLOT_TILE_STATE_DATA_ARRAY:
-                    *((UINT *)(pDmaBuf + patch->PatchOffset)) = m_tileStateDataArrayPhysicalAddress;
+                    *((UINT *)(pDmaBuf + patch->PatchOffset)) = m_tileStateDataArrayPhysicalAddress + m_busAddressOffset;
                     break;
                 case VC4_SLOT_NV_SHADER_STATE:
                 case VC4_SLOT_BRANCH:
@@ -1985,7 +2001,7 @@ RosKmAdapter::PatchDmaBuffer(
                     // patches are handled in SubmitCommand
                     break;
                 default:
-                    *((UINT *)(pDmaBuf + patch->PatchOffset)) = gpuAddress;
+                    *((UINT *)(pDmaBuf + patch->PatchOffset)) = physicalAddress + m_busAddressOffset;
                 }
 #endif
             }

@@ -58,5 +58,5 @@ const int C_ROSD_GPU_ENGINE_COUNT = 1;
 
 #endif
 
-#define GPU_CACHE_WORKAROUND 1
+// #define GPU_CACHE_WORKAROUND 1
 
