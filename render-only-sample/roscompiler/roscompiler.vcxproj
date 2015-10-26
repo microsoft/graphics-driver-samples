@@ -35,6 +35,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\roscommon\Vc4Qpu.h" />
     <ClInclude Include="d3dumddi_.h" />
     <ClInclude Include="HLSLBinary.hpp" />
     <ClInclude Include="roscompiler.h" />
