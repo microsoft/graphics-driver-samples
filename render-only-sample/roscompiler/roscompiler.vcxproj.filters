@@ -41,5 +41,8 @@
     <ClCompile Include="HLSLBinary.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="Vc4Disasm.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

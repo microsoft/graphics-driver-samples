@@ -44,6 +44,7 @@
     <ClCompile Include="HLSLBinary.cpp" />
     <ClCompile Include="HLSLDisasm.cpp" />
     <ClCompile Include="roscompiler.cpp" />
+    <ClCompile Include="Vc4Disasm.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{98E16C06-7E74-4A0C-A5E6-24219CAE527D}</ProjectGuid>

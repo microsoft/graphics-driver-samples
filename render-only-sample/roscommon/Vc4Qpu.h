@@ -28,6 +28,7 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 #define VC4_QPU_SIG_ALU_WITH_RADDR_B 13
 #define VC4_QPU_SIG_LOAD_IMMEDIATE 14
 #define VC4_QPU_SIG_BRANCH 15
+#define VC4_QPU_SIG_ARRAY_SIZE 16 // just for array
 
 //
 // ALU instructions 
@@ -51,6 +52,7 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 #define VC4_QPU_UNPACK_8b 5 // float or unsigned depending on opcode.
 #define VC4_QPU_UNPACK_8c 6 // float or unsigned depending on opcode.
 #define VC4_QPU_UNPACK_8d 7 // float or unsigned depending on opcode.
+#define VC4_QPU_UNPACK_ARRAY_SIZE 8 // just for array
 
 //
 // PM Bit for unpack/pack [56]
@@ -81,6 +83,7 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 #define VC4_QPU_PACK_A_8b_SAT 13
 #define VC4_QPU_PACK_A_8c_SAT 14
 #define VC4_QPU_PACK_A_8d_SAT 15
+#define VC4_QPU_PACK_A_ARRAY_SIZE 16 // just for array
 
 // MUL ALU pack operations (pm bit = 1):
 #define VC4_QPU_PACK_MUL_32 0
@@ -90,6 +93,7 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 #define VC4_QPU_PACK_MUL_8b 5
 #define VC4_QPU_PACK_MUL_8c 6
 #define VC4_QPU_PACK_MUL_8d 7
+#define VC4_QPU_PACK_MUL_ARRAY_SIZE 8 // just for array
 
 //
 // Condition Bits [51]-[49] for add, [48]-[46] for mul.
@@ -103,11 +107,12 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 #define VC4_QPU_COND_NEVER 0
 #define VC4_QPU_COND_ALWAYS 1
 #define VC4_QPU_COND_ZS 2 // Z set
-#define VC4_QPU_COND_ZC 3 // C clear
+#define VC4_QPU_COND_ZC 3 // Z clear
 #define VC4_QPU_COND_NS 4 // N set
 #define VC4_QPU_COND_NC 5 // N clear
 #define VC4_QPU_COND_CS 6 // C set
 #define VC4_QPU_COND_CC 7 // C clear
+#define VC4_QPU_COND_ARRAY_SIZE 8 // just for array
 
 //
 // Setflags Bit [45]
@@ -140,7 +145,7 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 #define VC4_QPU_WADDR_ACC2 34
 #define VC4_QPU_WADDR_ACC3 35
 #define VC4_QPU_WADDR_TMU_NOSWAP 36
-#define VC4_QPU_WADDR_ACC5 37 // A: replicate pixel 0 per quad, B: replicate SIMD element 0)
+#define VC4_QPU_WADDR_ACC5 37 // A: replicate pixel 0 per quad, B: replicate SIMD element 0
 #define VC4_QPU_WADDR_HOSTINT 38
 #define VC4_QPU_WADDR_NOP 39
 #define VC4_QPU_WADDR_UNIFORM 40
@@ -163,14 +168,15 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 #define VC4_QPU_WADDR_SFU_RECIPSQRT 53
 #define VC4_QPU_WADDR_SFU_EXP 54
 #define VC4_QPU_WADDR_SFU_LOG 55
-#define VC4_QPU_WADDR_TMU0_S 56
-#define VC4_QPU_WADDR_TMU0_T 57
-#define VC4_QPU_WADDR_TMU0_R 58
-#define VC4_QPU_WADDR_TMU0_B 59
-#define VC4_QPU_WADDR_TMU1_S 60
-#define VC4_QPU_WADDR_TMU1_T 61
-#define VC4_QPU_WADDR_TMU1_R 62
-#define VC4_QPU_WADDR_TMU1_B 63
+#define VC4_QPU_WADDR_TMU0_S 56 // X - retiring
+#define VC4_QPU_WADDR_TMU0_T 57 // Y
+#define VC4_QPU_WADDR_TMU0_R 58 // Z
+#define VC4_QPU_WADDR_TMU0_B 59 // LOD Bias
+#define VC4_QPU_WADDR_TMU1_S 60 // X - retiring
+#define VC4_QPU_WADDR_TMU1_T 61 // Y
+#define VC4_QPU_WADDR_TMU1_R 62 // Z
+#define VC4_QPU_WADDR_TMU1_B 63 // LOD Bias
+#define VC4_QPU_WADDR_ARRAY_SIZE 64 // just for array
 
 //
 // Op code for mul [31]-[29]
@@ -186,6 +192,7 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 #define VC4_QPU_OPCODE_MUL_V8MAX 5
 #define VC4_QPU_OPCODE_MUL_V8ADDS 6
 #define VC4_QPU_OPCODE_MUL_V8SUBS 7
+#define VC4_QPU_OPCODE_MUL_ARRAY_SIZE 8 // just for array
 
 //
 // Op code for add [28]-[24]
@@ -219,6 +226,7 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 // 25-29 reserved
 #define VC4_QPU_OPCODE_ADD_V8ADDS 30
 #define VC4_QPU_OPCODE_ADD_V8SUBS 31
+#define VC4_QPU_OPCODE_ADD_ARRAY_SIZE 32
 
 //
 // Read address for register file A [23]-[18]
@@ -248,7 +256,8 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 #define VC4_QPU_RADDR_VPM_ST_BUSY 49 // regfile B
 #define VC4_QPU_RADDR_VPM_LD_WAIT 50 // regfile A
 #define VC4_QPU_RADDR_VPM_ST_WAIT 50 // regfile B
-#define VC4_QPU_RADDR_MUTEX_AQUIRE 51
+#define VC4_QPU_RADDR_MUTEX_ACQUIRE 51
+#define VC4_QPU_RADDR_ARRAY_SIZE 52 // just for array
 
 //
 // add_a [11]-[9]
@@ -285,6 +294,7 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 #define VC4_QPU_ALU_R5 5
 #define VC4_QPU_ALU_REG_A 6
 #define VC4_QPU_ALU_REG_B 7
+#define VC4_QPU_ALU_ARRAY_SIZE 8 // just for array
 
 //
 // Load Small immediate instruction
@@ -312,7 +322,7 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 
 #define VC4_QPU_IMMEDIATE_TYPE_32 0
 #define VC4_QPU_IMMEDIATE_TYPE_PER_ELEMENT_SIGNED 1
-#define VC4_QPU_IMMEDIATE_TYPE_PER_ELEMENT_UNSIGNED 2
+#define VC4_QPU_IMMEDIATE_TYPE_PER_ELEMENT_UNSIGNED 3
 #define VC4_QPU_IMMEDIATE_TYPE_SEMAPHORE 4
 
 //
@@ -371,6 +381,7 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 #define VC4_QPU_BRANCH_COND_ANY_CC 11 // Any C flags clear
 // Reserved 12-14
 #define VC4_QPU_BRANCH_COND_ALWAYS 15 // Always execute
+#define VC4_QPU_BRANCH_COND_ARRAY_SIZE 16 // just for array
 
 //
 // Branch relative bit [51] : PC = PC + 4.
