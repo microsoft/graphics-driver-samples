@@ -1,18 +1,18 @@
 #include "roscompiler.h"
 #include "Vc4Disasm.hpp"
 
-static char* VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_ARRAY_SIZE] = { 0 };
-static char* VC4_QPU_Name_Unpack[VC4_QPU_UNPACK_ARRAY_SIZE] = { 0 };
-static char* VC4_QPU_Name_Pack_A[VC4_QPU_PACK_A_ARRAY_SIZE] = { 0 };
-static char* VC4_QPU_Name_Pack_Mul[VC4_QPU_PACK_MUL_ARRAY_SIZE] = { 0 };
-static char* VC4_QPU_Name_Cond[VC4_QPU_COND_ARRAY_SIZE] = { 0 };
-static char* VC4_QPU_Name_Waddr[VC4_QPU_WADDR_ARRAY_SIZE][1] = { 0 }; // [0] for regfile A, [1] for regfile B
-static char* VC4_QPU_Name_Op_Mul[VC4_QPU_OPCODE_MUL_ARRAY_SIZE] = { 0 };
-static char* VC4_QPU_Name_Op_Add[VC4_QPU_OPCODE_ADD_ARRAY_SIZE] = { 0 };
+static char* VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_ARRAY_SIZE] = { NULL };
+static char* VC4_QPU_Name_Unpack[VC4_QPU_UNPACK_ARRAY_SIZE] = { NULL };
+static char* VC4_QPU_Name_Pack_A[VC4_QPU_PACK_A_ARRAY_SIZE] = { NULL };
+static char* VC4_QPU_Name_Pack_Mul[VC4_QPU_PACK_MUL_ARRAY_SIZE] = { NULL };
+static char* VC4_QPU_Name_Cond[VC4_QPU_COND_ARRAY_SIZE] = { NULL };
+static char* VC4_QPU_Name_Waddr[VC4_QPU_WADDR_ARRAY_SIZE][2] = { NULL }; // [0] for regfile A, [1] for regfile B
+static char* VC4_QPU_Name_Op_Mul[VC4_QPU_OPCODE_MUL_ARRAY_SIZE] = { NULL };
+static char* VC4_QPU_Name_Op_Add[VC4_QPU_OPCODE_ADD_ARRAY_SIZE] = { NULL };
 static char* VC4_QPU_Name_Op_Move = NULL;
-static char* VC4_QPU_Name_Raddr[VC4_QPU_RADDR_ARRAY_SIZE][1] = { 0 }; // [0] for regfile A, [1] for regfile B
-static char* VC4_QPU_Name_Alu[VC4_QPU_ALU_ARRAY_SIZE] = { 0 };
-static char* VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ARRAY_SIZE] = { 0 };
+static char* VC4_QPU_Name_Raddr[VC4_QPU_RADDR_ARRAY_SIZE][2] = { NULL }; // [0] for regfile A, [1] for regfile B
+static char* VC4_QPU_Name_Alu[VC4_QPU_ALU_ARRAY_SIZE] = { NULL };
+static char* VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ARRAY_SIZE] = { NULL };
 static char* VC4_QPU_Name_SetFlag = NULL;
 static char* VC_QPU_Name_Empty = NULL;
 
@@ -35,7 +35,7 @@ void __stdcall VC4_InitializeName()
 	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_LOAD_IMMEDIATE] = "load_imm";
 	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_BRANCH] = "br";
 
-	VC4_QPU_Name_Unpack[VC4_QPU_UNPACK_32] = ".32";
+	VC4_QPU_Name_Unpack[VC4_QPU_UNPACK_32] = "";
 	VC4_QPU_Name_Unpack[VC4_QPU_UNPACK_16a] = ".16a";
 	VC4_QPU_Name_Unpack[VC4_QPU_UNPACK_16b] = ".16b";
 	VC4_QPU_Name_Unpack[VC4_QPU_UNPACK_8d_REP] = ".8d_replicate";
@@ -44,7 +44,7 @@ void __stdcall VC4_InitializeName()
 	VC4_QPU_Name_Unpack[VC4_QPU_UNPACK_8c] = ".8c";
 	VC4_QPU_Name_Unpack[VC4_QPU_UNPACK_8d] = ".8d";
 
-	VC4_QPU_Name_Pack_A[VC4_QPU_PACK_A_32] = ".32";
+	VC4_QPU_Name_Pack_A[VC4_QPU_PACK_A_32] = "";
 	VC4_QPU_Name_Pack_A[VC4_QPU_PACK_A_16a] = ".16a";
 	VC4_QPU_Name_Pack_A[VC4_QPU_PACK_A_16b] = ".16b";
 	VC4_QPU_Name_Pack_A[VC4_QPU_PACK_A_8888] = ".8888";
@@ -61,21 +61,21 @@ void __stdcall VC4_InitializeName()
 	VC4_QPU_Name_Pack_A[VC4_QPU_PACK_A_8c_SAT] = ".8c_saturate";
 	VC4_QPU_Name_Pack_A[VC4_QPU_PACK_A_8d_SAT] = ".8d_saturate";
 
-	VC4_QPU_Name_Pack_Mul[VC4_QPU_PACK_MUL_32] = ".32";
+	VC4_QPU_Name_Pack_Mul[VC4_QPU_PACK_MUL_32] = "";
 	VC4_QPU_Name_Pack_Mul[VC4_QPU_PACK_MUL_8888] = ".8888";
 	VC4_QPU_Name_Pack_Mul[VC4_QPU_PACK_MUL_8a] = ".8a";
 	VC4_QPU_Name_Pack_Mul[VC4_QPU_PACK_MUL_8b] = ".8b";
-	VC4_QPU_Name_Pack_Mul[VC4_QPU_PACK_MUL_8b] = ".8c";
+	VC4_QPU_Name_Pack_Mul[VC4_QPU_PACK_MUL_8c] = ".8c";
 	VC4_QPU_Name_Pack_Mul[VC4_QPU_PACK_MUL_8d] = ".8d";
 
 	VC4_QPU_Name_Cond[VC4_QPU_COND_NEVER] = ".never";
 	VC4_QPU_Name_Cond[VC4_QPU_COND_ALWAYS] = "";
-	VC4_QPU_Name_Cond[VC4_QPU_COND_ZS] = ".zs";
-	VC4_QPU_Name_Cond[VC4_QPU_COND_ZC] = ".zc";
-	VC4_QPU_Name_Cond[VC4_QPU_COND_NS] = ".ns";
-	VC4_QPU_Name_Cond[VC4_QPU_COND_NC] = ".nc";
-	VC4_QPU_Name_Cond[VC4_QPU_COND_CS] = ".cs";
-	VC4_QPU_Name_Cond[VC4_QPU_COND_CC] = ".cc";
+	VC4_QPU_Name_Cond[VC4_QPU_COND_ZS] = ".if_zs";
+	VC4_QPU_Name_Cond[VC4_QPU_COND_ZC] = ".if_zc";
+	VC4_QPU_Name_Cond[VC4_QPU_COND_NS] = ".if_ns";
+	VC4_QPU_Name_Cond[VC4_QPU_COND_NC] = ".if_nc";
+	VC4_QPU_Name_Cond[VC4_QPU_COND_CS] = ".if_cs";
+	VC4_QPU_Name_Cond[VC4_QPU_COND_CC] = ".if_cc";
 
 	VC4_QPU_Name_Waddr[VC4_QPU_WADDR_ACC0][0] =
 	VC4_QPU_Name_Waddr[VC4_QPU_WADDR_ACC0][1] = "r0";
@@ -92,7 +92,7 @@ void __stdcall VC4_InitializeName()
 	VC4_QPU_Name_Waddr[VC4_QPU_WADDR_HOSTINT][0] =
 	VC4_QPU_Name_Waddr[VC4_QPU_WADDR_HOSTINT][1] = "hostint";
 	VC4_QPU_Name_Waddr[VC4_QPU_WADDR_NOP][0] =
-	VC4_QPU_Name_Waddr[VC4_QPU_WADDR_NOP][1] = "nop";
+	VC4_QPU_Name_Waddr[VC4_QPU_WADDR_NOP][1] = "";
 	VC4_QPU_Name_Waddr[VC4_QPU_WADDR_UNIFORM][0] =
 	VC4_QPU_Name_Waddr[VC4_QPU_WADDR_UNIFORM][1] = "uniform";
 	VC4_QPU_Name_Waddr[VC4_QPU_WADDR_QUAD_X][0] = "quad_X"; // X for regfile A.
@@ -185,7 +185,7 @@ void __stdcall VC4_InitializeName()
 	VC4_QPU_Name_Raddr[VC4_QPU_RADDR_ELEMENT_NUMBER][0] = "element_number"; // regfile A
 	VC4_QPU_Name_Raddr[VC4_QPU_RADDR_QPU_NUMBER][1] = "qpu_number"; // regfile B
 	VC4_QPU_Name_Raddr[VC4_QPU_RADDR_NOP][0] =
-	VC4_QPU_Name_Raddr[VC4_QPU_RADDR_NOP][1] = "nop";
+	VC4_QPU_Name_Raddr[VC4_QPU_RADDR_NOP][1] = "";
 	VC4_QPU_Name_Raddr[VC4_QPU_RADDR_PIXEL_COORD_X][0] = "pixel_coord_x"; // regfile A
 	VC4_QPU_Name_Raddr[VC4_QPU_RADDR_PIXEL_COORD_Y][1] = "pixel_coord_y"; // regfile B
 	VC4_QPU_Name_Raddr[VC4_QPU_RADDR_MS_FLAGS][0] = "ms_flags"; // regfile A
@@ -205,22 +205,22 @@ void __stdcall VC4_InitializeName()
 	VC4_QPU_Name_Alu[VC4_QPU_ALU_R3] = "r3";
 	VC4_QPU_Name_Alu[VC4_QPU_ALU_R4] = "r4";
 	VC4_QPU_Name_Alu[VC4_QPU_ALU_R5] = "r5";
-	VC4_QPU_Name_Alu[VC4_QPU_ALU_REG_A] = "regfile_a";
-	VC4_QPU_Name_Alu[VC4_QPU_ALU_REG_B] = "regfile_b";
+	VC4_QPU_Name_Alu[VC4_QPU_ALU_REG_A] = "ra";
+	VC4_QPU_Name_Alu[VC4_QPU_ALU_REG_B] = "rb";
 
-	VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ALL_ZS] = ".all_zs"; // All Z flags set
-	VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ALL_ZC] = ".all_zc"; // All Z flags clear
-	VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ANY_ZS] = ".any_zs"; // Any Z flags set
-	VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ANY_ZC] = ".any_zc"; // Any Z flags clear
-	VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ALL_NS] = ".all_ns"; // All N flags set
-	VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ALL_NC] = ".all_nc"; // All N flags clear
-	VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ANY_NS] = ".any_ns"; // Any N flags set
-	VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ANY_NC] = ".any_nc"; // Any N flags clear
-	VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ALL_CS] = ".all_cs"; // All C flags set
-	VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ALL_CC] = ".all_cc"; // All C flags clear
-	VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ANY_CS] = ".any_cs"; // Any C flags set
-	VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ANY_CC] = ".any_cc"; // Any C flags clear
-	VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ALWAYS] = ".always"; // Always execute
+	VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ALL_ZS] = ".if_all_zs"; // All Z flags set
+	VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ALL_ZC] = ".if_all_zc"; // All Z flags clear
+	VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ANY_ZS] = ".if_any_zs"; // Any Z flags set
+	VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ANY_ZC] = ".if_any_zc"; // Any Z flags clear
+	VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ALL_NS] = ".if_all_ns"; // All N flags set
+	VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ALL_NC] = ".if_all_nc"; // All N flags clear
+	VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ANY_NS] = ".if_any_ns"; // Any N flags set
+	VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ANY_NC] = ".if_any_nc"; // Any N flags clear
+	VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ALL_CS] = ".if_all_cs"; // All C flags set
+	VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ALL_CC] = ".if_all_cc"; // All C flags clear
+	VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ANY_CS] = ".if_any_cs"; // Any C flags set
+	VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ANY_CC] = ".if_any_cc"; // Any C flags clear
+	VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ALWAYS] = ""; // Always execute
 
     VC4_QPU_Name_SetFlag = ".setFlags";
 
@@ -233,29 +233,169 @@ void __stdcall VC4_InitializeName()
 #define VC4_QPU_IS_OPCODE_ADD_NOP(Inst) (VC4_QPU_GET_OPCODE_ADD(Inst) == VC4_QPU_OPCODE_ADD_NOP)
 #define VC4_QPU_IS_OPCODE_MUL_NOP(Inst) (VC4_QPU_GET_OPCODE_MUL(Inst) == VC4_QPU_OPCODE_MUL_NOP)
 
+#define VC4_QPU_IS_OPCODE_LOAD_SM(Inst) (VC4_QPU_GET_SIG(Inst) == VC4_QPU_SIG_ALU_WITH_RADDR_B)
+
 HRESULT Vc4Disasm::ParseSignature(VC4_QPU_INSTRUCTION Instruction)
 {
     this->xprintf("%s\t", VC4_QPU_Name_Signaling_Bits[VC4_QPU_GET_SIG(Instruction)]);
     return S_OK;
 }
 
+HRESULT Vc4Disasm::ParseSmallImmediate(DWORD dwSmallImmediate)
+{
+    if (dwSmallImmediate < 16)
+    {
+        this->xprintf("%d", dwSmallImmediate);
+    }
+    else if (dwSmallImmediate < 32)
+    {
+        this->xprintf("%d", -16 + (dwSmallImmediate - 16));
+    }
+    else if (dwSmallImmediate < 40)
+    {
+        this->xprintf("%.1f", (float)(1 << (dwSmallImmediate - 32)));
+    }
+    else if (dwSmallImmediate < 48)
+    {
+        this->xprintf("%f", 1.0f / (1 << (48 - dwSmallImmediate)));
+    }
+    else if (dwSmallImmediate == 48)
+    {
+        this->xprintf("Mul output vector rotation is taken from accumulator r5, element 0, bits [3:0]");
+    }
+    else if (dwSmallImmediate < 64)
+    {
+        this->xprintf("Mul output vector rotated by %d upwards (so element 0 moves to element %d)", dwSmallImmediate - 48, dwSmallImmediate - 48);
+    }
+    else
+    {
+        this->xprintf("Invalid");
+    }
+    return S_OK;
+ }
+
+HRESULT Vc4Disasm::ParseWriteAddr(DWORD waddr, bool bRegfile_A)
+{
+    if (waddr < 32)
+    {
+        this->xprintf("r%s%d", bRegfile_A ? "a" : "b", waddr);
+    }
+    else if (waddr < VC4_QPU_RADDR_ARRAY_SIZE)
+    {
+        this->xprintf("%s", VC4_QPU_Name_Waddr[waddr][bRegfile_A ? 0 : 1]);
+    }
+    else
+    {
+        this->xprintf("Invalid");
+    }
+    return S_OK;
+}
+
+HRESULT Vc4Disasm::ParseWrite(VC4_QPU_INSTRUCTION Instruction, bool bAddOp)
+{
+    bool bRegfile_A = ((bAddOp == true) == (VC4_QPU_IS_WRITE_SWAP(Instruction) == 0)) ? true : false;
+    ParseWriteAddr(bAddOp ? VC4_QPU_GET_WADDR_ADD(Instruction) : VC4_QPU_GET_WADDR_MUL(Instruction), bRegfile_A);
+    if (bRegfile_A && !VC4_QPU_IS_PM_SET(Instruction))
+    {
+        this->xprintf("%s", VC4_QPU_Name_Pack_A[VC4_QPU_GET_PACK(Instruction)]);
+    }
+    else if (!bAddOp && VC4_QPU_IS_PM_SET(Instruction))
+    {
+        this->xprintf("%s", VC4_QPU_Name_Pack_Mul[VC4_QPU_GET_PACK(Instruction)]);
+    }
+    return S_OK;
+}
+
+HRESULT Vc4Disasm::ParseReadAddr(DWORD raddr, bool bRegfile_A)
+{
+    if (raddr < 32)
+    {
+        this->xprintf("r%s%d", bRegfile_A ? "a" : "b", raddr);
+    }
+    else if (raddr < VC4_QPU_RADDR_ARRAY_SIZE)
+    {
+        this->xprintf("%s", VC4_QPU_Name_Raddr[raddr][bRegfile_A ? 0 : 1]);
+    }
+    else
+    {
+        this->xprintf("Invalid");
+    }
+    return S_OK;
+}
+
+HRESULT Vc4Disasm::ParseRead(VC4_QPU_INSTRUCTION Instruction, DWORD mux)
+{
+    if (mux < VC4_QPU_ALU_REG_A)
+    {
+        this->xprintf("%s", VC4_QPU_Name_Alu[mux]);
+        if (mux == VC4_QPU_ALU_R4 && VC4_QPU_IS_PM_SET(Instruction))
+        {
+            this->xprintf("%s", VC4_QPU_Name_Unpack[VC4_QPU_GET_UNPACK(Instruction)]);
+        }
+    }
+    else if (mux == VC4_QPU_ALU_REG_A)
+    {
+        ParseReadAddr(VC4_QPU_GET_RADDR_A(Instruction), true);
+        if (!VC4_QPU_IS_PM_SET(Instruction))
+        {
+            this->xprintf("%s", VC4_QPU_Name_Unpack[VC4_QPU_GET_UNPACK(Instruction)]);
+        }
+    } 
+    else if (mux == VC4_QPU_ALU_REG_B)
+    {
+        if (VC4_QPU_IS_OPCODE_LOAD_SM(Instruction))
+        {
+            ParseSmallImmediate(VC4_QPU_GET_SMALL_IMMEDIATE(Instruction));
+        }
+        else
+        {
+            ParseReadAddr(VC4_QPU_GET_RADDR_B(Instruction), false);
+        }
+    }
+    else
+    {
+        this->xprintf("Invalid");
+    }
+    return S_OK;
+}
+
 HRESULT Vc4Disasm::ParseAddOp(VC4_QPU_INSTRUCTION Instruction)
 {
-    this->xprintf("%s%s%s",
+    this->xprintf("%s%s%s ",
         VC4_QPU_IS_OPCODE_ADD_MOV(Instruction) ? VC4_QPU_Name_Op_Move : VC4_QPU_Name_Op_Add[VC4_QPU_GET_OPCODE_ADD(Instruction)],
-        VC4_QPU_IS_OPCODE_ADD_NOP(Instruction) ? VC_QPU_Name_Empty : VC4_QPU_Name_Cond[VC4_QPU_GET_COND_ADD(Instruction)],
-        VC4_QPU_IS_SETFLAGS(Instruction) ? VC4_QPU_Name_SetFlag : VC_QPU_Name_Empty);
-    //TODO
+        VC4_QPU_IS_SETFLAGS(Instruction) ? VC4_QPU_Name_SetFlag : VC_QPU_Name_Empty,
+        VC4_QPU_IS_OPCODE_ADD_NOP(Instruction) ? VC_QPU_Name_Empty : VC4_QPU_Name_Cond[VC4_QPU_GET_COND_ADD(Instruction)]);
+    if (!VC4_QPU_IS_OPCODE_ADD_NOP(Instruction))
+    {
+        ParseWrite(Instruction, true);
+        this->xprintf(", ");
+        ParseRead(Instruction, VC4_QPU_GET_ADD_A(Instruction));
+        if (!VC4_QPU_IS_OPCODE_ADD_MOV(Instruction))
+        {
+            this->xprintf(", ");
+            ParseRead(Instruction, VC4_QPU_GET_ADD_B(Instruction));
+        }
+    }
     return S_OK;
 }
 
 HRESULT Vc4Disasm::ParseMulOp(VC4_QPU_INSTRUCTION Instruction)
 {
-    this->xprintf("%s%s%s",
+    this->xprintf("%s%s%s ",
         VC4_QPU_IS_OPCODE_MUL_MOV(Instruction) ? VC4_QPU_Name_Op_Move : VC4_QPU_Name_Op_Mul[VC4_QPU_GET_OPCODE_MUL(Instruction)],
-        VC4_QPU_IS_OPCODE_MUL_NOP(Instruction) ? VC_QPU_Name_Empty : VC4_QPU_Name_Cond[VC4_QPU_GET_COND_MUL(Instruction)],
-        VC4_QPU_IS_SETFLAGS(Instruction) ? VC4_QPU_Name_SetFlag : VC_QPU_Name_Empty);
-    //TODO
+        VC4_QPU_IS_SETFLAGS(Instruction) ? VC4_QPU_Name_SetFlag : VC_QPU_Name_Empty,
+        VC4_QPU_IS_OPCODE_MUL_NOP(Instruction) ? VC_QPU_Name_Empty : VC4_QPU_Name_Cond[VC4_QPU_GET_COND_MUL(Instruction)]);
+    if (!VC4_QPU_IS_OPCODE_MUL_NOP(Instruction))
+    {
+        ParseWrite(Instruction, false);
+        this->xprintf(", ");
+        ParseRead(Instruction, VC4_QPU_GET_MUL_A(Instruction));
+        if (!VC4_QPU_IS_OPCODE_MUL_MOV(Instruction))
+        {
+            this->xprintf(", ");
+            ParseRead(Instruction, VC4_QPU_GET_MUL_B(Instruction));
+        }
+    }
     return S_OK;
 }
 

@@ -13,6 +13,13 @@ public:
 private:
     HRESULT ParseSignature(VC4_QPU_INSTRUCTION Instruction);
 
+    HRESULT ParseSmallImmediate(DWORD dwSmallImmediate);
+
+    HRESULT ParseWrite(VC4_QPU_INSTRUCTION Instruction, bool bAddOp);
+    HRESULT ParseWriteAddr(DWORD waddr, bool bRegfile_A);
+    HRESULT ParseRead(VC4_QPU_INSTRUCTION Instruction, DWORD mux);
+    HRESULT ParseReadAddr(DWORD raddr, bool bRegfile_A);
+    
     HRESULT ParseALUInstruction(VC4_QPU_INSTRUCTION Instruction);
     HRESULT ParseAddOp(VC4_QPU_INSTRUCTION Instruction);
     HRESULT ParseMulOp(VC4_QPU_INSTRUCTION Instruction);

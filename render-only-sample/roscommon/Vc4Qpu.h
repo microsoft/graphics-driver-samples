@@ -41,7 +41,8 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 // Unpack Bits [59]-[57]
 //
 #define VC4_QPU_UNPACK_SHIFT 57
-#define VC4_QPU_UNPACK_MASK (0x7ULL << VC4_QPU_UNPACK_MASK)
+#define VC4_QPU_UNPACK_MASK (0x7ULL << VC4_QPU_UNPACK_SHIFT)
+#define VC4_QPU_GET_UNPACK(Inst) (((Inst) & VC4_QPU_UNPACK_MASK) >> VC4_QPU_UNPACK_SHIFT)
 
 // Regfile-a unpack operations (pm bit = 0):
 // R4 unpack operations (pm bit = 1):
@@ -65,8 +66,9 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 //
 // Pack Bits [55]-[52]
 // 
-#define VC4_QPU_PACK_SHIFT 53
+#define VC4_QPU_PACK_SHIFT 52
 #define VC4_QPU_PACK_MASK (0xfULL << VC4_QPU_PACK_SHIFT)
+#define VC4_QPU_GET_PACK(Inst) (((Inst) & VC4_QPU_PACK_MASK) >> VC4_QPU_PACK_SHIFT)
 
 // Regfile-a pack operations (pm bit = 0):
 #define VC4_QPU_PACK_A_32 0 // NOP
@@ -138,9 +140,11 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 //
 #define VC4_QPU_WADDR_ADD_SHIFT 38
 #define VC4_QPU_WADDR_ADD_MASK (0x3fULL << VC4_QPU_WADDR_ADD_SHIFT)
+#define VC4_QPU_GET_WADDR_ADD(Inst) (((Inst) & VC4_QPU_WADDR_ADD_MASK) >> VC4_QPU_WADDR_ADD_SHIFT)
 
 #define VC4_QPU_WADDR_MUL_SHIFT 32
 #define VC4_QPU_WADDR_MUL_MASK (0x3fULL << VC4_QPU_WADDR_MUL_SHIFT)
+#define VC4_QPU_GET_WADDR_MUL(Inst) (((Inst) & VC4_QPU_WADDR_MUL_MASK) >> VC4_QPU_WADDR_MUL_SHIFT)
 
 //
 // QPU register address map for write
@@ -242,9 +246,11 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 //
 #define VC4_QPU_RADDR_A_SHIFT 18
 #define VC4_QPU_RADDR_A_MASK (0x3fULL << VC4_QPU_RADDR_A_SHIFT)
+#define VC4_QPU_GET_RADDR_A(Inst) (((Inst) & VC4_QPU_RADDR_A_MASK) >> VC4_QPU_RADDR_A_SHIFT)
 
 #define VC4_QPU_RADDR_B_SHIFT 12
 #define VC4_QPU_RADDR_B_MASK (0x3fULL << VC4_QPU_RADDR_B_SHIFT)
+#define VC4_QPU_GET_RADDR_B(Inst) (((Inst) & VC4_QPU_RADDR_B_MASK) >> VC4_QPU_RADDR_B_SHIFT)
 
 //
 // QPU register address map for read.
@@ -253,7 +259,7 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 #define VC4_QPU_RADDR_UNIFORM 32
 #define VC4_QPU_RADDR_VERYING 35
 #define VC4_QPU_RADDR_ELEMENT_NUMBER 38 // regfile A
-#define VC4_QPU_RADDR_QPU_NUMBER 39 // regfile B
+#define VC4_QPU_RADDR_QPU_NUMBER     38 // regfile B
 #define VC4_QPU_RADDR_NOP 39
 #define VC4_QPU_RADDR_PIXEL_COORD_X 41 // regfile A
 #define VC4_QPU_RADDR_PIXEL_COORD_Y 41 // regfile B
@@ -319,6 +325,7 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 //
 #define VC4_QPU_SMALL_IMMEDIATE_SHIFT 12
 #define VC4_QPU_SMALL_IMMEDIATE_MASK (0x3fULL << VC4_QPU_SMALL_IMMEDIATE_SHIFT)
+#define VC4_QPU_GET_SMALL_IMMEDIATE(Inst) (((Inst) & VC4_QPU_SMALL_IMMEDIATE_MASK) >> VC4_QPU_SMALL_IMMEDIATE_SHIFT)
 
 //
 // Load immediate insturction
