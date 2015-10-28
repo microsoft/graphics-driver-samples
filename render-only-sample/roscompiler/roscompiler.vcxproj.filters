@@ -30,6 +30,15 @@
     <ClInclude Include="..\roscommon\Vc4Qpu.h">
       <Filter>Common</Filter>
     </ClInclude>
+    <ClInclude Include="HLSLDisasm.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vc4Disasm.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DisasmBase.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="roscompiler.cpp">
@@ -42,6 +51,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Vc4Disasm.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DisasmBase.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

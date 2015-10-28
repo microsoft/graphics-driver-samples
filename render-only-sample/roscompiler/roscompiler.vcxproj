@@ -37,10 +37,14 @@
   <ItemGroup>
     <ClInclude Include="..\roscommon\Vc4Qpu.h" />
     <ClInclude Include="d3dumddi_.h" />
+    <ClInclude Include="DisasmBase.hpp" />
     <ClInclude Include="HLSLBinary.hpp" />
+    <ClInclude Include="HLSLDisasm.hpp" />
     <ClInclude Include="roscompiler.h" />
+    <ClInclude Include="Vc4Disasm.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="DisasmBase.cpp" />
     <ClCompile Include="HLSLBinary.cpp" />
     <ClCompile Include="HLSLDisasm.cpp" />
     <ClCompile Include="roscompiler.cpp" />

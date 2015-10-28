@@ -10,7 +10,8 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 // Siginaling Bits - [63]-[60]
 //
 #define VC4_QPU_SIG_SHIFT 60
-#define VC4_QPU_SIG_MASK (0xf << VC4_QPU_SIG_SHIFT)
+#define VC4_QPU_SIG_MASK (0xfULL << VC4_QPU_SIG_SHIFT)
+#define VC4_QPU_GET_SIG(Inst) (((Inst) & VC4_QPU_SIG_MASK) >> VC4_QPU_SIG_SHIFT)
 
 #define VC4_QPU_SIG_BREAK 0
 #define VC4_QPU_SIG_NO_SIGNAL 1
@@ -40,7 +41,7 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 // Unpack Bits [59]-[57]
 //
 #define VC4_QPU_UNPACK_SHIFT 57
-#define VC4_QPU_UNPACK_MASK (0x7 << VC4_QPU_UNPACK_MASK)
+#define VC4_QPU_UNPACK_MASK (0x7ULL << VC4_QPU_UNPACK_MASK)
 
 // Regfile-a unpack operations (pm bit = 0):
 // R4 unpack operations (pm bit = 1):
@@ -58,13 +59,14 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 // PM Bit for unpack/pack [56]
 //
 #define VC4_QPU_PM_SHIFT 56
-#define VC4_QPU_PM_MASK (0x1 << VC4_QPU_PM_SHIFT)
+#define VC4_QPU_PM_MASK (0x1ULL << VC4_QPU_PM_SHIFT)
+#define VC4_QPU_IS_PM_SET(Inst) ((Inst) & VC4_QPU_PM_MASK)
 
 //
 // Pack Bits [55]-[52]
 // 
 #define VC4_QPU_PACK_SHIFT 53
-#define VC4_QPU_PACK_MASK (0xf << VC4_QPU_PACK_SHIFT)
+#define VC4_QPU_PACK_MASK (0xfULL << VC4_QPU_PACK_SHIFT)
 
 // Regfile-a pack operations (pm bit = 0):
 #define VC4_QPU_PACK_A_32 0 // NOP
@@ -99,10 +101,12 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 // Condition Bits [51]-[49] for add, [48]-[46] for mul.
 //
 #define VC4_QPU_COND_ADD_SHIFT 49
-#define VC4_QPU_COND_ADD_MASK (0x7 << VC4_QPU_COND_ADD_SHIFT)
+#define VC4_QPU_COND_ADD_MASK (0x7ULL << VC4_QPU_COND_ADD_SHIFT)
+#define VC4_QPU_GET_COND_ADD(Inst) ((((Inst) & VC4_QPU_COND_ADD_MASK) >> VC4_QPU_COND_ADD_SHIFT))
 
 #define VC4_QPU_COND_MUL_SHIFT 46
-#define VC4_QPU_COND_MUL_MASK (0x7 << VC4_QPU_COND_MUL_SHIFT)
+#define VC4_QPU_COND_MUL_MASK (0x7ULL << VC4_QPU_COND_MUL_SHIFT)
+#define VC4_QPU_GET_COND_MUL(Inst) ((((Inst) & VC4_QPU_COND_MUL_MASK) >> VC4_QPU_COND_MUL_SHIFT))
 
 #define VC4_QPU_COND_NEVER 0
 #define VC4_QPU_COND_ALWAYS 1
@@ -118,23 +122,25 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 // Setflags Bit [45]
 //
 #define VC4_QPU_SETFLAGS_SHIFT 45
-#define VC4_QPU_SETFLAGS_MASK (0x1 << VC4_QPU_SETFLAGS_SHIFT)
+#define VC4_QPU_SETFLAGS_MASK (0x1ULL << VC4_QPU_SETFLAGS_SHIFT)
+#define VC4_QPU_IS_SETFLAGS(Inst) ((Inst) & VC4_QPU_SETFLAGS_MASK)
 
 //
 // Write Swap Bit [44]
 //
 #define VC4_QPU_WRITESWAP_SHIFT 44
-#define VC4_QPU_WRITESWAP_MASK (0x1 << VC4_QPU_WRITESWAP_SHIFT)
+#define VC4_QPU_WRITESWAP_MASK (0x1ULL << VC4_QPU_WRITESWAP_SHIFT)
+#define VC4_QPU_IS_WRITE_SWAP(Inst) ((Inst) & VC4_QPU_WRITESWAP_MASK)
 
 //
 // Write Address for output [43]-[38] for add
 //                          [37]-[32] for mul
 //
 #define VC4_QPU_WADDR_ADD_SHIFT 38
-#define VC4_QPU_WADDR_ADD_MASK (0x3f << VC4_QPU_WADDR_ADD_SHIFT)
+#define VC4_QPU_WADDR_ADD_MASK (0x3fULL << VC4_QPU_WADDR_ADD_SHIFT)
 
 #define VC4_QPU_WADDR_MUL_SHIFT 32
-#define VC4_QPU_WADDR_MUL_MASK (0x3f << VC4_QPU_WADDR_MUL_SHIFT)
+#define VC4_QPU_WADDR_MUL_MASK (0x3fULL << VC4_QPU_WADDR_MUL_SHIFT)
 
 //
 // QPU register address map for write
@@ -182,7 +188,8 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 // Op code for mul [31]-[29]
 //
 #define VC4_QPU_OPCODE_MUL_SHIFT 29
-#define VC4_QPU_OPCODE_MUL_MASK (0x7 << VC4_QPU_OPCODE_MUL_SHIFT)
+#define VC4_QPU_OPCODE_MUL_MASK (0x7ULL << VC4_QPU_OPCODE_MUL_SHIFT)
+#define VC4_QPU_GET_OPCODE_MUL(Inst) ((((Inst) & VC4_QPU_OPCODE_MUL_MASK) >> VC4_QPU_OPCODE_MUL_SHIFT))
 
 #define VC4_QPU_OPCODE_MUL_NOP 0
 #define VC4_QPU_OPCODE_MUL_FMUL 1
@@ -198,7 +205,8 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 // Op code for add [28]-[24]
 //
 #define VC4_QPU_OPCODE_ADD_SHIFT 24
-#define VC4_QPU_OPCODE_ADD_MASK (0x1f << VC4_QPU_OPCODE_MUL_SHIFT)
+#define VC4_QPU_OPCODE_ADD_MASK (0x1fULL << VC4_QPU_OPCODE_ADD_SHIFT)
+#define VC4_QPU_GET_OPCODE_ADD(Inst) ((((Inst) & VC4_QPU_OPCODE_ADD_MASK) >> VC4_QPU_OPCODE_ADD_SHIFT))
 
 #define VC4_QPU_OPCODE_ADD_NOP 0
 #define VC4_QPU_OPCODE_ADD_FADD 1
@@ -233,10 +241,10 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 //                  register file B [17]-[12]
 //
 #define VC4_QPU_RADDR_A_SHIFT 18
-#define VC4_QPU_RADDR_A_MASK (0x3f << VC4_QPU_RADDR_A_SHIFT)
+#define VC4_QPU_RADDR_A_MASK (0x3fULL << VC4_QPU_RADDR_A_SHIFT)
 
 #define VC4_QPU_RADDR_B_SHIFT 12
-#define VC4_QPU_RADDR_B_MASK (0x3f << VC4_QPU_RADDR_B_SHIFT)
+#define VC4_QPU_RADDR_B_MASK (0x3fULL << VC4_QPU_RADDR_B_SHIFT)
 
 //
 // QPU register address map for read.
@@ -263,25 +271,29 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 // add_a [11]-[9]
 //
 #define VC4_QPU_ADD_A_SHIFT 9
-#define VC4_QPU_ADD_A_MASK (0x7 << VC4_QPU_ADD_A_SHIFT)
+#define VC4_QPU_ADD_A_MASK (0x7ULL << VC4_QPU_ADD_A_SHIFT)
+#define VC4_QPU_GET_ADD_A(Inst) ((((Inst) & VC4_QPU_ADD_A_MASK) >> VC4_QPU_ADD_A_SHIFT))
 
 //
 // add_b [8]-[6]
 //
 #define VC4_QPU_ADD_B_SHIFT 6
-#define VC4_QPU_ADD_B_MASK (0x7 << VC4_QPU_ADD_B_SHIFT)
+#define VC4_QPU_ADD_B_MASK (0x7ULL << VC4_QPU_ADD_B_SHIFT)
+#define VC4_QPU_GET_ADD_B(Inst) ((((Inst) & VC4_QPU_ADD_B_MASK) >> VC4_QPU_ADD_B_SHIFT))
 
 //
 // mul_a [5]-[3]
 //
 #define VC4_QPU_MUL_A_SHIFT 3
-#define VC4_QPU_MUL_A_MASK (0x7 << VC4_QPU_MUL_A_SHIFT)
+#define VC4_QPU_MUL_A_MASK (0x7ULL << VC4_QPU_MUL_A_SHIFT)
+#define VC4_QPU_GET_MUL_A(Inst) ((((Inst) & VC4_QPU_MUL_A_MASK) >> VC4_QPU_MUL_A_SHIFT))
 
 //
 // mul_b [2]-[0]
 //
 #define VC4_QPU_MUL_B_SHIFT 0
-#define VC4_QPU_MUL_B_MASK (0x7 << VC4_QPU_MUL_B_SHIFT)
+#define VC4_QPU_MUL_B_MASK (0x7ULL << VC4_QPU_MUL_B_SHIFT)
+#define VC4_QPU_GET_MUL_B(Inst) ((((Inst) & VC4_QPU_MUL_B_MASK) >> VC4_QPU_MUL_B_SHIFT))
 
 //
 // ALU input muxes for add_a/b, mul_a/b.
@@ -306,7 +318,7 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 // Small immediate [17]-[12] : overlapping with register file B.
 //
 #define VC4_QPU_SMALL_IMMEDIATE_SHIFT 12
-#define VC4_QPU_SMALL_IMMEDIATE_MASK (0x3f << VC4_QPU_SMALL_IMMEDIATE_SHIFT)
+#define VC4_QPU_SMALL_IMMEDIATE_MASK (0x3fULL << VC4_QPU_SMALL_IMMEDIATE_SHIFT)
 
 //
 // Load immediate insturction
@@ -318,42 +330,45 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 // Immediate type [59]-[57]
 //
 #define VC4_QPU_IMMEDIATE_TYPE_SHIFT 57
-#define VC4_QPU_IMMEDIATE_TYPE_MASK (0x3 << VC4_QPU_IMMEDIATE_TYPE_SHIFT)
+#define VC4_QPU_IMMEDIATE_TYPE_MASK (0x3ULL << VC4_QPU_IMMEDIATE_TYPE_SHIFT)
+#define VC4_QPU_GET_IMMEDIATE_TYPE(Inst) (((Inst) & VC4_QPU_IMMEDIATE_TYPE_MASK) >> VC4_QPU_IMMEDIATE_TYPE_SHIFT)
 
 #define VC4_QPU_IMMEDIATE_TYPE_32 0
 #define VC4_QPU_IMMEDIATE_TYPE_PER_ELEMENT_SIGNED 1
 #define VC4_QPU_IMMEDIATE_TYPE_PER_ELEMENT_UNSIGNED 3
 #define VC4_QPU_IMMEDIATE_TYPE_SEMAPHORE 4
 
+#define VC4_QPU_IS_SEMAPHORE(Inst) (VC4_QPU_GET_IMMEDIATE_TYPE(Inst) == VC4_QPU_IMMEDIATE_TYPE_SEMAPHORE)
+
 //
 // Immediate 32bit [31]-[0]
 //
 #define VC4_QPU_IMMEDIATE_32_SHIFT 0
-#define VC4_QPU_IMMEDIATE_32_MASK (0xffffffff << VC4_QPU_IMMEDIATE_32_SHIFT)
+#define VC4_QPU_IMMEDIATE_32_MASK (0xffffffffULL << VC4_QPU_IMMEDIATE_32_SHIFT)
 
 //
 // Immediate per element MS bit [31]-[16]
 //
 #define VC4_QPU_IMMEDIATE_MS_SHIFT 16
-#define VC4_QPU_IMMEDIATE_MS_MASK (0xffff << VC4_QPU_IMMEDIATE_MS_SHIFT)
+#define VC4_QPU_IMMEDIATE_MS_MASK (0xffffULL << VC4_QPU_IMMEDIATE_MS_SHIFT)
 
 //
 // Immediate per element LS bit [15]-[0]
 //
 #define VC4_QPU_IMMEDIATE_LS_SHIFT 0
-#define VC4_QPU_IMMEDIATE_LS_MASK (0xffff << VC4_QPU_IMMEDIATE_LS_SHIFT)
+#define VC4_QPU_IMMEDIATE_LS_MASK (0xffffULL << VC4_QPU_IMMEDIATE_LS_SHIFT)
 
 //
 // Only when VC4_QPU_IMMEDIATE_TYPE_SEMAPHORE
 //
 #define VC4_QPU_SEMAPHORE_SA_SHIFT 4
-#define VC4_QPU_SEMAPHORE_SA_MASK (0x1 << VC4_QPU_SEMAPHORE_SA_SHIFT)
+#define VC4_QPU_SEMAPHORE_SA_MASK (0x1ULL << VC4_QPU_SEMAPHORE_SA_SHIFT)
 
 #define VC4_QPU_SEMAPHORE_SA_INC 0
 #define VC4_QPU_SEMAPHORE_SA_DEC 1
 
 #define VC4_QPU_SEMAPHORE_SHIFT 0
-#define VC4_QPU_SEMAPHORE_MASK (0xf << VC4_QPU_SEMAPHORE_SHIFT)
+#define VC4_QPU_SEMAPHORE_MASK (0xfULL << VC4_QPU_SEMAPHORE_SHIFT)
 
 //
 // Branch instruction
@@ -365,7 +380,7 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 // Branch condition [55]-[52]
 //
 #define VC4_QPU_BRANCH_COND_SHIFT 52
-#define VC4_QPU_BRANCH_COND_MASK (0xf << VC4_QPU_BRANCH_COND_SHIFT)
+#define VC4_QPU_BRANCH_COND_MASK (0xfULL << VC4_QPU_BRANCH_COND_SHIFT)
 
 #define VC4_QPU_BRANCH_COND_ALL_ZS 0 // All Z flags set
 #define VC4_QPU_BRANCH_COND_ALL_ZC 1 // All Z flags clear
@@ -387,10 +402,10 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 // Branch relative bit [51] : PC = PC + 4.
 //
 #define VC4_QPU_BRANCH_RELATIVE_SHIFT 51
-#define VC4_QPU_BRANCH_RELATIVE_MASK (0x1 << VC4_QPU_BRANCH_RELATIVE_SHIFT)
+#define VC4_QPU_BRANCH_RELATIVE_MASK (0x1ULL << VC4_QPU_BRANCH_RELATIVE_SHIFT)
 
 //
 // Branch register file A [50] : PC = PC + raddr_a[0].
 //
 #define VC4_QPU_BRANCH_RADDR_A_SHIFT 50
-#define VC4_QPU_BRANCH_RADDR_A_MASK (0x1 << VC4_QPU_BRANCH_RADDR_A_SHIFT)
+#define VC4_QPU_BRANCH_RADDR_A_MASK (0x1ULL << VC4_QPU_BRANCH_RADDR_A_SHIFT)

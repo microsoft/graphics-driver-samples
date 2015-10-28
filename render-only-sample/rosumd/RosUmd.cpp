@@ -4,6 +4,8 @@
 
 // TODO[bhouse] Turn ApiValidator back on
 
+void __stdcall InitializeShaderCompilerLibrary();
+
 HINSTANCE g_hDLL;
 
 BOOL WINAPI DllMain(
@@ -22,6 +24,7 @@ BOOL WINAPI DllMain(
     {
     case( DLL_PROCESS_ATTACH ):
         {
+			InitializeShaderCompilerLibrary();
             g_hDLL = hmod;
         } break;
 

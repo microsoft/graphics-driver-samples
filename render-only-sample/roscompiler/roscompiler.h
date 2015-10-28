@@ -1,5 +1,10 @@
 #include "d3dumddi_.h"
+#include "DisasmBase.hpp"
 #include "HLSLBinary.hpp"
+#include "HLSLDisasm.hpp"
+#if VC4
+#include "Vc4Disasm.hpp"
+#endif // VC4
 
 class RosCompiler
 {
@@ -19,7 +24,12 @@ public:
 
 private:
 	void Disassemble_HLSL()	{ HLSLDisasm().Run(m_pCode); }
-	void Disassemble_HW() 	{		/* m_pHwCode; */	 }
+	void Disassemble_HW()
+	{
+#if VC4
+		Vc4Disasm().Run((const VC4_QPU_INSTRUCTION*)m_pHwCode, m_HwCodeSize);
+#endif // VC4
+	}
 	
 private:
 

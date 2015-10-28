@@ -12,11 +12,11 @@ void
 RosUmdShader::Standup(
     const UINT * pCode, D3D10DDI_HRTSHADER hRTShader)
 {
-    UINT codeSize = pCode[1] * sizeof(UINT);
+    UINT codeSize = pCode[1];
 
     m_pCode = new UINT[codeSize];
     
-    memcpy(m_pCode, pCode, codeSize);
+    memcpy(m_pCode, pCode, codeSize * sizeof(UINT));
 
     m_hRTShader = hRTShader;
 }

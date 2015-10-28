@@ -31,11 +31,9 @@ typedef enum D3D11_SB_OPCODE_CLASS
     D3D11_SB_DCL_OP,
 } D3D11_SB_OPCODE_CLASS;
 
-void __stdcall InitInstructionInfo();
-
 struct CInstructionInfo
 {
-	CInstructionInfo() { ::InitInstructionInfo(); }
+	CInstructionInfo() {}
 	~CInstructionInfo()	{}
 
     void Set (BYTE NumDstOperands, BYTE NumSrcOperands, LPCSTR Name, D3D11_SB_OPCODE_CLASS OpClass)
@@ -1963,35 +1961,3 @@ protected:
     UINT            m_NumParsedInstructions;
 };
 
-
-class HLSLDisasm
-{
-public:
-    typedef void (fnPrinter)(void *pFile, const char* szStr, int Line, void* m_pCustomCtx);
-
-    HLSLDisasm();
-    HLSLDisasm(void *pFile, fnPrinter *pStrPrinter, void *pCustomCtx);
-    ~HLSLDisasm();
-    HRESULT Run(const UINT * pShader);
-
-    void SetCustomCtx(void *pCustomCtx) { m_pCustomCtx = pCustomCtx; }
-    void SetFile(void * pFile) { m_pFile = pFile; }
-    void SetPrinter(fnPrinter *pStrPrinter) { m_pStrPrinter = pStrPrinter; }
-
-    void SetColor(WORD wColor);
-    void UnsetColor();
-    void xprintf(LPCSTR pStr, ...);
-    void Flush(int Line);
-
-protected:
-    size_t m_cbSize;
-    size_t m_cbSizeMax;
-    char*  m_pBuf;
-    bool   m_bColorCode;
-    void*  m_pFile;
-    void*  m_pCustomCtx;
-    fnPrinter* m_pStrPrinter;
-
-    void xaddstring(LPCSTR sz);
-    bool EnsureSize(const size_t cbSize);
-};

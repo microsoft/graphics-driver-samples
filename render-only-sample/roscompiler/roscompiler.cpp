@@ -1,5 +1,16 @@
 #include "roscompiler.h"
 
+void __stdcall InitInstructionInfo();
+void __stdcall VC4_InitializeName();
+
+void __stdcall InitializeShaderCompilerLibrary()
+{
+	InitInstructionInfo();
+#if VC4
+	VC4_InitializeName();
+#endif //
+}
+
 RosCompiler* RosCompilerCreate(UINT *pCode,
                                UINT numInputSignatureEntries,
                                D3D11_1DDIARG_SIGNATURE_ENTRY *pInputSignatureEntries,
@@ -59,7 +70,7 @@ BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize)
     else if (D3D10_SB_PIXEL_SHADER == programType)
     {
 #if VC4
-        m_HwCodeSize = PAGE_SIZE;
+        m_HwCodeSize = 9 * sizeof(VC4_QPU_INSTRUCTION);
         m_pHwCode = new BYTE[m_HwCodeSize];
 
         //
@@ -84,6 +95,8 @@ BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize)
         *pShaderCode++ = 0x100009e7;    // nop; nop; nop
         *pShaderCode++ = 0x009e7000;
         *pShaderCode++ = 0x500009e7;    // nop; nop; sbdone
+
+		Disassemble_HW();
 
         *puiShaderCodeSize = PAGE_SIZE;
         return TRUE;

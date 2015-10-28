@@ -1,5 +1,5 @@
 #include "roscompiler.h"
-#include "..\roscommon\Vc4Qpu.h"
+#include "Vc4Disasm.hpp"
 
 static char* VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_ARRAY_SIZE] = { 0 };
 static char* VC4_QPU_Name_Unpack[VC4_QPU_UNPACK_ARRAY_SIZE] = { 0 };
@@ -9,28 +9,31 @@ static char* VC4_QPU_Name_Cond[VC4_QPU_COND_ARRAY_SIZE] = { 0 };
 static char* VC4_QPU_Name_Waddr[VC4_QPU_WADDR_ARRAY_SIZE][1] = { 0 }; // [0] for regfile A, [1] for regfile B
 static char* VC4_QPU_Name_Op_Mul[VC4_QPU_OPCODE_MUL_ARRAY_SIZE] = { 0 };
 static char* VC4_QPU_Name_Op_Add[VC4_QPU_OPCODE_ADD_ARRAY_SIZE] = { 0 };
+static char* VC4_QPU_Name_Op_Move = NULL;
 static char* VC4_QPU_Name_Raddr[VC4_QPU_RADDR_ARRAY_SIZE][1] = { 0 }; // [0] for regfile A, [1] for regfile B
 static char* VC4_QPU_Name_Alu[VC4_QPU_ALU_ARRAY_SIZE] = { 0 };
 static char* VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ARRAY_SIZE] = { 0 };
+static char* VC4_QPU_Name_SetFlag = NULL;
+static char* VC_QPU_Name_Empty = NULL;
 
-void VC4_InitializeName()
+void __stdcall VC4_InitializeName()
 {
-	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_BREAK] = "Breakpoint";
-	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_NO_SIGNAL] = "No_Signal";
-	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_THREAD_SWITCH] = "Thread_Switch";
-	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_PROGRAM_END] = "Program_End";
-	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_WAIT_FOR_SCOREBOARD] = "Wait_for_Scoreboard";
-	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_SCOREBOARD_UNBLOCK] = "Scoreboard_Unblock";
-	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_LAST_THREAD_SWITCH] = "Last_Thread_Swich";
-	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_COVERAGE_LOAD] = "Coverage_Load_from_Tile_buffer_to_r4";
-	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_COLOR_LOAD] = "Color_Load_from_Tile_buffer_to_r4";
-	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_COLOR_LOAD_AND_PROGRAM_END] = "Color_Load_and_Program_End";
-	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_LOAD_TMU0] = "Load_data_from_TMU0_to_r4";
-	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_LOAD_TMU1] = "Load_data_from_TMU1_to_r4";
-	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_ALPAH_MASK_LOAD] = "Alpha-Mask_Load_from_Tile_buffer_to_r4";
-	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_ALU_WITH_RADDR_B] = "ALU_instruction_with_raddr_b";
-	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_LOAD_IMMEDIATE] = "Load_Immediate";
-	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_BRANCH] = "Branch";
+	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_BREAK] = "bkpt";
+	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_NO_SIGNAL] = "";
+	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_THREAD_SWITCH] = "thrsw";
+	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_PROGRAM_END] = "thrend";
+	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_WAIT_FOR_SCOREBOARD] = "sbwait";
+	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_SCOREBOARD_UNBLOCK] = "sbdone";
+	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_LAST_THREAD_SWITCH] = "lthrsw";
+	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_COVERAGE_LOAD] = "loadcv";
+	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_COLOR_LOAD] = "loadc";
+	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_COLOR_LOAD_AND_PROGRAM_END] = "ldcend";
+	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_LOAD_TMU0] = "ldtmu0";
+	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_LOAD_TMU1] = "ldtmu1";
+	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_ALPAH_MASK_LOAD] = "loadam";
+	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_ALU_WITH_RADDR_B] = "load_sm";
+	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_LOAD_IMMEDIATE] = "load_imm";
+	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_BRANCH] = "br";
 
 	VC4_QPU_Name_Unpack[VC4_QPU_UNPACK_32] = ".32";
 	VC4_QPU_Name_Unpack[VC4_QPU_UNPACK_16a] = ".16a";
@@ -173,12 +176,14 @@ void VC4_InitializeName()
 	VC4_QPU_Name_Op_Add[VC4_QPU_OPCODE_ADD_V8ADDS] = "v8add_saturate";
 	VC4_QPU_Name_Op_Add[VC4_QPU_OPCODE_ADD_V8SUBS] = "v8sub_saturate";
 
+    VC4_QPU_Name_Op_Move = "mov";
+
 	VC4_QPU_Name_Raddr[VC4_QPU_RADDR_UNIFORM][0] =
 	VC4_QPU_Name_Raddr[VC4_QPU_RADDR_UNIFORM][1] = "uniform";
 	VC4_QPU_Name_Raddr[VC4_QPU_RADDR_VERYING][0] =
 	VC4_QPU_Name_Raddr[VC4_QPU_RADDR_VERYING][1] = "varying";
-	VC4_QPU_Name_Raddr[VC4_QPU_RADDR_ELEMENT_NUMBER][0] = "element number"; // regfile A
-	VC4_QPU_Name_Raddr[VC4_QPU_RADDR_QPU_NUMBER][1] = "qpu number"; // regfile B
+	VC4_QPU_Name_Raddr[VC4_QPU_RADDR_ELEMENT_NUMBER][0] = "element_number"; // regfile A
+	VC4_QPU_Name_Raddr[VC4_QPU_RADDR_QPU_NUMBER][1] = "qpu_number"; // regfile B
 	VC4_QPU_Name_Raddr[VC4_QPU_RADDR_NOP][0] =
 	VC4_QPU_Name_Raddr[VC4_QPU_RADDR_NOP][1] = "nop";
 	VC4_QPU_Name_Raddr[VC4_QPU_RADDR_PIXEL_COORD_X][0] = "pixel_coord_x"; // regfile A
@@ -200,8 +205,8 @@ void VC4_InitializeName()
 	VC4_QPU_Name_Alu[VC4_QPU_ALU_R3] = "r3";
 	VC4_QPU_Name_Alu[VC4_QPU_ALU_R4] = "r4";
 	VC4_QPU_Name_Alu[VC4_QPU_ALU_R5] = "r5";
-	VC4_QPU_Name_Alu[VC4_QPU_ALU_REG_A] = "regfile A";
-	VC4_QPU_Name_Alu[VC4_QPU_ALU_REG_B] = "regfile B";
+	VC4_QPU_Name_Alu[VC4_QPU_ALU_REG_A] = "regfile_a";
+	VC4_QPU_Name_Alu[VC4_QPU_ALU_REG_B] = "regfile_b";
 
 	VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ALL_ZS] = ".all_zs"; // All Z flags set
 	VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ALL_ZC] = ".all_zc"; // All Z flags clear
@@ -216,4 +221,109 @@ void VC4_InitializeName()
 	VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ANY_CS] = ".any_cs"; // Any C flags set
 	VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ANY_CC] = ".any_cc"; // Any C flags clear
 	VC4_QPU_Name_Branch_Cond[VC4_QPU_BRANCH_COND_ALWAYS] = ".always"; // Always execute
+
+    VC4_QPU_Name_SetFlag = ".setFlags";
+
+    VC_QPU_Name_Empty = "";
+}
+
+#define VC4_QPU_IS_OPCODE_ADD_MOV(Inst) ((VC4_QPU_GET_OPCODE_ADD(Inst) == VC4_QPU_OPCODE_ADD_OR) && (VC4_QPU_GET_ADD_A(Inst) == VC4_QPU_GET_ADD_B(Inst)))
+#define VC4_QPU_IS_OPCODE_MUL_MOV(Inst) ((VC4_QPU_GET_OPCODE_MUL(Inst) == VC4_QPU_OPCODE_MUL_V8MIN) && (VC4_QPU_GET_MUL_A(Inst) == VC4_QPU_GET_MUL_B(Inst)))
+
+#define VC4_QPU_IS_OPCODE_ADD_NOP(Inst) (VC4_QPU_GET_OPCODE_ADD(Inst) == VC4_QPU_OPCODE_ADD_NOP)
+#define VC4_QPU_IS_OPCODE_MUL_NOP(Inst) (VC4_QPU_GET_OPCODE_MUL(Inst) == VC4_QPU_OPCODE_MUL_NOP)
+
+HRESULT Vc4Disasm::ParseSignature(VC4_QPU_INSTRUCTION Instruction)
+{
+    this->xprintf("%s\t", VC4_QPU_Name_Signaling_Bits[VC4_QPU_GET_SIG(Instruction)]);
+    return S_OK;
+}
+
+HRESULT Vc4Disasm::ParseAddOp(VC4_QPU_INSTRUCTION Instruction)
+{
+    this->xprintf("%s%s%s",
+        VC4_QPU_IS_OPCODE_ADD_MOV(Instruction) ? VC4_QPU_Name_Op_Move : VC4_QPU_Name_Op_Add[VC4_QPU_GET_OPCODE_ADD(Instruction)],
+        VC4_QPU_IS_OPCODE_ADD_NOP(Instruction) ? VC_QPU_Name_Empty : VC4_QPU_Name_Cond[VC4_QPU_GET_COND_ADD(Instruction)],
+        VC4_QPU_IS_SETFLAGS(Instruction) ? VC4_QPU_Name_SetFlag : VC_QPU_Name_Empty);
+    //TODO
+    return S_OK;
+}
+
+HRESULT Vc4Disasm::ParseMulOp(VC4_QPU_INSTRUCTION Instruction)
+{
+    this->xprintf("%s%s%s",
+        VC4_QPU_IS_OPCODE_MUL_MOV(Instruction) ? VC4_QPU_Name_Op_Move : VC4_QPU_Name_Op_Mul[VC4_QPU_GET_OPCODE_MUL(Instruction)],
+        VC4_QPU_IS_OPCODE_MUL_NOP(Instruction) ? VC_QPU_Name_Empty : VC4_QPU_Name_Cond[VC4_QPU_GET_COND_MUL(Instruction)],
+        VC4_QPU_IS_SETFLAGS(Instruction) ? VC4_QPU_Name_SetFlag : VC_QPU_Name_Empty);
+    //TODO
+    return S_OK;
+}
+
+HRESULT Vc4Disasm::ParseALUInstruction(VC4_QPU_INSTRUCTION Instruction)
+{
+    ParseAddOp(Instruction);
+    this->xprintf(" ; ");
+    ParseMulOp(Instruction);
+    return S_OK;
+}
+
+HRESULT Vc4Disasm::ParseLoadImmInstruction(VC4_QPU_INSTRUCTION Instruction)
+{
+    return S_OK;
+    Instruction;
+}
+
+HRESULT Vc4Disasm::ParseSemaphoreInstruction(VC4_QPU_INSTRUCTION Instruction)
+{
+    return S_OK;
+    Instruction;
+}
+        
+HRESULT Vc4Disasm::ParseBranchInstruction(VC4_QPU_INSTRUCTION Instruction)
+{
+    return S_OK;
+    Instruction;
+}
+
+HRESULT
+Vc4Disasm::Run(const VC4_QPU_INSTRUCTION* pShader, ULONG ShaderSize)
+{
+	ULONG cInstruction = ShaderSize / sizeof(VC4_QPU_INSTRUCTION);
+    for (ULONG i = 0; i < cInstruction; i++)
+    {
+        VC4_QPU_INSTRUCTION Instruction = pShader[i];
+        ParseSignature(Instruction);
+        switch (VC4_QPU_GET_SIG(Instruction))
+        {
+        case VC4_QPU_SIG_BREAK:
+        case VC4_QPU_SIG_NO_SIGNAL:
+        case VC4_QPU_SIG_THREAD_SWITCH:
+        case VC4_QPU_SIG_PROGRAM_END:
+        case VC4_QPU_SIG_WAIT_FOR_SCOREBOARD:
+        case VC4_QPU_SIG_SCOREBOARD_UNBLOCK:
+        case VC4_QPU_SIG_LAST_THREAD_SWITCH:
+        case VC4_QPU_SIG_COVERAGE_LOAD:
+        case VC4_QPU_SIG_COLOR_LOAD:
+        case VC4_QPU_SIG_COLOR_LOAD_AND_PROGRAM_END:
+        case VC4_QPU_SIG_LOAD_TMU0:
+        case VC4_QPU_SIG_LOAD_TMU1:
+        case VC4_QPU_SIG_ALPAH_MASK_LOAD:
+        case VC4_QPU_SIG_ALU_WITH_RADDR_B:
+            ParseALUInstruction(Instruction);
+            break;
+        case VC4_QPU_SIG_LOAD_IMMEDIATE:
+            if (VC4_QPU_IS_SEMAPHORE(Instruction))
+                ParseSemaphoreInstruction(Instruction);
+            else
+                ParseLoadImmInstruction(Instruction);
+            break;
+        case VC4_QPU_SIG_BRANCH:
+            ParseBranchInstruction(Instruction);
+            break;
+        default:
+            this->xprintf("Invalid signature");
+        }
+        Flush(0);
+    }
+	return S_OK;
 }

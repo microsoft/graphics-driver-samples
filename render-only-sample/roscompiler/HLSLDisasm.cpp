@@ -1,131 +1,5 @@
 #include "roscompiler.h"
 
-#define COLOR_COMMENT   0//(FOREGROUND_INTENSITY)
-#define COLOR_KEYWORD   1//(FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY)
-#define COLOR_TEXT      2//(FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE)
-#define COLOR_LITERAL   3//(FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY)
-
-HLSLDisasm::HLSLDisasm()
-{
-    m_cbSize        = 0;
-    m_cbSizeMax     = 0;
-    m_pBuf          = NULL;
-    m_bColorCode    = FALSE;
-    m_pFile         = NULL;
-    m_pCustomCtx    = NULL;
-    m_pStrPrinter   = NULL;
-}
-
-HLSLDisasm::HLSLDisasm(void *pFile, fnPrinter *pStrPrinter, void *pCustomCtx)
-{
-    m_cbSize        = 0;
-    m_cbSizeMax     = 0;
-    m_pBuf          = NULL;
-    m_bColorCode    = FALSE;
-    m_pFile         = pFile;
-    m_pCustomCtx    = pCustomCtx;
-    m_pStrPrinter   = pStrPrinter;
-}
-
-HLSLDisasm::~HLSLDisasm()
-{
-	delete[] m_pBuf;
-}
-
-HRESULT DisasembleShader(const UINT * pShader, HLSLDisasm * pCtx);
-
-HRESULT
-HLSLDisasm::Run(const UINT * pShader)
-{
-    if(pShader)
-        return DisasembleShader(pShader, this);
-    else
-    {
-        xprintf("No shader active");
-        Flush(0);
-        return S_OK;
-    }
-}
-
-void HLSLDisasm::SetColor(WORD wColor)
-{
-    const char* x_rgszFontColor[4] =
-    {
-        "a0a0a0", // COLOR_COMMENT   0//(FOREGROUND_INTENSITY)
-        "ffff40", // COLOR_KEYWORD   1//(FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY)
-        "e0e0e0", // COLOR_TEXT      2//(FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE)
-        "00ffff"  // COLOR_LITERAL   3//(FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY)
-    };
-
-    if(m_bColorCode)
-    {
-        xprintf("<font color = \"#%s\">", x_rgszFontColor[wColor]);
-    }
-}
-
-void HLSLDisasm::UnsetColor()
-{
-    if(m_bColorCode)
-    {
-        xprintf("</font>");
-    }
-}
-
-void HLSLDisasm::xprintf(LPCSTR pStr, ...)
-{
-    char sz[512];
-    va_list ap;
-    va_start(ap, pStr);
-    vsprintf_s(sz, sizeof(sz), pStr, ap);
-    va_end(ap);
-
-    xaddstring(sz);
-}
-
-void HLSLDisasm::Flush(int Line)
-{
-	if (!EnsureSize(1)) return;
-	m_pBuf[m_cbSize] = '\0';
-	if (m_pStrPrinter)
-    {
-		(m_pStrPrinter)(m_pFile, m_pBuf, Line, m_pCustomCtx);
-    }
-	else
-    {
-		OutputDebugStringA(m_pBuf);
-		OutputDebugStringA("\n");
-    }
-    m_cbSize = 0;
-}
-
-void HLSLDisasm::xaddstring(LPCSTR sz)
-{
-	const size_t cbSize = strlen(sz);
-    if(!EnsureSize(cbSize)) return;
-    memcpy(&m_pBuf[m_cbSize], sz, cbSize);
-    m_cbSize += cbSize;
-}
-
-bool HLSLDisasm::EnsureSize(const size_t cbSize)
-{
-    if(m_cbSizeMax < m_cbSize + cbSize)
-    {
-        const size_t kBufInc = 8*1024;
-        char *pNewBuf = new char[m_cbSizeMax + cbSize + kBufInc];
-        if(pNewBuf == NULL)
-        {
-            return false;
-        }
-
-        memcpy(pNewBuf, m_pBuf, m_cbSize);
-		delete[] m_pBuf;
-        m_pBuf = pNewBuf;
-        m_cbSizeMax = m_cbSizeMax + cbSize + kBufInc;
-    }
-
-    return true;
-}
-
 //----------------------------------------------------------------------------
 // Misc functions
 //----------------------------------------------------------------------------
@@ -469,7 +343,7 @@ static HRESULT PrintName(HLSLDisasm *pCtx, UINT uName)
 }
 
 HRESULT
-DisasembleShader(const UINT * pShader, HLSLDisasm * pCtx)
+HLSLDisasm::Run(const UINT * pShader)
 {
     HRESULT hr = S_OK;
     CShaderCodeParser Parser;
@@ -486,35 +360,35 @@ DisasembleShader(const UINT * pShader, HLSLDisasm * pCtx)
 
     for (INT i = 0; i < uIndent; i++)
     {
-        pCtx->xprintf("  ");
+        this->xprintf("  ");
     }
 
     switch(uShaderType)
     {
         case D3D10_SB_PIXEL_SHADER:
-            pCtx->xprintf("ps_%d_%d", uMajorVersion, uMinorVersion);
+            this->xprintf("ps_%d_%d", uMajorVersion, uMinorVersion);
             break;
         case D3D10_SB_VERTEX_SHADER:
-            pCtx->xprintf("vs_%d_%d", uMajorVersion, uMinorVersion);
+            this->xprintf("vs_%d_%d", uMajorVersion, uMinorVersion);
             break;
         case D3D10_SB_GEOMETRY_SHADER:
-            pCtx->xprintf("gs_%d_%d", uMajorVersion, uMinorVersion);
+            this->xprintf("gs_%d_%d", uMajorVersion, uMinorVersion);
             break;
         case D3D11_SB_COMPUTE_SHADER:
-            pCtx->xprintf("cs_%d_%d", uMajorVersion, uMinorVersion);
+            this->xprintf("cs_%d_%d", uMajorVersion, uMinorVersion);
             break;
         case D3D11_SB_HULL_SHADER:
-            pCtx->xprintf("hs_%d_%d", uMajorVersion, uMinorVersion);
+            this->xprintf("hs_%d_%d", uMajorVersion, uMinorVersion);
             break;
         case D3D11_SB_DOMAIN_SHADER:
-            pCtx->xprintf("ds_%d_%d", uMajorVersion, uMinorVersion);
+            this->xprintf("ds_%d_%d", uMajorVersion, uMinorVersion);
             break;
         default:
             hr = E_FAIL;
             goto Cleanup;
     }
 
-    pCtx->Flush(0);
+    this->Flush(0);
 
     int line = 0;
 
@@ -534,7 +408,7 @@ DisasembleShader(const UINT * pShader, HLSLDisasm * pCtx)
 
         for (INT i = 0; i < uIndent; i++)
         {
-            pCtx->xprintf("  ");
+            this->xprintf("  ");
         }
 
         //print opcode, validate first
@@ -552,9 +426,9 @@ DisasembleShader(const UINT * pShader, HLSLDisasm * pCtx)
             goto Cleanup;
         }
 
-        pCtx->SetColor(COLOR_KEYWORD);
+        this->SetColor(COLOR_KEYWORD);
 
-        pCtx->xprintf("%s", g_InstructionInfo[Instruction.m_OpCode].m_Name);
+        this->xprintf("%s", g_InstructionInfo[Instruction.m_OpCode].m_Name);
 
         if (Instruction.m_bSaturate)
         {
@@ -603,7 +477,7 @@ DisasembleShader(const UINT * pShader, HLSLDisasm * pCtx)
             case D3D11_SB_OPCODE_DCL_GS_INSTANCE_COUNT:
                 break;
             default:
-                pCtx->xprintf("_sat");
+                this->xprintf("_sat");
             }
         }
 
@@ -618,17 +492,17 @@ DisasembleShader(const UINT * pShader, HLSLDisasm * pCtx)
             switch (Instruction.m_Test)
             {
             case D3D10_SB_INSTRUCTION_TEST_ZERO:
-                pCtx->xprintf("_z");
+                this->xprintf("_z");
                 break;
 
             case D3D10_SB_INSTRUCTION_TEST_NONZERO:
-                pCtx->xprintf("_nz");
+                this->xprintf("_nz");
                 break;
             }
             break;
         }
 
-        pCtx->UnsetColor();
+        this->UnsetColor();
 
         BOOL bOperands = TRUE;
 
@@ -637,7 +511,7 @@ DisasembleShader(const UINT * pShader, HLSLDisasm * pCtx)
             switch (Instruction.m_OpCodeEx[0])
             {
             case D3D10_SB_EXTENDED_OPCODE_SAMPLE_CONTROLS:
-                pCtx->xprintf("_O(%i,%i,%i) ",
+                this->xprintf("_O(%i,%i,%i) ",
                     Instruction.m_TexelOffset[0],
                     Instruction.m_TexelOffset[1],
                     Instruction.m_TexelOffset[2]);
@@ -652,14 +526,14 @@ DisasembleShader(const UINT * pShader, HLSLDisasm * pCtx)
             switch (Instruction.m_ResInfoReturnType)
             {
                 case D3D10_SB_RESINFO_INSTRUCTION_RETURN_RCPFLOAT:
-                    pCtx->xprintf("_rcpfloat ");
+                    this->xprintf("_rcpfloat ");
                     break;
                 case D3D10_SB_RESINFO_INSTRUCTION_RETURN_UINT:
-                    pCtx->xprintf("_uint ");
+                    this->xprintf("_uint ");
                     break;
                 default:
                 case D3D10_SB_RESINFO_INSTRUCTION_RETURN_FLOAT:
-                    pCtx->xprintf(" ");
+                    this->xprintf(" ");
                     break;
             }
             break;
@@ -675,7 +549,7 @@ DisasembleShader(const UINT * pShader, HLSLDisasm * pCtx)
                 if(Instruction.m_IndexableTempDecl.Mask & D3D10_SB_OPERAND_4_COMPONENT_MASK_W)
                     count++;
 
-                pCtx->xprintf(" x%i[%i], %d", Instruction.m_IndexableTempDecl.IndexableTempNumber,
+                this->xprintf(" x%i[%i], %d", Instruction.m_IndexableTempDecl.IndexableTempNumber,
                                                  Instruction.m_IndexableTempDecl.NumRegisters,
                                                  count);
                 bOperands = FALSE;
@@ -683,32 +557,32 @@ DisasembleShader(const UINT * pShader, HLSLDisasm * pCtx)
             }
         case D3D10_SB_OPCODE_DCL_INDEX_RANGE:
 
-            pCtx->xprintf(" ");
-            IFC (PrintOperandD3D10(pCtx, &Instruction.m_Operands[0], TRUE, FALSE));
+            this->xprintf(" ");
+            IFC (PrintOperandD3D10(this, &Instruction.m_Operands[0], TRUE, FALSE));
 
-            pCtx->xprintf(" %i", Instruction.m_IndexRangeDecl.RegCount);
+            this->xprintf(" %i", Instruction.m_IndexRangeDecl.RegCount);
             bOperands = FALSE;
 
             break;
         case D3D10_SB_OPCODE_DCL_GLOBAL_FLAGS:
             {
                 bool hasFlags = false;
-                pCtx->xprintf(" ");
+                this->xprintf(" ");
                 if( Instruction.m_GlobalFlagsDecl.Flags & D3D10_SB_GLOBAL_FLAG_REFACTORING_ALLOWED )
                 {
                     hasFlags = true;
-                    pCtx->xprintf("refactoringAllowed" );
+                    this->xprintf("refactoringAllowed" );
                 }
 
                 if( Instruction.m_GlobalFlagsDecl.Flags & D3D11_SB_GLOBAL_FLAG_FORCE_EARLY_DEPTH_STENCIL )
                 {
                     hasFlags = true;
-                    pCtx->xprintf("forceEarlyDepthStencil " );
+                    this->xprintf("forceEarlyDepthStencil " );
                 }
 
                 if(!hasFlags)
                 {
-                    pCtx->xprintf("none" );
+                    this->xprintf("none" );
                 }
                 bOperands = FALSE;
             }
@@ -716,255 +590,255 @@ DisasembleShader(const UINT * pShader, HLSLDisasm * pCtx)
         case D3D10_SB_OPCODE_DCL_GS_OUTPUT_PRIMITIVE_TOPOLOGY:
             switch(Instruction.m_OutputTopologyDecl.Topology)
             {
-            case D3D10_PRIMITIVE_TOPOLOGY_POINTLIST: pCtx->xprintf(" pointlist");break;
-            case D3D10_PRIMITIVE_TOPOLOGY_LINESTRIP: pCtx->xprintf(" linestrip"); break;
-            case D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP: pCtx->xprintf(" triangestrip"); break;
-            case D3D10_PRIMITIVE_TOPOLOGY_UNDEFINED: pCtx->xprintf(" undefined"); break;
-            default: pCtx->xprintf(" ???"); break;
+            case D3D10_PRIMITIVE_TOPOLOGY_POINTLIST: this->xprintf(" pointlist");break;
+            case D3D10_PRIMITIVE_TOPOLOGY_LINESTRIP: this->xprintf(" linestrip"); break;
+            case D3D10_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP: this->xprintf(" triangestrip"); break;
+            case D3D10_PRIMITIVE_TOPOLOGY_UNDEFINED: this->xprintf(" undefined"); break;
+            default: this->xprintf(" ???"); break;
             }
             break;
         case D3D10_SB_OPCODE_DCL_MAX_OUTPUT_VERTEX_COUNT:
-            pCtx->xprintf(" %u", Instruction.m_GSMaxOutputVertexCountDecl.MaxOutputVertexCount); break;
+            this->xprintf(" %u", Instruction.m_GSMaxOutputVertexCountDecl.MaxOutputVertexCount); break;
         case D3D10_SB_OPCODE_DCL_GS_INPUT_PRIMITIVE:
             switch(Instruction.m_InputPrimitiveDecl.Primitive)
             {
-            case D3D10_PRIMITIVE_POINT: pCtx->xprintf(" point"); break;
-            case D3D10_PRIMITIVE_LINE: pCtx->xprintf(" line"); break;
-            case D3D10_PRIMITIVE_TRIANGLE: pCtx->xprintf(" triangle"); break;
-            case D3D10_PRIMITIVE_LINE_ADJ: pCtx->xprintf(" lineadj"); break;
-            case D3D10_PRIMITIVE_TRIANGLE_ADJ: pCtx->xprintf(" triangleadj"); break;
-            case D3D11_SB_PRIMITIVE_1_CONTROL_POINT_PATCH: pCtx->xprintf(" controlPoint1"); break;
-            case D3D11_SB_PRIMITIVE_2_CONTROL_POINT_PATCH: pCtx->xprintf(" controlPoint2"); break;
-            case D3D11_SB_PRIMITIVE_3_CONTROL_POINT_PATCH: pCtx->xprintf(" controlPoint3"); break;
-            case D3D11_SB_PRIMITIVE_4_CONTROL_POINT_PATCH: pCtx->xprintf(" controlPoint4"); break;
-            case D3D11_SB_PRIMITIVE_5_CONTROL_POINT_PATCH: pCtx->xprintf(" controlPoint5"); break;
-            case D3D11_SB_PRIMITIVE_6_CONTROL_POINT_PATCH: pCtx->xprintf(" controlPoint6"); break;
-            case D3D11_SB_PRIMITIVE_7_CONTROL_POINT_PATCH: pCtx->xprintf(" controlPoint7"); break;
-            case D3D11_SB_PRIMITIVE_8_CONTROL_POINT_PATCH: pCtx->xprintf(" controlPoint8"); break;
-            case D3D11_SB_PRIMITIVE_9_CONTROL_POINT_PATCH: pCtx->xprintf(" controlPoint9"); break;
-            case D3D11_SB_PRIMITIVE_10_CONTROL_POINT_PATCH: pCtx->xprintf(" controlPoint10"); break;
-            case D3D11_SB_PRIMITIVE_11_CONTROL_POINT_PATCH: pCtx->xprintf(" controlPoint11"); break;
-            case D3D11_SB_PRIMITIVE_12_CONTROL_POINT_PATCH: pCtx->xprintf(" controlPoint12"); break;
-            case D3D11_SB_PRIMITIVE_13_CONTROL_POINT_PATCH: pCtx->xprintf(" controlPoint13"); break;
-            case D3D11_SB_PRIMITIVE_14_CONTROL_POINT_PATCH: pCtx->xprintf(" controlPoint14"); break;
-            case D3D11_SB_PRIMITIVE_15_CONTROL_POINT_PATCH: pCtx->xprintf(" controlPoint15"); break;
-            case D3D11_SB_PRIMITIVE_16_CONTROL_POINT_PATCH: pCtx->xprintf(" controlPoint16"); break;
-            case D3D11_SB_PRIMITIVE_17_CONTROL_POINT_PATCH: pCtx->xprintf(" controlPoint17"); break;
-            case D3D11_SB_PRIMITIVE_18_CONTROL_POINT_PATCH: pCtx->xprintf(" controlPoint18"); break;
-            case D3D11_SB_PRIMITIVE_19_CONTROL_POINT_PATCH: pCtx->xprintf(" controlPoint19"); break;
-            case D3D11_SB_PRIMITIVE_20_CONTROL_POINT_PATCH: pCtx->xprintf(" controlPoint20"); break;
-            case D3D11_SB_PRIMITIVE_21_CONTROL_POINT_PATCH: pCtx->xprintf(" controlPoint21"); break;
-            case D3D11_SB_PRIMITIVE_22_CONTROL_POINT_PATCH: pCtx->xprintf(" controlPoint22"); break;
-            case D3D11_SB_PRIMITIVE_23_CONTROL_POINT_PATCH: pCtx->xprintf(" controlPoint23"); break;
-            case D3D11_SB_PRIMITIVE_24_CONTROL_POINT_PATCH: pCtx->xprintf(" controlPoint24"); break;
-            case D3D11_SB_PRIMITIVE_25_CONTROL_POINT_PATCH: pCtx->xprintf(" controlPoint25"); break;
-            case D3D11_SB_PRIMITIVE_26_CONTROL_POINT_PATCH: pCtx->xprintf(" controlPoint26"); break;
-            case D3D11_SB_PRIMITIVE_27_CONTROL_POINT_PATCH: pCtx->xprintf(" controlPoint27"); break;
-            case D3D11_SB_PRIMITIVE_28_CONTROL_POINT_PATCH: pCtx->xprintf(" controlPoint28"); break;
-            case D3D11_SB_PRIMITIVE_29_CONTROL_POINT_PATCH: pCtx->xprintf(" controlPoint29"); break;
-            case D3D11_SB_PRIMITIVE_30_CONTROL_POINT_PATCH: pCtx->xprintf(" controlPoint30"); break;
-            case D3D11_SB_PRIMITIVE_31_CONTROL_POINT_PATCH: pCtx->xprintf(" controlPoint31"); break;
-            case D3D11_SB_PRIMITIVE_32_CONTROL_POINT_PATCH: pCtx->xprintf(" controlPoint32"); break;
-            case D3D10_PRIMITIVE_UNDEFINED: pCtx->xprintf(" undefined"); break;
-            default: pCtx->xprintf(" ???");
+            case D3D10_PRIMITIVE_POINT: this->xprintf(" point"); break;
+            case D3D10_PRIMITIVE_LINE: this->xprintf(" line"); break;
+            case D3D10_PRIMITIVE_TRIANGLE: this->xprintf(" triangle"); break;
+            case D3D10_PRIMITIVE_LINE_ADJ: this->xprintf(" lineadj"); break;
+            case D3D10_PRIMITIVE_TRIANGLE_ADJ: this->xprintf(" triangleadj"); break;
+            case D3D11_SB_PRIMITIVE_1_CONTROL_POINT_PATCH: this->xprintf(" controlPoint1"); break;
+            case D3D11_SB_PRIMITIVE_2_CONTROL_POINT_PATCH: this->xprintf(" controlPoint2"); break;
+            case D3D11_SB_PRIMITIVE_3_CONTROL_POINT_PATCH: this->xprintf(" controlPoint3"); break;
+            case D3D11_SB_PRIMITIVE_4_CONTROL_POINT_PATCH: this->xprintf(" controlPoint4"); break;
+            case D3D11_SB_PRIMITIVE_5_CONTROL_POINT_PATCH: this->xprintf(" controlPoint5"); break;
+            case D3D11_SB_PRIMITIVE_6_CONTROL_POINT_PATCH: this->xprintf(" controlPoint6"); break;
+            case D3D11_SB_PRIMITIVE_7_CONTROL_POINT_PATCH: this->xprintf(" controlPoint7"); break;
+            case D3D11_SB_PRIMITIVE_8_CONTROL_POINT_PATCH: this->xprintf(" controlPoint8"); break;
+            case D3D11_SB_PRIMITIVE_9_CONTROL_POINT_PATCH: this->xprintf(" controlPoint9"); break;
+            case D3D11_SB_PRIMITIVE_10_CONTROL_POINT_PATCH: this->xprintf(" controlPoint10"); break;
+            case D3D11_SB_PRIMITIVE_11_CONTROL_POINT_PATCH: this->xprintf(" controlPoint11"); break;
+            case D3D11_SB_PRIMITIVE_12_CONTROL_POINT_PATCH: this->xprintf(" controlPoint12"); break;
+            case D3D11_SB_PRIMITIVE_13_CONTROL_POINT_PATCH: this->xprintf(" controlPoint13"); break;
+            case D3D11_SB_PRIMITIVE_14_CONTROL_POINT_PATCH: this->xprintf(" controlPoint14"); break;
+            case D3D11_SB_PRIMITIVE_15_CONTROL_POINT_PATCH: this->xprintf(" controlPoint15"); break;
+            case D3D11_SB_PRIMITIVE_16_CONTROL_POINT_PATCH: this->xprintf(" controlPoint16"); break;
+            case D3D11_SB_PRIMITIVE_17_CONTROL_POINT_PATCH: this->xprintf(" controlPoint17"); break;
+            case D3D11_SB_PRIMITIVE_18_CONTROL_POINT_PATCH: this->xprintf(" controlPoint18"); break;
+            case D3D11_SB_PRIMITIVE_19_CONTROL_POINT_PATCH: this->xprintf(" controlPoint19"); break;
+            case D3D11_SB_PRIMITIVE_20_CONTROL_POINT_PATCH: this->xprintf(" controlPoint20"); break;
+            case D3D11_SB_PRIMITIVE_21_CONTROL_POINT_PATCH: this->xprintf(" controlPoint21"); break;
+            case D3D11_SB_PRIMITIVE_22_CONTROL_POINT_PATCH: this->xprintf(" controlPoint22"); break;
+            case D3D11_SB_PRIMITIVE_23_CONTROL_POINT_PATCH: this->xprintf(" controlPoint23"); break;
+            case D3D11_SB_PRIMITIVE_24_CONTROL_POINT_PATCH: this->xprintf(" controlPoint24"); break;
+            case D3D11_SB_PRIMITIVE_25_CONTROL_POINT_PATCH: this->xprintf(" controlPoint25"); break;
+            case D3D11_SB_PRIMITIVE_26_CONTROL_POINT_PATCH: this->xprintf(" controlPoint26"); break;
+            case D3D11_SB_PRIMITIVE_27_CONTROL_POINT_PATCH: this->xprintf(" controlPoint27"); break;
+            case D3D11_SB_PRIMITIVE_28_CONTROL_POINT_PATCH: this->xprintf(" controlPoint28"); break;
+            case D3D11_SB_PRIMITIVE_29_CONTROL_POINT_PATCH: this->xprintf(" controlPoint29"); break;
+            case D3D11_SB_PRIMITIVE_30_CONTROL_POINT_PATCH: this->xprintf(" controlPoint30"); break;
+            case D3D11_SB_PRIMITIVE_31_CONTROL_POINT_PATCH: this->xprintf(" controlPoint31"); break;
+            case D3D11_SB_PRIMITIVE_32_CONTROL_POINT_PATCH: this->xprintf(" controlPoint32"); break;
+            case D3D10_PRIMITIVE_UNDEFINED: this->xprintf(" undefined"); break;
+            default: this->xprintf(" ???");
             }
             break;
 
         case D3D11_SB_OPCODE_DCL_HS_FORK_PHASE_INSTANCE_COUNT:
-                pCtx->xprintf(" %i", Instruction.m_HSForkPhaseDecl.InstanceCount);
+                this->xprintf(" %i", Instruction.m_HSForkPhaseDecl.InstanceCount);
                 bOperands = false;
             break;
         case D3D11_SB_OPCODE_DCL_HS_JOIN_PHASE_INSTANCE_COUNT:
-                pCtx->xprintf(" %i", Instruction.m_HSJoinPhaseDecl.InstanceCount);
+                this->xprintf(" %i", Instruction.m_HSJoinPhaseDecl.InstanceCount);
                 bOperands = false;
             break;
         case D3D11_SB_OPCODE_DCL_TESS_DOMAIN:
             switch(Instruction.m_TessellatorDomainDecl.TessellatorDomain)
             {
-            case D3D11_SB_TESSELLATOR_DOMAIN_ISOLINE: pCtx->xprintf(" isoline"); break;
-            case D3D11_SB_TESSELLATOR_DOMAIN_TRI: pCtx->xprintf(" tri"); break;
-            case D3D11_SB_TESSELLATOR_DOMAIN_QUAD: pCtx->xprintf(" quad"); break;
-                default: pCtx->xprintf(" ???");
+            case D3D11_SB_TESSELLATOR_DOMAIN_ISOLINE: this->xprintf(" isoline"); break;
+            case D3D11_SB_TESSELLATOR_DOMAIN_TRI: this->xprintf(" tri"); break;
+            case D3D11_SB_TESSELLATOR_DOMAIN_QUAD: this->xprintf(" quad"); break;
+                default: this->xprintf(" ???");
             }
             bOperands = false;
             break;
         case D3D11_SB_OPCODE_DCL_TESS_OUTPUT_PRIMITIVE:
             switch(Instruction.m_TessellatorOutputPrimitiveDecl.TessellatorOutputPrimitive)
             {
-            case D3D11_SB_TESSELLATOR_OUTPUT_POINT: pCtx->xprintf(" point"); break;
-            case D3D11_SB_TESSELLATOR_OUTPUT_LINE: pCtx->xprintf(" line"); break;
-            case D3D11_SB_TESSELLATOR_OUTPUT_TRIANGLE_CCW: pCtx->xprintf(" tri_ccw"); break;
-            case D3D11_SB_TESSELLATOR_OUTPUT_TRIANGLE_CW: pCtx->xprintf(" tri_cw"); break;
-                default: pCtx->xprintf(" ???");
+            case D3D11_SB_TESSELLATOR_OUTPUT_POINT: this->xprintf(" point"); break;
+            case D3D11_SB_TESSELLATOR_OUTPUT_LINE: this->xprintf(" line"); break;
+            case D3D11_SB_TESSELLATOR_OUTPUT_TRIANGLE_CCW: this->xprintf(" tri_ccw"); break;
+            case D3D11_SB_TESSELLATOR_OUTPUT_TRIANGLE_CW: this->xprintf(" tri_cw"); break;
+                default: this->xprintf(" ???");
             }
             bOperands = false;
             break;
         case D3D11_SB_OPCODE_DCL_TESS_PARTITIONING:
             switch(Instruction.m_TessellatorPartitioningDecl.TessellatorPartitioning)
             {
-            case D3D11_SB_TESSELLATOR_PARTITIONING_POW2: pCtx->xprintf(" pow2"); break;
-            case D3D11_SB_TESSELLATOR_PARTITIONING_INTEGER: pCtx->xprintf(" int"); break;
-            case D3D11_SB_TESSELLATOR_PARTITIONING_FRACTIONAL_EVEN: pCtx->xprintf(" fract-even"); break;
-            case D3D11_SB_TESSELLATOR_PARTITIONING_FRACTIONAL_ODD: pCtx->xprintf(" fract-odd"); break;
-                default: pCtx->xprintf(" ???");
+            case D3D11_SB_TESSELLATOR_PARTITIONING_POW2: this->xprintf(" pow2"); break;
+            case D3D11_SB_TESSELLATOR_PARTITIONING_INTEGER: this->xprintf(" int"); break;
+            case D3D11_SB_TESSELLATOR_PARTITIONING_FRACTIONAL_EVEN: this->xprintf(" fract-even"); break;
+            case D3D11_SB_TESSELLATOR_PARTITIONING_FRACTIONAL_ODD: this->xprintf(" fract-odd"); break;
+                default: this->xprintf(" ???");
             }
             bOperands = false;
             break;
         case D3D11_SB_OPCODE_DCL_INPUT_CONTROL_POINT_COUNT:
-            pCtx->xprintf(" %i", Instruction.m_InputControlPointCountDecl.InputControlPointCount);
+            this->xprintf(" %i", Instruction.m_InputControlPointCountDecl.InputControlPointCount);
             bOperands = false;
             break;
         case D3D11_SB_OPCODE_DCL_OUTPUT_CONTROL_POINT_COUNT:
-            pCtx->xprintf(" %i", Instruction.m_OutputControlPointCountDecl.OutputControlPointCount);
+            this->xprintf(" %i", Instruction.m_OutputControlPointCountDecl.OutputControlPointCount);
             bOperands = false;
             break;
 
         case D3D10_SB_OPCODE_DCL_INPUT_PS_SIV:
-            pCtx->xprintf(" ");
-            IFC (PrintOperandD3D10(pCtx, &Instruction.m_Operands[0], TRUE, FALSE));
+            this->xprintf(" ");
+            IFC (PrintOperandD3D10(this, &Instruction.m_Operands[0], TRUE, FALSE));
 
             if(D3D10_SB_OPCODE_DCL_INPUT_PS_SIV == Instruction.m_OpCode)
             {
-                pCtx->xprintf(", ");
-                PrintName(pCtx, Instruction.m_OutputDeclSIV.Name);
+                this->xprintf(", ");
+                PrintName(this, Instruction.m_OutputDeclSIV.Name);
             }
 
             switch(Instruction.m_InputPSDeclSIV.InterpolationMode)
             {
-                case D3D10_SB_INTERPOLATION_UNDEFINED: pCtx->xprintf(", undefined"); break;
-                case D3D10_SB_INTERPOLATION_CONSTANT:  pCtx->xprintf(", constant"); break;
-                case D3D10_SB_INTERPOLATION_LINEAR: pCtx->xprintf(", linear"); break;
-                case D3D10_SB_INTERPOLATION_LINEAR_CENTROID: pCtx->xprintf(", linear centroid"); break;
-                case D3D10_SB_INTERPOLATION_LINEAR_NOPERSPECTIVE: pCtx->xprintf(", linear noperspective"); break;
-                case D3D10_SB_INTERPOLATION_LINEAR_NOPERSPECTIVE_CENTROID: pCtx->xprintf(", linear noperspective centroid"); break;
-                default : pCtx->xprintf(" ???"); break;
+                case D3D10_SB_INTERPOLATION_UNDEFINED: this->xprintf(", undefined"); break;
+                case D3D10_SB_INTERPOLATION_CONSTANT:  this->xprintf(", constant"); break;
+                case D3D10_SB_INTERPOLATION_LINEAR: this->xprintf(", linear"); break;
+                case D3D10_SB_INTERPOLATION_LINEAR_CENTROID: this->xprintf(", linear centroid"); break;
+                case D3D10_SB_INTERPOLATION_LINEAR_NOPERSPECTIVE: this->xprintf(", linear noperspective"); break;
+                case D3D10_SB_INTERPOLATION_LINEAR_NOPERSPECTIVE_CENTROID: this->xprintf(", linear noperspective centroid"); break;
+                default : this->xprintf(" ???"); break;
             }
             bOperands = FALSE;
             break;
 
         case D3D10_SB_OPCODE_DCL_INPUT_PS:
 
-            pCtx->xprintf(" ");
-            IFC (PrintOperandD3D10(pCtx, &Instruction.m_Operands[0], TRUE, FALSE));
+            this->xprintf(" ");
+            IFC (PrintOperandD3D10(this, &Instruction.m_Operands[0], TRUE, FALSE));
 
             if(D3D10_SB_OPCODE_DCL_INPUT_PS_SIV == Instruction.m_OpCode)
             {
-                pCtx->xprintf(", ");
-                PrintName(pCtx, Instruction.m_OutputDeclSIV.Name);
+                this->xprintf(", ");
+                PrintName(this, Instruction.m_OutputDeclSIV.Name);
             }
 
             switch(Instruction.m_InputPSDecl.InterpolationMode)
             {
-                case D3D10_SB_INTERPOLATION_UNDEFINED: pCtx->xprintf(", undefined"); break;
-                case D3D10_SB_INTERPOLATION_CONSTANT:  pCtx->xprintf(", constant"); break;
-                case D3D10_SB_INTERPOLATION_LINEAR: pCtx->xprintf(", linear"); break;
-                case D3D10_SB_INTERPOLATION_LINEAR_CENTROID: pCtx->xprintf(", linear centroid"); break;
-                case D3D10_SB_INTERPOLATION_LINEAR_NOPERSPECTIVE: pCtx->xprintf(", linear noperspective"); break;
-                case D3D10_SB_INTERPOLATION_LINEAR_NOPERSPECTIVE_CENTROID: pCtx->xprintf(", linear noperspective centroid"); break;
-                default : pCtx->xprintf(" ???"); break;
+                case D3D10_SB_INTERPOLATION_UNDEFINED: this->xprintf(", undefined"); break;
+                case D3D10_SB_INTERPOLATION_CONSTANT:  this->xprintf(", constant"); break;
+                case D3D10_SB_INTERPOLATION_LINEAR: this->xprintf(", linear"); break;
+                case D3D10_SB_INTERPOLATION_LINEAR_CENTROID: this->xprintf(", linear centroid"); break;
+                case D3D10_SB_INTERPOLATION_LINEAR_NOPERSPECTIVE: this->xprintf(", linear noperspective"); break;
+                case D3D10_SB_INTERPOLATION_LINEAR_NOPERSPECTIVE_CENTROID: this->xprintf(", linear noperspective centroid"); break;
+                default : this->xprintf(" ???"); break;
             }
             bOperands = FALSE;
             break;
 
         case D3D10_SB_OPCODE_DCL_OUTPUT_SGV:
-            pCtx->xprintf(" ");
-            IFC (PrintOperandD3D10(pCtx, &Instruction.m_Operands[0], TRUE, FALSE));
-            pCtx->xprintf(", ");
+            this->xprintf(" ");
+            IFC (PrintOperandD3D10(this, &Instruction.m_Operands[0], TRUE, FALSE));
+            this->xprintf(", ");
 
-            PrintName(pCtx, Instruction.m_OutputDeclSGV.Name);
+            PrintName(this, Instruction.m_OutputDeclSGV.Name);
             bOperands = FALSE;
             break;
 
         case D3D10_SB_OPCODE_DCL_OUTPUT_SIV:
-            pCtx->xprintf(" ");
-            IFC (PrintOperandD3D10(pCtx, &Instruction.m_Operands[0], TRUE, FALSE));
-            pCtx->xprintf(", ");
+            this->xprintf(" ");
+            IFC (PrintOperandD3D10(this, &Instruction.m_Operands[0], TRUE, FALSE));
+            this->xprintf(", ");
 
-            PrintName(pCtx, Instruction.m_OutputDeclSIV.Name);
+            PrintName(this, Instruction.m_OutputDeclSIV.Name);
             bOperands = FALSE;
             break;
 
        case D3D10_SB_OPCODE_DCL_INPUT_SIV:
-            pCtx->xprintf(" ");
-            IFC (PrintOperandD3D10(pCtx, &Instruction.m_Operands[0], TRUE, FALSE));
-            pCtx->xprintf(", ");
+            this->xprintf(" ");
+            IFC (PrintOperandD3D10(this, &Instruction.m_Operands[0], TRUE, FALSE));
+            this->xprintf(", ");
 
-            PrintName(pCtx, Instruction.m_InputDeclSIV.Name);
+            PrintName(this, Instruction.m_InputDeclSIV.Name);
             bOperands = FALSE;
             break;
 
         case D3D10_SB_OPCODE_DCL_INPUT_PS_SGV:
-            pCtx->xprintf(" ");
-            IFC (PrintOperandD3D10(pCtx, &Instruction.m_Operands[0], TRUE, FALSE));
-            pCtx->xprintf(", ");
-            PrintName(pCtx, Instruction.m_InputPSDeclSGV.Name);
+            this->xprintf(" ");
+            IFC (PrintOperandD3D10(this, &Instruction.m_Operands[0], TRUE, FALSE));
+            this->xprintf(", ");
+            PrintName(this, Instruction.m_InputPSDeclSGV.Name);
             bOperands = FALSE;
             break;
 
         case D3D10_SB_OPCODE_DCL_INPUT_SGV:
-            pCtx->xprintf(" ");
-            IFC (PrintOperandD3D10(pCtx, &Instruction.m_Operands[0], TRUE, FALSE));
-            pCtx->xprintf(", ");
-            PrintName(pCtx, Instruction.m_InputDeclSIV.Name);
+            this->xprintf(" ");
+            IFC (PrintOperandD3D10(this, &Instruction.m_Operands[0], TRUE, FALSE));
+            this->xprintf(", ");
+            PrintName(this, Instruction.m_InputDeclSIV.Name);
             bOperands = FALSE;
             break;
 
         case D3D10_SB_OPCODE_DCL_CONSTANT_BUFFER:
-            pCtx->xprintf(" ");
+            this->xprintf(" ");
 
             if (Instruction.m_Operands[0].OperandIndexDimension() == D3D10_SB_OPERAND_INDEX_3D)
             {
-                pCtx->xprintf("cb%d[%u-%u], space %d", Instruction.m_ResourceDecl.Space.SetIdx, Instruction.m_ResourceDecl.Space.MinShaderRegister, Instruction.m_ResourceDecl.Space.MaxShaderRegister,
+                this->xprintf("cb%d[%u-%u], space %d", Instruction.m_ResourceDecl.Space.SetIdx, Instruction.m_ResourceDecl.Space.MinShaderRegister, Instruction.m_ResourceDecl.Space.MaxShaderRegister,
                     Instruction.m_ResourceDecl.Space.Space);
             }
             else
             {
-                pCtx->xprintf("cb%d[%d]", Instruction.m_Operands[0].m_Index[0].m_RegIndex, Instruction.m_Operands[0].m_Index[1].m_RegIndex);
+                this->xprintf("cb%d[%d]", Instruction.m_Operands[0].m_Index[0].m_RegIndex, Instruction.m_Operands[0].m_Index[1].m_RegIndex);
             }
 
             if (Instruction.m_ResourceDecl.CBInfo.AccessPattern == D3D10_SB_CONSTANT_BUFFER_DYNAMIC_INDEXED)
-                pCtx->xprintf(", dynamicIndexed");
+                this->xprintf(", dynamicIndexed");
             else
-                pCtx->xprintf(", immediateIndexed");
+                this->xprintf(", immediateIndexed");
 
             bOperands = FALSE;
             break;
 
         case D3D10_SB_OPCODE_DCL_TEMPS:
-            pCtx->xprintf(" %d",  Instruction.m_TempsDecl.NumTemps);
+            this->xprintf(" %d",  Instruction.m_TempsDecl.NumTemps);
             break;
 
         case D3D10_SB_OPCODE_DCL_RESOURCE:
 
-            pCtx->xprintf(" ");
+            this->xprintf(" ");
 
             if (Instruction.m_Operands[0].OperandIndexDimension() == D3D10_SB_OPERAND_INDEX_3D)
             {
-                pCtx->xprintf("t%d[%u-%u], space %d", Instruction.m_ResourceDecl.Space.SetIdx, Instruction.m_ResourceDecl.Space.MinShaderRegister, Instruction.m_ResourceDecl.Space.MaxShaderRegister,
+                this->xprintf("t%d[%u-%u], space %d", Instruction.m_ResourceDecl.Space.SetIdx, Instruction.m_ResourceDecl.Space.MinShaderRegister, Instruction.m_ResourceDecl.Space.MaxShaderRegister,
                     Instruction.m_ResourceDecl.Space.Space);
             }
             else
             {
-                IFC(PrintOperandD3D10(pCtx, &Instruction.m_Operands[0], TRUE, FALSE));
+                IFC(PrintOperandD3D10(this, &Instruction.m_Operands[0], TRUE, FALSE));
             }
 
             switch( Instruction.m_ResourceDecl.SRVInfo.Dimension)
             {
-                case D3D10_SB_RESOURCE_DIMENSION_BUFFER: pCtx->xprintf(", buffer"); break;
-                case D3D10_SB_RESOURCE_DIMENSION_TEXTURE1D: pCtx->xprintf(", texture1d"); break;
-                case D3D10_SB_RESOURCE_DIMENSION_TEXTURE2D: pCtx->xprintf(", texture2d"); break;
-                case D3D10_SB_RESOURCE_DIMENSION_TEXTURE2DMS: pCtx->xprintf(", texture2dms"); break;
-                case D3D10_SB_RESOURCE_DIMENSION_TEXTURE3D: pCtx->xprintf(", texture3d"); break;
-                case D3D10_SB_RESOURCE_DIMENSION_TEXTURECUBE: pCtx->xprintf(", texturecube"); break;
-                case D3D10_SB_RESOURCE_DIMENSION_TEXTURE1DARRAY: pCtx->xprintf(", texture1darray"); break;
-                case D3D10_SB_RESOURCE_DIMENSION_TEXTURE2DARRAY: pCtx->xprintf(", texture2darray"); break;
-                case D3D10_SB_RESOURCE_DIMENSION_TEXTURE2DMSARRAY: pCtx->xprintf(", texture2dmsarray"); break;
+                case D3D10_SB_RESOURCE_DIMENSION_BUFFER: this->xprintf(", buffer"); break;
+                case D3D10_SB_RESOURCE_DIMENSION_TEXTURE1D: this->xprintf(", texture1d"); break;
+                case D3D10_SB_RESOURCE_DIMENSION_TEXTURE2D: this->xprintf(", texture2d"); break;
+                case D3D10_SB_RESOURCE_DIMENSION_TEXTURE2DMS: this->xprintf(", texture2dms"); break;
+                case D3D10_SB_RESOURCE_DIMENSION_TEXTURE3D: this->xprintf(", texture3d"); break;
+                case D3D10_SB_RESOURCE_DIMENSION_TEXTURECUBE: this->xprintf(", texturecube"); break;
+                case D3D10_SB_RESOURCE_DIMENSION_TEXTURE1DARRAY: this->xprintf(", texture1darray"); break;
+                case D3D10_SB_RESOURCE_DIMENSION_TEXTURE2DARRAY: this->xprintf(", texture2darray"); break;
+                case D3D10_SB_RESOURCE_DIMENSION_TEXTURE2DMSARRAY: this->xprintf(", texture2dmsarray"); break;
             }
 
             if ((Instruction.m_ResourceDecl.SRVInfo.Dimension == D3D10_SB_RESOURCE_DIMENSION_TEXTURE2DMS) ||
                 (Instruction.m_ResourceDecl.SRVInfo.Dimension == D3D10_SB_RESOURCE_DIMENSION_TEXTURE2DMSARRAY))
             {
-                pCtx->xprintf("[%d]", Instruction.m_ResourceDecl.SRVInfo.SampleCount);
+                this->xprintf("[%d]", Instruction.m_ResourceDecl.SRVInfo.SampleCount);
             }
 
             if ((Instruction.m_ResourceDecl.SRVInfo.ReturnType[0] == Instruction.m_ResourceDecl.SRVInfo.ReturnType[1]) &&
@@ -973,136 +847,136 @@ DisasembleShader(const UINT * pShader, HLSLDisasm * pCtx)
             {
                 switch (Instruction.m_ResourceDecl.SRVInfo.ReturnType[0])
                 {
-                case D3D10_SB_RETURN_TYPE_MIXED: pCtx->xprintf(", mixed"); break;
-                case D3D10_SB_RETURN_TYPE_UNORM: pCtx->xprintf(", unorm"); break;
-                case D3D10_SB_RETURN_TYPE_SNORM: pCtx->xprintf(", snorm"); break;
-                case D3D10_SB_RETURN_TYPE_SINT:  pCtx->xprintf(", sint"); break;
-                case D3D10_SB_RETURN_TYPE_UINT:  pCtx->xprintf(", uint"); break;
-                case D3D10_SB_RETURN_TYPE_FLOAT: pCtx->xprintf(", float"); break;
+                case D3D10_SB_RETURN_TYPE_MIXED: this->xprintf(", mixed"); break;
+                case D3D10_SB_RETURN_TYPE_UNORM: this->xprintf(", unorm"); break;
+                case D3D10_SB_RETURN_TYPE_SNORM: this->xprintf(", snorm"); break;
+                case D3D10_SB_RETURN_TYPE_SINT:  this->xprintf(", sint"); break;
+                case D3D10_SB_RETURN_TYPE_UINT:  this->xprintf(", uint"); break;
+                case D3D10_SB_RETURN_TYPE_FLOAT: this->xprintf(", float"); break;
                 }
             }
             else
             {
-                pCtx->xprintf(", (");
+                this->xprintf(", (");
                 for(UINT i = 0;i < 4; i++)
                 {
                     switch (Instruction.m_ResourceDecl.SRVInfo.ReturnType[i])
                     {
-                    case D3D10_SB_RETURN_TYPE_MIXED: pCtx->xprintf(" mixed"); break;
-                    case D3D10_SB_RETURN_TYPE_UNORM: pCtx->xprintf(" unorm"); break;
-                    case D3D10_SB_RETURN_TYPE_SNORM: pCtx->xprintf(" snorm"); break;
-                    case D3D10_SB_RETURN_TYPE_SINT:  pCtx->xprintf(" sint"); break;
-                    case D3D10_SB_RETURN_TYPE_UINT:  pCtx->xprintf(" uint"); break;
-                    case D3D10_SB_RETURN_TYPE_FLOAT: pCtx->xprintf(" float"); break;
+                    case D3D10_SB_RETURN_TYPE_MIXED: this->xprintf(" mixed"); break;
+                    case D3D10_SB_RETURN_TYPE_UNORM: this->xprintf(" unorm"); break;
+                    case D3D10_SB_RETURN_TYPE_SNORM: this->xprintf(" snorm"); break;
+                    case D3D10_SB_RETURN_TYPE_SINT:  this->xprintf(" sint"); break;
+                    case D3D10_SB_RETURN_TYPE_UINT:  this->xprintf(" uint"); break;
+                    case D3D10_SB_RETURN_TYPE_FLOAT: this->xprintf(" float"); break;
                     }
                     if(i != 3)
-                        pCtx->xprintf(",");
+                        this->xprintf(",");
                 }
-                pCtx->xprintf(" )");
+                this->xprintf(" )");
             }
             bOperands = FALSE;
             break;
 
         case D3D11_SB_OPCODE_DCL_RESOURCE_RAW:
-            pCtx->xprintf(" ");
+            this->xprintf(" ");
 
             if (Instruction.m_Operands[0].OperandIndexDimension() == D3D10_SB_OPERAND_INDEX_3D)
             {
-                pCtx->xprintf("t%d[%u-%u], space %d", Instruction.m_ResourceDecl.Space.SetIdx, Instruction.m_ResourceDecl.Space.MinShaderRegister, Instruction.m_ResourceDecl.Space.MaxShaderRegister,
+                this->xprintf("t%d[%u-%u], space %d", Instruction.m_ResourceDecl.Space.SetIdx, Instruction.m_ResourceDecl.Space.MinShaderRegister, Instruction.m_ResourceDecl.Space.MaxShaderRegister,
                     Instruction.m_ResourceDecl.Space.Space);
             }
             else
             {
-                IFC(PrintOperandD3D10(pCtx, &Instruction.m_Operands[0], TRUE, FALSE));
+                IFC(PrintOperandD3D10(this, &Instruction.m_Operands[0], TRUE, FALSE));
             }
 
             bOperands = FALSE;
             break;
 
         case D3D11_SB_OPCODE_DCL_RESOURCE_STRUCTURED:
-            pCtx->xprintf(" ");
+            this->xprintf(" ");
 
             if (Instruction.m_Operands[0].OperandIndexDimension() == D3D10_SB_OPERAND_INDEX_3D)
             {
-                pCtx->xprintf("t%d[%u-%u], space %d", Instruction.m_ResourceDecl.Space.SetIdx, Instruction.m_ResourceDecl.Space.MinShaderRegister, Instruction.m_ResourceDecl.Space.MaxShaderRegister,
+                this->xprintf("t%d[%u-%u], space %d", Instruction.m_ResourceDecl.Space.SetIdx, Instruction.m_ResourceDecl.Space.MinShaderRegister, Instruction.m_ResourceDecl.Space.MaxShaderRegister,
                     Instruction.m_ResourceDecl.Space.Space);
             }
             else
             {
-                IFC(PrintOperandD3D10(pCtx, &Instruction.m_Operands[0], TRUE, FALSE));
+                IFC(PrintOperandD3D10(this, &Instruction.m_Operands[0], TRUE, FALSE));
             }
 
-            pCtx->xprintf(", stride=%u", Instruction.m_ResourceDecl.UAVInfo.Stride);
+            this->xprintf(", stride=%u", Instruction.m_ResourceDecl.UAVInfo.Stride);
             bOperands = FALSE;
             break;
 
         case D3D11_SB_OPCODE_DCL_UNORDERED_ACCESS_VIEW_RAW:
-            pCtx->xprintf(" ");
+            this->xprintf(" ");
 
             if (Instruction.m_Operands[0].OperandIndexDimension() == D3D10_SB_OPERAND_INDEX_3D)
             {
-                pCtx->xprintf(" uav%d[%d-%d], space %d", Instruction.m_ResourceDecl.Space.SetIdx, Instruction.m_ResourceDecl.Space.MinShaderRegister, Instruction.m_ResourceDecl.Space.MaxShaderRegister,
+                this->xprintf(" uav%d[%d-%d], space %d", Instruction.m_ResourceDecl.Space.SetIdx, Instruction.m_ResourceDecl.Space.MinShaderRegister, Instruction.m_ResourceDecl.Space.MaxShaderRegister,
                     Instruction.m_ResourceDecl.Space.Space);
             }
             else
             {
-                IFC(PrintOperandD3D10(pCtx, &Instruction.m_Operands[0], TRUE, FALSE));
+                IFC(PrintOperandD3D10(this, &Instruction.m_Operands[0], TRUE, FALSE));
             }
 
             bOperands = FALSE;
             break;
 
         case D3D11_SB_OPCODE_DCL_UNORDERED_ACCESS_VIEW_STRUCTURED:
-            pCtx->xprintf(" ");
+            this->xprintf(" ");
 
             if (Instruction.m_Operands[0].OperandIndexDimension() == D3D10_SB_OPERAND_INDEX_3D)
             {
-                pCtx->xprintf(" uav%d[%d-%d], space %d", Instruction.m_ResourceDecl.Space.SetIdx, Instruction.m_ResourceDecl.Space.MinShaderRegister, Instruction.m_ResourceDecl.Space.MaxShaderRegister,
+                this->xprintf(" uav%d[%d-%d], space %d", Instruction.m_ResourceDecl.Space.SetIdx, Instruction.m_ResourceDecl.Space.MinShaderRegister, Instruction.m_ResourceDecl.Space.MaxShaderRegister,
                     Instruction.m_ResourceDecl.Space.Space);
             }
             else
             {
-                IFC(PrintOperandD3D10(pCtx, &Instruction.m_Operands[0], TRUE, FALSE));
+                IFC(PrintOperandD3D10(this, &Instruction.m_Operands[0], TRUE, FALSE));
             }
 
-            pCtx->xprintf(", stride=%u", Instruction.m_ResourceDecl.UAVInfo.Stride);
+            this->xprintf(", stride=%u", Instruction.m_ResourceDecl.UAVInfo.Stride);
             bOperands = FALSE;
             break;
 
         case D3D11_SB_OPCODE_DCL_UNORDERED_ACCESS_VIEW_TYPED:
-            pCtx->xprintf(" ");
+            this->xprintf(" ");
 
             if (Instruction.m_Operands[0].OperandIndexDimension() == D3D10_SB_OPERAND_INDEX_3D)
             {
-                pCtx->xprintf(" uav%d[%u-%u], space %d", Instruction.m_ResourceDecl.Space.SetIdx, Instruction.m_ResourceDecl.Space.MinShaderRegister, Instruction.m_ResourceDecl.Space.MaxShaderRegister,
+                this->xprintf(" uav%d[%u-%u], space %d", Instruction.m_ResourceDecl.Space.SetIdx, Instruction.m_ResourceDecl.Space.MinShaderRegister, Instruction.m_ResourceDecl.Space.MaxShaderRegister,
                     Instruction.m_ResourceDecl.Space.Space);
             }
             else
             {
-                IFC(PrintOperandD3D10(pCtx, &Instruction.m_Operands[0], TRUE, FALSE));
+                IFC(PrintOperandD3D10(this, &Instruction.m_Operands[0], TRUE, FALSE));
             }
 
             switch (Instruction.m_ResourceDecl.UAVInfo.Dimension)
             {
-                case D3D10_SB_RESOURCE_DIMENSION_BUFFER: pCtx->xprintf(", buffer"); break;
-                case D3D10_SB_RESOURCE_DIMENSION_TEXTURE1D: pCtx->xprintf(", texture1d"); break;
-                case D3D10_SB_RESOURCE_DIMENSION_TEXTURE2D: pCtx->xprintf(", texture2d"); break;
-                case D3D10_SB_RESOURCE_DIMENSION_TEXTURE2DMS: pCtx->xprintf(", texture2dms"); break;
-                case D3D10_SB_RESOURCE_DIMENSION_TEXTURE3D: pCtx->xprintf(", texture3d"); break;
-                case D3D10_SB_RESOURCE_DIMENSION_TEXTURECUBE: pCtx->xprintf(", texturecube"); break;
-                case D3D10_SB_RESOURCE_DIMENSION_TEXTURE1DARRAY: pCtx->xprintf(", texture1darray"); break;
-                case D3D10_SB_RESOURCE_DIMENSION_TEXTURE2DARRAY: pCtx->xprintf(", texture2darray"); break;
-                case D3D10_SB_RESOURCE_DIMENSION_TEXTURE2DMSARRAY: pCtx->xprintf(", texture2dmsarray"); break;
+                case D3D10_SB_RESOURCE_DIMENSION_BUFFER: this->xprintf(", buffer"); break;
+                case D3D10_SB_RESOURCE_DIMENSION_TEXTURE1D: this->xprintf(", texture1d"); break;
+                case D3D10_SB_RESOURCE_DIMENSION_TEXTURE2D: this->xprintf(", texture2d"); break;
+                case D3D10_SB_RESOURCE_DIMENSION_TEXTURE2DMS: this->xprintf(", texture2dms"); break;
+                case D3D10_SB_RESOURCE_DIMENSION_TEXTURE3D: this->xprintf(", texture3d"); break;
+                case D3D10_SB_RESOURCE_DIMENSION_TEXTURECUBE: this->xprintf(", texturecube"); break;
+                case D3D10_SB_RESOURCE_DIMENSION_TEXTURE1DARRAY: this->xprintf(", texture1darray"); break;
+                case D3D10_SB_RESOURCE_DIMENSION_TEXTURE2DARRAY: this->xprintf(", texture2darray"); break;
+                case D3D10_SB_RESOURCE_DIMENSION_TEXTURE2DMSARRAY: this->xprintf(", texture2dmsarray"); break;
             }
 
             switch (Instruction.m_ResourceDecl.UAVInfo.Type)
             {
-            case D3D10_SB_RETURN_TYPE_MIXED: pCtx->xprintf(", mixed"); break;
-            case D3D10_SB_RETURN_TYPE_UNORM: pCtx->xprintf(", unorm"); break;
-            case D3D10_SB_RETURN_TYPE_SNORM: pCtx->xprintf(", snorm"); break;
-            case D3D10_SB_RETURN_TYPE_SINT:  pCtx->xprintf(", sint"); break;
-            case D3D10_SB_RETURN_TYPE_UINT:  pCtx->xprintf(", uint"); break;
-            case D3D10_SB_RETURN_TYPE_FLOAT: pCtx->xprintf(", float"); break;
+            case D3D10_SB_RETURN_TYPE_MIXED: this->xprintf(", mixed"); break;
+            case D3D10_SB_RETURN_TYPE_UNORM: this->xprintf(", unorm"); break;
+            case D3D10_SB_RETURN_TYPE_SNORM: this->xprintf(", snorm"); break;
+            case D3D10_SB_RETURN_TYPE_SINT:  this->xprintf(", sint"); break;
+            case D3D10_SB_RETURN_TYPE_UINT:  this->xprintf(", uint"); break;
+            case D3D10_SB_RETURN_TYPE_FLOAT: this->xprintf(", float"); break;
             }
             bOperands = FALSE;
             break;
@@ -1113,13 +987,13 @@ DisasembleShader(const UINT * pShader, HLSLDisasm * pCtx)
                 {
                     case D3D10_SB_CUSTOMDATA_DCL_IMMEDIATE_CONSTANT_BUFFER:
                     {
-                        pCtx->SetColor(COLOR_KEYWORD);
-                        pCtx->xprintf("dcl_immediateConstantBuffer");
-                        pCtx->UnsetColor();
-                        pCtx->xprintf(" { ");
+                        this->SetColor(COLOR_KEYWORD);
+                        this->xprintf("dcl_immediateConstantBuffer");
+                        this->UnsetColor();
+                        this->xprintf(" { ");
                         for (UINT uNumVecs = 0; uNumVecs < Instruction.m_CustomData.DataSizeInBytes / 16;)
                         {
-                            pCtx->xprintf("{ ");
+                            this->xprintf("{ ");
                             for(UINT i = 0;i < 4; i++)
                             {
                                 UINT uVal;
@@ -1129,91 +1003,91 @@ DisasembleShader(const UINT * pShader, HLSLDisasm * pCtx)
                                 if(uMasked == 0x7F800000 || uMasked == 0)
                                 {
                                     if(abs((INT)uVal) > 10000)
-                                        pCtx->xprintf("0x%08x",uVal);
+                                        this->xprintf("0x%08x",uVal);
                                     else
-                                        pCtx->xprintf("%d",(INT)uVal);
+                                        this->xprintf("%d",(INT)uVal);
                                 } else
                                 {
-                                    pCtx->xprintf("%f",*pfVal);
+                                    this->xprintf("%f",*pfVal);
                                 }
 
                                 if(i != 3)
-                                    pCtx->xprintf(", ");
+                                    this->xprintf(", ");
                             }
-                            pCtx->xprintf("}");
+                            this->xprintf("}");
                             uNumVecs++;
                             if (uNumVecs < Instruction.m_CustomData.DataSizeInBytes / 16)
                             {
-                                pCtx->xprintf(",\n                              ");
+                                this->xprintf(",\n                              ");
                             }
                         }
-                        pCtx->xprintf(" }");
+                        this->xprintf(" }");
                     }
                     break;
 
                     case D3D10_SB_CUSTOMDATA_COMMENT:
-                        pCtx->xprintf(" %d bytes of comment custom data\n", Instruction.m_CustomData.DataSizeInBytes);
+                        this->xprintf(" %d bytes of comment custom data\n", Instruction.m_CustomData.DataSizeInBytes);
                         break;
 
                     case D3D10_SB_CUSTOMDATA_DEBUGINFO:
-                        pCtx->xprintf(" %d bytes of debuginfo custom data\n", Instruction.m_CustomData.DataSizeInBytes);
+                        this->xprintf(" %d bytes of debuginfo custom data\n", Instruction.m_CustomData.DataSizeInBytes);
                         break;
 
                     case D3D10_SB_CUSTOMDATA_OPAQUE:
-                        pCtx->xprintf(" %d bytes of opaque custom data\n", Instruction.m_CustomData.DataSizeInBytes);
+                        this->xprintf(" %d bytes of opaque custom data\n", Instruction.m_CustomData.DataSizeInBytes);
                         break;
 
                     case D3D11_SB_CUSTOMDATA_SHADER_MESSAGE:
-                        pCtx->xprintf(" %d bytes of shader message custom data\n", Instruction.m_CustomData.DataSizeInBytes);
+                        this->xprintf(" %d bytes of shader message custom data\n", Instruction.m_CustomData.DataSizeInBytes);
                         break;
 
                     default:
-                        pCtx->xprintf(" %d bytes of unknown custom data\n", Instruction.m_CustomData.DataSizeInBytes);
+                        this->xprintf(" %d bytes of unknown custom data\n", Instruction.m_CustomData.DataSizeInBytes);
                         break;
                 }
             }
             break;
 
         case D3D11_SB_OPCODE_DCL_FUNCTION_BODY:
-            pCtx->xprintf(" fb%u", Instruction.m_FunctionBodyIdx);
+            this->xprintf(" fb%u", Instruction.m_FunctionBodyIdx);
             bOperands = FALSE;
             break;
 
         case D3D11_SB_OPCODE_DCL_FUNCTION_TABLE:
-            pCtx->xprintf(" ft%u = {", Instruction.m_FunctionTable.FtIdx);
+            this->xprintf(" ft%u = {", Instruction.m_FunctionTable.FtIdx);
             for(UINT i = 0; i < Instruction.m_FunctionTable.FbCount; i++)
             {
-                pCtx->xprintf("fb%u", Instruction.m_FunctionTable.pFbStartToken[i]);
-                if(i < Instruction.m_FunctionTable.FbCount-1) pCtx->xprintf(", ");
+                this->xprintf("fb%u", Instruction.m_FunctionTable.pFbStartToken[i]);
+                if(i < Instruction.m_FunctionTable.FbCount-1) this->xprintf(", ");
             }
-            pCtx->xprintf("}");
+            this->xprintf("}");
 
             bOperands = FALSE;
             break;
 
         case D3D11_SB_OPCODE_DCL_INTERFACE:
-            pCtx->xprintf(" fp%u[%u][%u] = {", Instruction.m_InterfaceTable.FpIdx,
+            this->xprintf(" fp%u[%u][%u] = {", Instruction.m_InterfaceTable.FpIdx,
                 Instruction.m_InterfaceTable.FpArraySize, Instruction.m_InterfaceTable.NumCallSites);
             for(UINT i = 0; i < Instruction.m_InterfaceTable.FtCount; i++)
             {
-                pCtx->xprintf("ft%u", Instruction.m_InterfaceTable.pFtStartToken[i]);
-                if(i < Instruction.m_InterfaceTable.FtCount-1) pCtx->xprintf(", ");
+                this->xprintf("ft%u", Instruction.m_InterfaceTable.pFtStartToken[i]);
+                if(i < Instruction.m_InterfaceTable.FtCount-1) this->xprintf(", ");
             }
-            pCtx->xprintf("}");
+            this->xprintf("}");
 
             bOperands = FALSE;
             break;
 
         case D3D11_SB_OPCODE_INTERFACE_CALL:
-            pCtx->xprintf(" ");
-            IFC (PrintOperandD3D10(pCtx, &Instruction.m_Operands[0], false, false));
-            pCtx->xprintf("[%u]", Instruction.m_InterfaceCallSiteIdx);
+            this->xprintf(" ");
+            IFC (PrintOperandD3D10(this, &Instruction.m_Operands[0], false, false));
+            this->xprintf("[%u]", Instruction.m_InterfaceCallSiteIdx);
 
             bOperands = FALSE;
             break;
 
         default:
-            pCtx->xprintf(" ");
+            this->xprintf(" ");
             break;
         }
 
@@ -1275,10 +1149,10 @@ DisasembleShader(const UINT * pShader, HLSLDisasm * pCtx)
             for(UINT i = 0; i < Instruction.m_NumOperands;i++)
             {
 
-                IFC (PrintOperandD3D10(pCtx, &Instruction.m_Operands[i], bFloat, bAmbiguous));
+                IFC (PrintOperandD3D10(this, &Instruction.m_Operands[i], bFloat, bAmbiguous));
 
                 if(i != Instruction.m_NumOperands-1)
-                    pCtx->xprintf(", ");
+                    this->xprintf(", ");
 
             }
         }
@@ -1295,19 +1169,19 @@ DisasembleShader(const UINT * pShader, HLSLDisasm * pCtx)
             switch(Instruction.m_ResourceDecl.SamplerInfo.SamplerMode)
             {
                 case D3D10_SB_SAMPLER_MODE_DEFAULT:
-                    pCtx->xprintf(", mode_default");
+                    this->xprintf(", mode_default");
                     break;
                 case D3D10_SB_SAMPLER_MODE_COMPARISON:
-                    pCtx->xprintf(", mode_comparison");
+                    this->xprintf(", mode_comparison");
                     break;
                 case D3D10_SB_SAMPLER_MODE_MONO:
-                    pCtx->xprintf(", mode_mono");
+                    this->xprintf(", mode_mono");
                     break;
             }
             break;
         }
 
-        pCtx->Flush(++line);
+        this->Flush(++line);
     }
 
 Cleanup:
