@@ -61,7 +61,7 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 //
 #define VC4_QPU_PM_SHIFT 56
 #define VC4_QPU_PM_MASK (0x1ULL << VC4_QPU_PM_SHIFT)
-#define VC4_QPU_IS_PM_SET(Inst) ((Inst) & VC4_QPU_PM_MASK)
+#define VC4_QPU_IS_PM_SET(Inst) (((Inst) & VC4_QPU_PM_MASK) != 0)
 
 //
 // Pack Bits [55]-[52]
@@ -125,14 +125,14 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 //
 #define VC4_QPU_SETFLAGS_SHIFT 45
 #define VC4_QPU_SETFLAGS_MASK (0x1ULL << VC4_QPU_SETFLAGS_SHIFT)
-#define VC4_QPU_IS_SETFLAGS(Inst) ((Inst) & VC4_QPU_SETFLAGS_MASK)
+#define VC4_QPU_IS_SETFLAGS(Inst) (((Inst) & VC4_QPU_SETFLAGS_MASK) != 0)
 
 //
 // Write Swap Bit [44]
 //
 #define VC4_QPU_WRITESWAP_SHIFT 44
 #define VC4_QPU_WRITESWAP_MASK (0x1ULL << VC4_QPU_WRITESWAP_SHIFT)
-#define VC4_QPU_IS_WRITE_SWAP(Inst) ((Inst) & VC4_QPU_WRITESWAP_MASK)
+#define VC4_QPU_IS_WRITE_SWAP(Inst) (((Inst) & VC4_QPU_WRITESWAP_MASK) != 0)
 
 //
 // Write Address for output [43]-[38] for add
@@ -352,6 +352,7 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 //
 #define VC4_QPU_IMMEDIATE_32_SHIFT 0
 #define VC4_QPU_IMMEDIATE_32_MASK (0xffffffffULL << VC4_QPU_IMMEDIATE_32_SHIFT)
+#define VC4_QPU_GET_IMMEDIATE_32(Inst) (((Inst) & VC4_QPU_IMMEDIATE_32_MASK) >> VC4_QPU_IMMEDIATE_32_SHIFT)
 
 //
 // Immediate per element MS bit [31]-[16]
@@ -388,6 +389,7 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 //
 #define VC4_QPU_BRANCH_COND_SHIFT 52
 #define VC4_QPU_BRANCH_COND_MASK (0xfULL << VC4_QPU_BRANCH_COND_SHIFT)
+#define VC4_QPU_GET_BRANCH_COND(Inst) (((Inst) & VC4_QPU_BRANCH_COND_MASK) >> VC4_QPU_BRANCH_COND_SHIFT)
 
 #define VC4_QPU_BRANCH_COND_ALL_ZS 0 // All Z flags set
 #define VC4_QPU_BRANCH_COND_ALL_ZC 1 // All Z flags clear
@@ -410,9 +412,20 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 //
 #define VC4_QPU_BRANCH_RELATIVE_SHIFT 51
 #define VC4_QPU_BRANCH_RELATIVE_MASK (0x1ULL << VC4_QPU_BRANCH_RELATIVE_SHIFT)
+#define VC4_QPU_IS_BRANCH_RELATIVE(Inst) (((Inst) & VC4_QPU_BRANCH_RELATIVE_SHIFT) != 0)
 
 //
 // Branch register file A [50] : PC = PC + raddr_a[0].
 //
-#define VC4_QPU_BRANCH_RADDR_A_SHIFT 50
-#define VC4_QPU_BRANCH_RADDR_A_MASK (0x1ULL << VC4_QPU_BRANCH_RADDR_A_SHIFT)
+#define VC4_QPU_BRANCH_USE_RADDR_A_SHIFT 50
+#define VC4_QPU_BRANCH_USE_RADDR_A_MASK (0x1ULL << VC4_QPU_BRANCH_USE_RADDR_A_SHIFT)
+#define VC4_QPU_IS_BRANCH_USE_RADDR_A(Inst) (((Inst) & VC4_QPU_BRANCH_USE_RADDR_A_MASK) != 0)
+
+//
+// Brach raddr_a [49] - [45]
+//
+#define VC4_QPU_BRANCH_RADDR_A_SHIFT 45
+#define VC4_QPU_BRANCH_RADDR_A_MASK (0x1fULL << VC4_QPU_BRANCH_RADDR_A_SHIFT)
+#define VC4_QPU_GET_BRANCH_RADDR_A(Inst) (((Inst) & VC4_QPU_BRANCH_RADDR_A_MASK) >> VC4_QPU_BRANCH_RADDR_A_SHIFT)
+
+

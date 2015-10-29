@@ -31,9 +31,9 @@ void __stdcall VC4_InitializeName()
 	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_LOAD_TMU0] = "ldtmu0";
 	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_LOAD_TMU1] = "ldtmu1";
 	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_ALPAH_MASK_LOAD] = "loadam";
-	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_ALU_WITH_RADDR_B] = "load_sm";
-	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_LOAD_IMMEDIATE] = "load_imm";
-	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_BRANCH] = "br";
+	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_ALU_WITH_RADDR_B] = "loadsm";
+	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_LOAD_IMMEDIATE] = "loadim";
+	VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_BRANCH] = "branch";
 
 	VC4_QPU_Name_Unpack[VC4_QPU_UNPACK_32] = "";
 	VC4_QPU_Name_Unpack[VC4_QPU_UNPACK_16a] = ".16a";
@@ -87,8 +87,8 @@ void __stdcall VC4_InitializeName()
 	VC4_QPU_Name_Waddr[VC4_QPU_WADDR_ACC3][1] = "r3";
 	VC4_QPU_Name_Waddr[VC4_QPU_WADDR_TMU_NOSWAP][0] =
 	VC4_QPU_Name_Waddr[VC4_QPU_WADDR_TMU_NOSWAP][1] = "tmu_noswap";
-	VC4_QPU_Name_Waddr[VC4_QPU_WADDR_ACC5][0] =       // A: replicate pixel 0 per quad.
-	VC4_QPU_Name_Waddr[VC4_QPU_WADDR_ACC5][1] = "r5"; // B: replicate SIMD element 0.
+    VC4_QPU_Name_Waddr[VC4_QPU_WADDR_ACC5][0] = "r5_replicate_pixel_0"; // A: replicate pixel 0 per quad.
+	VC4_QPU_Name_Waddr[VC4_QPU_WADDR_ACC5][1] = "r5_replicate_SIMD_0"; // B: replicate SIMD element 0.
 	VC4_QPU_Name_Waddr[VC4_QPU_WADDR_HOSTINT][0] =
 	VC4_QPU_Name_Waddr[VC4_QPU_WADDR_HOSTINT][1] = "hostint";
 	VC4_QPU_Name_Waddr[VC4_QPU_WADDR_NOP][0] =
@@ -278,7 +278,7 @@ HRESULT Vc4Disasm::ParseWriteAddr(DWORD waddr, bool bRegfile_A)
 {
     if (waddr < 32)
     {
-        this->xprintf("r%s%d", bRegfile_A ? "a" : "b", waddr);
+        this->xprintf("%s%d", bRegfile_A ? VC4_QPU_Name_Alu[VC4_QPU_ALU_REG_A] : VC4_QPU_Name_Alu[VC4_QPU_ALU_REG_B], waddr);
     }
     else if (waddr < VC4_QPU_RADDR_ARRAY_SIZE)
     {
@@ -291,17 +291,20 @@ HRESULT Vc4Disasm::ParseWriteAddr(DWORD waddr, bool bRegfile_A)
     return S_OK;
 }
 
-HRESULT Vc4Disasm::ParseWrite(VC4_QPU_INSTRUCTION Instruction, bool bAddOp)
+HRESULT Vc4Disasm::ParseWrite(VC4_QPU_INSTRUCTION Instruction, bool bAddOp, bool bShowPack)
 {
     bool bRegfile_A = ((bAddOp == true) == (VC4_QPU_IS_WRITE_SWAP(Instruction) == 0)) ? true : false;
     ParseWriteAddr(bAddOp ? VC4_QPU_GET_WADDR_ADD(Instruction) : VC4_QPU_GET_WADDR_MUL(Instruction), bRegfile_A);
-    if (bRegfile_A && !VC4_QPU_IS_PM_SET(Instruction))
+    if (bShowPack)
     {
-        this->xprintf("%s", VC4_QPU_Name_Pack_A[VC4_QPU_GET_PACK(Instruction)]);
-    }
-    else if (!bAddOp && VC4_QPU_IS_PM_SET(Instruction))
-    {
-        this->xprintf("%s", VC4_QPU_Name_Pack_Mul[VC4_QPU_GET_PACK(Instruction)]);
+        if (bRegfile_A && !VC4_QPU_IS_PM_SET(Instruction))
+        {
+            this->xprintf("%s", VC4_QPU_Name_Pack_A[VC4_QPU_GET_PACK(Instruction)]);
+        }
+        else if (!bAddOp && VC4_QPU_IS_PM_SET(Instruction))
+        {
+            this->xprintf("%s", VC4_QPU_Name_Pack_Mul[VC4_QPU_GET_PACK(Instruction)]);
+        }
     }
     return S_OK;
 }
@@ -310,7 +313,7 @@ HRESULT Vc4Disasm::ParseReadAddr(DWORD raddr, bool bRegfile_A)
 {
     if (raddr < 32)
     {
-        this->xprintf("r%s%d", bRegfile_A ? "a" : "b", raddr);
+        this->xprintf("%s%d", bRegfile_A ? VC4_QPU_Name_Alu[VC4_QPU_ALU_REG_A] : VC4_QPU_Name_Alu[VC4_QPU_ALU_REG_B], raddr);
     }
     else if (raddr < VC4_QPU_RADDR_ARRAY_SIZE)
     {
@@ -362,9 +365,9 @@ HRESULT Vc4Disasm::ParseRead(VC4_QPU_INSTRUCTION Instruction, DWORD mux)
 HRESULT Vc4Disasm::ParseAddOp(VC4_QPU_INSTRUCTION Instruction)
 {
     this->xprintf("%s%s%s ",
-        VC4_QPU_IS_OPCODE_ADD_MOV(Instruction) ? VC4_QPU_Name_Op_Move : VC4_QPU_Name_Op_Add[VC4_QPU_GET_OPCODE_ADD(Instruction)],
-        VC4_QPU_IS_SETFLAGS(Instruction) ? VC4_QPU_Name_SetFlag : VC_QPU_Name_Empty,
-        VC4_QPU_IS_OPCODE_ADD_NOP(Instruction) ? VC_QPU_Name_Empty : VC4_QPU_Name_Cond[VC4_QPU_GET_COND_ADD(Instruction)]);
+        (VC4_QPU_IS_OPCODE_ADD_MOV(Instruction) ? VC4_QPU_Name_Op_Move : VC4_QPU_Name_Op_Add[VC4_QPU_GET_OPCODE_ADD(Instruction)]),
+        (VC4_QPU_IS_SETFLAGS(Instruction) ? VC4_QPU_Name_SetFlag : VC_QPU_Name_Empty),
+        (VC4_QPU_IS_OPCODE_ADD_NOP(Instruction) ? VC_QPU_Name_Empty : VC4_QPU_Name_Cond[VC4_QPU_GET_COND_ADD(Instruction)]));
     if (!VC4_QPU_IS_OPCODE_ADD_NOP(Instruction))
     {
         ParseWrite(Instruction, true);
@@ -382,9 +385,9 @@ HRESULT Vc4Disasm::ParseAddOp(VC4_QPU_INSTRUCTION Instruction)
 HRESULT Vc4Disasm::ParseMulOp(VC4_QPU_INSTRUCTION Instruction)
 {
     this->xprintf("%s%s%s ",
-        VC4_QPU_IS_OPCODE_MUL_MOV(Instruction) ? VC4_QPU_Name_Op_Move : VC4_QPU_Name_Op_Mul[VC4_QPU_GET_OPCODE_MUL(Instruction)],
-        VC4_QPU_IS_SETFLAGS(Instruction) ? VC4_QPU_Name_SetFlag : VC_QPU_Name_Empty,
-        VC4_QPU_IS_OPCODE_MUL_NOP(Instruction) ? VC_QPU_Name_Empty : VC4_QPU_Name_Cond[VC4_QPU_GET_COND_MUL(Instruction)]);
+        (VC4_QPU_IS_OPCODE_MUL_MOV(Instruction) ? VC4_QPU_Name_Op_Move : VC4_QPU_Name_Op_Mul[VC4_QPU_GET_OPCODE_MUL(Instruction)]),
+        (VC4_QPU_IS_SETFLAGS(Instruction) ? VC4_QPU_Name_SetFlag : VC_QPU_Name_Empty),
+        (VC4_QPU_IS_OPCODE_MUL_NOP(Instruction) ? VC_QPU_Name_Empty : VC4_QPU_Name_Cond[VC4_QPU_GET_COND_MUL(Instruction)]));
     if (!VC4_QPU_IS_OPCODE_MUL_NOP(Instruction))
     {
         ParseWrite(Instruction, false);
@@ -409,20 +412,55 @@ HRESULT Vc4Disasm::ParseALUInstruction(VC4_QPU_INSTRUCTION Instruction)
 
 HRESULT Vc4Disasm::ParseLoadImmInstruction(VC4_QPU_INSTRUCTION Instruction)
 {
+    this->xprintf("%s%s%s ",
+        VC4_QPU_Name_Op_Move,
+        ((VC4_QPU_GET_IMMEDIATE_TYPE(Instruction) == VC4_QPU_IMMEDIATE_TYPE_32) ? "" : (VC4_QPU_GET_IMMEDIATE_TYPE(Instruction) == VC4_QPU_IMMEDIATE_TYPE_PER_ELEMENT_SIGNED) ? "_per_element_signed" : (VC4_QPU_GET_IMMEDIATE_TYPE(Instruction) == VC4_QPU_IMMEDIATE_TYPE_PER_ELEMENT_UNSIGNED) ? "per_element_unsigned" : "Invalid"),
+        (VC4_QPU_IS_SETFLAGS(Instruction) ? VC4_QPU_Name_SetFlag : VC_QPU_Name_Empty));
+    if (VC4_QPU_GET_WADDR_ADD(Instruction) != VC4_QPU_WADDR_NOP)
+    {
+        ParseWrite(Instruction, true);
+        this->xprintf("%s", VC4_QPU_Name_Cond[VC4_QPU_GET_COND_ADD(Instruction)]);
+        this->xprintf(", ");
+    }
+    if (VC4_QPU_GET_WADDR_MUL(Instruction) != VC4_QPU_WADDR_NOP)
+    {
+        ParseWrite(Instruction, false);
+        this->xprintf("%s", VC4_QPU_Name_Cond[VC4_QPU_GET_COND_MUL(Instruction)]);
+        this->xprintf(", ");
+    }
+    this->xprintf("%x", VC4_QPU_GET_IMMEDIATE_32(Instruction));
     return S_OK;
-    Instruction;
 }
 
 HRESULT Vc4Disasm::ParseSemaphoreInstruction(VC4_QPU_INSTRUCTION Instruction)
 {
+    this->xprintf("Semaphore instruction is not supported yet");
     return S_OK;
     Instruction;
 }
         
 HRESULT Vc4Disasm::ParseBranchInstruction(VC4_QPU_INSTRUCTION Instruction)
 {
+    this->xprintf("%s%s ",
+        (VC4_QPU_IS_BRANCH_RELATIVE(Instruction) ? "brr" : "bra"),
+        (VC4_QPU_Name_Branch_Cond[VC4_QPU_GET_BRANCH_COND(Instruction)]));
+    if (VC4_QPU_IS_BRANCH_USE_RADDR_A(Instruction))
+    {
+        ParseReadAddr(VC4_QPU_GET_BRANCH_RADDR_A(Instruction), true);
+    }
+    if (VC4_QPU_GET_IMMEDIATE_32(Instruction) != 0)
+    {
+        this->xprintf("+0x%x", VC4_QPU_GET_IMMEDIATE_32(Instruction));
+    }
+    if ((VC4_QPU_GET_WADDR_ADD(Instruction) != VC4_QPU_WADDR_NOP) ||
+        (VC4_QPU_GET_WADDR_MUL(Instruction) != VC4_QPU_WADDR_NOP))
+    {
+        this->xprintf("; ret_addr saved to ");
+        ParseWrite(Instruction, true, false);
+        this->xprintf(" ");
+        ParseWrite(Instruction, false, false);
+    }
     return S_OK;
-    Instruction;
 }
 
 HRESULT
@@ -453,15 +491,20 @@ Vc4Disasm::Run(const VC4_QPU_INSTRUCTION* pShader, ULONG ShaderSize)
             break;
         case VC4_QPU_SIG_LOAD_IMMEDIATE:
             if (VC4_QPU_IS_SEMAPHORE(Instruction))
+            {
                 ParseSemaphoreInstruction(Instruction);
+            }
             else
+            {
                 ParseLoadImmInstruction(Instruction);
+            }
             break;
         case VC4_QPU_SIG_BRANCH:
             ParseBranchInstruction(Instruction);
             break;
         default:
             this->xprintf("Invalid signature");
+            break;
         }
         Flush(0);
     }

@@ -15,7 +15,7 @@ private:
 
     HRESULT ParseSmallImmediate(DWORD dwSmallImmediate);
 
-    HRESULT ParseWrite(VC4_QPU_INSTRUCTION Instruction, bool bAddOp);
+    HRESULT ParseWrite(VC4_QPU_INSTRUCTION Instruction, bool bAddOp, bool bShowPack = true);
     HRESULT ParseWriteAddr(DWORD waddr, bool bRegfile_A);
     HRESULT ParseRead(VC4_QPU_INSTRUCTION Instruction, DWORD mux);
     HRESULT ParseReadAddr(DWORD raddr, bool bRegfile_A);
