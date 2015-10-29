@@ -4,19 +4,27 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 //--------------------------------------------------------------------------------------
 
+struct PSInput
+{
+    float4 pos : SV_POSITION;
+    float3 color : COLOR0;
+};
+
 //--------------------------------------------------------------------------------------
 // Vertex Shader
 //--------------------------------------------------------------------------------------
-float4 VS( float3 Pos : POSITION, float3 Color : COLOR ) : SV_POSITION
+PSInput VS( float3 Pos : POSITION, float3 Color : COLOR )
 {
-    return float4(Pos, 1.0f);
+    PSInput output;
+    output.pos = float4(Pos, 1.0f);
+    output.color = Color;
+    return output;
 }
-
 
 //--------------------------------------------------------------------------------------
 // Pixel Shader
 //--------------------------------------------------------------------------------------
-float4 PS( float4 Pos : SV_POSITION ) : SV_Target
+float4 PS(PSInput input ) : SV_Target
 {
-    return float4( 1.0f, 1.0f, 0.0f, 1.0f );    // Yellow, with Alpha = 1
+    return float4(input.color, 1.0f); // vertex color
 }

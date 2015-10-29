@@ -111,7 +111,7 @@ void InitInstructionInfo()
     SET (D3D10_SB_OPCODE_ROUND_Z,    1, 1,  "round_z", D3D11_SB_FLOAT_OP);
     SET (D3D10_SB_OPCODE_RSQ,        1, 1,  "rsq", D3D11_SB_FLOAT_OP);
     SET (D3D10_SB_OPCODE_SAMPLE,     1, 3,  "sample", D3D11_SB_TEX_OP);
-    SET (D3D10_SB_OPCODE_SAMPLE_B,   1, 4, "sample_b", D3D11_SB_TEX_OP);
+    SET (D3D10_SB_OPCODE_SAMPLE_B,   1, 4,  "sample_b", D3D11_SB_TEX_OP);
     SET (D3D10_SB_OPCODE_SAMPLE_L,   1, 4,  "sample_l", D3D11_SB_TEX_OP);
     SET (D3D10_SB_OPCODE_SAMPLE_D,   1, 5,  "sample_d", D3D11_SB_TEX_OP);
     SET (D3D10_SB_OPCODE_SAMPLE_C,   1, 4,  "sample_c", D3D11_SB_TEX_OP);

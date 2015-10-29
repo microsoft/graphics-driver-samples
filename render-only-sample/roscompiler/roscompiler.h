@@ -31,6 +31,13 @@ private:
 #endif // VC4
 	}
 	
+    void Disassemble_Signatures()
+    {
+        HLSLDisasm().Run("Input Signature Entries", m_pInputSignatureEntries, m_numInputSignatureEntries);
+        HLSLDisasm().Run("Output Signature Entries", m_pOutputSignatureEntries, m_numOutputSignatureEntries);
+        HLSLDisasm().Run("Patch Constant Signature Entries", m_pPatchConstantSignatureEntries, m_numPatchConstantSignatureEntries);
+    }
+
 private:
 
     //

@@ -57,6 +57,7 @@ BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize)
 	assert(puiShaderCodeSize);
 	*puiShaderCodeSize = 0;
 	
+    Disassemble_Signatures();
 	Disassemble_HLSL();
 	
 	UINT versionToken = m_pCode[0];

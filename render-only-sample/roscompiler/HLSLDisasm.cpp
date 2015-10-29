@@ -342,6 +342,75 @@ static HRESULT PrintName(HLSLDisasm *pCtx, UINT uName)
     return S_OK;
 }
 
+static HRESULT PrintMask(HLSLDisasm *pCtx, BYTE cMask)
+{
+    if (cMask & 0x8) pCtx->xprintf("x");
+    if (cMask & 0x4) pCtx->xprintf("y");
+    if (cMask & 0x2) pCtx->xprintf("z");
+    if (cMask & 0x1) pCtx->xprintf("w");
+    return S_OK;
+}
+
+static HRESULT PrintRegisterComponentType(HLSLDisasm *pCtx, UINT uType)
+{
+    switch (uType)
+    {
+    case D3D10_SB_REGISTER_COMPONENT_UNKNOWN: pCtx->xprintf(""); break;
+    case D3D10_SB_REGISTER_COMPONENT_UINT32:  pCtx->xprintf("reg component - uint"); break;
+    case D3D10_SB_REGISTER_COMPONENT_SINT32:  pCtx->xprintf("reg component - sint"); break;
+    case D3D10_SB_REGISTER_COMPONENT_FLOAT32: pCtx->xprintf("reg component - float"); break;
+    default:
+        return E_FAIL;
+    }
+    return S_OK;
+}
+
+static HRESULT PrintMinPrecision(HLSLDisasm *pCtx, UINT uPrecision)
+{
+    switch (uPrecision)
+    {
+    case D3D11_SB_OPERAND_MIN_PRECISION_DEFAULT: break;
+    case D3D11_SB_OPERAND_MIN_PRECISION_FLOAT_16: pCtx->xprintf("\t : "); pCtx->xprintf("min precision - float16"); break;
+    case D3D11_SB_OPERAND_MIN_PRECISION_FLOAT_2_8: pCtx->xprintf("\t : "); pCtx->xprintf("min precision - float10"); break;
+    case D3D11_SB_OPERAND_MIN_PRECISION_SINT_16: pCtx->xprintf("\t : "); pCtx->xprintf("min precision - sint16"); break;
+    case D3D11_SB_OPERAND_MIN_PRECISION_UINT_16: pCtx->xprintf("\t : "); pCtx->xprintf("min precision - uint16"); break;
+    default:
+        return E_FAIL;
+    }
+    return S_OK;
+}
+
+HRESULT
+PrintSignatureEntry(HLSLDisasm *pCtx, const D3D11_1DDIARG_SIGNATURE_ENTRY *pEntry)
+{
+    assert(pCtx);
+    assert(pEntry);
+
+    pCtx->xprintf("    Register %d.", pEntry->Register);
+    PrintMask(pCtx, pEntry->Mask);
+    pCtx->xprintf("\t : ");
+    PrintName(pCtx, pEntry->SystemValue);
+    PrintRegisterComponentType(pCtx, pEntry->RegisterComponentType);
+    PrintMinPrecision(pCtx, pEntry->MinPrecision);
+
+    pCtx->Flush(0);
+    return S_OK;
+}
+
+HRESULT
+HLSLDisasm::Run(char *pTitile, const D3D11_1DDIARG_SIGNATURE_ENTRY *pEntry, UINT numEntries)
+{
+    if (numEntries)
+    {
+        this->xprintf("%s\n", pTitile);
+    }
+    for (UINT i = 0; i < numEntries; i++)
+    {
+        PrintSignatureEntry(this, pEntry); pEntry++;
+    }
+    return S_OK;
+}
+
 HRESULT
 HLSLDisasm::Run(const UINT * pShader)
 {

@@ -412,13 +412,9 @@ public:
         ID3DBlob* pVSBlob = nullptr;
 
 #if VC4
-
-        HRESULT hr = CompileShaderFromFile(L"VC4Test.fx", "VS", "vs_4_0", &pVSBlob);
-
+        HRESULT hr = CompileShaderFromFile(L"VC4Test.fx", "VS", "vs_4_0_level_9_1", &pVSBlob);
 #else
-
         HRESULT hr = CompileShaderFromFile(L"Tutorial02.fx", "VS", "vs_4_0", &pVSBlob);
-
 #endif
 
         if (FAILED(hr)) throw std::exception("Failed to compile shader from file");
@@ -439,9 +435,7 @@ public:
         {
             { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 #if VC4
-
             { "COLOR",    0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-
 #endif
         };
         UINT numElements = ARRAYSIZE(layout);
@@ -481,13 +475,9 @@ public:
         ID3DBlob* pPSBlob = nullptr;
 
 #if VC4
-
-        HRESULT hr = CompileShaderFromFile(L"VC4Test.fx", "PS", "ps_4_0", &pPSBlob);
-
+        HRESULT hr = CompileShaderFromFile(L"VC4Test.fx", "PS", "ps_4_0_level_9_1", &pPSBlob);
 #else
-
         HRESULT hr = CompileShaderFromFile(L"Tutorial02.fx", "PS", "ps_4_0", &pPSBlob);
-
 #endif
         if (FAILED(hr)) throw std::exception("Unable to compile pixel shader");
 
