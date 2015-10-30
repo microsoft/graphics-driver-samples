@@ -344,10 +344,10 @@ static HRESULT PrintName(HLSLDisasm *pCtx, UINT uName)
 
 static HRESULT PrintMask(HLSLDisasm *pCtx, BYTE cMask)
 {
-    if (cMask & 0x8) pCtx->xprintf("x");
-    if (cMask & 0x4) pCtx->xprintf("y");
-    if (cMask & 0x2) pCtx->xprintf("z");
-    if (cMask & 0x1) pCtx->xprintf("w");
+    if (cMask & 0x1) pCtx->xprintf("x");
+    if (cMask & 0x2) pCtx->xprintf("y");
+    if (cMask & 0x4) pCtx->xprintf("z");
+    if (cMask & 0x8) pCtx->xprintf("w");
     return S_OK;
 }
 
