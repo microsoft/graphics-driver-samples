@@ -6,6 +6,9 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "roskmd", "roskmd\roskmd.vcxproj", "{65CF1498-21A7-4356-8C3A-3642958DEF34}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "rosumd", "rosumd\rosumd.vcxproj", "{B87732A7-0D66-4692-96E2-2772BF77C3FC}"
+	ProjectSection(ProjectDependencies) = postProject
+		{98E16C06-7E74-4A0C-A5E6-24219CAE527D} = {98E16C06-7E74-4A0C-A5E6-24219CAE527D}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "rostest", "rostest\rostest.vcxproj", "{55C9EAC8-81E0-467D-B0D4-631B201AE621}"
 EndProject
