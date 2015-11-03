@@ -433,9 +433,12 @@ public:
         // Define the input layout
         D3D11_INPUT_ELEMENT_DESC layout[] =
         {
-            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 #if VC4
-            { "COLOR",    0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            { "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            { "COLOR",    0, DXGI_FORMAT_R32G32B32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+#else
+            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            { "COLOR",    0, DXGI_FORMAT_R32G32B32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 #endif
         };
         UINT numElements = ARRAYSIZE(layout);
@@ -513,23 +516,20 @@ public:
     D3DVertexBuffer(std::shared_ptr<D3DDevice> & inDevice)
     {
 #if VC4
-
         SimpleVertex vertices[] =
         {
+            //                X,                  Y,    Z,   W,     R,    G,    B // See Input layout.
             {   (kWidth/2) << 4,   (kHeight/4) << 4, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f },
             {   (kWidth/4) << 4, (kHeight*3/4) << 4, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f },
             { (kWidth*3/4) << 4, (kHeight*3/4) << 4, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f }
         };
-
 #else
-
         SimpleVertex vertices[] =
         {
             DirectX::XMFLOAT3(0.0f, 0.5f, 0.5f),
             DirectX::XMFLOAT3(0.5f, -0.5f, 0.5f),
             DirectX::XMFLOAT3(-0.5f, -0.5f, 0.5f),
         };
-
 #endif
 
         D3D11_BUFFER_DESC bd;

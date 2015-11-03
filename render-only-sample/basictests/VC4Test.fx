@@ -13,10 +13,10 @@ struct PSInput
 //--------------------------------------------------------------------------------------
 // Vertex Shader
 //--------------------------------------------------------------------------------------
-PSInput VS( float3 Pos : POSITION, float3 Color : COLOR )
+PSInput VS( float4 Pos : POSITION, float3 Color : COLOR )
 {
     PSInput output;
-    output.pos = float4(Pos, 1.0f);
+    output.pos = Pos;
     output.color = Color;
     return output;
 }
@@ -24,7 +24,7 @@ PSInput VS( float3 Pos : POSITION, float3 Color : COLOR )
 //--------------------------------------------------------------------------------------
 // Pixel Shader
 //--------------------------------------------------------------------------------------
-float4 PS(PSInput input ) : SV_Target
+float4 PS( PSInput input ) : SV_Target
 {
     return float4(input.color, 1.0f); // vertex color
 }
