@@ -19,7 +19,7 @@ NTSTATUS RosKmAcpiReader::EvalAcpiMethod()
     NT_ASSERT(m_OutputBufferSize);
 
     NTSTATUS Status;
-	for (;;)
+    for (;;)
     {
         Status = m_pRosKmAdapter->GetDxgkInterface()->DxgkCbEvalAcpiMethod(
                      m_pRosKmAdapter->GetDxgkInterface()->DeviceHandle,
