@@ -5,9 +5,9 @@ void __stdcall VC4_InitializeName();
 
 void __stdcall InitializeShaderCompilerLibrary()
 {
-	InitInstructionInfo();
+    InitInstructionInfo();
 #if VC4
-	VC4_InitializeName();
+    VC4_InitializeName();
 #endif //
 }
 
@@ -16,16 +16,16 @@ RosCompiler* RosCompilerCreate(UINT *pCode,
                                D3D11_1DDIARG_SIGNATURE_ENTRY *pInputSignatureEntries,
                                UINT numOutputSignatureEntries,
                                D3D11_1DDIARG_SIGNATURE_ENTRY *pOutputSignatureEntries,
-							   UINT numPatchConstantSignatureEntries,
-	                           D3D11_1DDIARG_SIGNATURE_ENTRY *pPatchConstantSignatureEntries)
+                               UINT numPatchConstantSignatureEntries,
+                               D3D11_1DDIARG_SIGNATURE_ENTRY *pPatchConstantSignatureEntries)
 {
-	return new RosCompiler(pCode,
-		numInputSignatureEntries,
-		pInputSignatureEntries,
-		numOutputSignatureEntries,
-		pOutputSignatureEntries,
-		numPatchConstantSignatureEntries,
-		pPatchConstantSignatureEntries);
+    return new RosCompiler(pCode,
+        numInputSignatureEntries,
+        pInputSignatureEntries,
+        numOutputSignatureEntries,
+        pOutputSignatureEntries,
+        numPatchConstantSignatureEntries,
+        pPatchConstantSignatureEntries);
 }
 
 RosCompiler::RosCompiler(UINT *pCode,
@@ -33,16 +33,16 @@ RosCompiler::RosCompiler(UINT *pCode,
                          D3D11_1DDIARG_SIGNATURE_ENTRY *pInputSignatureEntries,
                          UINT numOutputSignatureEntries,
                          D3D11_1DDIARG_SIGNATURE_ENTRY *pOutputSignatureEntries,
-						 UINT numPatchConstantSignatureEntries,
-						 D3D11_1DDIARG_SIGNATURE_ENTRY *pPatchConstantSignatureEntries) :
+                         UINT numPatchConstantSignatureEntries,
+                         D3D11_1DDIARG_SIGNATURE_ENTRY *pPatchConstantSignatureEntries) :
     m_pCode(pCode),
     m_numInputSignatureEntries(numInputSignatureEntries),
     m_pInputSignatureEntries(pInputSignatureEntries),
     m_numOutputSignatureEntries(numOutputSignatureEntries),
     m_pOutputSignatureEntries(pOutputSignatureEntries),
-	m_numPatchConstantSignatureEntries(numPatchConstantSignatureEntries),
-	m_pPatchConstantSignatureEntries(pPatchConstantSignatureEntries),
-	m_pHwCode(NULL),
+    m_numPatchConstantSignatureEntries(numPatchConstantSignatureEntries),
+    m_pPatchConstantSignatureEntries(pPatchConstantSignatureEntries),
+    m_pHwCode(NULL),
     m_HwCodeSize(0)
 {
 }
@@ -54,6 +54,7 @@ RosCompiler::~RosCompiler()
 
 BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize)
 {
+<<<<<<< HEAD
 	assert(puiShaderCodeSize);
 	*puiShaderCodeSize = 0;
 	
@@ -65,8 +66,17 @@ BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize)
     __debugbreak();
 
 	UINT versionToken = m_pCode[0];
+=======
+    assert(puiShaderCodeSize);
+    *puiShaderCodeSize = 0;
+    
+    Disassemble_Signatures();
+    Disassemble_HLSL();
+    
+    UINT versionToken = m_pCode[0];
+>>>>>>> origin/master
     UINT programType = (versionToken & D3D10_SB_TOKENIZED_PROGRAM_TYPE_MASK) >> D3D10_SB_TOKENIZED_PROGRAM_TYPE_SHIFT;
-	
+    
     if (D3D10_SB_VERTEX_SHADER == programType)
     {
         // Implement vertex shader compiling
@@ -101,9 +111,13 @@ BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize)
         *pShaderCode++ = 0x009e7000;
         *pShaderCode++ = 0x500009e7;    // nop; nop; sbdone
 
+<<<<<<< HEAD
 #if DBG
 		Disassemble_HW();
 #endif // DBG
+=======
+        Disassemble_HW();
+>>>>>>> origin/master
 
         *puiShaderCodeSize = PAGE_SIZE;
         return TRUE;

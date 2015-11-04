@@ -33,8 +33,8 @@ typedef enum D3D11_SB_OPCODE_CLASS
 
 struct CInstructionInfo
 {
-	CInstructionInfo() {}
-	~CInstructionInfo()	{}
+    CInstructionInfo() {}
+    ~CInstructionInfo()    {}
 
     void Set (BYTE NumDstOperands, BYTE NumSrcOperands, LPCSTR Name, D3D11_SB_OPCODE_CLASS OpClass)
     {
@@ -1224,8 +1224,8 @@ public:
     {
         if (m_OpCode == D3D10_SB_OPCODE_CUSTOMDATA)
         {
-			delete[] m_CustomData.pData;
-			m_CustomData.pData = NULL;
+            delete[] m_CustomData.pData;
+            m_CustomData.pData = NULL;
         }
     }
 
@@ -1235,8 +1235,8 @@ public:
         {
             if (m_OpCode == D3D10_SB_OPCODE_CUSTOMDATA)
             {
-				delete [] m_CustomData.pData;
-				m_CustomData.pData = NULL;
+                delete [] m_CustomData.pData;
+                m_CustomData.pData = NULL;
             }
 
             memset(this, 0, sizeof(CInstruction));
@@ -1403,8 +1403,8 @@ public:
 
         m_BufferSize = 1024;
 
-		IFCOOM((m_dwFunc = new UINT[m_BufferSize]));
-		
+        IFCOOM((m_dwFunc = new UINT[m_BufferSize]));
+        
         Reset();
 
 Cleanup:

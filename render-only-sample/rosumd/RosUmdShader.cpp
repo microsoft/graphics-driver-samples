@@ -24,8 +24,8 @@ RosUmdShader::Standup(
 void
 RosUmdShader::Teardown()
 {
-	delete m_pCompiler;
-	delete[] m_pCode;
+    delete m_pCompiler;
+    delete[] m_pCode;
 
     m_hwShaderCode.Teardown();
 }
@@ -57,10 +57,10 @@ RosUmdPipelineShader::Standup(
     m_pCompiler = RosCompilerCreate(m_pCode,
                                     m_numInputSignatureEntries,
                                     m_pInputSignatureEntries,
-									m_numOutputSignatureEntries,
+                                    m_numOutputSignatureEntries,
                                     m_pOutputSignatureEntries,
-		                            0,
-		                            NULL);
+                                    0,
+                                    NULL);
 
     if (m_pCompiler &&
         m_pCompiler->Compile(&m_hwShaderCodeSize) &&
@@ -71,7 +71,7 @@ RosUmdPipelineShader::Standup(
             m_hwShaderCodeSize);
 
         {
-		    D3D10DDI_MAPPED_SUBRESOURCE mappedSubRes = { 0 };
+            D3D10DDI_MAPPED_SUBRESOURCE mappedSubRes = { 0 };
 
             m_hwShaderCode.Map(
                 m_pDevice,

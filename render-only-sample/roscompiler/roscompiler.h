@@ -11,26 +11,26 @@ class RosCompiler
 public:
 
     RosCompiler(UINT *pCode,
-		UINT numInputSignatureEntries,
-		D3D11_1DDIARG_SIGNATURE_ENTRY *pInputSignatureEntries,
-		UINT numOutputSignatureEntries,
-		D3D11_1DDIARG_SIGNATURE_ENTRY *pOutputSignatureEntries,
-		UINT numPatchConstantSignatureEntries,
-	    D3D11_1DDIARG_SIGNATURE_ENTRY *pPatchConstantSignatureEntries);
+        UINT numInputSignatureEntries,
+        D3D11_1DDIARG_SIGNATURE_ENTRY *pInputSignatureEntries,
+        UINT numOutputSignatureEntries,
+        D3D11_1DDIARG_SIGNATURE_ENTRY *pOutputSignatureEntries,
+        UINT numPatchConstantSignatureEntries,
+        D3D11_1DDIARG_SIGNATURE_ENTRY *pPatchConstantSignatureEntries);
     ~RosCompiler();
 
-	BOOLEAN Compile(UINT * puiShaderCodeSize);
-	BYTE *GetShaderCode();
+    BOOLEAN Compile(UINT * puiShaderCodeSize);
+    BYTE *GetShaderCode();
 
 private:
-	void Disassemble_HLSL()	{ HLSLDisasm().Run(m_pCode); }
-	void Disassemble_HW()
-	{
+    void Disassemble_HLSL()    { HLSLDisasm().Run(m_pCode); }
+    void Disassemble_HW()
+    {
 #if VC4
-		Vc4Disasm().Run((const VC4_QPU_INSTRUCTION*)m_pHwCode, m_HwCodeSize);
+        Vc4Disasm().Run((const VC4_QPU_INSTRUCTION*)m_pHwCode, m_HwCodeSize);
 #endif // VC4
-	}
-	
+    }
+    
     void Disassemble_Signatures()
     {
         HLSLDisasm().Run("Input Signature Entries", m_pInputSignatureEntries, m_numInputSignatureEntries);
@@ -48,14 +48,14 @@ private:
     D3D11_1DDIARG_SIGNATURE_ENTRY *m_pInputSignatureEntries;
     UINT m_numOutputSignatureEntries;
     D3D11_1DDIARG_SIGNATURE_ENTRY *m_pOutputSignatureEntries;
-	UINT m_numPatchConstantSignatureEntries;
-	D3D11_1DDIARG_SIGNATURE_ENTRY *m_pPatchConstantSignatureEntries;
-	
-	//
-	// Hardware code.
-	//
-	BYTE *m_pHwCode;
-	UINT m_HwCodeSize;
+    UINT m_numPatchConstantSignatureEntries;
+    D3D11_1DDIARG_SIGNATURE_ENTRY *m_pPatchConstantSignatureEntries;
+    
+    //
+    // Hardware code.
+    //
+    BYTE *m_pHwCode;
+    UINT m_HwCodeSize;
 };
 
 RosCompiler* RosCompilerCreate(UINT *pCode,
@@ -63,5 +63,5 @@ RosCompiler* RosCompilerCreate(UINT *pCode,
                                D3D11_1DDIARG_SIGNATURE_ENTRY *pInputSignatureEntries,
                                UINT numOutputSignatureEntries,
                                D3D11_1DDIARG_SIGNATURE_ENTRY *pOutputSignatureEntries,
-							   UINT numPatchConstantSignatureEntries,
-							   D3D11_1DDIARG_SIGNATURE_ENTRY *pPatchConstantSignatureEntries);
+                               UINT numPatchConstantSignatureEntries,
+                               D3D11_1DDIARG_SIGNATURE_ENTRY *pPatchConstantSignatureEntries);

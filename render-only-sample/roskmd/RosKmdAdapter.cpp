@@ -35,7 +35,7 @@ RosKmAdapter::RosKmAdapter(IN_CONST_PDEVICE_OBJECT PhysicalDeviceObject, OUT_PPV
     // Set initial power management state.
     m_PowerManagementStarted = FALSE;
     m_AdapterPowerDState = PowerDeviceD0; // Device is at D0 at startup
-	m_NumPowerComponents = 0;
+    m_NumPowerComponents = 0;
     RtlZeroMemory(&m_EnginePowerFState[0], sizeof(m_EnginePowerFState)); // Components are F0 at startup.
 
     RtlZeroMemory(&m_deviceId, sizeof(m_deviceId));
@@ -736,24 +736,24 @@ RosKmAdapter::Start(
 
         RosKmAcpiReader acpiReader(this, DISPLAY_ADAPTER_HW_ID);
         acpiStatus = acpiReader.Read(ACPI_METHOD_HARDWARE_ID);
-		if (NT_SUCCESS(acpiStatus) && (acpiReader.GetOutputArgumentCount() == 1))
-		{
-			RosKmAcpiArgumentParser acpiParser(&acpiReader, NULL);
-			char *pDeviceId;
-			ULONG DeviceIdLength;
-			acpiStatus = acpiParser.GetAnsiString(&pDeviceId, &DeviceIdLength);
-			if (NT_SUCCESS(acpiStatus) && DeviceIdLength)
-			{
-				m_deviceIdLength = min(DeviceIdLength, sizeof(m_deviceId));
-				RtlCopyMemory(&m_deviceId[0], pDeviceId, m_deviceIdLength);
-			}
-		}
+        if (NT_SUCCESS(acpiStatus) && (acpiReader.GetOutputArgumentCount() == 1))
+        {
+            RosKmAcpiArgumentParser acpiParser(&acpiReader, NULL);
+            char *pDeviceId;
+            ULONG DeviceIdLength;
+            acpiStatus = acpiParser.GetAnsiString(&pDeviceId, &DeviceIdLength);
+            if (NT_SUCCESS(acpiStatus) && DeviceIdLength)
+            {
+                m_deviceIdLength = min(DeviceIdLength, sizeof(m_deviceId));
+                RtlCopyMemory(&m_deviceId[0], pDeviceId, m_deviceIdLength);
+            }
+        }
     }
 
-	//
-	// Initialize power component data.
-	//
-	InitializePowerComponentInfo();
+    //
+    // Initialize power component data.
+    //
+    InitializePowerComponentInfo();
     CM_PARTIAL_RESOURCE_LIST       *pResourceList = &m_deviceInfo.TranslatedResourceList->List->PartialResourceList;
     CM_PARTIAL_RESOURCE_DESCRIPTOR *pResource = &pResourceList->PartialDescriptors[0];
 

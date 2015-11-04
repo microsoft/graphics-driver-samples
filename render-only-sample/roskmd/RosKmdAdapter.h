@@ -289,10 +289,10 @@ public:
         return rosKmAdapter;
     }
 
-	DXGKRNL_INTERFACE* GetDxgkInterface()
-	{
-		return &m_DxgkInterface;
-	}
+    DXGKRNL_INTERFACE* GetDxgkInterface()
+    {
+        return &m_DxgkInterface;
+    }
 
     void QueueDmaBuffer(IN_CONST_PDXGKARG_SUBMITCOMMAND pSubmitCommand);
 
@@ -469,18 +469,18 @@ public:
 
     DEVICE_POWER_STATE          m_AdapterPowerDState;
     BOOLEAN                     m_PowerManagementStarted;
-	UINT                        m_NumPowerComponents;
-	DXGK_POWER_RUNTIME_COMPONENT m_PowerComponents[C_ROSD_GPU_ENGINE_COUNT];
+    UINT                        m_NumPowerComponents;
+    DXGK_POWER_RUNTIME_COMPONENT m_PowerComponents[C_ROSD_GPU_ENGINE_COUNT];
     UINT                         m_EnginePowerFState[C_ROSD_GPU_ENGINE_COUNT];
-	
+    
     UINT                        m_NumNodes;
     DXGK_WDDMVERSION            m_WDDMVersion;
 
 public:
 
-	NTSTATUS
-		InitializePowerComponentInfo();
-		
+    NTSTATUS
+        InitializePowerComponentInfo();
+        
     NTSTATUS 
         GetNumPowerComponents();
 

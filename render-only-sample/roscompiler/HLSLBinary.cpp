@@ -614,7 +614,7 @@ __checkReturn HRESULT CShaderCodeParser::ParseInstruction(CInstruction* pInstruc
         else
         {
             pInstruction->m_CustomData.DataSizeInBytes = (*m_pCurrentToken-2)*4;
-			IFCOOM((pInstruction->m_CustomData.pData = new UINT[*m_pCurrentToken - 2]));
+            IFCOOM((pInstruction->m_CustomData.pData = new UINT[*m_pCurrentToken - 2]));
 
             memcpy(pInstruction->m_CustomData.pData, m_pCurrentToken+1, (*m_pCurrentToken - 2)*4);
         }

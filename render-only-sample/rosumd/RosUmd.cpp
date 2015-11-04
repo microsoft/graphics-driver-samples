@@ -24,7 +24,7 @@ BOOL WINAPI DllMain(
     {
     case( DLL_PROCESS_ATTACH ):
         {
-			InitializeShaderCompilerLibrary();
+            InitializeShaderCompilerLibrary();
             g_hDLL = hmod;
         } break;
 

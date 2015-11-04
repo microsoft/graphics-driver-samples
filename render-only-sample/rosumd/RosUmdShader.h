@@ -10,7 +10,7 @@ public:
 
     RosUmdShader(RosUmdDevice * pDevice)
         : m_pDevice(pDevice),
-		  m_pCompiler(NULL)
+          m_pCompiler(NULL)
     {
     }
 
@@ -36,9 +36,9 @@ protected:
 
     RosUmdDevice *                  m_pDevice;
     RosUmdResource                  m_hwShaderCode;
-	UINT							m_hwShaderCodeSize;
-	
-	RosCompiler *                   m_pCompiler;
+    UINT                            m_hwShaderCodeSize;
+    
+    RosCompiler *                   m_pCompiler;
 };
 
 inline RosUmdShader* RosUmdShader::CastFrom(D3D10DDI_HSHADER hShader)
