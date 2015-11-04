@@ -54,7 +54,6 @@ RosCompiler::~RosCompiler()
 
 BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize)
 {
-<<<<<<< HEAD
 	assert(puiShaderCodeSize);
 	*puiShaderCodeSize = 0;
 	
@@ -63,18 +62,7 @@ BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize)
 	Disassemble_HLSL();
 #endif // DBG
 	
-    __debugbreak();
-
 	UINT versionToken = m_pCode[0];
-=======
-    assert(puiShaderCodeSize);
-    *puiShaderCodeSize = 0;
-    
-    Disassemble_Signatures();
-    Disassemble_HLSL();
-    
-    UINT versionToken = m_pCode[0];
->>>>>>> origin/master
     UINT programType = (versionToken & D3D10_SB_TOKENIZED_PROGRAM_TYPE_MASK) >> D3D10_SB_TOKENIZED_PROGRAM_TYPE_SHIFT;
     
     if (D3D10_SB_VERTEX_SHADER == programType)
@@ -110,15 +98,9 @@ BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize)
         *pShaderCode++ = 0x100009e7;    // nop; nop; nop
         *pShaderCode++ = 0x009e7000;
         *pShaderCode++ = 0x500009e7;    // nop; nop; sbdone
-
-<<<<<<< HEAD
 #if DBG
 		Disassemble_HW();
 #endif // DBG
-=======
-        Disassemble_HW();
->>>>>>> origin/master
-
         *puiShaderCodeSize = PAGE_SIZE;
         return TRUE;
 #else
