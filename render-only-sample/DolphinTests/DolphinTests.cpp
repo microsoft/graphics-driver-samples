@@ -1045,7 +1045,7 @@ void SaveDolphin(int iFrame)
     SaveBMP(fileName, pd3dDevice, pStaging);
 }
 
-int APIENTRY main()
+int main()
 {
     InitD3D();
     InitDolphin();
