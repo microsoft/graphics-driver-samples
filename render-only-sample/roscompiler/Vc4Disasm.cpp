@@ -1,6 +1,8 @@
 #include "roscompiler.h"
 #include "Vc4Disasm.hpp"
 
+#if VC4
+
 static char* VC4_QPU_Name_Signaling_Bits[VC4_QPU_SIG_ARRAY_SIZE] = { NULL };
 static char* VC4_QPU_Name_Unpack[VC4_QPU_UNPACK_ARRAY_SIZE] = { NULL };
 static char* VC4_QPU_Name_Pack_A[VC4_QPU_PACK_A_ARRAY_SIZE] = { NULL };
@@ -227,14 +229,6 @@ void __stdcall VC4_InitializeName()
     VC_QPU_Name_Empty = "";
 }
 
-#define VC4_QPU_IS_OPCODE_ADD_MOV(Inst) ((VC4_QPU_GET_OPCODE_ADD(Inst) == VC4_QPU_OPCODE_ADD_OR) && (VC4_QPU_GET_ADD_A(Inst) == VC4_QPU_GET_ADD_B(Inst)))
-#define VC4_QPU_IS_OPCODE_MUL_MOV(Inst) ((VC4_QPU_GET_OPCODE_MUL(Inst) == VC4_QPU_OPCODE_MUL_V8MIN) && (VC4_QPU_GET_MUL_A(Inst) == VC4_QPU_GET_MUL_B(Inst)))
-
-#define VC4_QPU_IS_OPCODE_ADD_NOP(Inst) (VC4_QPU_GET_OPCODE_ADD(Inst) == VC4_QPU_OPCODE_ADD_NOP)
-#define VC4_QPU_IS_OPCODE_MUL_NOP(Inst) (VC4_QPU_GET_OPCODE_MUL(Inst) == VC4_QPU_OPCODE_MUL_NOP)
-
-#define VC4_QPU_IS_OPCODE_LOAD_SM(Inst) (VC4_QPU_GET_SIG(Inst) == VC4_QPU_SIG_ALU_WITH_RADDR_B)
-
 HRESULT Vc4Disasm::ParseSignature(VC4_QPU_INSTRUCTION Instruction)
 {
     this->xprintf("%s\t", VC4_QPU_Name_Signaling_Bits[VC4_QPU_GET_SIG(Instruction)]);
@@ -293,7 +287,7 @@ HRESULT Vc4Disasm::ParseWriteAddr(DWORD waddr, bool bRegfile_A)
 
 HRESULT Vc4Disasm::ParseWrite(VC4_QPU_INSTRUCTION Instruction, bool bAddOp, bool bShowPack)
 {
-    bool bRegfile_A = ((bAddOp == true) == (VC4_QPU_IS_WRITE_SWAP(Instruction) == 0)) ? true : false;
+    bool bRegfile_A = ((bAddOp == true) == (VC4_QPU_IS_WRITESWAP_SET(Instruction) == 0)) ? true : false;
     ParseWriteAddr(bAddOp ? VC4_QPU_GET_WADDR_ADD(Instruction) : VC4_QPU_GET_WADDR_MUL(Instruction), bRegfile_A);
     if (bShowPack)
     {
@@ -366,7 +360,7 @@ HRESULT Vc4Disasm::ParseAddOp(VC4_QPU_INSTRUCTION Instruction)
 {
     this->xprintf("%s%s%s ",
         (VC4_QPU_IS_OPCODE_ADD_MOV(Instruction) ? VC4_QPU_Name_Op_Move : VC4_QPU_Name_Op_Add[VC4_QPU_GET_OPCODE_ADD(Instruction)]),
-        (VC4_QPU_IS_SETFLAGS(Instruction) ? VC4_QPU_Name_SetFlag : VC_QPU_Name_Empty),
+        (VC4_QPU_IS_SETFLAGS_SET(Instruction) ? VC4_QPU_Name_SetFlag : VC_QPU_Name_Empty),
         (VC4_QPU_IS_OPCODE_ADD_NOP(Instruction) ? VC_QPU_Name_Empty : VC4_QPU_Name_Cond[VC4_QPU_GET_COND_ADD(Instruction)]));
     if (!VC4_QPU_IS_OPCODE_ADD_NOP(Instruction))
     {
@@ -386,7 +380,7 @@ HRESULT Vc4Disasm::ParseMulOp(VC4_QPU_INSTRUCTION Instruction)
 {
     this->xprintf("%s%s%s ",
         (VC4_QPU_IS_OPCODE_MUL_MOV(Instruction) ? VC4_QPU_Name_Op_Move : VC4_QPU_Name_Op_Mul[VC4_QPU_GET_OPCODE_MUL(Instruction)]),
-        (VC4_QPU_IS_SETFLAGS(Instruction) ? VC4_QPU_Name_SetFlag : VC_QPU_Name_Empty),
+        (VC4_QPU_IS_SETFLAGS_SET(Instruction) ? VC4_QPU_Name_SetFlag : VC_QPU_Name_Empty),
         (VC4_QPU_IS_OPCODE_MUL_NOP(Instruction) ? VC_QPU_Name_Empty : VC4_QPU_Name_Cond[VC4_QPU_GET_COND_MUL(Instruction)]));
     if (!VC4_QPU_IS_OPCODE_MUL_NOP(Instruction))
     {
@@ -415,7 +409,7 @@ HRESULT Vc4Disasm::ParseLoadImmInstruction(VC4_QPU_INSTRUCTION Instruction)
     this->xprintf("%s%s%s ",
         VC4_QPU_Name_Op_Move,
         ((VC4_QPU_GET_IMMEDIATE_TYPE(Instruction) == VC4_QPU_IMMEDIATE_TYPE_32) ? "" : (VC4_QPU_GET_IMMEDIATE_TYPE(Instruction) == VC4_QPU_IMMEDIATE_TYPE_PER_ELEMENT_SIGNED) ? "_per_element_signed" : (VC4_QPU_GET_IMMEDIATE_TYPE(Instruction) == VC4_QPU_IMMEDIATE_TYPE_PER_ELEMENT_UNSIGNED) ? "per_element_unsigned" : "Invalid"),
-        (VC4_QPU_IS_SETFLAGS(Instruction) ? VC4_QPU_Name_SetFlag : VC_QPU_Name_Empty));
+        (VC4_QPU_IS_SETFLAGS_SET(Instruction) ? VC4_QPU_Name_SetFlag : VC_QPU_Name_Empty));
     if (VC4_QPU_GET_WADDR_ADD(Instruction) != VC4_QPU_WADDR_NOP)
     {
         ParseWrite(Instruction, true);
@@ -510,3 +504,5 @@ Vc4Disasm::Run(const VC4_QPU_INSTRUCTION* pShader, ULONG ShaderSize)
     }
 	return S_OK;
 }
+
+#endif

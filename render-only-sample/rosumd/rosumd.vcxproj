@@ -227,8 +227,8 @@
     <Link>
       <ModuleDefinitionFile>RosUmd.def</ModuleDefinitionFile>
       <AdditionalDependencies>%(AdditionalDependencies);roscompiler.lib</AdditionalDependencies>
-      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
     </Link>
     <ProjectReference>
       <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
@@ -245,6 +245,9 @@
     </ClCompile>
     <Link>
       <ModuleDefinitionFile>RosUmd.def</ModuleDefinitionFile>
+      <AdditionalDependencies>%(AdditionalDependencies);roscompiler.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -260,8 +263,8 @@
     <Link>
       <ModuleDefinitionFile>RosUmd.def</ModuleDefinitionFile>
       <AdditionalDependencies>%(AdditionalDependencies);roscompiler.lib</AdditionalDependencies>
-      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
     </Link>
     <ProjectReference>
       <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
@@ -278,6 +281,9 @@
     </ClCompile>
     <Link>
       <ModuleDefinitionFile>RosUmd.def</ModuleDefinitionFile>
+      <AdditionalDependencies>%(AdditionalDependencies);roscompiler.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
@@ -293,8 +299,8 @@
     <Link>
       <ModuleDefinitionFile>RosUmd.def</ModuleDefinitionFile>
       <AdditionalDependencies>%(AdditionalDependencies);roscompiler.lib</AdditionalDependencies>
-      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
     </Link>
     <ProjectReference>
       <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
@@ -311,6 +317,9 @@
     </ClCompile>
     <Link>
       <ModuleDefinitionFile>RosUmd.def</ModuleDefinitionFile>
+      <AdditionalDependencies>%(AdditionalDependencies);roscompiler.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
@@ -326,8 +335,8 @@
     <Link>
       <ModuleDefinitionFile>RosUmd.def</ModuleDefinitionFile>
       <AdditionalDependencies>%(AdditionalDependencies);roscompiler.lib</AdditionalDependencies>
-      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
     </Link>
     <ProjectReference>
       <UseLibraryDependencyInputs>false</UseLibraryDependencyInputs>
@@ -344,6 +353,9 @@
     </ClCompile>
     <Link>
       <ModuleDefinitionFile>RosUmd.def</ModuleDefinitionFile>
+      <AdditionalDependencies>%(AdditionalDependencies);roscompiler.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
+      <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
