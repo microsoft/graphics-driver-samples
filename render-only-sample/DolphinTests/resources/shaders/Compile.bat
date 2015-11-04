@@ -16,6 +16,3 @@ call fxc /T vs_4_0_level_9_1 /E "ShadeSeaFloorVertex" /Fo SeaFloor.xvu /Fc SeaFl
 
 call fxc /T ps_4_0_level_9_1 /E "ShadeCausticsPixel" /Fo ShadeCausticsPixel.xpu /Fc ShadeCausticsPixel.txt Dolphin.psh
 
-call fxc /T vs_4_0_level_9_1 /E "main" /Fo TextureQuad.xvu /Fc TextureQuad_vs.txt TextureQuad.vsh
-
-call fxc /T ps_4_0_level_9_1 /E "main" /Fo TextureQuad.xpu /Fc TextureQuad_ps.txt TextureQuad.psh

@@ -25,17 +25,17 @@ struct VSOUT
 //--------------------------------------------------------------------------------------
 // Pixel shader constants
 //--------------------------------------------------------------------------------------
-sampler SamplerSkin;
-sampler SamplerCaustics;
+sampler SamplerSkin     : register(s0);
+sampler SamplerCaustics : register(s1);
 
-cbuffer cb0
+cbuffer cb0 : register(b0)
 {
-    uniform float3 g_vAmbient       : register(c0); // Material ambient color
-    uniform float4 g_vFogColor      : register(c1); // Fog color
+    uniform float3 g_vAmbient       : packoffset(c0); // Material ambient color
+    uniform float4 g_vFogColor      : packoffset(c1); // Fog color
 }
 
-Texture2D TextureSkin;
-Texture2D TextureCaustics;
+Texture2D TextureSkin     : register(t0);
+Texture2D TextureCaustics : register(t1);
 
 //--------------------------------------------------------------------------------------
 // Name: ShadeCausticsPixel()

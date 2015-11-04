@@ -26,21 +26,21 @@ struct VSOUT
 // Vertex shader constants
 //--------------------------------------------------------------------------------------
 
-cbuffer cb0
+cbuffer cb0 : register(b0)
 {
-    uniform float4   g_vZero             : register(c0);  // ( 0, 0, 0, 0 )
-    uniform float4   g_vConstants        : register(c1);  // ( 1, 0.5, -, - )
-    uniform float3   g_vBlendWeights     : register(c2);  // ( fWeight1, fWeight2, fWeight3, 0 )
-    uniform float4x4 g_matWorldViewProj  : register(c4);  // world-view-projection matrix
-    uniform float4x4 g_matWorldView      : register(c8);  // world-view matrix
-    uniform float4x4 g_matView           : register(c12); // view matrix
-    uniform float4x4 g_matProjection     : register(c16); // projection matrix
-    uniform float3   g_vSeafloorLightDir : register(c20); // seafloor light direction
-    uniform float3   g_vDolphinLightDir  : register(c21); // dolphin light direction
-    uniform float4   g_vDiffuse          : register(c23);
-    uniform float4   g_vAmbient          : register(c24);
-    uniform float4   g_vFogRange         : register(c22); // ( x, fog_end, (1/(fog_end-fog_start)), x)
-    uniform float4   g_vTexGen           : register(c25);
+    uniform float4   g_vZero             : packoffset(c0);  // ( 0, 0, 0, 0 )
+    uniform float4   g_vConstants        : packoffset(c1);  // ( 1, 0.5, -, - )
+    uniform float3   g_vBlendWeights     : packoffset(c2);  // ( fWeight1, fWeight2, fWeight3, 0 )
+    uniform float4x4 g_matWorldViewProj  : packoffset(c3);  // world-view-projection matrix
+    uniform float4x4 g_matWorldView      : packoffset(c7);  // world-view matrix
+    uniform float4x4 g_matView           : packoffset(c11); // view matrix
+    uniform float4x4 g_matProjection     : packoffset(c15); // projection matrix
+    uniform float3   g_vSeafloorLightDir : packoffset(c19); // seafloor light direction
+    uniform float3   g_vDolphinLightDir  : packoffset(c20); // dolphin light direction
+    uniform float4   g_vDiffuse          : packoffset(c21);
+    uniform float4   g_vAmbient          : packoffset(c22);
+    uniform float4   g_vFogRange         : packoffset(c23); // ( x, fog_end, (1/(fog_end-fog_start)), x)
+    uniform float4   g_vTexGen           : packoffset(c24);
 }
 
 //--------------------------------------------------------------------------------------

@@ -375,13 +375,32 @@ BOOL InitD3D(VOID)
     DXGI_MODE_DESC ModeDesc = { 0 };
 
     CHR(CreateDXGIFactory(__uuidof(IDXGIFactory), (void**)&pFactory));
+#if VC4
+    for (UINT i = 0; ; i++)
+    {
+        DXGI_ADAPTER_DESC adapterDesc = { 0 };
+        CHR(pFactory->EnumAdapters(i, &pAdapter));
+        pAdapter->GetDesc(&adapterDesc);
+        if (lstrcmpi(adapterDesc.Description, TEXT("Render Only Sample Driver")) == 0)
+        {
+            break;
+        }
+        SAFE_RELEASE(pAdapter);
+    }
+#else
     CHR(pFactory->EnumAdapters(0, &pAdapter));
+#endif
     CHR(pAdapter->EnumOutputs(0, &pOutput));
 
     {
         // Create Direct3D
+#if VC4
         D3D_FEATURE_LEVEL  FeatureLevelsRequested[] = { D3D_FEATURE_LEVEL_9_1 };
         D3D_FEATURE_LEVEL  FeatureLevelsSupported = D3D_FEATURE_LEVEL_9_1;
+#else
+        D3D_FEATURE_LEVEL  FeatureLevelsRequested[] = { D3D_FEATURE_LEVEL_11_0 };
+        D3D_FEATURE_LEVEL  FeatureLevelsSupported = D3D_FEATURE_LEVEL_11_0;
+#endif 
 
         CHR(D3D11CreateDevice(pAdapter,
             D3D_DRIVER_TYPE_UNKNOWN,
