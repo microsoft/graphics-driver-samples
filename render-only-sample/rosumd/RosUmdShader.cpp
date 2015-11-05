@@ -31,6 +31,12 @@ RosUmdShader::Teardown()
 }
 
 void
+RosUmdShader::Update()
+{
+
+}
+
+void
 RosUmdPipelineShader::Standup(
     const UINT * pCode, D3D10DDI_HRTSHADER hRTShader, const D3D11_1DDIARG_STAGE_IO_SIGNATURES * pSignatures)
 {
@@ -53,6 +59,16 @@ RosUmdPipelineShader::Standup(
         m_pInputSignatureEntries = nullptr;
         m_pOutputSignatureEntries = nullptr;
     }
+}
+
+void
+RosUmdPipelineShader::Update()
+{
+    // TODO: state dirtiness check.
+    if (m_pCompiler)
+        return;
+
+    assert(m_pCode != NULL);
 
     m_pCompiler = RosCompilerCreate(m_pCode,
                                     m_numInputSignatureEntries,
@@ -135,6 +151,12 @@ RosUmdTesselationShader::Teardown()
     delete[] m_pPatchConstantSignatureEntries;
 
     RosUmdShader::Teardown();
+}
+
+void
+RosUmdTesselationShader::Update()
+{
+    //TODO:
 }
 
 

@@ -209,7 +209,7 @@ HRESULT loadRGB32(PBYTE pFile, BITMAPINFOHEADER& bmpHeader, /*_Out_writes_bytes_
 }
 } // namespace BMP
 
-HRESULT LoadBMP(PBYTE pFile, ULONG *pRetWidth, ULONG *pRetHeight, PBYTE *pRetData)
+HRESULT LoadBMP(BYTE* pFile, ULONG *pRetWidth, ULONG *pRetHeight, PBYTE *pRetData)
 {
     HRESULT             hr          = S_OK;
     BITMAPFILEHEADER    hdr         = { 0 };
@@ -665,11 +665,15 @@ CLEAN_UP:
     return hr;
 }
 
-void SaveBMP(const char* inFilePath, ID3D11Device *pDevice, ID3D11Texture2D *pTexture)
+HRESULT SaveBMP(const char* pFileName, ID3D11Device *pDevice, ID3D11Texture2D *pTexture)
 {
     FILE * fp = NULL;
 
-    errno_t result = fopen_s(&fp, inFilePath, "wb");
+    errno_t result = fopen_s(&fp, pFileName, "wb");
+    if (result != 0)
+    {
+        return E_FAIL;
+    }
 
 #pragma pack(push, 2)
 
@@ -732,32 +736,37 @@ void SaveBMP(const char* inFilePath, ID3D11Device *pDevice, ID3D11Texture2D *pTe
     fwrite(&bmpHeader, sizeof(bmpHeader), 1, fp);
     fwrite(&dibHeader, sizeof(dibHeader), 1, fp);
 
-    D3D11_MAPPED_SUBRESOURCE mappedSubresource;
+    D3D11_MAPPED_SUBRESOURCE mappedSubresource = { 0 };
     ID3D11DeviceContext *pImmediateContext;
     pDevice->GetImmediateContext(&pImmediateContext);
             
-    pImmediateContext->Map(pTexture, 0, D3D11_MAP_READ, 0, &mappedSubresource);
-
-    UINT8 * pData = reinterpret_cast<UINT8*>(mappedSubresource.pData);
-
-    DWORD padding = 0;
-    for (UINT32 row = 0; row < pixelHeight; row++)
+    if (SUCCEEDED(pImmediateContext->Map(pTexture, 0, D3D11_MAP_READ, 0, &mappedSubresource)))
     {
-        UINT8 * pRow = pData + ((pixelHeight - row - 1) * (pixelWidth * 4));
+        UINT8 * pData = reinterpret_cast<UINT8*>(mappedSubresource.pData);
+        assert(pData);
 
-        for (UINT32 col = 0; col < pixelWidth; col++)
+        DWORD padding = 0;
+        for (UINT32 row = 0; row < pixelHeight; row++)
         {
-            fwrite(pRow + 2, 1, 1, fp);
-            fwrite(pRow + 1, 1, 1, fp);
-            fwrite(pRow + 0, 1, 1, fp);
+            UINT8 * pRow = pData + ((pixelHeight - row - 1) * (pixelWidth * 4));
 
-            pRow += 4;
+            for (UINT32 col = 0; col < pixelWidth; col++)
+            {
+                fwrite(pRow + 2, 1, 1, fp);
+                fwrite(pRow + 1, 1, 1, fp);
+                fwrite(pRow + 0, 1, 1, fp);
+
+                pRow += 4;
+            }
+            if (bytePadding) fwrite(&padding, 1, bytePadding, fp);
         }
-        if (bytePadding) fwrite(&padding, 1, bytePadding, fp);
-    }
 
-    pImmediateContext->Unmap(pTexture, 0);
-    
+        pImmediateContext->Unmap(pTexture, 0);
+    }
+        
     fclose(fp);
+
+    return S_OK;
 }
+
 

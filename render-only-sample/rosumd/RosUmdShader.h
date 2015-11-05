@@ -23,6 +23,7 @@ public:
 
     void Standup(const UINT * pCode, D3D10DDI_HRTSHADER hRTShader);
     virtual void Teardown();
+    virtual void Update();
 
     RosUmdResource * GetCodeResource()
     {
@@ -69,6 +70,7 @@ public:
 
     void Standup(const UINT * pCode, D3D10DDI_HRTSHADER hRT, const D3D11_1DDIARG_STAGE_IO_SIGNATURES * pSignatures);
     void Teardown();
+    void Update();
 
 private:
 
@@ -107,6 +109,7 @@ public:
 
     void Standup(const UINT * pCode, D3D10DDI_HRTSHADER hRTShader, const D3D11_1DDIARG_TESSELLATION_IO_SIGNATURES * pSignatures);
     void Teardown();
+    void Update();
 
 private:
 
