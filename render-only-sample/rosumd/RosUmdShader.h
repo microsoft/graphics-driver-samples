@@ -8,8 +8,9 @@ class RosUmdShader
 {
 public:
 
-    RosUmdShader(RosUmdDevice * pDevice)
+    RosUmdShader(RosUmdDevice * pDevice, D3D10_SB_TOKENIZED_PROGRAM_TYPE Type)
         : m_pDevice(pDevice),
+          m_ProgramType(Type),
           m_pCompiler(NULL)
     {
     }
@@ -31,6 +32,8 @@ public:
     }
 
 protected:
+
+    D3D10_SB_TOKENIZED_PROGRAM_TYPE m_ProgramType;
 
     UINT *                          m_pCode;
     D3D10DDI_HRTSHADER              m_hRTShader;
@@ -56,8 +59,8 @@ class RosUmdPipelineShader : public RosUmdShader
 {
 public:
 
-    RosUmdPipelineShader(RosUmdDevice *pDevice)
-        : RosUmdShader(pDevice)
+    RosUmdPipelineShader(RosUmdDevice *pDevice, D3D10_SB_TOKENIZED_PROGRAM_TYPE Type)
+        : RosUmdShader(pDevice, Type)
     {
     }
 
@@ -95,8 +98,8 @@ class RosUmdTesselationShader : public RosUmdShader
 {
 public:
 
-    RosUmdTesselationShader(RosUmdDevice *pDevice)
-        : RosUmdShader(pDevice)
+    RosUmdTesselationShader(RosUmdDevice *pDevice, D3D10_SB_TOKENIZED_PROGRAM_TYPE Type)
+        : RosUmdShader(pDevice, Type)
     {
     }
 

@@ -70,7 +70,8 @@ RosUmdPipelineShader::Update()
 
     assert(m_pCode != NULL);
 
-    m_pCompiler = RosCompilerCreate(m_pCode,
+    m_pCompiler = RosCompilerCreate(m_ProgramType,
+                                    m_pCode,
                                     m_numInputSignatureEntries,
                                     m_pInputSignatureEntries,
                                     m_numOutputSignatureEntries,

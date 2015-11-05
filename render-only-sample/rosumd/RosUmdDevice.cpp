@@ -312,7 +312,7 @@ void RosUmdDevice::CreatePixelShader(
     D3D10DDI_HRTSHADER hRTShader,
     const D3D11_1DDIARG_STAGE_IO_SIGNATURES* pSignatures)
 {
-    RosUmdPipelineShader* pPipelineShader = new (hShader.pDrvPrivate) RosUmdPipelineShader(this);
+    RosUmdPipelineShader* pPipelineShader = new (hShader.pDrvPrivate) RosUmdPipelineShader(this, D3D10_SB_PIXEL_SHADER);
 
     pPipelineShader->Standup(pCode, hRTShader, pSignatures);
 }
@@ -323,7 +323,7 @@ void RosUmdDevice::CreateVertexShader(
     D3D10DDI_HRTSHADER hRTShader,
     const D3D11_1DDIARG_STAGE_IO_SIGNATURES* pSignatures)
 {
-    RosUmdPipelineShader* pPipelineShader = new (hShader.pDrvPrivate) RosUmdPipelineShader(this);
+    RosUmdPipelineShader* pPipelineShader = new (hShader.pDrvPrivate) RosUmdPipelineShader(this, D3D10_SB_VERTEX_SHADER);
 
     pPipelineShader->Standup(pCode, hRTShader, pSignatures);
 }
@@ -334,7 +334,7 @@ void RosUmdDevice::CreateGeometryShader(
     D3D10DDI_HRTSHADER hRTShader,
     const D3D11_1DDIARG_STAGE_IO_SIGNATURES* pSignatures)
 {
-    RosUmdPipelineShader* pPipelineShader = new (hShader.pDrvPrivate) RosUmdPipelineShader(this);
+    RosUmdPipelineShader* pPipelineShader = new (hShader.pDrvPrivate) RosUmdPipelineShader(this, D3D10_SB_GEOMETRY_SHADER);
 
     pPipelineShader->Standup(pCode, hRTShader, pSignatures);
 }
@@ -344,7 +344,7 @@ void RosUmdDevice::CreateComputeShader(
     D3D10DDI_HSHADER hShader,
     D3D10DDI_HRTSHADER hRTShader)
 {
-    RosUmdPipelineShader* pPipelineShader = new (hShader.pDrvPrivate) RosUmdPipelineShader(this);
+    RosUmdPipelineShader* pPipelineShader = new (hShader.pDrvPrivate) RosUmdPipelineShader(this, D3D11_SB_COMPUTE_SHADER);
 
     pPipelineShader->Standup(pCode, hRTShader, NULL);
 }
@@ -353,9 +353,10 @@ void RosUmdDevice::CreateTessellationShader(
     const UINT * pCode,
     D3D10DDI_HSHADER hShader,
     D3D10DDI_HRTSHADER hRTShader,
-    const D3D11_1DDIARG_TESSELLATION_IO_SIGNATURES* pSignatures)
+    const D3D11_1DDIARG_TESSELLATION_IO_SIGNATURES* pSignatures,
+    D3D10_SB_TOKENIZED_PROGRAM_TYPE ProgramType)
 {
-    RosUmdTesselationShader* pTessellationShader = new (hShader.pDrvPrivate) RosUmdTesselationShader(this);
+    RosUmdTesselationShader* pTessellationShader = new (hShader.pDrvPrivate) RosUmdTesselationShader(this, ProgramType);
 
     pTessellationShader->Standup(pCode, hRTShader, pSignatures);
 }

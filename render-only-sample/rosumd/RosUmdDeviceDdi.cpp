@@ -824,7 +824,7 @@ void APIENTRY RosUmdDeviceDdi::DdiCreateHullShader(
 
     try
     {
-        pRosUmdDevice->CreateTessellationShader(pCode, hShader, hRTShader, pSignatures);
+        pRosUmdDevice->CreateTessellationShader(pCode, hShader, hRTShader, pSignatures, D3D11_SB_HULL_SHADER);
     }
 
     catch (std::exception & e)
@@ -848,7 +848,7 @@ void APIENTRY RosUmdDeviceDdi::DdiCreateDomainShader(
 
     try
     {
-        pRosUmdDevice->CreateTessellationShader(pCode, hShader, hRTShader, pSignatures);
+        pRosUmdDevice->CreateTessellationShader(pCode, hShader, hRTShader, pSignatures, D3D11_SB_DOMAIN_SHADER);
     }
 
     catch (std::exception & e)

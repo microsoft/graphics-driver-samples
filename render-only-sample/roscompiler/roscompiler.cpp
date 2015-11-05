@@ -11,7 +11,8 @@ void __stdcall InitializeShaderCompilerLibrary()
 #endif //
 }
 
-RosCompiler* RosCompilerCreate(UINT *pCode,
+RosCompiler* RosCompilerCreate(D3D10_SB_TOKENIZED_PROGRAM_TYPE ProgramType,
+                               UINT *pCode,
                                UINT numInputSignatureEntries,
                                D3D11_1DDIARG_SIGNATURE_ENTRY *pInputSignatureEntries,
                                UINT numOutputSignatureEntries,
@@ -19,7 +20,9 @@ RosCompiler* RosCompilerCreate(UINT *pCode,
                                UINT numPatchConstantSignatureEntries,
                                D3D11_1DDIARG_SIGNATURE_ENTRY *pPatchConstantSignatureEntries)
 {
-    return new RosCompiler(pCode,
+    return new RosCompiler(
+        ProgramType,
+        pCode,
         numInputSignatureEntries,
         pInputSignatureEntries,
         numOutputSignatureEntries,
@@ -28,13 +31,15 @@ RosCompiler* RosCompilerCreate(UINT *pCode,
         pPatchConstantSignatureEntries);
 }
 
-RosCompiler::RosCompiler(UINT *pCode,
+RosCompiler::RosCompiler(D3D10_SB_TOKENIZED_PROGRAM_TYPE ProgramType,
+                         UINT *pCode,
                          UINT numInputSignatureEntries,
                          D3D11_1DDIARG_SIGNATURE_ENTRY *pInputSignatureEntries,
                          UINT numOutputSignatureEntries,
                          D3D11_1DDIARG_SIGNATURE_ENTRY *pOutputSignatureEntries,
                          UINT numPatchConstantSignatureEntries,
                          D3D11_1DDIARG_SIGNATURE_ENTRY *pPatchConstantSignatureEntries) :
+    m_ProgramType(ProgramType),
     m_pCode(pCode),
     m_numInputSignatureEntries(numInputSignatureEntries),
     m_pInputSignatureEntries(pInputSignatureEntries),
@@ -57,20 +62,20 @@ BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize)
 	assert(puiShaderCodeSize);
 	*puiShaderCodeSize = 0;
 
+    assert(m_pCode);
+    assert(m_ProgramType == (D3D10_SB_TOKENIZED_PROGRAM_TYPE)((m_pCode[0] & D3D10_SB_TOKENIZED_PROGRAM_TYPE_MASK) >> D3D10_SB_TOKENIZED_PROGRAM_TYPE_SHIFT));
+
 #if DBG
     Disassemble_Signatures();
 	Disassemble_HLSL();
 #endif // DBG
-	
-	UINT versionToken = m_pCode[0];
-    UINT programType = (versionToken & D3D10_SB_TOKENIZED_PROGRAM_TYPE_MASK) >> D3D10_SB_TOKENIZED_PROGRAM_TYPE_SHIFT;
-    
-    if (D3D10_SB_VERTEX_SHADER == programType)
+        
+    if (D3D10_SB_VERTEX_SHADER == m_ProgramType)
     {
         // Implement vertex shader compiling
         __debugbreak();
     }
-    else if (D3D10_SB_PIXEL_SHADER == programType)
+    else if (D3D10_SB_PIXEL_SHADER == m_ProgramType)
     {
 #if VC4
         m_HwCodeSize = 9 * sizeof(VC4_QPU_INSTRUCTION);
@@ -106,6 +111,10 @@ BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize)
 #else
         __debugbreak();
 #endif
+    }
+    else
+    {
+        __debugbreak();
     }
    
     return FALSE;

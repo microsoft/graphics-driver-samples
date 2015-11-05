@@ -10,7 +10,9 @@ class RosCompiler
 {
 public:
 
-    RosCompiler(UINT *pCode,
+    RosCompiler(
+        D3D10_SB_TOKENIZED_PROGRAM_TYPE ProgramType,
+        UINT *pCode,
         UINT numInputSignatureEntries,
         D3D11_1DDIARG_SIGNATURE_ENTRY *pInputSignatureEntries,
         UINT numOutputSignatureEntries,
@@ -43,6 +45,7 @@ private:
     //
     // Data from runime.
     //
+    D3D10_SB_TOKENIZED_PROGRAM_TYPE m_ProgramType;
     UINT *m_pCode;
     UINT m_numInputSignatureEntries;
     D3D11_1DDIARG_SIGNATURE_ENTRY *m_pInputSignatureEntries;
@@ -58,7 +61,8 @@ private:
     UINT m_HwCodeSize;
 };
 
-RosCompiler* RosCompilerCreate(UINT *pCode,
+RosCompiler* RosCompilerCreate(D3D10_SB_TOKENIZED_PROGRAM_TYPE ProgramType,
+                               UINT *pCode,
                                UINT numInputSignatureEntries,
                                D3D11_1DDIARG_SIGNATURE_ENTRY *pInputSignatureEntries,
                                UINT numOutputSignatureEntries,
