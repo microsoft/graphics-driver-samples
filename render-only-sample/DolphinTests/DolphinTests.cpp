@@ -381,7 +381,7 @@ BOOL InitD3D(VOID)
         DXGI_ADAPTER_DESC adapterDesc = { 0 };
         CHR(pFactory->EnumAdapters(i, &pAdapter));
         pAdapter->GetDesc(&adapterDesc);
-        if (lstrcmpi(adapterDesc.Description, TEXT("Render Only Sample Driver")) == 0)
+        if (_tcsicmp(adapterDesc.Description, TEXT("Render Only Sample Driver")) == 0)
         {
             break;
         }
@@ -390,7 +390,6 @@ BOOL InitD3D(VOID)
 #else
     CHR(pFactory->EnumAdapters(0, &pAdapter));
 #endif
-    CHR(pAdapter->EnumOutputs(0, &pOutput));
 
     {
         // Create Direct3D
@@ -414,15 +413,21 @@ BOOL InitD3D(VOID)
             &pd3dContext));
     }
 
+#if VC4
+    ModeDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    ModeDesc.Width = 800;
+    ModeDesc.Height = 600;
+#else
     //
     // Get the current mode information from the output (i.e. as it is
     // currently being used for the desktop).
     //
-
+    CHR(pAdapter->EnumOutputs(0, &pOutput));
     ZeroMemory(&ModeToMatch, sizeof(ModeToMatch));
     CHR(pOutput->FindClosestMatchingMode(&ModeToMatch,
         &ModeDesc,
         pd3dDevice));
+#endif
 
     {
         D3D11_TEXTURE2D_DESC desc;
@@ -430,7 +435,7 @@ BOOL InitD3D(VOID)
         desc.ArraySize = 1;
         desc.BindFlags = D3D11_BIND_RENDER_TARGET;
         desc.CPUAccessFlags = 0;
-        desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        desc.Format = ModeDesc.Format;
         desc.Width = ModeDesc.Width;
         desc.Height = ModeDesc.Height;
         desc.MipLevels = 1;
