@@ -705,6 +705,19 @@ HRESULT SaveBMP(const char* pFileName, ID3D11Device *pDevice, ID3D11Texture2D *p
     D3D11_TEXTURE2D_DESC desc;
     pTexture->GetDesc(&desc);
 
+    boolean bSwapRGB = false;
+    switch (desc.Format)
+    {
+    case DXGI_FORMAT_B8G8R8A8_UNORM:
+        bSwapRGB = true;
+        break;
+    case DXGI_FORMAT_R8G8B8A8_UNORM:
+        break;
+    default:
+        // unsupported format
+        return E_FAIL;
+    }
+
     UINT32 pixelWidth = desc.Width;
     UINT32 pixelHeight = desc.Height;
     UINT32 byteWidthNoPadding = pixelWidth * 3;
@@ -752,9 +765,18 @@ HRESULT SaveBMP(const char* pFileName, ID3D11Device *pDevice, ID3D11Texture2D *p
 
             for (UINT32 col = 0; col < pixelWidth; col++)
             {
-                fwrite(pRow + 2, 1, 1, fp);
-                fwrite(pRow + 1, 1, 1, fp);
-                fwrite(pRow + 0, 1, 1, fp);
+                if (bSwapRGB)
+                {
+                    fwrite(pRow + 0, 1, 1, fp);
+                    fwrite(pRow + 1, 1, 1, fp);
+                    fwrite(pRow + 2, 1, 1, fp);
+                }
+                else
+                {
+                    fwrite(pRow + 2, 1, 1, fp);
+                    fwrite(pRow + 1, 1, 1, fp);
+                    fwrite(pRow + 0, 1, 1, fp);
+                }
 
                 pRow += 4;
             }
