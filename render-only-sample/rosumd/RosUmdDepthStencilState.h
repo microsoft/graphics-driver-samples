@@ -4,6 +4,8 @@
 
 class RosUmdDepthStencilState
 {
+    friend class RosUmdDevice;
+
 public:
 
     RosUmdDepthStencilState(const D3D10_DDI_DEPTH_STENCIL_DESC * desc, D3D10DDI_HRTDEPTHSTENCILSTATE & hRT) :

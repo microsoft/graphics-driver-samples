@@ -78,7 +78,10 @@ BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize)
     else if (D3D10_SB_PIXEL_SHADER == m_ProgramType)
     {
 #if VC4
-        m_HwCodeSize = 9 * sizeof(VC4_QPU_INSTRUCTION);
+        //
+        // Use a whole page for adding intrustion more easily
+        //
+        m_HwCodeSize = 512 * sizeof(VC4_QPU_INSTRUCTION);
         m_pHwCode = new BYTE[m_HwCodeSize];
 
         //
@@ -97,6 +100,8 @@ BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize)
         *pShaderCode++ = 0x115049e3;    // nop; mov r3.8b, r1
         *pShaderCode++ = 0x809e7012;
         *pShaderCode++ = 0x116049e3;    // nop; mov r3.8c, r2
+        *pShaderCode++ = 0x159cffc0;
+        *pShaderCode++ = 0x10020b27;    // mov tlbz, rb15; nop
         *pShaderCode++ = 0x159e76c0;
         *pShaderCode++ = 0x30020ba7;    // mov tlbc, r3; nop; thrend
         *pShaderCode++ = 0x009e7000;

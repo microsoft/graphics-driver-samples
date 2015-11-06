@@ -18,7 +18,8 @@ enum RosHwFormat
     X565,
     X32,
     X16,
-    X8
+    X8,
+    D24S8       // For depth stencil
 };
 
 struct RosAllocationExchange

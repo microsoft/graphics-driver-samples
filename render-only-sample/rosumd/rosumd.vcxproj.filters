@@ -99,6 +99,9 @@
     <ClInclude Include="..\roscompiler\roscompiler.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="RosUmdDepthStencilView.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="RosUmd.cpp">

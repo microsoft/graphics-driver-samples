@@ -54,5 +54,12 @@ ConvertD3D11Topology(
     return vc4PrimitiveModes[topology];
 }
 
+VC4DepthTestFunc
+ConvertD3D11DepthComparisonFunc(
+    D3D10_DDI_COMPARISON_FUNC   comparisonFunc)
+{
+    return (VC4DepthTestFunc)(comparisonFunc - 1);
+}
+
 #endif
 

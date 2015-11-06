@@ -84,7 +84,8 @@ public:
 
 #if VC4
 
-    void UpdateClearColors(UINT clearColor);
+    void UpdateClearColor(UINT clearColor);
+    void UpdateClearDepthStencil(FLOAT depthValue, UINT8 stencilValue);
 
 #endif
 

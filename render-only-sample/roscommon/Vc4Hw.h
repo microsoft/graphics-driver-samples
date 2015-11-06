@@ -498,6 +498,19 @@ typedef struct _VC4ConfigBits
 
 const VC4ConfigBits vc4ConfigBits = { VC4_CMD_CONFIG_BITS, 0 };
 
+// 0 - 7 = never, lt, eq, le, gt, ne, ge, always
+typedef enum _VC4DepthTestFunc
+{
+    VC4_DEPTH_TEST_NEVER            = 0,
+    VC4_DEPTH_TEST_LESS             = 1,
+    VC4_DEPTH_TEST_EQUAL            = 2,
+    VC4_DEPTH_TEST_LESS_EQUAL       = 3,
+    VC4_DEPTH_TEST_GREATER          = 4,
+    VC4_DEPTH_TEST_NOT_EQUAL        = 5,
+    VC4_DEPTH_TEST_GREATER_EQUAL    = 6,
+    VC4_DEPTH_TEST_ALWAYS           = 7
+} VC4DepthTestFunc;
+
 // Code: 102
 typedef struct _VC4ClipWindow
 {

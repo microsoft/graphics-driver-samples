@@ -2,6 +2,7 @@
 #include "RosUmdResource.h"
 #include "RosUmdDevice.h"
 #include "RosUmdDebug.h"
+#include <math.h>
 
 RosUmdCommandBuffer::RosUmdCommandBuffer()
 {
@@ -268,7 +269,7 @@ RosUmdCommandBuffer::UseResource(
 
 #if VC4
 
-void RosUmdCommandBuffer::UpdateClearColors(
+void RosUmdCommandBuffer::UpdateClearColor(
     UINT clearColor)
 {
     m_pCmdBufHeader->m_commandBufferHeader.m_hasVC4ClearColors = 1;
@@ -279,6 +280,22 @@ void RosUmdCommandBuffer::UpdateClearColors(
 
     pVC4ClearColor->ClearColor8    = clearColor;
     pVC4ClearColor->ClearColor8Dup = clearColor;
+}
+
+void RosUmdCommandBuffer::UpdateClearDepthStencil(
+    FLOAT depthValue,
+    UINT8 stencilValue)
+{
+    m_pCmdBufHeader->m_commandBufferHeader.m_hasVC4ClearColors = 1;
+
+    VC4ClearColors *    pVC4ClearColor = &m_pCmdBufHeader->m_commandBufferHeader.m_vc4ClearColors;
+
+    pVC4ClearColor->CommandCode = VC4_CMD_CLEAR_COLOR;
+
+    UINT    max24BitDepthValue = 0xFFFFFF;
+    pVC4ClearColor->ClearZ = (UINT)round(max24BitDepthValue*depthValue);
+
+    pVC4ClearColor->ClearStencil = stencilValue;
 }
 
 #endif

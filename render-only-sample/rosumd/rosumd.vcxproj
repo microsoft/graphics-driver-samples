@@ -66,6 +66,7 @@
     <ClInclude Include="RosUmdCommandBuffer.h" />
     <ClInclude Include="RosUmdDebug.h" />
     <ClInclude Include="RosUmdDepthStencilState.h" />
+    <ClInclude Include="RosUmdDepthStencilView.h" />
     <ClInclude Include="RosUmdDevice.h" />
     <ClInclude Include="RosUmdDeviceDdi.h" />
     <ClInclude Include="RosUmdElementLayout.h" />

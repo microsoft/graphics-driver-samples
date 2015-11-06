@@ -190,7 +190,14 @@ RosUmdResource::CalculateMemoryLayout(
 #endif
 
             // TODO(bhouse) Need mapping code from resource DXGI format to hw format
-            m_hwFormat = RosHwFormat::X8888;
+            if (m_bindFlags & D3D10_DDI_BIND_DEPTH_STENCIL)
+            {
+                m_hwFormat = RosHwFormat::D24S8;
+            }
+            else
+            {
+                m_hwFormat = RosHwFormat::X8888;
+            }
 
             // Using system memory linear MipMap as example
             m_hwWidthPixels = m_mip0Info.TexelWidth;
@@ -224,7 +231,7 @@ RosUmdResource::CalculateMemoryLayout(
                 assert(m_hwLayout == RosHwLayout::Tiled);
                 assert(m_mipLevels == 1);
 
-                assert(m_hwFormat == RosHwFormat::X8888);
+                assert((m_hwFormat == RosHwFormat::X8888) || (m_hwFormat == RosHwFormat::D24S8));
                 UINT sizeTileBytes = 64 * 64 * 4;
 
                 m_hwSizeBytes = m_hwWidthTiles * m_hwHeightTiles * sizeTileBytes;

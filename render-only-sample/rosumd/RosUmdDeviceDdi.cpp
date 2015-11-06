@@ -10,6 +10,7 @@
 #include "RosUmdShader.h"
 #include "RosUmdBlendState.h"
 #include "RosUmdRenderTargetView.h"
+#include "RosUmdDepthStencilView.h"
 
 #include "RosContext.h"
 
@@ -69,7 +70,7 @@ const D3D11_1DDI_DEVICEFUNCS RosUmdDeviceDdi::s_deviceFuncs11_1 =
     RosUmdDeviceDdi::DdiSetViewports,
     RosUmdDeviceDdi::SetScissorRects_Default,
     RosUmdDeviceDdi::DdiClearRenderTargetView,
-    RosUmdDeviceDdi::ClearDepthStencilView_Default,
+    RosUmdDeviceDdi::DdiClearDepthStencilView,
     RosUmdDeviceDdi::SetPredication_Default,
     RosUmdDeviceDdi::QueryGetData_Default,
     RosUmdDeviceDdi::DdiFlush,
@@ -92,9 +93,9 @@ const D3D11_1DDI_DEVICEFUNCS RosUmdDeviceDdi::s_deviceFuncs11_1 =
     RosUmdDeviceDdi::DdiCalcPrivateRenderTargetViewSize,
     RosUmdDeviceDdi::DdiCreateRenderTargetView,
     RosUmdDeviceDdi::DdiDestroyRenderTargetView,
-    RosUmdDeviceDdi::CalcPrivateDepthStencilViewSize11_Default,
-    RosUmdDeviceDdi::CreateDepthStencilView11_Default,
-    RosUmdDeviceDdi::DestroyDepthStencilView_Default,
+    RosUmdDeviceDdi::DdiCalcPrivateDepthStencilViewSize11,
+    RosUmdDeviceDdi::DdiCreateDepthStencilView11,
+    RosUmdDeviceDdi::DdiDestroyDepthStencilView,
     RosUmdDeviceDdi::DdiCalcPrivateElementLayoutSize,
     RosUmdDeviceDdi::DdiCreateElementLayout,
     RosUmdDeviceDdi::DdiDestroyElementLayout,
@@ -1024,6 +1025,37 @@ void APIENTRY RosUmdDeviceDdi::DdiDestroyRenderTargetView(
 
 }
 
+SIZE_T APIENTRY RosUmdDeviceDdi::DdiCalcPrivateDepthStencilViewSize11(
+    D3D10DDI_HDEVICE,
+    const D3D11DDIARG_CREATEDEPTHSTENCILVIEW*)
+{
+    RosUmdLogging::Call(__FUNCTION__);
+
+    return sizeof(RosUmdDepthStencilView);
+}
+
+void APIENTRY RosUmdDeviceDdi::DdiCreateDepthStencilView11(
+    D3D10DDI_HDEVICE,
+    const D3D11DDIARG_CREATEDEPTHSTENCILVIEW* pCreate,
+    D3D10DDI_HDEPTHSTENCILVIEW hDepthStencilView,
+    D3D10DDI_HRTDEPTHSTENCILVIEW hRTDepthStencilView)
+{
+    RosUmdLogging::Call(__FUNCTION__);
+
+    RosUmdDepthStencilView * pDepthStencilView = new(hDepthStencilView.pDrvPrivate) RosUmdDepthStencilView(pCreate, hRTDepthStencilView);
+    pDepthStencilView;  // unused
+}
+
+void APIENTRY RosUmdDeviceDdi::DdiDestroyDepthStencilView(
+    D3D10DDI_HDEVICE,
+    D3D10DDI_HDEPTHSTENCILVIEW hDepthStencilView)
+{
+    RosUmdLogging::Call(__FUNCTION__);
+
+    RosUmdDepthStencilView * pDepthStencilView = RosUmdDepthStencilView::CastFrom(hDepthStencilView);
+    pDepthStencilView->~RosUmdDepthStencilView();
+}
+
 void APIENTRY RosUmdDeviceDdi::DdiClearRenderTargetView(
     D3D10DDI_HDEVICE hDevice,
     D3D10DDI_HRENDERTARGETVIEW hRenderTargetView,
@@ -1032,6 +1064,21 @@ void APIENTRY RosUmdDeviceDdi::DdiClearRenderTargetView(
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     RosUmdRenderTargetView * pRenderTargetView = RosUmdRenderTargetView::CastFrom(hRenderTargetView);
     pDevice->ClearRenderTargetView(pRenderTargetView, clearColor);
+}
+
+void APIENTRY RosUmdDeviceDdi::DdiClearDepthStencilView(
+    D3D10DDI_HDEVICE hDevice,
+    D3D10DDI_HDEPTHSTENCILVIEW hDepthStencilView,
+    UINT clearFlags,
+    FLOAT depthValue,
+    UINT8 stencilValue)
+{
+    RosUmdLogging::Call(__FUNCTION__);
+    
+    RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
+    RosUmdDepthStencilView * pDepthStencilView = RosUmdDepthStencilView::CastFrom(hDepthStencilView);
+
+    pDevice->ClearDepthStencilView(pDepthStencilView, clearFlags, depthValue, stencilValue);
 }
 
 void APIENTRY RosUmdDeviceDdi::DdiSetRenderTargets(

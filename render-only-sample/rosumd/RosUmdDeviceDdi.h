@@ -67,7 +67,7 @@ public:
     static void APIENTRY SetTextFilter_Default(D3D10DDI_HDEVICE, UINT, UINT) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY ClearUnorderedAccessViewUint_Default(D3D10DDI_HDEVICE, D3D11DDI_HUNORDEREDACCESSVIEW, const UINT[4]) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY ClearUnorderedAccessViewFloat_Default(D3D10DDI_HDEVICE, D3D11DDI_HUNORDEREDACCESSVIEW, const FLOAT[4]) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
-    static void APIENTRY ClearDepthStencilView_Default(D3D10DDI_HDEVICE, D3D10DDI_HDEPTHSTENCILVIEW, UINT, FLOAT, UINT8) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
+    static void APIENTRY DdiClearDepthStencilView(D3D10DDI_HDEVICE, D3D10DDI_HDEPTHSTENCILVIEW, UINT, FLOAT, UINT8);
     static void APIENTRY Flush_Default(D3D10DDI_HDEVICE) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static BOOL APIENTRY DdiFlush(D3D10DDI_HDEVICE, UINT);
     static void APIENTRY GenerateMips_Default(D3D10DDI_HDEVICE, D3D10DDI_HSHADERRESOURCEVIEW) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
@@ -139,9 +139,9 @@ public:
     static void APIENTRY DestroyUnorderedAccessView_Default(D3D10DDI_HDEVICE, D3D11DDI_HUNORDEREDACCESSVIEW) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static SIZE_T APIENTRY CalcPrivateDepthStencilViewSize_Default(D3D10DDI_HDEVICE, const D3D10DDIARG_CREATEDEPTHSTENCILVIEW*) { RosUmdLogging::Call(__FUNCTION__); return 0; }
     static void APIENTRY CreateDepthStencilView_Default(D3D10DDI_HDEVICE, const D3D10DDIARG_CREATEDEPTHSTENCILVIEW*, D3D10DDI_HDEPTHSTENCILVIEW, D3D10DDI_HRTDEPTHSTENCILVIEW) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
-    static SIZE_T APIENTRY CalcPrivateDepthStencilViewSize11_Default(D3D10DDI_HDEVICE, const D3D11DDIARG_CREATEDEPTHSTENCILVIEW*) { RosUmdLogging::Call(__FUNCTION__); return 0; }
-    static void APIENTRY CreateDepthStencilView11_Default(D3D10DDI_HDEVICE, const D3D11DDIARG_CREATEDEPTHSTENCILVIEW*, D3D10DDI_HDEPTHSTENCILVIEW, D3D10DDI_HRTDEPTHSTENCILVIEW) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
-    static void APIENTRY DestroyDepthStencilView_Default(D3D10DDI_HDEVICE, D3D10DDI_HDEPTHSTENCILVIEW) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
+    static SIZE_T APIENTRY DdiCalcPrivateDepthStencilViewSize11(D3D10DDI_HDEVICE, const D3D11DDIARG_CREATEDEPTHSTENCILVIEW*);
+    static void APIENTRY DdiCreateDepthStencilView11(D3D10DDI_HDEVICE, const D3D11DDIARG_CREATEDEPTHSTENCILVIEW*, D3D10DDI_HDEPTHSTENCILVIEW, D3D10DDI_HRTDEPTHSTENCILVIEW);
+    static void APIENTRY DdiDestroyDepthStencilView(D3D10DDI_HDEVICE, D3D10DDI_HDEPTHSTENCILVIEW);
 
 //    static SIZE_T APIENTRY CalcPrivateBlendStateSize_Default(D3D10DDI_HDEVICE, const D3D10_DDI_BLEND_DESC*) { RosUmdLogging::Call(__FUNCTION__); return 0; }
 //    static void APIENTRY CreateBlendState_Default(D3D10DDI_HDEVICE, const D3D10_DDI_BLEND_DESC*, D3D10DDI_HBLENDSTATE, D3D10DDI_HRTBLENDSTATE) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }

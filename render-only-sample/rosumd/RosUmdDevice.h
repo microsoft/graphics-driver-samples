@@ -23,6 +23,7 @@
 
 class RosUmdAdapter;
 class RosUmdRenderTargetView;
+class RosUmdDepthStencilView;
 class RosUmdBlendState;
 class RosUmdShader;
 class RosUmdElementLayout;
@@ -153,6 +154,7 @@ public:
     void Draw(UINT vertexCount, UINT startVertexLocation);
     void DrawIndexed(UINT indexCount, UINT startIndexLocation, INT baseVertexLocation);
     void ClearRenderTargetView(RosUmdRenderTargetView * pRenderTargetView, FLOAT clearColor[4]);
+    void ClearDepthStencilView(RosUmdDepthStencilView * pDepthStencilView, UINT clearFlags, FLOAT depth, UINT8 stencil);
 
 public:
 
@@ -205,6 +207,8 @@ public:
 
     RosUmdRenderTargetView *        m_renderTargetViews[kMaxRenderTargets];
     UINT                            m_numRenderTargetViews;
+
+    RosUmdDepthStencilView *        m_depthStencilView;
 
     RosUmdBlendState *              m_blendState;
     FLOAT                           m_blendFactor[4];

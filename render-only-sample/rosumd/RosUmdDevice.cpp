@@ -11,10 +11,12 @@
 #include "RosUmdLogging.h"
 #include "RosUmdDeviceDdi.h"
 #include "RosUmdRenderTargetView.h"
+#include "RosUmdDepthStencilView.h"
 #include "RosUmdBlendState.h"
 #include "RosUmdSampler.h"
 #include "RosUmdShader.h"
 #include "RosUmdRasterizerState.h"
+#include "RosUmdDepthStencilState.h"
 #include "RosContext.h"
 #include "RosUmdUtil.h"
 
@@ -601,12 +603,31 @@ void RosUmdDevice::ClearRenderTargetView(RosUmdRenderTargetView * pRenderTargetV
         m_commandBuffer.Flush(0);
     }
 
-    // Set clear color into command  buffer header for KMD to generate Rendering Control List
-    m_commandBuffer.UpdateClearColors(ConvertFloatColor(clearColor));
+    // Set clear color into command buffer header for KMD to generate Rendering Control List
+    m_commandBuffer.UpdateClearColor(ConvertFloatColor(clearColor));
 
 #endif
 }
 
+void RosUmdDevice::ClearDepthStencilView(RosUmdDepthStencilView * pDepthStencilView, UINT clearFlags, FLOAT depthValue, UINT8 stencilValue)
+{
+    pDepthStencilView;  // unused
+
+    // TODO[indyz]: Clear depth and stencil separately
+    clearFlags;         // unused;
+
+    //
+    // KMD issumes Clear Colors command before Draw call
+    //
+
+    if (m_flags.m_hasDrawCall)
+    {
+        m_commandBuffer.Flush(0);
+    }
+
+    // Set clear depth and stencil into command buffer header for KMD to generate Rendering Control List
+    m_commandBuffer.UpdateClearDepthStencil(depthValue, stencilValue);
+}
 
 //
 // Graphics State Management
@@ -659,8 +680,6 @@ void RosUmdDevice::SetRenderTargets(const D3D10DDI_HRENDERTARGETVIEW* phRenderTa
     pUAVInitialCounts; // unused
     phUnorderedAccessView; // unused
 
-    assert(hDepthStencilView.pDrvPrivate == NULL);
-
 #if VC4
 
     //
@@ -680,6 +699,8 @@ void RosUmdDevice::SetRenderTargets(const D3D10DDI_HRENDERTARGETVIEW* phRenderTa
         m_renderTargetViews[i] = RosUmdRenderTargetView::CastFrom(phRenderTargetView[i]);
     }
     m_numRenderTargetViews = numRTVs;
+
+    m_depthStencilView = RosUmdDepthStencilView::CastFrom(hDepthStencilView);
 }
 
 void RosUmdDevice::SetBlendState(RosUmdBlendState * pBlendState, const FLOAT pBlendFactor[4], UINT sampleMask)
@@ -974,7 +995,19 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
 
 #endif
 
-    pVC4ConfigBits->EarlyZUpdatesEnable = 1;
+    if (m_depthStencilState->m_desc.DepthEnable)
+    {
+        pVC4ConfigBits->EarlyZEnable = 1;
+
+        pVC4ConfigBits->DepthTestFunction = ConvertD3D11DepthComparisonFunc(
+                                                m_depthStencilState->m_desc.DepthFunc);
+
+        if (m_depthStencilState->m_desc.DepthWriteMask == D3D10_DDI_DEPTH_WRITE_MASK_ALL)
+        {
+            pVC4ConfigBits->EarlyZUpdatesEnable = 1;
+            pVC4ConfigBits->ZUpdatesEnable = 1;
+        }
+    }
 
     //
     // Write Viewport Offset command
