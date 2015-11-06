@@ -520,8 +520,8 @@ public:
         {
             //                X,                  Y,    Z,   W,     R,    G,    B // See Input layout.
             {   (kWidth/2) << 4,   (kHeight/4) << 4, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f },
-            {   (kWidth/4) << 4, (kHeight*3/4) << 4, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f },
-            { (kWidth*3/4) << 4, (kHeight*3/4) << 4, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f }
+            {   (kWidth/4) << 4, (kHeight*3/4) << 4, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f },
+            { (kWidth*3/4) << 4, (kHeight*3/4) << 4, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f }
         };
 #else
         SimpleVertex vertices[] =
@@ -607,6 +607,95 @@ private:
 
 };
 
+class D3DDepthStencilBuffer
+{
+
+public:
+
+    D3DDepthStencilBuffer(std::shared_ptr<D3DDevice> & inDevice, int inWidth, int inHeight)
+    {
+        D3D11_TEXTURE2D_DESC desc;
+
+        desc.ArraySize = 1;
+        desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+        desc.CPUAccessFlags = 0;
+        desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+        desc.Height = inHeight;
+        desc.MipLevels = 1;
+        desc.MiscFlags = 0;
+        desc.SampleDesc.Count = 1;
+        desc.SampleDesc.Quality = 0;
+        desc.Usage = D3D11_USAGE_DEFAULT;
+        desc.Width = inWidth;
+
+        ID3D11Texture2D * pDepthStencilBuffer;
+        HRESULT hr = inDevice->GetDevice()->CreateTexture2D(&desc, NULL, &pDepthStencilBuffer);
+        if (FAILED(hr))
+        {
+            throw std::exception("Failed to create depth stencil buffer");
+        }
+        
+        m_pDepthStencilBuffer = pDepthStencilBuffer;
+
+        ID3D11DepthStencilView * pDepthStencilView;
+        hr = inDevice->GetDevice()->CreateDepthStencilView(pDepthStencilBuffer, nullptr, &pDepthStencilView);
+        if (FAILED(hr))
+        {
+            throw std::exception("Failed to create depth stencil view");
+        }
+
+        m_pDepthStencilView = pDepthStencilView;
+    }
+
+    ~D3DDepthStencilBuffer()
+    {
+        // do nothing
+    }
+
+    ID3D11DepthStencilView * GetDepthStencilView() { return m_pDepthStencilView; }
+
+private:
+
+    D3DPointer<ID3D11Texture2D>         m_pDepthStencilBuffer;
+    D3DPointer<ID3D11DepthStencilView>  m_pDepthStencilView;
+};
+
+class D3DDepthStencilState
+{
+public:
+
+    D3DDepthStencilState(std::shared_ptr<D3DDevice> & inDevice)
+    {
+        D3D11_DEPTH_STENCIL_DESC depthStencilDesc = { 0 };
+        
+        depthStencilDesc.DepthEnable = 1;
+        depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+        depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS;
+
+        HRESULT hr;
+        ID3D11DepthStencilState * pDepthStencilState;
+
+        hr = inDevice->GetDevice()->CreateDepthStencilState(&depthStencilDesc, &pDepthStencilState);
+        if (FAILED(hr))
+        {
+            throw std::exception("Unable to create Depth Stencil State");
+        }
+
+        m_pDepthStencilState = pDepthStencilState;
+    }
+
+    ~D3DDepthStencilState()
+    {
+        // do nothing
+    }
+
+    ID3D11DepthStencilState * GetDepthStencilState() { return m_pDepthStencilState; }
+
+private:
+
+    D3DPointer<ID3D11DepthStencilState> m_pDepthStencilState;
+};
+
 class D3DEngine
 {
 public:
@@ -616,12 +705,21 @@ public:
         m_pDevice = std::shared_ptr<D3DDevice>(new D3DDevice(L"Render Only Sample Driver"));
         // m_pDevice = std::shared_ptr<D3DDevice>(new D3DDevice(L"Microsoft Basic Render Driver"));
 
-        // Create and set render target
+        // Create render target
 
         m_pRenderTarget = std::unique_ptr<D3DRenderTarget>(new D3DRenderTarget(m_pDevice, kWidth, kHeight));
 
         ID3D11RenderTargetView * pRenderTargetView = m_pRenderTarget->GetRenderTargetView();
-        m_pDevice->GetContext()->OMSetRenderTargets(1, &pRenderTargetView, nullptr);
+
+        // Create depth stencil buffer
+
+        m_pDepthStencilBuffer = std::unique_ptr<D3DDepthStencilBuffer>(new D3DDepthStencilBuffer(m_pDevice, kWidth, kHeight));
+
+        ID3D11DepthStencilView * pDepthStencilView = m_pDepthStencilBuffer->GetDepthStencilView();
+
+        // Set render target and depth stencil buffer
+
+        m_pDevice->GetContext()->OMSetRenderTargets(1, &pRenderTargetView, pDepthStencilView);
 
         // Setup the viewport
 
@@ -644,6 +742,8 @@ public:
 
         m_pIndexBuffer = std::unique_ptr<D3DIndexBuffer>(new D3DIndexBuffer(m_pDevice));
 
+        m_pDepthStencilState = std::unique_ptr<D3DDepthStencilState>(new D3DDepthStencilState(m_pDevice));
+
         // Set vertex buffer
         UINT stride = sizeof(SimpleVertex);
         UINT offset = 0;
@@ -657,12 +757,21 @@ public:
         // Set primitive topology
         m_pDevice->GetContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
+        // Set depth stencil state
+        m_pDevice->GetContext()->OMSetDepthStencilState(m_pDepthStencilState->GetDepthStencilState(), 0);
+
         m_pTexture = std::unique_ptr<D3DTexture>(new D3DTexture(m_pDevice, kWidth, kHeight));
     }
 
     void Render()
     {
         m_pDevice->GetContext()->ClearRenderTargetView(m_pRenderTarget->GetRenderTargetView(), DirectX::Colors::MidnightBlue);
+
+        m_pDevice->GetContext()->ClearDepthStencilView(
+                                    m_pDepthStencilBuffer->GetDepthStencilView(),
+                                    D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,
+                                    0.5,
+                                    3);
 
         m_pDevice->GetContext()->VSSetShader(m_pVertexShader->GetVertexShader(), nullptr, 0);
         m_pDevice->GetContext()->PSSetShader(m_pPixelShader->GetPixelShader(), nullptr, 0);
@@ -683,13 +792,15 @@ public:
 
 private:
 
-    std::shared_ptr<D3DDevice>         m_pDevice;
-    std::unique_ptr<D3DRenderTarget>   m_pRenderTarget;
-    std::unique_ptr<D3DVertexShader>   m_pVertexShader;
-    std::unique_ptr<D3DPixelShader>    m_pPixelShader;
-    std::unique_ptr<D3DVertexBuffer>   m_pVertexBuffer;
-    std::unique_ptr<D3DIndexBuffer>    m_pIndexBuffer;
-    std::unique_ptr<D3DTexture>        m_pTexture;
+    std::shared_ptr<D3DDevice>              m_pDevice;
+    std::unique_ptr<D3DRenderTarget>        m_pRenderTarget;
+    std::unique_ptr<D3DDepthStencilBuffer>  m_pDepthStencilBuffer;
+    std::unique_ptr<D3DVertexShader>        m_pVertexShader;
+    std::unique_ptr<D3DPixelShader>         m_pPixelShader;
+    std::unique_ptr<D3DVertexBuffer>        m_pVertexBuffer;
+    std::unique_ptr<D3DIndexBuffer>         m_pIndexBuffer;
+    std::unique_ptr<D3DTexture>             m_pTexture;
+    std::unique_ptr<D3DDepthStencilState>   m_pDepthStencilState;
 };
 
 int main()
