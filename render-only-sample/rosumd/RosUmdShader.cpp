@@ -66,7 +66,9 @@ RosUmdPipelineShader::Update()
 {
     // TODO: state dirtiness check.
     if (m_pCompiler)
+    {
         return;
+    }
 
     assert(m_pCode != NULL);
 

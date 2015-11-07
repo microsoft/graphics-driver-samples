@@ -38,7 +38,7 @@ HRESULT CDXUTSDKMesh::CreateVertexBuffer( ID3D11Device* pd3dDevice, SDKMESH_VERT
     InitData.pSysMem = pVertices;
     hr = pd3dDevice->CreateBuffer( &bufferDesc, &InitData, &pHeader->pVB11 );
 
-	return hr;
+    return hr;
 }
 
 //--------------------------------------------------------------------------------------
@@ -84,7 +84,7 @@ HRESULT CDXUTSDKMesh::CreateIndexBuffer( ID3D11Device* pd3dDevice, SDKMESH_INDEX
         free(pMyIndices);
     }
 
-	return hr;
+    return hr;
 }
 
 HRESULT CDXUTSDKMesh::CreateFromMemory( ID3D11Device* pDev11,
@@ -96,7 +96,7 @@ HRESULT CDXUTSDKMesh::CreateFromMemory( ID3D11Device* pDev11,
     HRESULT hr = E_FAIL;
     
     m_pDev11 = pDev11;
-	m_bCopyStatic = bCopyStatic;
+    m_bCopyStatic = bCopyStatic;
 
     // Set outstanding resources to zero
     m_NumOutstandingResources = 0;
@@ -220,7 +220,7 @@ CDXUTSDKMesh::CDXUTSDKMesh() : m_NumOutstandingResources( 0 ),
                                m_pTransformedFrameMatrices( NULL ),
                                m_pWorldPoseFrameMatrices( NULL ),
                                m_pDev11( NULL ),
-							   m_bCopyStatic( false )
+                               m_bCopyStatic( false )
 {
 }
 
@@ -234,7 +234,7 @@ CDXUTSDKMesh::~CDXUTSDKMesh()
 //--------------------------------------------------------------------------------------
 HRESULT CDXUTSDKMesh::Create( ID3D11Device* pDev11, PBYTE pMesh, ULONG MeshSize, bool bCreateAdjacencyIndices )
 {
-	return CreateFromMemory( pDev11, pMesh, MeshSize, bCreateAdjacencyIndices, true );
+    return CreateFromMemory( pDev11, pMesh, MeshSize, bCreateAdjacencyIndices, true );
 }
 
 //--------------------------------------------------------------------------------------
@@ -246,7 +246,7 @@ void CDXUTSDKMesh::Destroy()
         {
             for( UINT64 m = 0; m < m_pMeshHeader->NumMaterials; m++ )
             {
-				if( m_pDev11 )
+                if( m_pDev11 )
                 {
                     //ID3D11Resource* pRes = NULL;
                     if( m_pMaterialArray[m].pDiffuseRV11 && !IsErrorResource( m_pMaterialArray[m].pDiffuseRV11 ) )
@@ -254,21 +254,21 @@ void CDXUTSDKMesh::Destroy()
                         //m_pMaterialArray[m].pDiffuseRV11->GetResource( &pRes );
                         //SAFE_RELEASE( pRes );
 
-						m_pMaterialArray[m].pDiffuseRV11->Release();
+                        m_pMaterialArray[m].pDiffuseRV11->Release();
                     }
                     if( m_pMaterialArray[m].pNormalRV11 && !IsErrorResource( m_pMaterialArray[m].pNormalRV11 ) )
                     {
                         //m_pMaterialArray[m].pNormalRV11->GetResource( &pRes );
                         //SAFE_RELEASE( pRes );
 
-						m_pMaterialArray[m].pNormalRV11->Release();
+                        m_pMaterialArray[m].pNormalRV11->Release();
                     }
                     if( m_pMaterialArray[m].pSpecularRV11 && !IsErrorResource( m_pMaterialArray[m].pSpecularRV11 ) )
                     {
                         //m_pMaterialArray[m].pSpecularRV11->GetResource( &pRes );
                         //SAFERELEASE( pRes );
 
-						m_pMaterialArray[m].pSpecularRV11->Release();
+                        m_pMaterialArray[m].pSpecularRV11->Release();
                     }
                 }
             }
@@ -279,21 +279,21 @@ void CDXUTSDKMesh::Destroy()
     {
         for( UINT64 i = 0; i < m_pMeshHeader->NumVertexBuffers; i++ )
         {
-			if (m_pVertexBufferArray[i].pVB11)
-			{
-				m_pVertexBufferArray[i].pVB11->Release();
-			}
-		}
+            if (m_pVertexBufferArray[i].pVB11)
+            {
+                m_pVertexBufferArray[i].pVB11->Release();
+            }
+        }
     }
 
     if( m_pIndexBufferArray )
     {
         for( UINT64 i = 0; i < m_pMeshHeader->NumIndexBuffers; i++ )
         {
-			if (m_pIndexBufferArray[i].pIB11)
-			{
-				m_pIndexBufferArray[i].pIB11->Release();
-			}
+            if (m_pIndexBufferArray[i].pIB11)
+            {
+                m_pIndexBufferArray[i].pIB11->Release();
+            }
         }
     }
     
@@ -301,33 +301,33 @@ void CDXUTSDKMesh::Destroy()
     {
         for( UINT64 i = 0; i < m_pMeshHeader->NumIndexBuffers; i++ )
         {
-			if (m_pAdjacencyIndexBufferArray[i].pIB11)
-			{
-				m_pAdjacencyIndexBufferArray[i].pIB11->Release();
-			}
+            if (m_pAdjacencyIndexBufferArray[i].pIB11)
+            {
+                m_pAdjacencyIndexBufferArray[i].pIB11->Release();
+            }
         }
     }
-	
-	if (m_pAdjacencyIndexBufferArray)
-		delete [] m_pAdjacencyIndexBufferArray;
+    
+    if (m_pAdjacencyIndexBufferArray)
+        delete [] m_pAdjacencyIndexBufferArray;
 
-	if (m_bCopyStatic && m_pHeapData)
-		delete [] m_pHeapData;
+    if (m_bCopyStatic && m_pHeapData)
+        delete [] m_pHeapData;
     m_pStaticMeshData = NULL;
     
-	if (m_pAnimationData)
-		delete [] m_pAnimationData;
-	if (m_pBindPoseFrameMatrices)
-		delete [] m_pBindPoseFrameMatrices;
-	if (m_pTransformedFrameMatrices)
-		delete [] m_pTransformedFrameMatrices;
-	if (m_pWorldPoseFrameMatrices)
-		delete [] m_pWorldPoseFrameMatrices;
+    if (m_pAnimationData)
+        delete [] m_pAnimationData;
+    if (m_pBindPoseFrameMatrices)
+        delete [] m_pBindPoseFrameMatrices;
+    if (m_pTransformedFrameMatrices)
+        delete [] m_pTransformedFrameMatrices;
+    if (m_pWorldPoseFrameMatrices)
+        delete [] m_pWorldPoseFrameMatrices;
 
-	if (m_ppVertices)
-		delete [] m_ppVertices;
-	if (m_ppIndices)
-		delete [] m_ppIndices;
+    if (m_ppVertices)
+        delete [] m_ppVertices;
+    if (m_ppIndices)
+        delete [] m_ppIndices;
 
     m_pMeshHeader = NULL;
     m_pVertexBufferArray = NULL;

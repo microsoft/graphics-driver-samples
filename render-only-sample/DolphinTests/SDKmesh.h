@@ -235,7 +235,7 @@ struct SDKMESH_MATERIAL
     VECTOR4 Emissive;
     FLOAT Power;
 
-	union
+    union
     {
         UINT64 Force64_1;           //Force the union to 64bits
         ID3D11Texture2D* pDiffuseTexture11;
@@ -309,7 +309,7 @@ private:
     HANDLE m_hFileMappingObject;
     ID3D11Device* m_pDev11;
     ID3D11DeviceContext* m_pDevContext11;
-	bool m_bCopyStatic;
+    bool m_bCopyStatic;
 
 protected:
     //These are the pointers to the two chunks of data loaded in from the mesh file
@@ -361,8 +361,8 @@ public:
     virtual                         ~CDXUTSDKMesh();
     virtual void                    Destroy();
 
-    virtual HRESULT					Create( ID3D11Device* pDev11, PBYTE pMesh, ULONG MeshSize, bool bCreateAdjacencyIndices=false );
-		
+    virtual HRESULT                 Create( ID3D11Device* pDev11, PBYTE pMesh, ULONG MeshSize, bool bCreateAdjacencyIndices=false );
+        
     //Helpers (D3D11 specific)
     static D3D11_PRIMITIVE_TOPOLOGY GetPrimitiveType11( SDKMESH_PRIMITIVE_TYPE PrimType );
     DXGI_FORMAT                     GetIBFormat11( UINT iMesh );

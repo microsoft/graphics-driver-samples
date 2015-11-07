@@ -39,7 +39,7 @@ HRESULT loadMono(PBYTE pFile, BITMAPINFOHEADER& bmpHeader, /*_Out_writes_bytes_(
         for (count = ( width + 1 ) / 2; count % 4; count++)
         {
             MyReadData(&byte, sizeof(byte));
-		}
+        }
     }
     return hr;
 }
@@ -68,7 +68,7 @@ HRESULT loadRGB4(PBYTE pFile, BITMAPINFOHEADER& bmpHeader, /*_Out_writes_bytes_(
         for (UINT x = 0; x < width; x += 2, count += 4)
         {
             MyReadData(&byte, sizeof(byte));
-			imageBuffer [ itter ++] = pPalette [byte >> 4].rgbRed;
+            imageBuffer [ itter ++] = pPalette [byte >> 4].rgbRed;
             imageBuffer [ itter ++] = pPalette [byte >> 4].rgbGreen;
             imageBuffer [ itter ++] = pPalette [byte >> 4].rgbBlue;
             imageBuffer [ itter ++] = alpha;
@@ -149,8 +149,8 @@ HRESULT loadRGB24(PBYTE pFile, BITMAPINFOHEADER& bmpHeader, /*_Out_writes_bytes_
         for ( UINT x = count = 0; x < width; x++, count += 4 )
         {
             MyReadData(&blue, sizeof(blue));
-			MyReadData(&green, sizeof(green));
-			MyReadData(&red, sizeof(red));
+            MyReadData(&green, sizeof(green));
+            MyReadData(&red, sizeof(red));
             
             // The layout of a BMP 24 is BGR not RGB...go figure.
             imageBuffer [itter ++] = red;
@@ -161,11 +161,11 @@ HRESULT loadRGB24(PBYTE pFile, BITMAPINFOHEADER& bmpHeader, /*_Out_writes_bytes_
         
         for ( ; count % 4; count++ )    // skip remaining bytes
         {
-			MyReadData(&trash, sizeof(trash));
-	    }
+            MyReadData(&trash, sizeof(trash));
+        }
     }
 
-	return hr;
+    return hr;
 }
 
 HRESULT loadRGB32(PBYTE pFile, BITMAPINFOHEADER& bmpHeader, /*_Out_writes_bytes_(bmpHeader.biHeight*bmpHeader.biWidth*4)*/ BYTE* imageBuffer)
@@ -193,9 +193,9 @@ HRESULT loadRGB32(PBYTE pFile, BITMAPINFOHEADER& bmpHeader, /*_Out_writes_bytes_
         for ( UINT x = count = 0; x < width; x++, count += 3 )
         {
             MyReadData(&blue, sizeof(blue));
-			MyReadData(&green, sizeof(green));
-			MyReadData(&red, sizeof(red));
-			MyReadData(&alpha, sizeof(alpha));
+            MyReadData(&green, sizeof(green));
+            MyReadData(&red, sizeof(red));
+            MyReadData(&alpha, sizeof(alpha));
 
             // The layout of a BMP is BGR not RGB...go figure.
             imageBuffer [itter ++] = red;
@@ -216,7 +216,7 @@ HRESULT LoadBMP(BYTE* pFile, ULONG *pRetWidth, ULONG *pRetHeight, PBYTE *pRetDat
     BITMAPINFOHEADER    infoHdr     = { 0 };
     RGBQUAD *           bmiColors   = NULL;
  
-	*pRetWidth = 0;
+    *pRetWidth = 0;
     *pRetHeight = 0;
     *pRetData = NULL;
  
@@ -226,33 +226,33 @@ HRESULT LoadBMP(BYTE* pFile, ULONG *pRetWidth, ULONG *pRetHeight, PBYTE *pRetDat
     //
     /////////////////////////////////////////////////////
 
-	MyReadData(&hdr.bfType, sizeof(hdr.bfType));
-	// Check that this is a bitmap file.
+    MyReadData(&hdr.bfType, sizeof(hdr.bfType));
+    // Check that this is a bitmap file.
     if(hdr.bfType != 0x4D42)
     {
         return E_FAIL;
     }
 
-	MyReadData(&hdr.bfSize, sizeof(hdr.bfSize));
-	MyReadData(&hdr.bfReserved1, sizeof(hdr.bfReserved1));
-	MyReadData(&hdr.bfReserved2, sizeof(hdr.bfReserved2));
-	MyReadData(&hdr.bfOffBits, sizeof(hdr.bfOffBits));
-	MyReadData(&infoHdr.biSize, sizeof(infoHdr.biSize));
-	MyReadData(&infoHdr.biWidth, sizeof(infoHdr.biWidth));
-	MyReadData(&infoHdr.biHeight, sizeof(infoHdr.biHeight));
-	MyReadData(&infoHdr.biPlanes, sizeof(infoHdr.biPlanes));
-	MyReadData(&infoHdr.biBitCount, sizeof(infoHdr.biBitCount));
-	MyReadData(&infoHdr.biCompression, sizeof(infoHdr.biCompression));
-	MyReadData(&infoHdr.biSizeImage, sizeof(infoHdr.biSizeImage));
-	MyReadData(&infoHdr.biXPelsPerMeter, sizeof(infoHdr.biXPelsPerMeter));
-	MyReadData(&infoHdr.biYPelsPerMeter, sizeof(infoHdr.biYPelsPerMeter));
-	MyReadData(&infoHdr.biClrUsed, sizeof(infoHdr.biClrUsed));
-	MyReadData(&infoHdr.biClrImportant, sizeof(infoHdr.biClrImportant));
+    MyReadData(&hdr.bfSize, sizeof(hdr.bfSize));
+    MyReadData(&hdr.bfReserved1, sizeof(hdr.bfReserved1));
+    MyReadData(&hdr.bfReserved2, sizeof(hdr.bfReserved2));
+    MyReadData(&hdr.bfOffBits, sizeof(hdr.bfOffBits));
+    MyReadData(&infoHdr.biSize, sizeof(infoHdr.biSize));
+    MyReadData(&infoHdr.biWidth, sizeof(infoHdr.biWidth));
+    MyReadData(&infoHdr.biHeight, sizeof(infoHdr.biHeight));
+    MyReadData(&infoHdr.biPlanes, sizeof(infoHdr.biPlanes));
+    MyReadData(&infoHdr.biBitCount, sizeof(infoHdr.biBitCount));
+    MyReadData(&infoHdr.biCompression, sizeof(infoHdr.biCompression));
+    MyReadData(&infoHdr.biSizeImage, sizeof(infoHdr.biSizeImage));
+    MyReadData(&infoHdr.biXPelsPerMeter, sizeof(infoHdr.biXPelsPerMeter));
+    MyReadData(&infoHdr.biYPelsPerMeter, sizeof(infoHdr.biYPelsPerMeter));
+    MyReadData(&infoHdr.biClrUsed, sizeof(infoHdr.biClrUsed));
+    MyReadData(&infoHdr.biClrImportant, sizeof(infoHdr.biClrImportant));
 
     if ((infoHdr.biSize == 40 && infoHdr.biPlanes == 1 &&
         (infoHdr.biBitCount == 1 || infoHdr.biBitCount == 2 ||
-		 infoHdr.biBitCount == 4 || infoHdr.biBitCount == 8 || 
-		 infoHdr.biBitCount == 24 || infoHdr.biBitCount == 32) &&
+         infoHdr.biBitCount == 4 || infoHdr.biBitCount == 8 || 
+         infoHdr.biBitCount == 24 || infoHdr.biBitCount == 32) &&
         (infoHdr.biCompression == BI_RGB) == FALSE))
     {
         return E_FAIL;
@@ -264,7 +264,7 @@ HRESULT LoadBMP(BYTE* pFile, ULONG *pRetWidth, ULONG *pRetHeight, PBYTE *pRetDat
         return E_FAIL;
     }
     ZeroMemory(pData,infoHdr.biWidth * infoHdr.biHeight * 4);
-	
+    
     // Load the palette if this is a pallete format.
     if (infoHdr.biBitCount <= 8)
     {
@@ -278,25 +278,25 @@ HRESULT LoadBMP(BYTE* pFile, ULONG *pRetWidth, ULONG *pRetHeight, PBYTE *pRetDat
         if (bmiColors == NULL)
         {
             hr = E_FAIL;
-			goto CLEAN_UP;
+            goto CLEAN_UP;
         }
-		ZeroMemory(bmiColors, numColors * sizeof(RGBQUAD));
+        ZeroMemory(bmiColors, numColors * sizeof(RGBQUAD));
 
-		for (int x = 0; x < numColors; x++)
+        for (int x = 0; x < numColors; x++)
         {
             char r, g, b, res;
 
-			MyReadData(&b, sizeof(b));
-			MyReadData(&g, sizeof(g));
-			MyReadData(&r, sizeof(r));
-			MyReadData(&res, sizeof(res));
+            MyReadData(&b, sizeof(b));
+            MyReadData(&g, sizeof(g));
+            MyReadData(&r, sizeof(r));
+            MyReadData(&res, sizeof(res));
 
-			bmiColors[x].rgbBlue = b;
+            bmiColors[x].rgbBlue = b;
             bmiColors[x].rgbGreen = g;
             bmiColors[x].rgbRed = r;
             bmiColors[x].rgbReserved = res;
         }
-	}
+    }
     
     if (infoHdr.biCompression == BI_RGB)
     {
@@ -328,19 +328,19 @@ CLEAN_UP:
         free(bmiColors);
     }
 
-	if (FAILED(hr))
-	{
-		if (pData)
-		{
-			free(pData);
-		}
-	}
-	else
-	{
-	   *pRetWidth = infoHdr.biWidth;
+    if (FAILED(hr))
+    {
+        if (pData)
+        {
+            free(pData);
+        }
+    }
+    else
+    {
+       *pRetWidth = infoHdr.biWidth;
        *pRetHeight = infoHdr.biHeight;
-	   *pRetData = pData;
-	}
+       *pRetData = pData;
+    }
 
     return hr;
 }
@@ -420,7 +420,7 @@ HRESULT loadRGB8(PBYTE pFile, TargaHeader& Header, /*_Out_writes_bytes_(Header.h
             imageBuffer [ itter ++] = pPalette [byte].r;
             imageBuffer [ itter ++] = pPalette [byte].g;
             imageBuffer [ itter ++] = pPalette [byte].b;
-			imageBuffer [ itter ++] = pPalette [byte].a;
+            imageBuffer [ itter ++] = pPalette [byte].a;
         }
         
         // skip remaining bytes
@@ -445,7 +445,7 @@ HRESULT loadRGB24(PBYTE pFile, TargaHeader& Header, /*_Out_writes_bytes_(Header.
     BYTE        red     = 0; 
     BYTE        green   = 0; 
     BYTE        blue    = 0;
-	
+    
     for ( INT y = height - 1; y >= 0; y-- )
     {
         // What is this voodoo magic?
@@ -458,16 +458,16 @@ HRESULT loadRGB24(PBYTE pFile, TargaHeader& Header, /*_Out_writes_bytes_(Header.
         {
             MyReadData(&blue, sizeof(blue));            
             MyReadData(&green, sizeof(green));
-			MyReadData(&red, sizeof(red));            
+            MyReadData(&red, sizeof(red));            
             // The layout of a TGA 24 is BGR not RGB...go figure.
             imageBuffer [itter ++] = red;
             imageBuffer [itter ++] = green;
             imageBuffer [itter ++] = blue;
-			imageBuffer [itter ++] = 0;
+            imageBuffer [itter ++] = 0;
         }
     }
 
-	return hr;
+    return hr;
 }
 
 HRESULT loadRGB32(PBYTE pFile, TargaHeader& Header, /*_Out_writes_bytes_(Header.height*Header.width*4)*/ BYTE* imageBuffer)
@@ -515,7 +515,7 @@ HRESULT LoadTGA(PBYTE pFile, ULONG *pRetWidth, ULONG *pRetHeight, PBYTE *pRetDat
     HRESULT         hr          = S_OK;
     Targa_Palette * pPalette    = NULL;
     TargaHeader     hdr         = { 0 };
-	
+    
     /////////////////////////////////////////////////////
     //
     // Load header and do error checking
@@ -524,16 +524,16 @@ HRESULT LoadTGA(PBYTE pFile, ULONG *pRetWidth, ULONG *pRetHeight, PBYTE *pRetDat
     
     MyReadData(&hdr.id_length, sizeof(hdr.id_length));
     MyReadData(&hdr.colormap_type, sizeof(hdr.colormap_type));
-	MyReadData(&hdr.image_type, sizeof(hdr.image_type));
-	MyReadData(&hdr.colormap_index, sizeof(hdr.colormap_index));
-	MyReadData(&hdr.colormap_length, sizeof(hdr.colormap_length));
-	MyReadData(&hdr.colormap_size, sizeof(hdr.colormap_size));
-	MyReadData(&hdr.x_origin, sizeof(hdr.x_origin));
-	MyReadData(&hdr.y_origin, sizeof(hdr.y_origin));
-	MyReadData(&hdr.width, sizeof(hdr.width));
+    MyReadData(&hdr.image_type, sizeof(hdr.image_type));
+    MyReadData(&hdr.colormap_index, sizeof(hdr.colormap_index));
+    MyReadData(&hdr.colormap_length, sizeof(hdr.colormap_length));
+    MyReadData(&hdr.colormap_size, sizeof(hdr.colormap_size));
+    MyReadData(&hdr.x_origin, sizeof(hdr.x_origin));
+    MyReadData(&hdr.y_origin, sizeof(hdr.y_origin));
+    MyReadData(&hdr.width, sizeof(hdr.width));
     MyReadData(&hdr.height, sizeof(hdr.height));
-	MyReadData(&hdr.pixel_size, sizeof(hdr.pixel_size));
-	MyReadData(&hdr.attributes, sizeof(hdr.attributes));
+    MyReadData(&hdr.pixel_size, sizeof(hdr.pixel_size));
+    MyReadData(&hdr.attributes, sizeof(hdr.attributes));
 
     if (hdr.image_type != NO_IMAGE && 
         hdr.image_type != UNCOMPRESSED_PALLETIZED && 
@@ -557,12 +557,12 @@ HRESULT LoadTGA(PBYTE pFile, ULONG *pRetWidth, ULONG *pRetHeight, PBYTE *pRetDat
     }
 
     // Allocate memory for the bitmap
-	PBYTE pData = (PBYTE) malloc(hdr.width * hdr.height * 4);
+    PBYTE pData = (PBYTE) malloc(hdr.width * hdr.height * 4);
     if(!pData)
     {
         return E_FAIL;
     }
-	memset(pData, 0, hdr.width * hdr.height * 4);
+    memset(pData, 0, hdr.width * hdr.height * 4);
     
     pPalette = (Targa_Palette *) malloc(hdr.colormap_size * sizeof(Targa_Palette));
     if(!pPalette)
@@ -582,35 +582,35 @@ HRESULT LoadTGA(PBYTE pFile, ULONG *pRetWidth, ULONG *pRetHeight, PBYTE *pRetDat
             for ( int i = 0; i < hdr.colormap_length; i++ )
             {
                 MyReadData(&a , sizeof(a));
-				MyReadData(&b , sizeof(b));
+                MyReadData(&b , sizeof(b));
                 pPalette[i].r = BYTE(a & 0x1F);
                 pPalette[i].g = BYTE(((b & 0x03) << 3) | ((a & 0xE0) >> 5));
                 pPalette[i].b = BYTE((b & 0x7C) >> 2);
                 pPalette[i].a = 0;
             }
         }
-		else if ( hdr.colormap_length == 24 )
+        else if ( hdr.colormap_length == 24 )
         {
-			for ( int i = 0; i < hdr.colormap_length; i++ )
-			{
+            for ( int i = 0; i < hdr.colormap_length; i++ )
+            {
                 MyReadData(&pPalette[i].b , sizeof(pPalette[i].b));
-				MyReadData(&pPalette[i].g , sizeof(pPalette[i].g));
-				MyReadData(&pPalette[i].r , sizeof(pPalette[i].r));
-				pPalette[i].a = 0;
+                MyReadData(&pPalette[i].g , sizeof(pPalette[i].g));
+                MyReadData(&pPalette[i].r , sizeof(pPalette[i].r));
+                pPalette[i].a = 0;
             }
-		}             
+        }             
         else if ( hdr.colormap_size == 32 )
         {
             for ( int i = 0; i < hdr.colormap_length; i++ )
             {
                 MyReadData(&pPalette[i].b , sizeof(pPalette[i].b));
-				MyReadData(&pPalette[i].g , sizeof(pPalette[i].g));
-				MyReadData(&pPalette[i].r , sizeof(pPalette[i].r));
-				MyReadData(&pPalette[i].a , sizeof(pPalette[i].a));
-			}
+                MyReadData(&pPalette[i].g , sizeof(pPalette[i].g));
+                MyReadData(&pPalette[i].r , sizeof(pPalette[i].r));
+                MyReadData(&pPalette[i].a , sizeof(pPalette[i].a));
+            }
         }
     }
-	else if ( hdr.colormap_size == 0 && hdr.pixel_size == 8 )   // grey-scale image
+    else if ( hdr.colormap_size == 0 && hdr.pixel_size == 8 )   // grey-scale image
     {
         // if not platted, but 8 bpp
         // create greyscale identity palette
@@ -621,7 +621,7 @@ HRESULT LoadTGA(PBYTE pFile, ULONG *pRetWidth, ULONG *pRetHeight, PBYTE *pRetDat
             pPalette [i].r = i;
             pPalette [i].a = i;
         }
-	}
+    }
     
     if ( hdr.image_type == UNCOMPRESSED_PALLETIZED ||
          hdr.image_type == UNCOMPRESSED_RGB ||
@@ -633,7 +633,7 @@ HRESULT LoadTGA(PBYTE pFile, ULONG *pRetWidth, ULONG *pRetHeight, PBYTE *pRetDat
         }
         else if ( hdr.pixel_size == 24 )
         {
-			hr = TGA::loadRGB24(pFile, hdr, (BYTE *) pData);
+            hr = TGA::loadRGB24(pFile, hdr, (BYTE *) pData);
         }
         else if ( hdr.pixel_size == 32 )
         {
@@ -648,19 +648,19 @@ CLEAN_UP:
         free(pPalette);
     }
 
-	if (FAILED(hr))
-	{
-		if (pData)
-		{
-			free(pData);
-		}
-	}
-	else
-	{
-		*pRetWidth = hdr.width;
-		*pRetHeight = hdr.height;
-	    *pRetData = pData;
-	}
+    if (FAILED(hr))
+    {
+        if (pData)
+        {
+            free(pData);
+        }
+    }
+    else
+    {
+        *pRetWidth = hdr.width;
+        *pRetHeight = hdr.height;
+        *pRetData = pData;
+    }
 
     return hr;
 }

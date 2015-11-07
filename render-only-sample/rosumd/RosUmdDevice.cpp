@@ -822,18 +822,30 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
     //
     // Update shaders
     //
-    if (m_pixelShader) 
-            m_pixelShader->Update();
-    if (m_vertexShader) 
-            m_vertexShader->Update();
-    if (m_domainShader) 
-            m_domainShader->Update();
-    if (m_geometryShader) 
-            m_geometryShader->Update();
-    if (m_hullShader) 
-            m_hullShader->Update();
-    if (m_computeShader) 
-            m_computeShader->Update();
+    if (m_pixelShader)
+    {
+        m_pixelShader->Update();
+    }
+    if (m_vertexShader)
+    {
+        m_vertexShader->Update();
+    }
+    if (m_domainShader)
+    {
+        m_domainShader->Update();
+    }
+    if (m_geometryShader)
+    {
+        m_geometryShader->Update();
+    }
+    if (m_hullShader)
+    {
+        m_hullShader->Update();
+    }
+    if (m_computeShader)
+    {
+        m_computeShader->Update();
+    }
 
 #if VC4
 
