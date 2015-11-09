@@ -5,6 +5,13 @@
 //
 // This header takes care of the various dependencies needed by d3dumddi.h
 //
+#ifndef PAGE_SIZE
+#define PAGE_SIZE 0x1000
+#endif
+
+#ifndef ROUND_TO_PAGES
+#define ROUND_TO_PAGES(Size)  (((ULONG_PTR)(Size) + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1))
+#endif
 
 //
 // Must include windef.h for POINT used by wingdi.h
@@ -39,7 +46,6 @@ typedef _Return_type_success_(return >= 0) LONG NTSTATUS;
 
 #include <d3d10umddi.h>
 #include <d3d11.h>
-
 
 //
 // Pop off our warning state

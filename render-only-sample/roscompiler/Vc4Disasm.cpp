@@ -484,7 +484,7 @@ Vc4Disasm::Run(const VC4_QPU_INSTRUCTION* pShader, ULONG ShaderSize)
             ParseALUInstruction(Instruction);
             break;
         case VC4_QPU_SIG_LOAD_IMMEDIATE:
-            if (VC4_QPU_IS_SEMAPHORE(Instruction))
+            if (VC4_QPU_IS_OPCODE_SEMAPHORE(Instruction))
             {
                 ParseSemaphoreInstruction(Instruction);
             }
