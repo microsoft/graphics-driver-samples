@@ -87,7 +87,7 @@ RosUmdPipelineShader::Update()
     {
         m_pDevice->CreateInternalBuffer(
             &m_hwShaderCode,
-            m_hwShaderCodeSize);
+            ROUND_TO_PAGES(m_hwShaderCodeSize)); // TODO: for now, for easier debugging, round allocation size to PAGE size aligned.
 
         {
             D3D10DDI_MAPPED_SUBRESOURCE mappedSubRes = { 0 };

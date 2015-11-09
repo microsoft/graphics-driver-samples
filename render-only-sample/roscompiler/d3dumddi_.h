@@ -9,6 +9,10 @@
 #define PAGE_SIZE 0x1000
 #endif
 
+#ifndef ROUND_TO_PAGES
+#define ROUND_TO_PAGES(Size)  (((ULONG_PTR)(Size) + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1))
+#endif
+
 //
 // Must include windef.h for POINT used by wingdi.h
 //
