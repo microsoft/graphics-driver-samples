@@ -10,7 +10,7 @@
 @REM see the LICENSE.RTF on your install media or the root of your tools installation.
 @REM THE SAMPLE SOURCE CODE IS PROVIDED "AS IS", WITH NO WARRANTIES OR INDEMNITIES.
 @REM
-call fxc /T vs_4_0_level_9_1 /E "ShadeDolphinVertex" /Fo DolphinTween.xvu /Fc Dolphin.txt Dolphin.vsh
+call fxc /T vs_4_0_level_9_1 /E "ShadeDolphinVertex" /Fo DolphinTween.xvu /Fc DolphinTween.txt Dolphin.vsh
 
 call fxc /T vs_4_0_level_9_1 /E "ShadeSeaFloorVertex" /Fo SeaFloor.xvu /Fc SeaFloor.txt Dolphin.vsh
 
