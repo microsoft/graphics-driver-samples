@@ -399,11 +399,11 @@ typedef struct _VC4IndexedPrimitiveList
             BYTE    PrimitiveMode   : 4;    // 0,1,2,3,4,5,6 = points, lines, line_loop, line_strip, triangles, triangle_strip,  triangle_fan
             BYTE    IndexType       : 4;    // 0,1 = 8-bit, 16-bit 
         };
-        BYTE    Byte1;
+        BYTE        Byte1;
     };
-    UINT        Length;                 // Number of indices
-    UINT        AddressOfIndicesList;
-    UINT        MaximumIndex;           // Primitives using a greater index will cause error
+    UINT            Length;                 // Number of indices
+    UINT            AddressOfIndicesList;
+    UINT            MaximumIndex;           // Primitives using a greater index will cause error
 } VC4IndexedPrimitiveList;
 
 const VC4IndexedPrimitiveList vc4IndexedPrimitiveList = { VC4_CMD_INDEXED_PRIMITIVE_LIST, 0 };
@@ -421,7 +421,7 @@ typedef struct _VC4PrimitiveListFormat
             BYTE    PrimitiveType   : 4;    // 0,1,2,3 = Points, Lines, Triangles, RHT
             BYTE    DataType        : 4;    // 1,3 = 16-bit index, 32-bit x/y 
         };
-        BYTE    Byte1;
+        BYTE        Byte1;
     };
 } VC4PrimitiveListFormat;
 
@@ -431,7 +431,7 @@ const VC4PrimitiveListFormat vc4PrimitiveListFormat = { VC4_CMD_PRIMITIVE_LIST_F
 typedef struct _VC4NVShaderState            // No Vertex shading - NV
 {
     VC4_COMMAND_ID  CommandCode;
-    UINT            ShaderRecordAddress;    //  16-bytes aligned GPU address of VC4NVShahderStateRecord
+    UINT            ShaderRecordAddress;    //  16-bytes aligned GPU address of VC4NVShaderStateRecord
 } VC4NVShaderState;
 
 const VC4NVShaderState vc4NVShaderState = { VC4_CMD_NV_SHADER_STATE, 0 };
