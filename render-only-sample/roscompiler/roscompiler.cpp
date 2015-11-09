@@ -81,8 +81,7 @@ BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize)
         //
         // Use a whole page for adding intrustion more easily
         //
-        m_HwCodeSize = 512 * sizeof(VC4_QPU_INSTRUCTION);
-        m_pHwCode = new BYTE[m_HwCodeSize];
+        m_pHwCode = new BYTE[512 * sizeof(VC4_QPU_INSTRUCTION)];
 
         //
         // TODO: Before shader compiler is online, use a hard-coded shader for testing
@@ -108,10 +107,15 @@ BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize)
         *pShaderCode++ = 0x100009e7;    // nop; nop; nop
         *pShaderCode++ = 0x009e7000;
         *pShaderCode++ = 0x500009e7;    // nop; nop; sbdone
+
+        m_HwCodeSize = ((BYTE *)pShaderCode) - m_pHwCode;
+
 #if DBG
         Disassemble_HW();
 #endif // DBG
-        *puiShaderCodeSize = PAGE_SIZE;
+
+        *puiShaderCodeSize = m_HwCodeSize;
+
         return TRUE;
 #else
         __debugbreak();
