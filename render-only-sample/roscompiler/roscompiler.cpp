@@ -6,9 +6,6 @@ void __stdcall VC4_InitializeName();
 void __stdcall InitializeShaderCompilerLibrary()
 {
     InitInstructionInfo();
-#if VC4
-    VC4_InitializeName();
-#endif //
 }
 
 RosCompiler* RosCompilerCreate(D3D10_SB_TOKENIZED_PROGRAM_TYPE ProgramType,

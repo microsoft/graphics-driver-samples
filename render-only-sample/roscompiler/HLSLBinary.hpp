@@ -36,14 +36,14 @@ struct CInstructionInfo
     CInstructionInfo() {}
     ~CInstructionInfo()    {}
 
-    void Set (BYTE NumDstOperands, BYTE NumSrcOperands, LPCSTR Name, D3D11_SB_OPCODE_CLASS OpClass)
+    void Set (BYTE NumDstOperands, BYTE NumSrcOperands, TCHAR* Name, D3D11_SB_OPCODE_CLASS OpClass)
     {
         m_NumSrcOperands = NumSrcOperands;
         m_NumDstOperands = NumDstOperands;
         m_Name = Name;
         m_OpClass = OpClass;
     }
-    LPCSTR          m_Name;
+    TCHAR*          m_Name;
     BYTE            m_NumSrcOperands;
     BYTE            m_NumDstOperands;
     D3D11_SB_OPCODE_CLASS m_OpClass;
@@ -55,7 +55,7 @@ UINT GetNumInstructionOperands(D3D10_SB_OPCODE_TYPE OpCode);
 UINT GetNumInstructionSrcOperands(D3D10_SB_OPCODE_TYPE OpCode);
 UINT GetNumInstructionDstOperands(D3D10_SB_OPCODE_TYPE OpCode);
 D3D11_SB_OPCODE_CLASS GetOpcodeClass(D3D10_SB_OPCODE_TYPE OpCode);
-LPCSTR GetOpcodeString(D3D10_SB_OPCODE_TYPE OpCode);
+TCHAR* GetOpcodeString(D3D10_SB_OPCODE_TYPE OpCode);
 
 //*****************************************************************************
 //
@@ -155,24 +155,24 @@ public:  //esp in the unions...it's just redundant to not directly access things
         memset(this, 0, sizeof(*this));
     }
     D3D10_SB_OPERAND_TYPE                        m_Type;
-    COperandIndex                             m_Index[3];
+    COperandIndex                                m_Index[3];
     D3D10_SB_OPERAND_NUM_COMPONENTS              m_NumComponents;
     D3D10_SB_OPERAND_4_COMPONENT_SELECTION_MODE  m_ComponentSelection;
-    BOOL                                      m_bExtendedOperand;
+    BOOL                                         m_bExtendedOperand;
     D3D10_SB_OPERAND_MODIFIER                    m_Modifier;
     D3D10_SB_EXTENDED_OPERAND_TYPE               m_ExtendedOperandType;
     D3D11_SB_OPERAND_MIN_PRECISION               m_MinPrecision;
     union
     {
-        UINT                   m_WriteMask;
-        BYTE                    m_Swizzle[4];
+        UINT                     m_WriteMask;
+        BYTE                     m_Swizzle[4];
     };
     D3D10_SB_4_COMPONENT_NAME    m_ComponentName;
     union
     {
-        UINT                               m_Value[4];
+        UINT                                m_Value[4];
         float                               m_Valuef[4];
-        UINT                               m_ValueA[4][2];
+        UINT                                m_ValueA[4][2];
         INT64                               m_Value64[4];
     };
     struct

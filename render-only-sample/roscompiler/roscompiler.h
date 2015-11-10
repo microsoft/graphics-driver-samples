@@ -35,9 +35,9 @@ private:
     
     void Disassemble_Signatures()
     {
-        HLSLDisasm().Run("Input Signature Entries", m_pInputSignatureEntries, m_numInputSignatureEntries);
-        HLSLDisasm().Run("Output Signature Entries", m_pOutputSignatureEntries, m_numOutputSignatureEntries);
-        HLSLDisasm().Run("Patch Constant Signature Entries", m_pPatchConstantSignatureEntries, m_numPatchConstantSignatureEntries);
+        HLSLDisasm().Run(TEXT("Input Signature Entries"), m_pInputSignatureEntries, m_numInputSignatureEntries);
+        HLSLDisasm().Run(TEXT("Output Signature Entries"), m_pOutputSignatureEntries, m_numOutputSignatureEntries);
+        HLSLDisasm().Run(TEXT("Patch Constant Signature Entries"), m_pPatchConstantSignatureEntries, m_numPatchConstantSignatureEntries);
     }
 
 private:
