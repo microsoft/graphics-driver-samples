@@ -270,10 +270,10 @@ public:
 
     void ResetDevice(void);
 
-private:
+protected:
 
     RosKmAdapter(IN_CONST_PDEVICE_OBJECT PhysicalDeviceObject, OUT_PPVOID MiniportDeviceContext);
-    ~RosKmAdapter();
+    virtual ~RosKmAdapter();
 
     void * operator new(size_t  size);
     void operator delete(void * ptr);
@@ -312,11 +312,11 @@ public:
         CONST D3DDDI_PATCHLOCATIONLIST* pPatchLocationList,
         UINT                            patchAllocationList);
 
-private:
+protected:
 
     friend class RosKmdDdi;
 
-    NTSTATUS Start(
+    virtual NTSTATUS Start(
         IN_PDXGK_START_INFO     DxgkStartInfo,
         IN_PDXGKRNL_INTERFACE   DxgkInterface,
         OUT_PULONG              NumberOfVideoPresentSources,
@@ -326,6 +326,10 @@ private:
 
     NTSTATUS BuildPagingBuffer(
         IN_PDXGKARG_BUILDPAGINGBUFFER   pArgs);
+
+protected:
+
+    virtual void ProcessRenderBuffer(ROSDMABUFSUBMISSION * pDmaBufSubmission) = 0;
 
 private:
 
@@ -337,54 +341,9 @@ private:
     BOOLEAN SynchronizeNotifyInterrupt();
     ROSDMABUFSUBMISSION * DequeueDmaBuffer(KSPIN_LOCK * pDmaBufQueueLock);
     void ProcessPagingBuffer(ROSDMABUFSUBMISSION * pDmaBufSubmission);
-    void ProcessRenderBuffer(ROSDMABUFSUBMISSION * pDmaBufSubmission);
     static void HwDmaBufCompletionDpcRoutine(KDPC *, PVOID, PVOID, PVOID);
 
-    void SubmitControlList(bool bBinningControlist, UINT startAddress, UINT endAddress);
-    UINT GetAperturePhysicalAddress(UINT apertureAddress)
-    {
-        UINT pageIndex = (apertureAddress - ROSD_SEGMENT_APERTURE_BASE_ADDRESS) / kPageSize;
-
-        return ((UINT)m_aperturePageTable[pageIndex])*kPageSize + (apertureAddress & (kPageSize - 1));
-    };
-
-    UINT GenerateRenderingControlList(ROSDMABUFINFO *pDmaBufInf);
-
-    void MoveToNextBinnerRenderMemChunk(UINT controlListLength)
-    {
-        controlListLength = (controlListLength + (kPageSize - 1)) & (~(kPageSize - 1));
-
-#if BINNER_DBG
-
-        m_pRenderingControlList               += controlListLength;
-        m_renderingControlListPhysicalAddress += controlListLength;
-
-        if ((m_renderingControlListPhysicalAddress + 64*kPageSize) > (m_controlListPoolPhysicalAddress + VC4_RENDERING_CTRL_LIST_POOL_SIZE))
-        {
-            m_pRenderingControlList               = m_pControlListPool;
-            m_renderingControlListPhysicalAddress = m_controlListPoolPhysicalAddress;
-        }
-
-        m_tileAllocationMemoryPhysicalAddress += 64*kPageSize;
-
-        if ((m_tileAllocationMemoryPhysicalAddress + 64*kPageSize) >= m_tileStatePoolPhysicalAddress)
-        {
-            m_tileAllocationMemoryPhysicalAddress = m_tileAllocPoolPhysicalAddress;
-        }
-
-        m_tileStateDataArrayPhysicalAddress += 64 * kPageSize;
-
-        if ((m_tileStateDataArrayPhysicalAddress + 64*kPageSize) >= (RosKmdGlobal::s_videoMemoryPhysicalAddress.LowPart + RosKmdGlobal::s_videoMemorySize))
-        {
-            m_tileStateDataArrayPhysicalAddress = m_tileStatePoolPhysicalAddress;
-        }
-
-#endif
-    }
-
-    NTSTATUS SetVC4Power(bool bOn);
-
-private:
+protected:
 
     static const size_t kPageSize = 4096;
     static const size_t kPageShift = 12;
@@ -397,13 +356,24 @@ private:
 
     static const size_t kVideoMemorySegmentId = 2;
 
+    UINT GetAperturePhysicalAddress(UINT apertureAddress)
+    {
+        UINT pageIndex = (apertureAddress - ROSD_SEGMENT_APERTURE_BASE_ADDRESS) / kPageSize;
+
+        return ((UINT)m_aperturePageTable[pageIndex])*kPageSize + (apertureAddress & (kPageSize - 1));
+    };
+
+protected:
+
+    RosKmAdapterFlags           m_flags;
+
 private:
 
     static const UINT32 kMagic = 'ADPT';
 
     UINT32                      m_magic;
 
-    RosKmAdapterFlags           m_flags;
+protected:
 
     DEVICE_OBJECT              *m_pPhysicalDevice;
     DXGKRNL_INTERFACE           m_DxgkInterface;
@@ -439,7 +409,6 @@ private:
 
 #if VC4
 
-    VC4_REGISTER_FILE          *m_pVC4RegFile;
     UINT                        m_localVidMemSegmentSize;
 
     BYTE                       *m_pRenderingControlList;
