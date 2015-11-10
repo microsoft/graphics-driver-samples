@@ -41,6 +41,8 @@
     <ClCompile Include="RosKmdDdi.cpp" />
     <ClCompile Include="RosKmdDevice.cpp" />
     <ClCompile Include="RosKmdGlobal.cpp" />
+    <ClCompile Include="RosKmdRapAdapter.cpp" />
+    <ClCompile Include="RosKmdSoftAdapter.cpp" />
     <ClCompile Include="RosKmdUtil.cpp" />
     <ClCompile Include="RosKmdPower.cpp" />
   </ItemGroup>
@@ -58,7 +60,9 @@
     <ClInclude Include="RosKmdDdi.h" />
     <ClInclude Include="RosKmdDevice.h" />
     <ClInclude Include="RosKmdGlobal.h" />
+    <ClInclude Include="RosKmdRapAdapter.h" />
     <ClInclude Include="RosKmdResource.h" />
+    <ClInclude Include="RosKmdSoftAdapter.h" />
     <ClInclude Include="RosKmdUtil.h" />
   </ItemGroup>
   <ItemGroup>
