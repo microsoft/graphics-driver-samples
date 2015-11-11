@@ -15,13 +15,13 @@ TCHAR *Vc4_QPU_LookUp_String(VC4QPU_TOKENLOOKUP_TABLE *pTable, INT Value)
     return _TEXT("Invalid");
 }
 
-TCHAR *Vc4_QPU_LookUp_Addr_String(VC4QPU_TOKENLOOKUP_TABLE pTable[][2], INT Regfile, INT Value)
+TCHAR *Vc4_QPU_LookUp_Addr_String(VC4QPU_TOKENLOOKUP_ADDR_TABLE *pTable, INT Regfile, INT Value)
 {
-    for (INT i = 0; pTable[i][Regfile].Value != VC4_QPU_END_OF_LOOKUPTABLE; i++)
+    for (INT i = 0; pTable[i].LookUp[Regfile].Value != VC4_QPU_END_OF_LOOKUPTABLE; i++)
     {
-        if (pTable[i][Regfile].Value == Value)
+        if (pTable[i].LookUp[Regfile].Value == Value)
         {
-            return (pTable[i][Regfile].Token ? pTable[i][Regfile].Token : _TEXT("Invalid"));
+            return (pTable[i].LookUp[Regfile].Token ? pTable[i].LookUp[Regfile].Token : _TEXT("Invalid"));
         }
     }
     return _TEXT("Invalid");
@@ -32,7 +32,7 @@ TCHAR *Vc4_QPU_LookUp_Addr_String(VC4QPU_TOKENLOOKUP_TABLE pTable[][2], INT Regf
 
 HRESULT Vc4Disasm::ParseSignature(VC4_QPU_INSTRUCTION Instruction)
 {
-    this->xprintf(TEXT("%s\t"), VC4_QPU_LOOKUP_STRING(SIG, VC4_QPU_GET_SIG(Instruction)));
+    this->xprintf(TEXT("%s\t; "), VC4_QPU_LOOKUP_STRING(SIG, VC4_QPU_GET_SIG(Instruction)));
     return S_OK;
 }
 
