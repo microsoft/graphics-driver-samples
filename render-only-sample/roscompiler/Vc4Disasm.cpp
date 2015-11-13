@@ -237,6 +237,40 @@ HRESULT Vc4Disasm::ParseBranchInstruction(VC4_QPU_INSTRUCTION Instruction)
     return S_OK;
 }
 
+HRESULT Vc4Disasm::ParseFlags(VC4_QPU_INSTRUCTION Instruction)
+{
+    switch (VC4_QPU_GET_SIG(Instruction))
+    {
+    case VC4_QPU_SIG_BREAK:
+    case VC4_QPU_SIG_NO_SIGNAL:
+    case VC4_QPU_SIG_THREAD_SWITCH:
+    case VC4_QPU_SIG_PROGRAM_END:
+    case VC4_QPU_SIG_WAIT_FOR_SCOREBOARD:
+    case VC4_QPU_SIG_SCOREBOARD_UNBLOCK:
+    case VC4_QPU_SIG_LAST_THREAD_SWITCH:
+    case VC4_QPU_SIG_COVERAGE_LOAD:
+    case VC4_QPU_SIG_COLOR_LOAD:
+    case VC4_QPU_SIG_COLOR_LOAD_AND_PROGRAM_END:
+    case VC4_QPU_SIG_LOAD_TMU0:
+    case VC4_QPU_SIG_LOAD_TMU1:
+    case VC4_QPU_SIG_ALPAH_MASK_LOAD:
+    case VC4_QPU_SIG_ALU_WITH_RADDR_B:
+    case VC4_QPU_SIG_LOAD_IMMEDIATE:
+        if (!VC4_QPU_IS_OPCODE_NOP(Instruction))
+        {
+            this->xprintf(TEXT("\t // pm = %d, sf = %d, ws = %d"),
+                VC4_QPU_IS_PM_SET(Instruction) ? 1 : 0,
+                VC4_QPU_IS_SETFLAGS_SET(Instruction) ? 1 : 0,
+                VC4_QPU_IS_WRITESWAP_SET(Instruction) ? 1 : 0);
+        }
+        break;
+    case VC4_QPU_SIG_BRANCH:
+        // TODO:
+        break;
+    }
+    return S_OK;
+}
+
 HRESULT
 Vc4Disasm::Run(const VC4_QPU_INSTRUCTION* pShader, ULONG ShaderSize)
 {
@@ -280,6 +314,7 @@ Vc4Disasm::Run(const VC4_QPU_INSTRUCTION* pShader, ULONG ShaderSize)
             this->xprintf(TEXT("Invalid signature"));
             break;
         }
+        ParseFlags(Instruction);
         Flush(0);
     }
     return S_OK;

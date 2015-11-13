@@ -27,6 +27,8 @@ private:
     HRESULT ParseLoadImmInstruction(VC4_QPU_INSTRUCTION Instruction);
     HRESULT ParseSemaphoreInstruction(VC4_QPU_INSTRUCTION Instruction);
     HRESULT ParseBranchInstruction(VC4_QPU_INSTRUCTION Instruction);
+
+    HRESULT ParseFlags(VC4_QPU_INSTRUCTION Instruction);
 };
 
 #endif // VC4
