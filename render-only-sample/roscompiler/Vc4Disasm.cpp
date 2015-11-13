@@ -36,8 +36,9 @@ HRESULT Vc4Disasm::ParseSignature(VC4_QPU_INSTRUCTION Instruction)
     return S_OK;
 }
 
-HRESULT Vc4Disasm::ParseSmallImmediate(DWORD dwSmallImmediate)
+HRESULT Vc4Disasm::ParseSmallImmediate(VC4_QPU_INSTRUCTION Instruction)
 {
+    DWORD dwSmallImmediate = VC4_QPU_GET_SMALL_IMMEDIATE(Instruction);
     if (dwSmallImmediate < 16)
     {
         this->xprintf(TEXT("%d"), dwSmallImmediate);
@@ -56,11 +57,11 @@ HRESULT Vc4Disasm::ParseSmallImmediate(DWORD dwSmallImmediate)
     }
     else if (dwSmallImmediate == 48)
     {
-        this->xprintf(TEXT("Mul output vector rotation is taken from accumulator r5, element 0, bits [3:0]"));
+        this->xprintf(TEXT("%s << r5[3:0]"), VC4_QPU_LOOKUP_STRING(ALU, VC4_QPU_GET_MUL_B(Instruction)));
     }
     else if (dwSmallImmediate < 64)
     {
-        this->xprintf(TEXT("Mul output vector rotated by %d upwards (so element 0 moves to element %d)"), dwSmallImmediate - 48, dwSmallImmediate - 48);
+        this->xprintf(TEXT("%s << %d"), VC4_QPU_LOOKUP_STRING(ALU, VC4_QPU_GET_MUL_B(Instruction)), dwSmallImmediate - 48);
     }
     else
     {
@@ -119,14 +120,7 @@ HRESULT Vc4Disasm::ParseRead(VC4_QPU_INSTRUCTION Instruction, DWORD mux)
     } 
     else if (mux == VC4_QPU_ALU_REG_B)
     {
-        if (VC4_QPU_IS_OPCODE_LOAD_SM(Instruction))
-        {
-            ParseSmallImmediate(VC4_QPU_GET_SMALL_IMMEDIATE(Instruction));
-        }
-        else
-        {
-            ParseReadAddr(VC4_QPU_GET_RADDR_B(Instruction), false);
-        }
+        ParseReadAddr(VC4_QPU_GET_RADDR_B(Instruction), false);
     }
     else
     {
@@ -165,11 +159,18 @@ HRESULT Vc4Disasm::ParseMulOp(VC4_QPU_INSTRUCTION Instruction)
     {
         ParseWrite(Instruction, false);
         this->xprintf(TEXT(", "));
-        ParseRead(Instruction, VC4_QPU_GET_MUL_A(Instruction));
-        if (!VC4_QPU_IS_OPCODE_MUL_MOV(Instruction))
+        if (VC4_QPU_IS_OPCODE_LOAD_SM(Instruction))
         {
-            this->xprintf(TEXT(", "));
-            ParseRead(Instruction, VC4_QPU_GET_MUL_B(Instruction));
+            ParseSmallImmediate(Instruction);
+        }
+        else
+        {
+            ParseRead(Instruction, VC4_QPU_GET_MUL_A(Instruction));
+            if (!VC4_QPU_IS_OPCODE_MUL_MOV(Instruction))
+            {
+                this->xprintf(TEXT(", "));
+                ParseRead(Instruction, VC4_QPU_GET_MUL_B(Instruction));
+            }
         }
     }
     return S_OK;
