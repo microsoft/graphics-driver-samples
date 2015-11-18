@@ -177,6 +177,20 @@ typedef union _V3D_REG_CT0CS
     UINT        Value;
 } V3D_REG_CT0CS, V3D_REG_CT1CS;
 
+// 0x0684   Performance Counter Mapping 0
+typedef union _V3D_REG_PCTRS0
+{
+    struct
+    {
+        UINT    PCTRS       : 5;
+        UINT    RESERVED    : 27;
+    };
+
+    UINT        Value;
+} V3D_REG_PCTRS0;
+
+const UINT  V3D_NUM_PERF_COUNTERS = 16;
+
 typedef enum _VC4_COMMAND_ID : BYTE
 {
     VC4_CMD_HALT                        = 0,
@@ -245,6 +259,7 @@ typedef enum _VC4_COMMAND_ID : BYTE
     VC4_CMD_VIEWPORT_OFFSET             = 103,
     VC4_CMD_Z_MIN_AND_MAX_CLIPPING_PLANES   = 104,
     VC4_CMD_CLIPPER_XY_SCALING          = 105,
+    VC4_CMD_CLIPPER_Z_SCALE_AND_OFFSET  = 106,
 
     // 107 - 111 Reserved
 
@@ -427,6 +442,66 @@ typedef struct _VC4PrimitiveListFormat
 
 const VC4PrimitiveListFormat vc4PrimitiveListFormat = { VC4_CMD_PRIMITIVE_LIST_FORMAT, 0 };
 
+// Code: 64
+typedef struct _VC4GLShaderState
+{
+    VC4_COMMAND_ID  CommandCode;
+    union
+    {
+        struct
+        {
+            UINT    NumberOfAttributeArrays : 3;    // Ignored for extended shader record
+            UINT    ExtendedShaderRecord    : 1;    // With 26-bit attribute memory stride
+            UINT    ShaderRecordAddress     : 28;   // 16-bytes aligned GPU address of VC4GLShaderStateRecord
+        };
+        UINT        UInt1;
+    };
+} VC4GLShaderState;
+
+const VC4GLShaderState vc4GLShaderState = { VC4_CMD_GL_SHADER_STATE, 0 };
+
+typedef struct _VC4GLShaderStateRecord
+{
+    union
+    {
+        struct
+        {
+            USHORT  EnableClipping                  : 1;
+            USHORT  PointSizeIncluded               : 1;
+            USHORT  FragmentShaderIsSingleThreaded  : 1;
+        };
+        USHORT      UShort1;
+    };
+
+    BYTE            FragmentShaderNumberOfUniforms;             // Not used currently
+    BYTE            FragmentShaderNumberOfVaryings;
+    UINT            FragmentShaderCodeAddress;
+    UINT            FragmentShaderUniformsAddress;
+
+    USHORT          VertexShaderNumberOfUniforms;               // Not used currently
+    BYTE            VertexShaderAttributeArraySelectBits;       // 8 bits for 8 attribute arrays
+    BYTE            VertexShaderTotalAttributesSize;
+    UINT            VertexShaderCodeAddress;
+    UINT            VertexShaderUniformsAddress;
+
+    USHORT          CoordinateShaderNumberOfUniforms;           // Not used currently
+    BYTE            CoordinateShaderAttributeArraySelectBits;   // 8 bits for 8 attribute arrays
+    BYTE            CoordinateShaderTotalAttributesSize;
+    UINT            CoordinateShaderCodeAddress;
+    UINT            CoordinateShaderUniformsAddress;
+
+} VC4GLShaderStateRecord;
+
+const VC4GLShaderStateRecord vc4GLShaderStateRecord = {};
+
+typedef struct _VC4VertexAttribute
+{
+    UINT            VertexBaseMemoryAddress;
+    BYTE            NumberOfBytesMinusOne;
+    BYTE            VertexShaderVPMOffset;
+    BYTE            CoordinateShaderVPMOffset;
+} VC4VertexAttribute;
+
 // Code: 65
 typedef struct _VC4NVShaderState            // No Vertex shading - NV
 {
@@ -452,7 +527,7 @@ typedef struct _VC4NVShaderStateRecord
     };
     BYTE            ShadedVertexDataStride;
     BYTE            FragmentShaderNumberOfUniforms;
-    BYTE            FragmaneShaderNumberOfVaryings;
+    BYTE            FragmentShaderNumberOfVaryings;
     UINT            FragmentShaderCodeAddress;          // Pixel shader code GPU address
     UINT            FragmentShaderUniformsAddress;      // Pixel shader constant buffer GPU address
     UINT            ShadedVertexDataAddress;            // Vertex buffer GPU address
@@ -532,6 +607,34 @@ typedef struct _VC4ViewportOffset
 } VC4ViewportOffset;
 
 const VC4ViewportOffset vc4ViewportOffset = { VC4_CMD_VIEWPORT_OFFSET, 0 };
+
+// Code: 104
+typedef struct _VC4ZClippingPlanes
+{
+    VC4_COMMAND_ID  CommandCode;
+    FLOAT           MinimumZ;
+    FLOAT           MaximumZ;
+} VC4ZClippingPlanes;
+
+// Code: 105
+typedef struct _VC4ClipperXYScaling
+{
+    VC4_COMMAND_ID  CommandCode;
+    FLOAT           ViewportHalfWidth;      // In 1/16th of pixel
+    FLOAT           ViewportHalfHeight;     // In 1/16th of pixel
+} VC4ClipperXYScaling;
+
+const VC4ClipperXYScaling vc4ClipperXYScaling = { VC4_CMD_CLIPPER_XY_SCALING, 0 };
+
+// Code: 106
+typedef struct _VC4ClipperZScaleAndOffset
+{
+    VC4_COMMAND_ID  CommandCode;
+    FLOAT           ViewportZScale;
+    FLOAT           ViewportZOffset;
+} VC4ClipperZScaleAndOffset;
+
+const VC4ClipperZScaleAndOffset vc4ClipperZScaleAndOffset = { VC4_CMD_CLIPPER_Z_SCALE_AND_OFFSET, 0 };
 
 // Code: 112,   Binning only
 typedef struct _VC4TileBinningModeConfig

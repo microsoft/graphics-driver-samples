@@ -156,7 +156,7 @@ RosKmContext::DdiCreateContext(
     else
     {
         pContextInfo->AllocationListSize = C_ROSD_ALLOCATION_LIST_SIZE;
-        pContextInfo->PatchLocationListSize = C_ROSD_ALLOCATION_LIST_SIZE;
+        pContextInfo->PatchLocationListSize = C_ROSD_PATCH_LOCATION_LIST_SIZE;
     }
 
     pCreateContext->hContext = pRosKmContext;

@@ -367,11 +367,23 @@ RosKmAdapter::ProcessRenderBuffer(
             dmaBufBaseAddress = GetAperturePhysicalAddress(pDmaBufInfo->m_DmaBufferPhysicalAddress.LowPart);
             dmaBufBaseAddress += m_busAddressOffset;
 
+#if DBG
+
+            m_pVC4RegFile->V3D_PCTRC = ((1 << V3D_NUM_PERF_COUNTERS) - 1);
+
+#endif
+
             // Skip the command buffer header at the beginning
             SubmitControlList(
                 true,
                 dmaBufBaseAddress + pDmaBufSubmission->m_StartOffset + sizeof(GpuCommand),
                 dmaBufBaseAddress + pDmaBufSubmission->m_EndOffset);
+
+#if DBG
+
+            m_pVC4RegFile->V3D_PCTRC = ((1 << V3D_NUM_PERF_COUNTERS) - 1);
+
+#endif
 
             //
             // Submit the Rendering Control List to the GPU
@@ -817,6 +829,23 @@ RosKmAdapter::Start(
         //
 
         m_busAddressOffset = VC4_BUS_ADDRESS_ALIAS_UNCACHED;
+
+#if DBG
+
+        //
+        // Enable performance counter
+        //
+
+        volatile UINT *  pRegPerfCountSrc = &m_pVC4RegFile->V3D_PCTRS0;
+
+        for (UINT i = 0; i < V3D_NUM_PERF_COUNTERS; i++)
+        {
+            pRegPerfCountSrc[i << 1] = i;
+        }
+
+        m_pVC4RegFile->V3D_PCTRE = ((1 << V3D_NUM_PERF_COUNTERS) - 1);
+
+#endif
     }
 
     m_localVidMemSegmentSize = ((UINT)RosKmdGlobal::s_videoMemorySize) -
@@ -1996,6 +2025,7 @@ RosKmAdapter::PatchDmaBuffer(
                     break;
                 case VC4_SLOT_NV_SHADER_STATE:
                 case VC4_SLOT_BRANCH:
+                case VC4_SLOT_GL_SHADER_STATE:
                     // When PrePatch happens in DdiRender, DMA buffer physical
                     // address is not available, so DMA buffer self-reference
                     // patches are handled in SubmitCommand
@@ -2075,6 +2105,7 @@ RosKmAdapter::ValidateDmaBuffer(
                 }
                 break;
             case VC4_SLOT_NV_SHADER_STATE:
+            case VC4_SLOT_GL_SHADER_STATE:
             case VC4_SLOT_BRANCH:
                 if (pDmaBufState->m_NumDmaBufSelfRef == VC4_MAX_DMA_BUFFER_SELF_REF)
                 {

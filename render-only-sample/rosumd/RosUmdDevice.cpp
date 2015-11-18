@@ -17,6 +17,7 @@
 #include "RosUmdShader.h"
 #include "RosUmdRasterizerState.h"
 #include "RosUmdDepthStencilState.h"
+#include "RosUmdElementLayout.h"
 #include "RosContext.h"
 #include "RosUmdUtil.h"
 
@@ -28,6 +29,8 @@
 
 #include "Vc4Hw.h"
 #include "Vc4Ddi.h"
+
+#define NV_SHADER 1
 
 #endif
 
@@ -861,8 +864,8 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
     //
 
     UINT    maxStateComamnds = 128;
-    UINT    maxAllocationsUsed = 6;
-    UINT    maxPathLocations = 9;
+    UINT    maxAllocationsUsed = 10;
+    UINT    maxPathLocations = 16;
 
     m_commandBuffer.ReserveCommandBufferSpace(
         false,                                  // HW command
@@ -1012,7 +1015,7 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
         pVC4ConfigBits->EarlyZEnable = 1;
 
         pVC4ConfigBits->DepthTestFunction = ConvertD3D11DepthComparisonFunc(
-                                                m_depthStencilState->m_desc.DepthFunc);
+            m_depthStencilState->m_desc.DepthFunc);
 
         if (m_depthStencilState->m_desc.DepthWriteMask == D3D10_DDI_DEPTH_WRITE_MASK_ALL)
         {
@@ -1020,6 +1023,8 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
             pVC4ConfigBits->ZUpdatesEnable = 1;
         }
     }
+
+#if NV_SHADER
 
     //
     // Write Viewport Offset command
@@ -1077,7 +1082,7 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
 
     // TODO[indyz] : Need to calculate it from Input Layout Elements, etc
     //
-    pVC4NVShaderStateRecord->FragmaneShaderNumberOfVaryings = 3;
+    pVC4NVShaderStateRecord->FragmentShaderNumberOfVaryings = 3;
 
 #if DBG
     pVC4NVShaderStateRecord->FragmentShaderCodeAddress      = 0xDEADBEEF;
@@ -1160,6 +1165,281 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
     m_commandBuffer.CommitCommandBufferSpace(
         commandsWritten,
         patchLocationUsed);
+
+#else
+
+    //
+    // Write Viewport Offset command
+    //
+
+    VC4ViewportOffset * pVC4ViewportOffset;
+    MoveToNextCommand(pVC4ConfigBits, pVC4ViewportOffset, curCommandOffset);
+
+    *pVC4ViewportOffset = vc4ViewportOffset;
+
+    pVC4ViewportOffset->ViewportCenterX = (SHORT)(m_viewports[0].Width / 2.0f);
+    pVC4ViewportOffset->ViewportCenterY = (SHORT)(m_viewports[0].Height / 2.0f);
+
+    //
+    // Write Clipper XY Scaling command
+    //
+
+    VC4ClipperXYScaling *   pVC4ClipperXYScaling;
+    MoveToNextCommand(pVC4ViewportOffset, pVC4ClipperXYScaling, curCommandOffset);
+
+    *pVC4ClipperXYScaling = vc4ClipperXYScaling;
+
+    pVC4ClipperXYScaling->ViewportHalfWidth = m_viewports[0].Width / 2.0f * 16.0f;
+    pVC4ClipperXYScaling->ViewportHalfHeight = -m_viewports[0].Height / 2.0f * 16.0f;
+
+    //
+    // Write Clipper Z Scale and Offset command
+    //
+
+    VC4ClipperZScaleAndOffset * pVC4ClipperZScaleAndOffset;
+    MoveToNextCommand(pVC4ClipperXYScaling, pVC4ClipperZScaleAndOffset, curCommandOffset);
+
+    *pVC4ClipperZScaleAndOffset = vc4ClipperZScaleAndOffset;
+
+    pVC4ClipperZScaleAndOffset->ViewportZOffset = (m_viewports[0].MaxDepth - m_viewports[0].MinDepth) / 2.0f;
+    pVC4ClipperZScaleAndOffset->ViewportZScale = pVC4ClipperZScaleAndOffset->ViewportZOffset;
+
+#ifdef SSR_END_DMA
+
+    UINT vc4GLShaderStateRecordOffset = PAGE_SIZE - sizeof(VC4GLShaderStateRecord);
+
+    VC4GLShaderStateRecord  *pVC4GLShaderStateRecord = (VC4GLShaderStateRecord *)((((PBYTE)pVC4ViewportOffset) - curCommandOffset) + vc4GLShaderStateRecordOffset);
+
+#else
+
+    //
+    // Write Branch command to skip over Shader State Record
+    //
+
+    VC4Branch * pVC4Branch;
+    MoveToNextCommand(pVC4ClipperZScaleAndOffset, pVC4Branch, curCommandOffset);
+
+    UINT vc4GLShaderStateRecordOffset = curCommandOffset + sizeof(VC4Branch);
+    AlignValue(vc4GLShaderStateRecordOffset, 16);
+
+    *pVC4Branch = vc4Branch;
+
+    m_commandBuffer.SetPatchLocation(
+        pCurPatchLocation,
+        dummyAllocIndex,
+        curCommandOffset + offsetof(VC4Branch, BranchAddress),
+        VC4_SLOT_BRANCH,
+        vc4GLShaderStateRecordOffset + sizeof(VC4GLShaderStateRecord) + m_elementLayout->m_numElements*sizeof(VC4VertexAttribute));
+
+    //
+    // Write Shader State Record for the subsequent NV Shader State command
+    //
+
+    VC4GLShaderStateRecord  *pVC4GLShaderStateRecord = (VC4GLShaderStateRecord *)(((PBYTE)pVC4Branch) + (vc4GLShaderStateRecordOffset - curCommandOffset));
+
+#endif
+
+    *pVC4GLShaderStateRecord = vc4GLShaderStateRecord;
+
+#if 0
+
+    pVC4GLShaderStateRecord->EnableClipping = 1;
+
+#endif
+    
+    pVC4GLShaderStateRecord->FragmentShaderIsSingleThreaded = 1;
+
+    //
+    // Calculate Number Of Varyings from pixel shader signature
+    //
+
+    D3D11_1DDIARG_SIGNATURE_ENTRY * pInputEntry;
+    UINT    numEntries = m_pixelShader->m_pCompiler->GetInputSignature(&pInputEntry);
+    BYTE    numVaryings = 0;
+
+    for (UINT i = 0; i < numEntries; i++,pInputEntry++)
+    {
+        if (pInputEntry->SystemValue != D3D10_SB_NAME_UNDEFINED)
+        {
+            continue;
+        }
+
+        for (UINT j = 0; j < 4; j++)
+        {
+            if (pInputEntry->Mask & (1 << j))
+            {
+                numVaryings++;
+            }
+        }
+    }
+
+    pVC4GLShaderStateRecord->FragmentShaderNumberOfVaryings = numVaryings;
+
+#if DBG
+    pVC4GLShaderStateRecord->FragmentShaderCodeAddress      = 0xDEADBEEF;
+    pVC4GLShaderStateRecord->FragmentShaderUniformsAddress  = 0xDEADBEEF;
+#endif
+
+    allocListIndex = m_commandBuffer.UseResource(m_pixelShader->GetCodeResource(), false);
+
+    m_commandBuffer.SetPatchLocation(
+        pCurPatchLocation,
+        allocListIndex,
+        vc4GLShaderStateRecordOffset + offsetof(VC4GLShaderStateRecord, FragmentShaderCodeAddress));
+
+    // TODO[indyz] : Set FragmentShaderUniformsAddress to constant buffer's address
+    //
+    // Set the uniforms address to dummy allocation when there is not constant buffer
+    // VC4 probably has read-ahead capability, it seems to hang without an valid address
+    //
+
+    m_commandBuffer.SetPatchLocation(
+        pCurPatchLocation,
+        dummyAllocIndex,
+        vc4GLShaderStateRecordOffset + offsetof(VC4GLShaderStateRecord, FragmentShaderUniformsAddress));
+
+#if DBG
+    pVC4GLShaderStateRecord->VertexShaderCodeAddress        = 0xDEADBEEF;
+    pVC4GLShaderStateRecord->VertexShaderUniformsAddress    = 0xDEADBEEF;
+#endif
+
+    allocListIndex = m_commandBuffer.UseResource(m_vertexShader->GetCodeResource(), false);
+
+    m_commandBuffer.SetPatchLocation(
+        pCurPatchLocation,
+        allocListIndex,
+        vc4GLShaderStateRecordOffset + offsetof(VC4GLShaderStateRecord, VertexShaderCodeAddress));
+
+    // TODO[indyz] : Set VertexShaderUniformsAddress to constant buffer's address
+    //
+
+    m_commandBuffer.SetPatchLocation(
+        pCurPatchLocation,
+        dummyAllocIndex,
+        vc4GLShaderStateRecordOffset + offsetof(VC4GLShaderStateRecord, VertexShaderUniformsAddress));
+    
+#if DBG
+    pVC4GLShaderStateRecord->CoordinateShaderCodeAddress        = 0xDEADBEEF;
+    pVC4GLShaderStateRecord->CoordinateShaderUniformsAddress    = 0xDEADBEEF;
+#endif
+
+    allocListIndex = m_commandBuffer.UseResource(m_vertexShader->GetCodeResource(), false);
+
+    m_commandBuffer.SetPatchLocation(
+        pCurPatchLocation,
+        allocListIndex,
+        vc4GLShaderStateRecordOffset + offsetof(VC4GLShaderStateRecord, CoordinateShaderCodeAddress),
+        0,
+        m_vertexShader->m_vc4CoordinateShaderOffset);
+
+    // TODO[indyz] : Set CoordinateShaderUniformsAddress to constant buffer's address
+    //
+
+    m_commandBuffer.SetPatchLocation(
+        pCurPatchLocation,
+        dummyAllocIndex,
+        vc4GLShaderStateRecordOffset + offsetof(VC4GLShaderStateRecord, CoordinateShaderUniformsAddress));
+
+    curCommandOffset = vc4GLShaderStateRecordOffset;
+
+    VC4VertexAttribute *    pVC4VertexAttribute;
+    MoveToNextCommand(pVC4GLShaderStateRecord, pVC4VertexAttribute, curCommandOffset);
+
+    D3D10DDIARG_INPUT_ELEMENT_DESC *    pElementDesc = m_elementLayout->m_pElementDesc;
+    BYTE    vpmOffset = 0;
+    BYTE    elementBytes;
+
+    for (UINT i = 0; i < m_elementLayout->m_numElements; i++)
+    {
+#if DBG
+        pVC4VertexAttribute->VertexBaseMemoryAddress = 0xDEADBEEF;
+#endif
+
+        elementBytes = (BYTE)CPixel::BytesPerPixel(pElementDesc[i].Format);
+
+        pVC4VertexAttribute->NumberOfBytesMinusOne = elementBytes - 1;
+        pVC4VertexAttribute->VertexShaderVPMOffset = vpmOffset;
+        pVC4VertexAttribute->CoordinateShaderVPMOffset = vpmOffset;
+
+        allocListIndex = m_commandBuffer.UseResource(m_vertexBuffers[pElementDesc[i].InputSlot], false);
+
+        m_commandBuffer.SetPatchLocation(
+            pCurPatchLocation,
+            allocListIndex,
+            curCommandOffset + offsetof(VC4VertexAttribute, VertexBaseMemoryAddress),
+            0,
+            vertexOffset*m_vertexStrides[pElementDesc[i].InputSlot] + pElementDesc[i].AlignedByteOffset);
+
+        vpmOffset += elementBytes;
+        MoveToNextCommand(pVC4VertexAttribute, pVC4VertexAttribute, curCommandOffset);
+    }
+
+    //
+    // Set the Total Attributes Size and Attribute Array Select Bits
+    //
+    pVC4GLShaderStateRecord->VertexShaderAttributeArraySelectBits = (1 << m_elementLayout->m_numElements) - 1;
+    pVC4GLShaderStateRecord->VertexShaderTotalAttributesSize = vpmOffset;
+
+    pVC4GLShaderStateRecord->CoordinateShaderAttributeArraySelectBits = (1 << m_elementLayout->m_numElements) - 1;
+    pVC4GLShaderStateRecord->CoordinateShaderTotalAttributesSize = vpmOffset;
+
+    //
+    // Write GL Shader State command
+    //
+    VC4GLShaderState *  pVC4GLShaderState;
+
+#ifdef SSR_END_DMA
+
+    MoveToNextCommand(pVC4ViewportOffset, pVC4GLShaderState, curCommandOffset);
+
+#else
+
+    pVC4GLShaderState = (VC4GLShaderState *)pVC4VertexAttribute;
+
+#endif
+
+    *pVC4GLShaderState = vc4GLShaderState;
+
+    pVC4GLShaderState->NumberOfAttributeArrays = m_elementLayout->m_numElements;
+
+    //
+    // TODO[indyz]: Need to understand when Extended Shader Record is used
+    //
+
+    pVC4GLShaderState->ExtendedShaderRecord = 0;
+
+#if DBG
+    pVC4GLShaderState->ShaderRecordAddress = 0xDEADBEE;
+#endif
+
+    // Dummy allocation is used in place of DMA buffer
+    //
+    // Allocation Offset is GL Shader State Record's offset within the DMA buffer
+    //
+    // NumberOfAttributeArrays and ExtendedShaderRecord are in the allocation offset
+
+    m_commandBuffer.SetPatchLocation(
+        pCurPatchLocation,
+        dummyAllocIndex,
+        curCommandOffset + offsetof(VC4GLShaderState, UInt1),
+        VC4_SLOT_GL_SHADER_STATE,
+        vc4GLShaderStateRecordOffset + pVC4GLShaderState->NumberOfAttributeArrays + pVC4GLShaderState->ExtendedShaderRecord);
+
+    //
+    // Commit the written state commands
+    //
+
+    UINT commandsWritten   = (UINT)(((PBYTE)(pVC4GLShaderState + 1)) - pCommandBuffer);
+    UINT patchLocationUsed = (UINT)(pCurPatchLocation - pPatchLocation);
+
+    assert(commandsWritten <= maxStateComamnds);
+    assert(patchLocationUsed <= maxPathLocations);
+
+    m_commandBuffer.CommitCommandBufferSpace(
+        commandsWritten,
+        patchLocationUsed);
+
+#endif
 
 #endif
 

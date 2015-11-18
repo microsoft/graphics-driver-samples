@@ -14,6 +14,8 @@ typedef enum _VC4ResourceSlotId
     VC4_SLOT_NV_SHADER_STATE        = 0xE0, // For code 65, NV Shader State
     VC4_SLOT_BRANCH                 = 0xE1, // For code 16, Branch
 
+    VC4_SLOT_GL_SHADER_STATE        = 0xE2, // For code 64, GL Shader State
+
 } VC4ResourceSlotId;
 
 //

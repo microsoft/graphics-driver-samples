@@ -110,6 +110,13 @@ static VC4IndexedPrimitiveList     *pVC4IndexedPrimitiveList = NULL;
 // Code: 56
 static VC4PrimitiveListFormat      *pVC4PrimitiveListFormat = NULL;
 
+// Code: 64
+static VC4GLShaderState            *pVC4GLShaderState = NULL;
+
+static VC4GLShaderStateRecord      *pVC4GLShaderStateRecord = NULL;
+
+static VC4VertexAttribute          *pVC4VertexAttribute = NULL;
+
 // Code: 65
 static VC4NVShaderState            *pVC4NVShaderState = NULL;
 
@@ -124,16 +131,25 @@ static VC4ClipWindow               *pVC4ClipWindow = NULL;
 // Code: 103
 static VC4ViewportOffset           *pVC4ViewportOffset = NULL; 
 
+// Code: 104
+static VC4ZClippingPlanes          *pVC4ZClippingPlanes = NULL;
+
+// Code: 105
+static VC4ClipperXYScaling         *pVC4ClipperXYScaling = NULL;
+
+// Code: 106
+static VC4ClipperZScaleAndOffset   *pVC4ClipperZScaleAndOffset = NULL;
+
 // Code: 112,   Binning only
 static VC4TileBinningModeConfig    *pVC4TileBinningModeConfig = NULL; 
 
-// Code 113,    Rendering only
+// Code: 113,   Rendering only
 static VC4TileRenderingModeConfig  *pVC4TileRenderingModeConfig = NULL; 
 
-// Code 114,    Rendering only
+// Code: 114,   Rendering only
 static VC4ClearColors              *pVC4ClearColors = NULL; 
 
-// Code 115,    Rendering only
+// Code: 115,   Rendering only
 static VC4TileCoordinates          *pVC4TileCoordinates = NULL;
 
 #endif

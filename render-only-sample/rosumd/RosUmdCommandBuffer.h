@@ -133,3 +133,11 @@ void MoveToNextCommand(TypeCur pCurCommand, TypeNext &pNextCommand, UINT &curCom
 
     pNextCommand = (TypeNext)(pCurCommand + 1);
 }
+
+template<typename TypeCur, typename TypeNext>
+void MoveToNextCommand(TypeCur pCurCommand, UINT variableSize, TypeNext &pNextCommand, UINT &curComamndOffset)
+{
+    curComamndOffset += (sizeof(*pCurCommand) + variableSize);
+
+    pNextCommand = (TypeNext)(pCurCommand + 1);
+}

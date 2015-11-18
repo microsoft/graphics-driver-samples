@@ -82,7 +82,8 @@ RosUmdPipelineShader::Update()
                                     NULL);
 
     if (m_pCompiler &&
-        m_pCompiler->Compile(&m_hwShaderCodeSize) &&
+        m_pCompiler->Compile(&m_hwShaderCodeSize,
+                             &m_vc4CoordinateShaderOffset) &&
         m_hwShaderCodeSize)
     {
         m_pDevice->CreateInternalBuffer(

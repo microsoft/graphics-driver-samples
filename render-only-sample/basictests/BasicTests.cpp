@@ -12,14 +12,21 @@
 
 //using namespace DirectX;
 
+#define NV_SHADER   1
+
 #if VC4
 
 #pragma pack(push, 1)
 
 struct SimpleVertex
 {
+#if NV_SHADER
     USHORT  x;
     USHORT  y;
+#else
+    FLOAT   x;
+    FLOAT   y;
+#endif
     FLOAT   z;
     FLOAT   w;
     FLOAT   r;
@@ -518,10 +525,30 @@ public:
 #if VC4
         SimpleVertex vertices[] =
         {
+#if NV_SHADER
             //                X,                  Y,    Z,   W,     R,    G,    B // See Input layout.
             {   (kWidth/2) << 4,   (kHeight/4) << 4, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f },
             {   (kWidth/4) << 4, (kHeight*3/4) << 4, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f },
             { (kWidth*3/4) << 4, (kHeight*3/4) << 4, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f }
+#else
+
+#if 1
+
+            //     X,      Y,    Z,    W,    R,    G,    B // See Input layout.
+            {  0.00f,  0.75f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f },
+            { -0.75f, -0.75f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f },
+            {  0.75f, -0.75f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f }
+
+#else
+
+            //           X,           Y,    Z,    W,    R,    G,    B // See Input layout.
+            {     kWidth/2,   kHeight/4, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f },
+            {     kWidth/4, kHeight*3/4, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f },
+            {   kWidth*3/4, kHeight*3/4, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f }
+
+#endif
+
+#endif
         };
 #else
         SimpleVertex vertices[] =

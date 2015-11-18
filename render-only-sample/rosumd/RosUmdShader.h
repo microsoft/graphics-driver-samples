@@ -6,6 +6,8 @@
 
 class RosUmdShader
 {
+friend RosUmdDevice;
+
 public:
 
     RosUmdShader(RosUmdDevice * pDevice, D3D10_SB_TOKENIZED_PROGRAM_TYPE Type)
@@ -41,7 +43,8 @@ protected:
     RosUmdDevice *                  m_pDevice;
     RosUmdResource                  m_hwShaderCode;
     UINT                            m_hwShaderCodeSize;
-    
+    UINT                            m_vc4CoordinateShaderOffset;
+
     RosCompiler *                   m_pCompiler;
 };
 

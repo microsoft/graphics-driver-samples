@@ -4,6 +4,8 @@
 
 class RosUmdElementLayout
 {
+friend RosUmdDevice;
+
 public:
 
     RosUmdElementLayout(const D3D10DDIARG_CREATEELEMENTLAYOUT * create, D3D10DDI_HRTELEMENTLAYOUT & hRT) :

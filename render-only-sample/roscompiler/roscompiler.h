@@ -21,8 +21,10 @@ public:
         D3D11_1DDIARG_SIGNATURE_ENTRY *pPatchConstantSignatureEntries);
     ~RosCompiler();
 
-    BOOLEAN Compile(UINT * puiShaderCodeSize);
+    BOOLEAN Compile(UINT * puiShaderCodeSize, UINT * pCoordinateShaderOffset = NULL);
     BYTE *GetShaderCode();
+    UINT GetInputSignature(D3D11_1DDIARG_SIGNATURE_ENTRY ** ppInputSignatureEntries);
+    UINT GetOutputSignature(D3D11_1DDIARG_SIGNATURE_ENTRY ** ppOutputSignatureEntries);
 
 private:
     void Disassemble_HLSL()    { HLSLDisasm().Run(m_pCode); }
