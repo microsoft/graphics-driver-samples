@@ -498,6 +498,7 @@ typedef struct _VC4VertexAttribute
 {
     UINT            VertexBaseMemoryAddress;
     BYTE            NumberOfBytesMinusOne;
+    BYTE            MemoryStride;
     BYTE            VertexShaderVPMOffset;
     BYTE            CoordinateShaderVPMOffset;
 } VC4VertexAttribute;

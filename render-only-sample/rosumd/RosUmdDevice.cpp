@@ -1177,8 +1177,8 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
 
     *pVC4ViewportOffset = vc4ViewportOffset;
 
-    pVC4ViewportOffset->ViewportCenterX = (SHORT)(m_viewports[0].Width / 2.0f);
-    pVC4ViewportOffset->ViewportCenterY = (SHORT)(m_viewports[0].Height / 2.0f);
+    pVC4ViewportOffset->ViewportCenterX = (SHORT)(m_viewports[0].Width / 2.0f * 16.0f);
+    pVC4ViewportOffset->ViewportCenterY = (SHORT)(m_viewports[0].Height / 2.0f * 16.0f);
 
     //
     // Write Clipper XY Scaling command
@@ -1273,6 +1273,8 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
         }
     }
 
+    // TODO[indyz]: Need to increase by 1 if W is written by VS for FS
+    //
     pVC4GLShaderStateRecord->FragmentShaderNumberOfVaryings = numVaryings;
 
 #if DBG
@@ -1358,6 +1360,7 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
         elementBytes = (BYTE)CPixel::BytesPerPixel(pElementDesc[i].Format);
 
         pVC4VertexAttribute->NumberOfBytesMinusOne = elementBytes - 1;
+        pVC4VertexAttribute->MemoryStride = (BYTE)m_vertexStrides[pElementDesc[i].InputSlot];
         pVC4VertexAttribute->VertexShaderVPMOffset = vpmOffset;
         pVC4VertexAttribute->CoordinateShaderVPMOffset = vpmOffset;
 
