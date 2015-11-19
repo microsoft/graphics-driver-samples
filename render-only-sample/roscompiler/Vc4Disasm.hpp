@@ -13,7 +13,7 @@ public:
 private:
     HRESULT ParseSignature(VC4_QPU_INSTRUCTION Instruction);
 
-    HRESULT ParseSmallImmediate(DWORD dwSmallImmediate);
+    HRESULT ParseSmallImmediate(VC4_QPU_INSTRUCTION Instruction);
 
     HRESULT ParseWrite(VC4_QPU_INSTRUCTION Instruction, bool bAddOp, bool bShowPack = true);
     HRESULT ParseWriteAddr(DWORD waddr, bool bRegfile_A);
@@ -27,6 +27,8 @@ private:
     HRESULT ParseLoadImmInstruction(VC4_QPU_INSTRUCTION Instruction);
     HRESULT ParseSemaphoreInstruction(VC4_QPU_INSTRUCTION Instruction);
     HRESULT ParseBranchInstruction(VC4_QPU_INSTRUCTION Instruction);
+
+    HRESULT ParseFlags(VC4_QPU_INSTRUCTION Instruction);
 };
 
 #endif // VC4

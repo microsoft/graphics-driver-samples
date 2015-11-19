@@ -8,7 +8,7 @@
 class BaseDisasm
 {
 public:
-    typedef void (fnPrinter)(void *pFile, const char* szStr, int Line, void* m_pCustomCtx);
+    typedef void (fnPrinter)(void *pFile, const TCHAR* szStr, int Line, void* m_pCustomCtx);
 
     BaseDisasm();
     ~BaseDisasm();
@@ -19,18 +19,18 @@ public:
 
     void SetColor(WORD wColor);
     void UnsetColor();
-    void xprintf(LPCSTR pStr, ...);
+    void xprintf(const TCHAR *pStr, ...);
     void Flush(int Line);
 
 protected:
-    size_t m_cbSize;
-    size_t m_cbSizeMax;
-    char*  m_pBuf;
+    size_t m_cSize;
+    size_t m_cSizeMax;
+    TCHAR* m_pBuf;
     bool   m_bColorCode;
     void*  m_pFile;
     void*  m_pCustomCtx;
     fnPrinter* m_pStrPrinter;
 
-    void xaddstring(LPCSTR sz);
-    bool EnsureSize(const size_t cbSize);
+    void xaddstring(const TCHAR *sz);
+    bool EnsureSize(const size_t cSize);
 };

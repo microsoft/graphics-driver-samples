@@ -96,6 +96,7 @@
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UMDF_VERSION_MAJOR>2</UMDF_VERSION_MAJOR>
     <DriverTargetPlatform>Universal</DriverTargetPlatform>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <TargetVersion>Windows10</TargetVersion>
@@ -104,6 +105,7 @@
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UMDF_VERSION_MAJOR>2</UMDF_VERSION_MAJOR>
     <DriverTargetPlatform>Universal</DriverTargetPlatform>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <TargetVersion>Windows10</TargetVersion>
@@ -112,8 +114,7 @@
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UMDF_VERSION_MAJOR>2</UMDF_VERSION_MAJOR>
     <DriverTargetPlatform>Universal</DriverTargetPlatform>
-    <CharacterSet>
-    </CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <TargetVersion>Windows10</TargetVersion>
@@ -122,8 +123,7 @@
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UMDF_VERSION_MAJOR>2</UMDF_VERSION_MAJOR>
     <DriverTargetPlatform>Universal</DriverTargetPlatform>
-    <CharacterSet>
-    </CharacterSet>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'" Label="Configuration">
     <TargetVersion>Windows10</TargetVersion>
@@ -132,6 +132,7 @@
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UMDF_VERSION_MAJOR>2</UMDF_VERSION_MAJOR>
     <DriverTargetPlatform>Universal</DriverTargetPlatform>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'" Label="Configuration">
     <TargetVersion>Windows10</TargetVersion>
@@ -140,6 +141,7 @@
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UMDF_VERSION_MAJOR>2</UMDF_VERSION_MAJOR>
     <DriverTargetPlatform>Universal</DriverTargetPlatform>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'" Label="Configuration">
     <TargetVersion>Windows10</TargetVersion>
@@ -148,6 +150,7 @@
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UMDF_VERSION_MAJOR>2</UMDF_VERSION_MAJOR>
     <DriverTargetPlatform>Universal</DriverTargetPlatform>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'" Label="Configuration">
     <TargetVersion>Windows10</TargetVersion>
@@ -156,6 +159,7 @@
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UMDF_VERSION_MAJOR>2</UMDF_VERSION_MAJOR>
     <DriverTargetPlatform>Universal</DriverTargetPlatform>
+    <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
