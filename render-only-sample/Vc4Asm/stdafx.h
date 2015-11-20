@@ -12,6 +12,10 @@
 #include <assert.h>
 
 #include <windows.h>
+
+#define VC4 1
 #include "..\roscommon\Vc4Qpu.h"
+#include "..\roscompiler\DisasmBase.hpp"
+#include "..\roscompiler\Vc4Disasm.hpp"
 
 // TODO: reference additional headers your program requires here

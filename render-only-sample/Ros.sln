@@ -27,6 +27,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DolphinTests", "DolphinTests\DolphinTests.vcxproj", "{00D7CFB0-452C-4EBA-A1FD-41339D01066B}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Vc4Asm", "Vc4Asm\Vc4Asm.vcxproj", "{53098D78-1666-4AE9-AAEA-15EC43D787B0}"
+	ProjectSection(ProjectDependencies) = postProject
+		{98E16C06-7E74-4A0C-A5E6-24219CAE527D} = {98E16C06-7E74-4A0C-A5E6-24219CAE527D}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

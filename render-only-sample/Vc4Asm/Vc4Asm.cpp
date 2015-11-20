@@ -658,8 +658,18 @@ HRESULT ParseALUInstruction(VC4_QPU_INSTRUCTION &QpuInst, TCHAR *pOpCode, UINT L
     return S_OK;
 }
 
-int main(int argc, TCHAR *argv[])
+void Printer(void *pFile, const TCHAR* szStr, int Line, void* m_pCustomCtx)
 {
+    _ftprintf_s(stderr, TEXT("\t\t\t// %s\n"), szStr);
+}
+
+int _tmain(int argc, TCHAR *argv[])
+{
+    Vc4Disasm Disasm;
+    Disasm.SetPrinterW(Printer);
+
+    boolean ShowDisassemble = false;
+
     if (argc <= 1)
     {
         RETURN_ERROR(E_INVALIDARG, _TEXT("%s\n"), TEXT("Usage: Vc4Asm ASMFile [OUTFile]\n"));
@@ -667,7 +677,18 @@ int main(int argc, TCHAR *argv[])
 
     for (int i = 1; i < argc; i++)
     {
-        if (szAsmFile[0] == NULL)
+        if (*argv[i] == TEXT('-'))
+        {
+            if (_tcsicmp(argv[i], TEXT("-ShowDisassemble")) == 0)
+            {
+                ShowDisassemble = true;
+            }
+            else
+            {
+                RETURN_ERROR(E_INVALIDARG, _TEXT("Invalid Option %s\n"), argv[i]);
+            }
+        }
+        else if (szAsmFile[0] == NULL)
         {
             _tcscpy_s(szAsmFile, argv[i]);
         }
@@ -746,6 +767,10 @@ int main(int argc, TCHAR *argv[])
         if (hr == S_OK)
         {
             _ftprintf_s(stdout, TEXT("0x%016llx\t // %s"), QpuInst, szOriginal);
+            if (ShowDisassemble)
+            {
+                Disasm.Run(&QpuInst, sizeof(QpuInst));
+            }
         }
         else
         {

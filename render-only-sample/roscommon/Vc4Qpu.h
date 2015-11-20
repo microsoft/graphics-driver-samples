@@ -637,10 +637,12 @@ _declspec(selectany) VC4QPU_TOKENLOOKUP_ADDR_TABLE VC4_QPU_WADDR_LOOKUP[] =
              VC4_QPU_WADDR_TLB_Z,     _TEXT("tlb_z") },
     { true,  VC4_QPU_WADDR_TLB_COLOUR_MS, _TEXT("tlb_colour_ms"),
              VC4_QPU_WADDR_TLB_COLOUR_MS, _TEXT("tlb_colour_ms") },
-    { true,  VC4_QPU_WADDR_TLB_COLOUR_ALL, _TEXT("tbl_colour"),
-             VC4_QPU_WADDR_TLB_COLOUR_ALL, _TEXT("tbl_colour") },
-    { true,  VC4_QPU_WADDR_TLB_ALPHA_MASK, _TEXT("tbl_alpha_mask"),
-             VC4_QPU_WADDR_TLB_ALPHA_MASK, _TEXT("tbl_alpha_mask") },
+    { true,  VC4_QPU_WADDR_TLB_COLOUR_ALL, _TEXT("tlb_colour"),
+             VC4_QPU_WADDR_TLB_COLOUR_ALL, _TEXT("tlb_colour") },
+    { true,  VC4_QPU_WADDR_TLB_COLOUR_ALL, _TEXT("tlb_c"),
+             VC4_QPU_WADDR_TLB_COLOUR_ALL, _TEXT("tlb_c") },
+    { true,  VC4_QPU_WADDR_TLB_ALPHA_MASK, _TEXT("tlb_alpha_mask"),
+             VC4_QPU_WADDR_TLB_ALPHA_MASK, _TEXT("tlb_alpha_mask") },
     { true,  VC4_QPU_WADDR_VPM, _TEXT("vpm"),
              VC4_QPU_WADDR_VPM, _TEXT("vpm") },
     { false, VC4_QPU_WADDR_VPMVCD_RD_SETUP, _TEXT("vpm_rd_setup"),   // regfile A
@@ -759,6 +761,8 @@ _declspec(selectany) VC4QPU_TOKENLOOKUP_ADDR_TABLE VC4_QPU_RADDR_LOOKUP[] =
              VC4_QPU_RADDR_UNIFORM, _TEXT("uniform") },
     { true,  VC4_QPU_RADDR_VERYING, _TEXT("varying"),
              VC4_QPU_RADDR_VERYING, _TEXT("varying") },
+    { true,  VC4_QPU_RADDR_VERYING, _TEXT("vary"),
+             VC4_QPU_RADDR_VERYING, _TEXT("vary") },
     { false, VC4_QPU_RADDR_ELEMENT_NUMBER, _TEXT("element_number"), // regfile A
              VC4_QPU_RADDR_QPU_NUMBER,     _TEXT("qpu_number") },   // regfile B
     { true,  VC4_QPU_RADDR_NOP, _TEXT(""),
