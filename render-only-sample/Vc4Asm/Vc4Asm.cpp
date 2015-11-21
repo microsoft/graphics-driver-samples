@@ -225,7 +225,7 @@ HRESULT ParseALUInstruction(VC4_QPU_INSTRUCTION &QpuInst, TCHAR *pOpCode, UINT L
     INT AddPack = 0;
 
     INT AddMuxSrc[2] = { 0 };
-    INT AddRaddr[2] = { 0 };
+    INT AddRaddr[2] = { VC4_QPU_RADDR_NOP };
     INT AddUnpack[2] = { 0 };
 
     boolean AddRegfileExchangeable[3] = { false };
@@ -239,7 +239,7 @@ HRESULT ParseALUInstruction(VC4_QPU_INSTRUCTION &QpuInst, TCHAR *pOpCode, UINT L
     INT MulPack = 0;
 
     INT MulMuxSrc[2] = { 0 };
-    INT MulRaddr[2] = { 0 };
+    INT MulRaddr[2] = { VC4_QPU_RADDR_NOP };
     INT MulUnpack[2] = { 0 };
 
     boolean MulRegfileExchangeable[3] = { false };
@@ -591,7 +591,7 @@ HRESULT ParseALUInstruction(VC4_QPU_INSTRUCTION &QpuInst, TCHAR *pOpCode, UINT L
         {
             if (_Mux[_i] == VC4_QPU_ALU_REG_A)
             {
-                if (_Raddr[_i] && (RaddrA != _Raddr[_i]))
+                if (_Raddr[_i] != VC4_QPU_RADDR_NOP && (RaddrA != _Raddr[_i]))
                 {
                     if (RaddrA == VC4_QPU_INVALID_VALUE)
                     {
@@ -603,9 +603,9 @@ HRESULT ParseALUInstruction(VC4_QPU_INSTRUCTION &QpuInst, TCHAR *pOpCode, UINT L
                     }
                 }
             }
-            if (_Mux[_i] == VC4_QPU_ALU_REG_B)
+            else if (_Mux[_i] == VC4_QPU_ALU_REG_B)
             {
-                if (_Raddr[_i] && (RaddrB != _Raddr[_i]))
+                if (_Raddr[_i] != VC4_QPU_RADDR_NOP && (RaddrB != _Raddr[_i]))
                 {
                     if (RaddrB == VC4_QPU_INVALID_VALUE)
                     {
