@@ -775,6 +775,8 @@ _declspec(selectany) VC4QPU_TOKENLOOKUP_ADDR_TABLE VC4_QPU_RADDR_LOOKUP[] =
              VC4_QPU_RADDR_REV_FLAG, _TEXT("rev_flag") }, // regfile B
     { true,  VC4_QPU_RADDR_VPM, _TEXT("vpm"),
              VC4_QPU_RADDR_VPM, _TEXT("vpm") },
+    { true,  VC4_QPU_RADDR_VPM, _TEXT("vpmread"),
+             VC4_QPU_RADDR_VPM, _TEXT("vpmread") },
     { false, VC4_QPU_RADDR_VPM_LD_BUSY, _TEXT("vpm_ld_busy"),   // regfile A
              VC4_QPU_RADDR_VPM_ST_BUSY, _TEXT("vpm_st_busy") }, // regfile B
     { false, VC4_QPU_RADDR_VPM_LD_WAIT, _TEXT("vpm_ld_wait"),   // regfile A

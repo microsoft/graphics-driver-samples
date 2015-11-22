@@ -630,8 +630,7 @@ HRESULT ParseALUInstruction(VC4_QPU_INSTRUCTION &QpuInst, TCHAR *pOpCode, UINT L
     }
     
     // Set write swap,
-    bWriteSwap = (AddMuxDest == VC4_QPU_ALU_REG_B);
-    assert(bWriteSwap == (MulMuxDest == VC4_QPU_ALU_REG_A));
+    bWriteSwap = (AddMuxDest == VC4_QPU_ALU_REG_B) || (MulMuxDest == VC4_QPU_ALU_REG_A);
 
     // TODO:
     bSetFlags = false; 
