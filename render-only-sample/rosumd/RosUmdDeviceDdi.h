@@ -40,7 +40,7 @@ public:
     static void APIENTRY VSSetShaderResources_Default(D3D10DDI_HDEVICE, UINT, UINT, const D3D10DDI_HSHADERRESOURCEVIEW*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY VSSetShaderResources_Preamble(D3D10DDI_HDEVICE, UINT, UINT, const D3D10DDI_HSHADERRESOURCEVIEW*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY VsSetConstantBuffers_Default(D3D10DDI_HDEVICE, UINT, UINT, const D3D10DDI_HRESOURCE*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
-    static void APIENTRY VsSetConstantBuffers11_1_Default(D3D10DDI_HDEVICE, UINT, UINT, const D3D10DDI_HRESOURCE*, const UINT*, const UINT*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
+    static void APIENTRY DdiVsSetConstantBuffers11_1(D3D10DDI_HDEVICE, UINT, UINT, const D3D10DDI_HRESOURCE*, const UINT*, const UINT*);
     static void APIENTRY VsSetConstantBuffers_Preamble(D3D10DDI_HDEVICE, UINT, UINT, const D3D10DDI_HRESOURCE*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY VsSetConstantBuffers11_1_Preamble(D3D10DDI_HDEVICE, UINT, UINT, const D3D10DDI_HRESOURCE*, const UINT*, const UINT*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY GSSetShaderResources_Default(D3D10DDI_HDEVICE, UINT, UINT, const D3D10DDI_HSHADERRESOURCEVIEW*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }

@@ -12,7 +12,10 @@
 
 //using namespace DirectX;
 
-#define NV_SHADER   1
+// #define NV_SHADER       1
+#define SHAREDTEX_CVS   1
+// #define PASSTHROUGH_CVS 1
+// #define SIMPLETRANS_CVS 1
 
 #if VC4
 
@@ -21,17 +24,37 @@
 struct SimpleVertex
 {
 #if NV_SHADER
+
     USHORT  x;
     USHORT  y;
-#else
-    FLOAT   x;
-    FLOAT   y;
-#endif
     FLOAT   z;
     FLOAT   w;
     FLOAT   r;
     FLOAT   g;
     FLOAT   b;
+
+#else
+
+#if SHAREDTEX_CVS
+
+    FLOAT   x;
+    FLOAT   y;
+    FLOAT   u;
+    FLOAT   v;
+
+#else
+
+    FLOAT   x;
+    FLOAT   y;
+    FLOAT   z;
+    FLOAT   w;
+    FLOAT   r;
+    FLOAT   g;
+    FLOAT   b;
+
+#endif
+
+#endif
 };
 
 #pragma pack(pop)
@@ -52,8 +75,17 @@ static const int kHeight = 1080;
 
 #else
 
+#if SHAREDTEX_CVS
+
+static const int kWidth = 300;
+static const int kHeight = 300;
+
+#else
+
 static const int kWidth = 256;
 static const int kHeight = 256;
+
+#endif
 
 #endif
 
@@ -419,9 +451,25 @@ public:
         ID3DBlob* pVSBlob = nullptr;
 
 #if VC4
-        HRESULT hr = CompileShaderFromFile(L"VC4Test.fx", "VS", "vs_4_0_level_9_1", &pVSBlob);
+
+#if SHAREDTEX_CVS
+
+        HRESULT hr = CompileShaderFromFile(L"VC4Test-SharedTex_CVS.fx", "VS", "vs_4_0_level_9_1", &pVSBlob);
+
+#elif 0 // SIMPLETRANS_CVS
+
+        HRESULT hr = CompileShaderFromFile(L"VC4Test-SimpleTrans_CVS.fx", "VS", "vs_4_0_level_9_1", &pVSBlob);
+
 #else
+
+        HRESULT hr = CompileShaderFromFile(L"VC4Test.fx", "VS", "vs_4_0_level_9_1", &pVSBlob);
+
+#endif
+
+#else
+
         HRESULT hr = CompileShaderFromFile(L"Tutorial02.fx", "VS", "vs_4_0", &pVSBlob);
+
 #endif
 
         if (FAILED(hr)) throw std::exception("Failed to compile shader from file");
@@ -441,11 +489,28 @@ public:
         D3D11_INPUT_ELEMENT_DESC layout[] =
         {
 #if VC4
+
+#if SHAREDTEX_CVS
+
+            { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+
+#elif 0 // SIMPLETRANS_CVS
+
+            { "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+
+#else
+
             { "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
             { "COLOR",    0, DXGI_FORMAT_R32G32B32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+
+#endif
+
 #else
+
             { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
             { "COLOR",    0, DXGI_FORMAT_R32G32B32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+
 #endif
         };
         UINT numElements = ARRAYSIZE(layout);
@@ -534,10 +599,33 @@ public:
 
 #if 1
 
-            //     X,      Y,    Z,    W,    R,    G,    B // See Input layout.
-            {  0.00f,  0.75f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f },
-            { -0.75f, -0.75f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f },
-            {  0.75f, -0.75f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f }
+#if SHAREDTEX_CVS
+
+            //     X,      Y,    U,    V // See Input layout.
+            {  0.00f,  0.75f, 1.0f, 1.0f },
+            { -0.75f, -0.75f, 1.0f, 0.0f },
+            {  0.75f, -0.75f, 0.0f, 1.0f }
+
+#elif PASSTHROUGH_CVS
+
+            //
+            // NOTE[indyz]: Only for demonstrating range of VS/CS output
+            //  1. Only works when coordinates are at the boundary or zero
+            //  2. Color is flat shaded, and green channel is missing
+
+            //        X,         Y,    Z,    W,    R,    G,    B // See Input layout.
+            { -2048.00f,  2048.00f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f },
+            {  2048.00f,  2048.00f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f },
+            {  2048.00f, -2048.00f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f }
+
+#elif SIMPLETRANS_CVS
+
+            //    X,     Y,    Z,    W,    R,    G,    B // See Input layout.
+            { -1.0f,  1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f },
+            {  0.0f,  1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f },
+            {  0.0f,  0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f }
+
+#endif
 
 #else
 
@@ -694,10 +782,24 @@ public:
     D3DDepthStencilState(std::shared_ptr<D3DDevice> & inDevice)
     {
         D3D11_DEPTH_STENCIL_DESC depthStencilDesc = { 0 };
-        
-        depthStencilDesc.DepthEnable = 1;
+
         depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+
+#if NV_SHADER
+
+        depthStencilDesc.DepthEnable = 1;
         depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS;
+
+#elif PASSTHROUGH_CVS
+
+        depthStencilDesc.DepthEnable = 1;
+        depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS;
+
+#else
+
+        depthStencilDesc.DepthFunc = D3D11_COMPARISON_ALWAYS;
+
+#endif
 
         HRESULT hr;
         ID3D11DepthStencilState * pDepthStencilState;
@@ -721,6 +823,77 @@ public:
 private:
 
     D3DPointer<ID3D11DepthStencilState> m_pDepthStencilState;
+};
+
+class D3DConstantBuffer
+{
+public:
+
+    D3DConstantBuffer(std::shared_ptr<D3DDevice> & inDevice)
+    {
+#if SHAREDTEX_CVS
+
+        UINT data[] =
+        {
+            0x00000000, 0x00000000, 0xbf1e3964, 0x3ea8423c,
+            0xbea8423c, 0xbf1e3964, 0x80000000, 0x00000000,
+            0x3f800000, 0x00000000, 0x45160000, 0x00000000,
+            0xc5160000, 0x00000000, 0x3f000000, 0x3f000000,
+            0x00000000, 0xbf1e3964, 0x3ea8423c, 0x00000000,
+            0xbea8423c, 0xbf1e3964, 0x80000000, 0x00000000,
+            0x00000000, 0x3f800000, 0x00000000, 0x00000000,
+            0x45160000, 0xc5160000, 0x3f000000, 0x3f000000
+        };
+
+#else
+
+        // TODO: The XY scaling should be generated by shader comiler internally
+
+        FLOAT data[] =
+        {
+            kWidth*16.0f/2.0f,
+            kHeight*16.0f/2.0f,
+            1.0f,
+            0.0f,
+
+            // For Coordinate Shader, not used
+            kWidth*16.0f/2.0f,
+            kHeight*16.0f/2.0f,
+            0.0f,
+            0.0f,
+        };
+
+#endif
+
+        D3D11_BUFFER_DESC bd;
+        ZeroMemory(&bd, sizeof(bd));
+        bd.Usage = D3D11_USAGE_DEFAULT;
+        bd.ByteWidth = sizeof(data);
+        bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+        bd.CPUAccessFlags = 0;
+
+        D3D11_SUBRESOURCE_DATA InitData;
+        ZeroMemory(&InitData, sizeof(InitData));
+        InitData.pSysMem = data;
+
+        ID3D11Buffer * pConstantBuffer;
+        HRESULT hr = inDevice->GetDevice()->CreateBuffer(&bd, &InitData, &pConstantBuffer);
+        if (FAILED(hr)) throw std::exception("Unable to create Constant buffer");
+
+        m_pConstantBuffer = pConstantBuffer;
+    }
+
+    ~D3DConstantBuffer()
+    {
+        // do nothing
+    }
+
+    ID3D11Buffer * GetConstantBuffer() { return m_pConstantBuffer; }
+
+private:
+
+    D3DPointer<ID3D11Buffer> m_pConstantBuffer;
+
 };
 
 class D3DEngine
@@ -761,6 +934,8 @@ public:
 
         m_pVertexShader = std::unique_ptr<D3DVertexShader>(new D3DVertexShader(m_pDevice));
 
+        m_pConstantBuffer = std::unique_ptr<D3DConstantBuffer>(new D3DConstantBuffer(m_pDevice));
+
         m_pDevice->GetContext()->IASetInputLayout(m_pVertexShader->GetVertexLayout());
 
         m_pPixelShader = std::unique_ptr<D3DPixelShader>(new D3DPixelShader(m_pDevice));
@@ -794,13 +969,33 @@ public:
     {
         m_pDevice->GetContext()->ClearRenderTargetView(m_pRenderTarget->GetRenderTargetView(), DirectX::Colors::MidnightBlue);
 
+#if NV_SHADER
+
         m_pDevice->GetContext()->ClearDepthStencilView(
                                     m_pDepthStencilBuffer->GetDepthStencilView(),
                                     D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,
                                     0.5,
                                     3);
 
+#else
+
+        m_pDevice->GetContext()->ClearDepthStencilView(
+            m_pDepthStencilBuffer->GetDepthStencilView(),
+            D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,
+            0.75,
+            3);
+
+#endif
+
         m_pDevice->GetContext()->VSSetShader(m_pVertexShader->GetVertexShader(), nullptr, 0);
+
+#if (SHAREDTEX_CVS || SIMPLETRANS_CVS)
+
+        ID3D11Buffer *    pConstantBuffer = m_pConstantBuffer->GetConstantBuffer();
+        m_pDevice->GetContext()->VSSetConstantBuffers(0, 1, &pConstantBuffer);
+
+#endif
+
         m_pDevice->GetContext()->PSSetShader(m_pPixelShader->GetPixelShader(), nullptr, 0);
 
         m_pDevice->GetContext()->DrawIndexed(3, 0, 0);
@@ -828,6 +1023,7 @@ private:
     std::unique_ptr<D3DIndexBuffer>         m_pIndexBuffer;
     std::unique_ptr<D3DTexture>             m_pTexture;
     std::unique_ptr<D3DDepthStencilState>   m_pDepthStencilState;
+    std::unique_ptr<D3DConstantBuffer>      m_pConstantBuffer;
 };
 
 int main()

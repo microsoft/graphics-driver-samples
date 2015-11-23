@@ -54,6 +54,10 @@ RosCompiler::~RosCompiler()
     delete[] m_pHwCode;
 }
 
+#define SHAREDTEX_CVS   1
+// #define PASSTHROUGH_CVS 1
+// #define SIMPLETRANS_CVS 1
+
 BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize,
                              UINT * pCoordinateShaderOffset)
 {
@@ -72,72 +76,209 @@ BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize,
     {
         // Implement vertex shader compiling
 #if VC4
+
+#if SHAREDTEX_CVS
+
+        VC4_QPU_INSTRUCTION vertexShader[] =
+        {
+            0xe0024c6700401a00, // load_imm vr_setup, nop, 0x00401a00 (0.000000)    // vr_setup = 0x401a00          ;       // 16bits, horizontal, 1 stride, 4 reads from VPM
+            0x1002082715c27d80, // mov r0, vpm_read; nop nop, r0, r0                // r0  = vpm_read (X)           ;
+            0x1002504035c20d87, // mov rb1, vpm_read; fmul ra0, r0, uni             // rb1 = vpm_read (Y)           ; ra0 = r0 * uni[0] // transform (X) by uniform[0], [1], [2], [4]
+            0x100059c120827006, // nop nop, r0, r0; fmul ra1, r0, uni               //                              ; ra1 = r0 * uni[1]
+            0x100240a135c20d87, // mov ra2, vpm_read; fmul r1, r0, uni              // ra2 = vpm_read (Varying0)    ; r1 = r0 * uni[2]  // ra2 = s:TEXCOORD0
+            0x100049e220827006, // nop nop, r0, r0; fmul r2, r0, uni                //                              ; r2 = r0 * uni[3]
+            0x100049e02080103e, // nop nop, r0, r0; fmul r0, rb1, uni               //                              ; r0 = rb1 * uni[4] // transform (Y) by uniform[4], [5], [6], [7]
+            0x10021027019e7040, // fadd rb0, r0, r1; nop nop, r0, r0                // rb0 = r0 + r1                ;
+            0x100049e02080103e, // nop nop, r0, r0; fmul r0, rb1, uni               //                              ; r0 = rb1 * uni[5]
+            0x100248e0218010be, // fadd r3, r0, r2; fmul r0, rb1, uni               // r3 = r0 + r2                 ; r0 = rb1 * uni[6]
+            0x1002086701027180, // fadd r1, r0, ra0; nop nop, r0, r0                // r1 = r0 + ra0                ;
+            0x100049e02080103e, // nop nop, r0, r0; fmul r0, rb1, uni               //                              ; r0 = rb1 * uni[7]
+            0x1002082701067180, // fadd r0, r0, ra1; nop nop, r0, r0                // r0 = r0 + ra1                ;
+            0x1002480281c20e36, // fadd r0, uni, r0; mov rb2, vpm_read              // r0 = uni[8] + r0             ; rb2 = vpm_read (Varying1)    // rb2 = t:TEXCOORD0
+            0x10021d27159e7000, // mov sfu_recip, r0; nop nop, r0, r0               // r4 = sfu_recip(r0)           ;       // r4 = 1/r0 (W)
+            0x100208a701800dc0, // fadd r2, uni, rb0; nop nop, r0, r0               // r2 = uni[9] + rb0            ;
+            0x100049e020827016, // nop nop, r0, r0; fmul r0, r2, uni                //                              ; r0 = r2 * uni[10]     // X scale by uniform ?
+            0x100248e021827cc4, // fadd r3, uni, r3; fmul r0, r0, r4                // r3 = uni[11] + r3            ; r0 = r0 * r4          // perspective divide (Y*1/W)
+            0x101240202782701e, // ftoi ra0.16a, r0, r0; fmul r0, r3, uni           // ra0.16a = ftoi(r0)           ; r0 = r3 * uni[12]     // Y scale by uniform ?
+            0x1002486021827c44, // fadd r1, uni, r1; fmul r0, r0, r4                // r1 = uni[13] + r1            ; r0 = r0 * r4          // perspective divide (X*1/W)
+            0x102240202782700e, // ftoi ra0.16b, r0, r0; fmul r0, r1, uni           // ra0.16b = ftoi(r0)           ; r0 = r1 * uni[14]     // Z scale by uniform ?
+            0xe0025c6700001a00, // load_imm vw_setup, nop, 0x00001a00 (0.000000)    // vw_setup = 0x1a00            ;                       // 16bits, horizontal, 1 stride.
+            0x10024c2035027d84, // mov vpm, ra0; fmul r0, r0, r4                    // vpm = ra0 (Ys/Xs)            ; r0 = r0 * r4          // perspective divide (Z*1/W)
+            0x10020c2701827180, // fadd vpm, r0, uni; nop nop, r0, r0               // vpm = r0 + uni[15] (Zs)      ;                       // Adjust Z with uniform
+            0x10020c27159e7900, // mov vpm, r4; nop nop, r0, r0                     // vpm = r4 (1/Wc)              ;
+            0x10020c27150a7d80, // mov vpm, ra2; nop nop, r0, r0                    // vpm = ra2 (Varying0)         ;       // vpm = s:TEXCOORD0
+            0x10020c27159c2fc0, // mov vpm, rb2; nop nop, r0, r0                    // vpm = rb2 (Varying1)         ;       // vpm = t:TEXCOORD1
+            0xd0020c27159e0fc0, // sig_small_imm mov vpm, 1.0; nop nop, r0, r0      // vpm = 1 (Varying2)           ;       // vpm = w?
+            0x300009e7009e7000, // sig_end nop nop, r0, r0; nop nop, r0, r0         // program end                  ;
+            0x100009e7009e7000, // nop nop, r0, r0; nop nop, r0, r0                 //
+            0x100009e7009e7000, // nop nop, r0, r0; nop nop, r0, r0                 //
+        };
+
+#elif PASSTHROUGH_CVS
+
         UINT vertexShader[] =
         {
             /* Assembled Program */
             /* 0x00000000: */ 0x00701a00, 0xe0020c67, /* ldi vr_setup, 0x00701a00 */
-            /* 0x00000008: */ 0x009e7000, 0x100009e7, /* nop ; nop */
-            /* 0x00000010: */ 0x009e7000, 0x100009e7, /* nop ; nop */
-            /* 0x00000018: */ 0x009e7000, 0x100009e7, /* nop ; nop */
-            /* 0x00000020: */ 0x15c27d80, 0x10020027, /* mov ra0, vpm ; nop */
-            /* 0x00000028: */ 0x15c27d80, 0x10020067, /* mov ra1, vpm ; nop */
-            /* 0x00000030: */ 0x15c27d80, 0x100200a7, /* mov ra2, vpm ; nop */
-            /* 0x00000038: */ 0x15c27d80, 0x100200e7, /* mov ra3, vpm ; nop */
-            /* 0x00000040: */ 0x15c27d80, 0x10020127, /* mov ra4, vpm ; nop */
-            /* 0x00000048: */ 0x15c27d80, 0x10020167, /* mov ra5, vpm ; nop */
-            /* 0x00000050: */ 0x15c27d80, 0x100201a7, /* mov ra6, vpm ; nop */
-            /* 0x00000058: */ 0x00000080, 0xe0020827, /* ldi r0, 128.0 */
-            /* 0x00000060: */ 0x20027030, 0x100049e1, /* nop; fmul r1, ra0, r0 */
-            /* 0x00000068: */ 0x019e7200, 0x10020867, /* fadd r1, r1, r0; nop */
-            /* 0x00000070: */ 0x20067030, 0x100049e2, /* nop; fmul r2, ra1, r0 */
-            /* 0x00000078: */ 0x019e7400, 0x100208a7, /* fadd r2, r2, r0; nop */
-            /* 0x00000080: */ 0x079e7240, 0x10120827, /* ftoi r0.16a, r1 ; nop */
-            /* 0x00000088: */ 0x079e7480, 0x10220827, /* ftoi r0.16b, r2 ; nop */
-            /* 0x00000090: */ 0x00001a00, 0xe0021c67, /* ldi vw_setup, 0x00001a00 */
-            /* 0x00000098: */ 0x159e7000, 0x10020c27, /* mov vpm, r0 ; nop */
-            /* 0x000000a0: */ 0x150a7d80, 0x10020c27, /* mov vpm, ra2 ; nop */
-            /* 0x000000a8: */ 0x150e7d80, 0x10020c27, /* mov vpm, ra3 ; nop */
-            /* 0x000000b0: */ 0x15127d80, 0x10020c27, /* mov vpm, ra4 ; nop */
-            /* 0x000000b8: */ 0x15167d80, 0x10020c27, /* mov vpm, ra5 ; nop */
-            /* 0x000000c0: */ 0x151a7d80, 0x10020c27, /* mov vpm, ra6 ; nop */
-            /* 0x000000c8: */ 0x009e7000, 0x300009e7, /* nop ; nop ; thrend */
-            /* 0x000000d0: */ 0x009e7000, 0x100009e7, /* nop ; nop */
-            /* 0x000000d8: */ 0x009e7000, 0x100009e7, /* nop ; nop */
+            /* 0x00000008: */ 0x15c27d80, 0x10020027, /* mov ra0, vpm ; nop */
+            /* 0x00000010: */ 0x15c27d80, 0x10020067, /* mov ra1, vpm ; nop */
+            /* 0x00000018: */ 0x15c27d80, 0x100200a7, /* mov ra2, vpm ; nop */
+            /* 0x00000020: */ 0x15c27d80, 0x100200e7, /* mov ra3, vpm ; nop */
+            /* 0x00000028: */ 0x15c27d80, 0x10020127, /* mov ra4, vpm ; nop */
+            /* 0x00000030: */ 0x15c27d80, 0x10020167, /* mov ra5, vpm ; nop */
+            /* 0x00000038: */ 0x15c27d80, 0x100201a7, /* mov ra6, vpm ; nop */
+            /* 0x00000040: */ 0x07027d80, 0x10120827, /* ftoi r0.16a, ra0 ; nop */
+            /* 0x00000048: */ 0x07067d80, 0x10220827, /* ftoi r0.16b, ra1 ; nop */
+            /* 0x00000050: */ 0x00001a00, 0xe0021c67, /* ldi vw_setup, 0x00001a00 */
+            /* 0x00000058: */ 0x159e7000, 0x10020c27, /* mov vpm, r0 ; nop */
+            /* 0x00000060: */ 0x150a7d80, 0x10020c27, /* mov vpm, ra2 ; nop */
+            /* 0x00000068: */ 0x150e7d80, 0x10020c27, /* mov vpm, ra3 ; nop */
+            /* 0x00000070: */ 0x15127d80, 0x10020c27, /* mov vpm, ra4 ; nop */
+            /* 0x00000078: */ 0x15167d80, 0x10020c27, /* mov vpm, ra5 ; nop */
+            /* 0x00000080: */ 0x151a7d80, 0x10020c27, /* mov vpm, ra6 ; nop */
+            /* 0x00000088: */ 0x009e7000, 0x300009e7, /* nop ; nop ; thrend */
+            /* 0x00000090: */ 0x009e7000, 0x100009e7, /* nop ; nop */
+            /* 0x00000098: */ 0x009e7000, 0x100009e7, /* nop ; nop */
         };
+
+#elif SIMPLETRANS_CVS
+
+        UINT vertexShader[] =
+        {
+            /* Assembled Program */
+            /* 0x00000000: */ 0x00701a00, 0xe0020c67, /* ldi vr_setup, 0x00701a00 */
+            /* 0x00000008: */ 0x15c27d80, 0x10020027, /* mov ra0, vpm ; nop */
+            /* 0x00000010: */ 0x15c27d80, 0x10020067, /* mov ra1, vpm ; nop */
+            /* 0x00000018: */ 0x15c27d80, 0x100200a7, /* mov ra2, vpm ; nop */
+            /* 0x00000020: */ 0x15c27d80, 0x100200e7, /* mov ra3, vpm ; nop */
+            /* 0x00000028: */ 0x15c27d80, 0x10020127, /* mov ra4, vpm ; nop */
+            /* 0x00000030: */ 0x15c27d80, 0x10020167, /* mov ra5, vpm ; nop */
+            /* 0x00000038: */ 0x15c27d80, 0x100201a7, /* mov ra6, vpm ; nop */
+            /* 0x00000040: */ 0x15827d80, 0x100208a7, /* mov r2, unif ; nop */
+            /* 0x00000048: */ 0x15027d80, 0x10020867, /* mov r1, ra0  ; nop */
+            /* 0x00000050: */ 0x209e700a, 0x100049c0, /* nop ; fmul rb0, r1, r2 */
+            /* 0x00000058: */ 0x15827d80, 0x100208a7, /* mov r2, unif ; nop */
+            /* 0x00000060: */ 0x15067d80, 0x10020867, /* mov r1, ra1  ; nop */
+            /* 0x00000068: */ 0x209e700a, 0x100049c1, /* nop ; fmul rb1, r1, r2 */
+            /* 0x00000070: */ 0x079c0fc0, 0x10120827, /* ftoi r0.16a, rb0 ; nop */
+            /* 0x00000078: */ 0x079c1fc0, 0x10220827, /* ftoi r0.16b, rb1 ; nop */
+            /* 0x00000080: */ 0x00001a00, 0xe0021c67, /* ldi vw_setup, 0x00001a00 */
+            /* 0x00000088: */ 0x159e7000, 0x10020c27, /* mov vpm, r0 ; nop */
+            /* 0x00000090: */ 0x150a7d80, 0x10020c27, /* mov vpm, ra2 ; nop */
+            /* 0x00000098: */ 0x150e7d80, 0x10020c27, /* mov vpm, ra3 ; nop */
+            /* 0x000000a0: */ 0x15127d80, 0x10020c27, /* mov vpm, ra4 */
+            /* 0x000000a8: */ 0x15167d80, 0x10020c27, /* mov vpm, ra5 */
+            /* 0x000000b0: */ 0x151a7d80, 0x10020c27, /* mov vpm, ra6 */
+            /* 0x000000b8: */ 0x009e7000, 0x300009e7, /* nop ; nop ; thrend */
+            /* 0x000000c0: */ 0x009e7000, 0x100009e7, /* nop ; nop */
+            /* 0x000000c8: */ 0x009e7000, 0x100009e7, /* nop ; nop */
+        };
+
+#else
+
+#endif
+
+#if SHAREDTEX_CVS
+
+        VC4_QPU_INSTRUCTION coordinateShader[] =
+        {
+            0xe0024c6700201a00, // load_imm vr_setup, nop, 0x00201a00 (0.000000)    // vr_setup = 0x201a00      ;           // 16bits, horizontal, 1 stride, 2 reads from VPM, 
+            0x1002082715c27d80, //  mov r0, vpm_read; nop nop, r0, r0               // r0 = vpm_read (X)        ;
+            0x1002404035c20d87, // mov ra1, vpm_read; fmul rb0, r0, uni             // ra1 = vpm_read (Y)       ; rb0 = r0 * uni[0]     // transform (X) by uniform[0], [1], [2], [3]
+            0x100049e120827006, // nop nop, r0, r0; fmul r1, r0, uni                //                          ; r1 = r0 * uni[1]
+            0x100049e220827006, // nop nop, r0, r0; fmul r2, r0, uni                //                          ; r2 = r0 * uni[2]
+            0x100049e320827006, // nop nop, r0, r0; fmul r3, r0, uni                //                          ; r3 = r0 * uni[3]
+            0x100049e020060037, // nop nop, r0, r0; fmul r0, ra1, uni               //                          ; r0 = ra1 * uni[4]     // transform (Y) by uniform[4], [5], [6], [7]
+            0x1002402021060077, // fadd ra0, r0, r1; fmul r0, ra1, uni              // ra0 = r0 + r1            ; r0 = ra1 * uni[5]
+            0x100248a0210600b7, // fadd r2, r0, r2; fmul r0, ra1, uni               // r2 = r0 + r2             ; r0 = ra1 * uni[6]
+            0x10024860210600f7, // fadd r1, r0, r3; fmul r0, ra1, uni               // r1 = r0 + r3             ; r0 = ra1 * uni[7]
+            0x10020827019c01c0, // fadd r0, r0, rb0; nop nop, r0, r0                // r0 = r0 + rb0            ;
+            0x100208e701020f80, // fadd r3, uni, ra0; nop nop, r0, r0               // r3 = uni[8] + ra0        ;
+            0xe0025c6700001a00, // load_imm vw_setup, nop, 0x00001a00 (0.000000)    // vw_setup = 0x1a00        ;           // 16bits, horizontal, 1 stride.
+            0x1002483081827c1b, // fadd r0, uni, r0; mov vpm, r3                    // r0 = uni[9] + r0         ; vpm = r3 (Xc)
+            0x100208a701827c80, // fadd r2, uni, r2; nop nop, r0, r0                // r2 = uni[10] + r2        ;
+            0x1002487081827c52, // fadd r1, uni, r1; mov vpm, r2                    // r1 = uni[11] + r1        ; vpm = r2 (Yc)
+            0x10021d27159e7000, // mov sfu_recip, r0; nop nop, r0, r0               // r4 = sfu_recip(r0)       ;           // r4 = 1/w
+            0x10020c27159e7240, // mov vpm, r1; nop nop, r0, r0                     // vpm = r1 (Zc)            ;
+            0x10024c203582701e, // mov vpm, r0; fmul r0, r3, uni                    // vpm = r0 (Wc)            ; r0 = r3 * uni[12]     // X scale by uniform ?
+            0x100049e0209e7004, // nop nop, r0, r0; fmul r0, r0, r4                 //                          ; r0 = r0 * r4          // perspective divide (Y*1/w)
+            0x1012402027827016, // ftoi ra0.16a, r0, r0; fmul r0, r2, uni           // ra0.16a = ftoi(r0)       ; r0 = r2 * uni[13]     // Y scale by uniform ?
+            0x100049e0209e7004, // nop nop, r0, r0; fmul r0, r0, r4                 //                          ; r0 = r0 * r4          // perspective divide (X*1/w)
+            0x102240202782700e, // ftoi ra0.16b, r0, r0; fmul r0, r1, uni           // ra0.16b = ftoi(r0)       ; r0 = r1 * uni[14]     // Z scale by uniform ?
+            0x100049e0209e7004, // nop nop, r0, r0; fmul r0, r0, r4                 //                          ; r0 = r0 * r4          // perspective divide (Z*1/w)
+            0x10020c2715027d80, // mov vpm, ra0; nop nop, r0, r0                    // vpm = ra0 (Ys/Xs)        ;
+            0x10020c2701827180, // fadd vpm, r0, uni; nop nop, r0, r0               // vpm = r0 + uni[15] (Zs)  ;           // Adjust Z with uniform
+            0x10020c27159e7900, // mov vpm, r4; nop nop, r0, r0                     // vpm = r4 (1/Wc)
+            0x300009e7009e7000, // sig_end nop nop, r0, r0; nop nop, r0, r0
+            0x100009e7009e7000, // nop nop, r0, r0; nop nop, r0, r0
+            0x100009e7009e7000, // nop nop, r0, r0; nop nop, r0, r0
+        };
+
+#elif PASSTHROUGH_CVS
 
         UINT coordinateShader[] =
         {
             /* Assembled Program */
             /* 0x00000000: */ 0x00701a00, 0xe0020c67, /* ldi vr_setup, 0x00701a00 */
-            /* 0x00000008: */ 0x009e7000, 0x100009e7, /* nop ; nop */
-            /* 0x00000010: */ 0x009e7000, 0x100009e7, /* nop ; nop */
-            /* 0x00000018: */ 0x009e7000, 0x100009e7, /* nop ; nop */
-            /* 0x00000020: */ 0x15c27d80, 0x10020027, /* mov ra0, vpm ; nop */
-            /* 0x00000028: */ 0x15c27d80, 0x10020067, /* mov ra1, vpm ; nop */
-            /* 0x00000030: */ 0x15c27d80, 0x100200a7, /* mov ra2, vpm ; nop */
-            /* 0x00000038: */ 0x15c27d80, 0x100200e7, /* mov ra3, vpm ; nop */
-            /* 0x00000040: */ 0x15c27d80, 0x10020127, /* mov ra4, vpm ; nop */
-            /* 0x00000048: */ 0x15c27d80, 0x10020167, /* mov ra5, vpm ; nop */
-            /* 0x00000050: */ 0x15c27d80, 0x100201a7, /* mov ra6, vpm ; nop */
-            /* 0x00000058: */ 0x00000080, 0xe0020827, /* ldi r0, 128.0 */
-            /* 0x00000060: */ 0x20027030, 0x100049e1, /* nop; fmul r1, ra0, r0 */
-            /* 0x00000068: */ 0x019e7200, 0x10020867, /* fadd r1, r1, r0; nop */
-            /* 0x00000070: */ 0x20067030, 0x100049e2, /* nop; fmul r2, ra1, r0 */
-            /* 0x00000078: */ 0x019e7400, 0x100208a7, /* fadd r2, r2, r0; nop */
-            /* 0x00000080: */ 0x079e7240, 0x10120827, /* ftoi r0.16a, r1 ; nop */
-            /* 0x00000088: */ 0x079e7480, 0x10220827, /* ftoi r0.16b, r2 ; nop */
-            /* 0x00000090: */ 0x00001a00, 0xe0021c67, /* ldi vw_setup, 0x00001a00 */
-            /* 0x00000098: */ 0x15027d80, 0x10020c27, /* mov vpm, ra0 */
-            /* 0x000000a0: */ 0x15067d80, 0x10020c27, /* mov vpm, ra1 */
-            /* 0x000000a8: */ 0x150a7d80, 0x10020c27, /* mov vpm, ra2 */
-            /* 0x000000b0: */ 0x150e7d80, 0x10020c27, /* mov vpm, ra3 */
-            /* 0x000000b8: */ 0x159e7000, 0x10020c27, /* mov vpm, r0 ; nop */
-            /* 0x000000c0: */ 0x150a7d80, 0x10020c27, /* mov vpm, ra2 ; nop */
-            /* 0x000000c8: */ 0x150e7d80, 0x10020c27, /* mov vpm, ra3 ; nop */
-            /* 0x000000d0: */ 0x009e7000, 0x300009e7, /* nop ; nop ; thrend */
-            /* 0x000000d8: */ 0x009e7000, 0x100009e7, /* nop ; nop */
-            /* 0x000000e0: */ 0x009e7000, 0x100009e7, /* nop ; nop */
+            /* 0x00000008: */ 0x15c27d80, 0x10020027, /* mov ra0, vpm ; nop */
+            /* 0x00000010: */ 0x15c27d80, 0x10020067, /* mov ra1, vpm ; nop */
+            /* 0x00000018: */ 0x15c27d80, 0x100200a7, /* mov ra2, vpm ; nop */
+            /* 0x00000020: */ 0x15c27d80, 0x100200e7, /* mov ra3, vpm ; nop */
+            /* 0x00000028: */ 0x15c27d80, 0x10020127, /* mov ra4, vpm ; nop */
+            /* 0x00000030: */ 0x15c27d80, 0x10020167, /* mov ra5, vpm ; nop */
+            /* 0x00000038: */ 0x15c27d80, 0x100201a7, /* mov ra6, vpm ; nop */
+            /* 0x00000040: */ 0x07027d80, 0x10120827, /* ftoi r0.16a, ra0 ; nop */
+            /* 0x00000048: */ 0x07067d80, 0x10220827, /* ftoi r0.16b, ra1 ; nop */
+            /* 0x00000050: */ 0x00001a00, 0xe0021c67, /* ldi vw_setup, 0x00001a00 */
+            /* 0x00000058: */ 0x15027d80, 0x10020c27, /* mov vpm, ra0 */
+            /* 0x00000060: */ 0x15067d80, 0x10020c27, /* mov vpm, ra1 */
+            /* 0x00000068: */ 0x150a7d80, 0x10020c27, /* mov vpm, ra2 */
+            /* 0x00000070: */ 0x150e7d80, 0x10020c27, /* mov vpm, ra3 */
+            /* 0x00000078: */ 0x159e7000, 0x10020c27, /* mov vpm, r0 ; nop */
+            /* 0x00000080: */ 0x150a7d80, 0x10020c27, /* mov vpm, ra2 ; nop */
+            /* 0x00000088: */ 0x150e7d80, 0x10020c27, /* mov vpm, ra3 ; nop */
+            /* 0x00000090: */ 0x009e7000, 0x300009e7, /* nop ; nop ; thrend */
+            /* 0x00000098: */ 0x009e7000, 0x100009e7, /* nop ; nop */
+            /* 0x000000a0: */ 0x009e7000, 0x100009e7, /* nop ; nop */
         };
+
+#elif SIMPLETRANS_CVS
+
+        UINT coordinateShader[] =
+        {
+            /* Assembled Program */
+            /* 0x00000000: */ 0x00701a00, 0xe0020c67, /* ldi vr_setup, 0x00701a00 */
+            /* 0x00000008: */ 0x15c27d80, 0x10020027, /* mov ra0, vpm ; nop */
+            /* 0x00000010: */ 0x15c27d80, 0x10020067, /* mov ra1, vpm ; nop */
+            /* 0x00000018: */ 0x15c27d80, 0x100200a7, /* mov ra2, vpm ; nop */
+            /* 0x00000020: */ 0x15c27d80, 0x100200e7, /* mov ra3, vpm ; nop */
+            /* 0x00000028: */ 0x15c27d80, 0x10020127, /* mov ra4, vpm ; nop */
+            /* 0x00000030: */ 0x15c27d80, 0x10020167, /* mov ra5, vpm ; nop */
+            /* 0x00000038: */ 0x15c27d80, 0x100201a7, /* mov ra6, vpm ; nop */
+            /* 0x00000040: */ 0x15827d80, 0x100208a7, /* mov r2, unif ; nop */
+            /* 0x00000048: */ 0x15027d80, 0x10020867, /* mov r1, ra0  ; nop */
+            /* 0x00000050: */ 0x209e700a, 0x100049c0, /* nop ; fmul rb0, r1, r2 */
+            /* 0x00000058: */ 0x15827d80, 0x100208a7, /* mov r2, unif ; nop */
+            /* 0x00000060: */ 0x15067d80, 0x10020867, /* mov r1, ra1  ; nop */
+            /* 0x00000068: */ 0x209e700a, 0x100049c1, /* nop ; fmul rb1, r1, r2 */
+            /* 0x00000070: */ 0x079c0fc0, 0x10120827, /* ftoi r0.16a, rb0 ; nop */
+            /* 0x00000078: */ 0x079c1fc0, 0x10220827, /* ftoi r0.16b, rb1 ; nop */
+            /* 0x00000080: */ 0x00001a00, 0xe0021c67, /* ldi vw_setup, 0x00001a00 */
+            /* 0x00000088: */ 0x159c0fc0, 0x10020c27, /* mov vpm, rb0 */
+            /* 0x00000090: */ 0x159c1fc0, 0x10020c27, /* mov vpm, rb1 */
+            /* 0x00000098: */ 0x150a7d80, 0x10020c27, /* mov vpm, ra2 */
+            /* 0x000000a0: */ 0x150e7d80, 0x10020c27, /* mov vpm, ra3 */
+            /* 0x000000a8: */ 0x159e7000, 0x10020c27, /* mov vpm, r0 ; nop */
+            /* 0x000000b0: */ 0x150a7d80, 0x10020c27, /* mov vpm, ra2 ; nop */
+            /* 0x000000b8: */ 0x150e7d80, 0x10020c27, /* mov vpm, ra3 ; nop */
+            /* 0x000000c0: */ 0x009e7000, 0x300009e7, /* nop ; nop ; thrend */
+            /* 0x000000c8: */ 0x009e7000, 0x100009e7, /* nop ; nop */
+            /* 0x000000d0: */ 0x009e7000, 0x100009e7, /* nop ; nop */
+        };
+
+#else
+
+#endif
 
         m_HwCodeSize = sizeof(vertexShader) + sizeof(coordinateShader);
 

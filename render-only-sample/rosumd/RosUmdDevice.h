@@ -165,6 +165,7 @@ public:
     static const UINT kMaxViewports = D3D10_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE;
     static const UINT kMaxRenderTargets = D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT;
     static const UINT kMaxSamplers = D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT;
+    static const UINT kMaxConstantBuffers = D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT;
 
     void SetVertexBuffers(UINT startBuffer, UINT numBuffers, const D3D10DDI_HRESOURCE* phBuffers, const UINT* pStrides,  const UINT* pOffsets);
     void SetIndexBuffer(const D3D10DDI_HRESOURCE indexBuffer, DXGI_FORMAT indexFormat, UINT offset);
@@ -178,6 +179,7 @@ public:
     void SetPixelSamplers(UINT Offset, UINT NumSamplers, const D3D10DDI_HSAMPLER* phSamplers);
     void SetVertexShader(RosUmdShader * pShader);
     void SetVertexSamplers(UINT Offset, UINT NumSamplers, const D3D10DDI_HSAMPLER* phSamplers);
+    void VsSetConstantBuffers11_1(UINT, UINT, const D3D10DDI_HRESOURCE*, const UINT*, const UINT*);
     void SetDomainShader(RosUmdShader * pShader);
     void SetDomainSamplers(UINT Offset, UINT NumSamplers, const D3D10DDI_HSAMPLER* phSamplers);
     void SetGeometryShader(RosUmdShader * pShader);
@@ -219,6 +221,10 @@ public:
 
     RosUmdShader *                  m_vertexShader;
     RosUmdSampler *                 m_vertexSamplers[kMaxSamplers];
+
+    RosUmdResource *                m_vsConstantBuffer[kMaxConstantBuffers];
+    UINT                            m_vs1stConstant[kMaxConstantBuffers];
+    UINT                            m_vsNumberContants[kMaxConstantBuffers];
 
     RosUmdShader *                  m_domainShader;
     RosUmdSampler *                 m_domainSamplers[kMaxSamplers];

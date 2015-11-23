@@ -30,7 +30,7 @@
 #include "Vc4Hw.h"
 #include "Vc4Ddi.h"
 
-#define NV_SHADER 1
+// #define NV_SHADER 1
 
 #endif
 
@@ -658,6 +658,32 @@ void RosUmdDevice::SetIndexBuffer(const D3D10DDI_HRESOURCE indexBuffer, DXGI_FOR
     m_indexOffset = offset;
 }
 
+void RosUmdDevice::VsSetConstantBuffers11_1(
+    UINT startBuffer,
+    UINT numberBuffers,
+    const D3D10DDI_HRESOURCE *  phResources,
+    const UINT *    pFirstConstant,
+    const UINT *    pNumberConstants)
+{
+    UINT bufIndex;
+    
+    bufIndex = startBuffer;
+    for (UINT i = 0; i < numberBuffers; i++, bufIndex++)
+    {
+        m_vsConstantBuffer[bufIndex] = RosUmdResource::CastFrom(phResources[i]);
+    }
+
+    if (pFirstConstant && pNumberConstants)
+    {
+        bufIndex = startBuffer;
+        for (UINT i = 0; i < numberBuffers; i++, bufIndex++)
+        {
+            m_vs1stConstant[bufIndex] = pFirstConstant[i];
+            m_vsNumberContants[bufIndex] = pNumberConstants[i];
+        }
+    }
+}
+
 void RosUmdDevice::SetTopology(D3D10_DDI_PRIMITIVE_TOPOLOGY topology)
 {
     m_topology = topology;
@@ -863,9 +889,9 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
     // TODO[indyz] : Decide maximal value to cover all cases
     //
 
-    UINT    maxStateComamnds = 128;
-    UINT    maxAllocationsUsed = 10;
-    UINT    maxPathLocations = 16;
+    UINT    maxStateComamnds = 160;
+    UINT    maxAllocationsUsed = 12;
+    UINT    maxPathLocations = 20;
 
     m_commandBuffer.ReserveCommandBufferSpace(
         false,                                  // HW command
@@ -1008,10 +1034,13 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
     pVC4ConfigBits->EnableForwardFacingPrimitive = 1;
     pVC4ConfigBits->EnableReverseFacingPrimitive = 1;
 
+    pVC4ConfigBits->ClosewisePrimitives = 1;
+
 #endif
 
     if (m_depthStencilState->m_desc.DepthEnable)
     {
+
         pVC4ConfigBits->EarlyZEnable = 1;
 
         pVC4ConfigBits->DepthTestFunction = ConvertD3D11DepthComparisonFunc(
@@ -1022,6 +1051,12 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
             pVC4ConfigBits->EarlyZUpdatesEnable = 1;
             pVC4ConfigBits->ZUpdatesEnable = 1;
         }
+    }
+    else
+    {
+        pVC4ConfigBits->DepthTestFunction = VC4_DEPTH_TEST_ALWAYS;
+
+        pVC4ConfigBits->EarlyZUpdatesEnable = 1;
     }
 
 #if NV_SHADER
@@ -1169,23 +1204,30 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
 #else
 
     //
-    // Write Viewport Offset command
+    // Write Depth Offset, Point Size, Line Width command
     //
 
-    VC4ViewportOffset * pVC4ViewportOffset;
-    MoveToNextCommand(pVC4ConfigBits, pVC4ViewportOffset, curCommandOffset);
+    VC4DepthOffset *    pVC4DepthOffset;
+    MoveToNextCommand(pVC4ConfigBits, pVC4DepthOffset, curCommandOffset);
 
-    *pVC4ViewportOffset = vc4ViewportOffset;
+    *pVC4DepthOffset = vc4DepthOffset;
 
-    pVC4ViewportOffset->ViewportCenterX = (SHORT)(m_viewports[0].Width / 2.0f * 16.0f);
-    pVC4ViewportOffset->ViewportCenterY = (SHORT)(m_viewports[0].Height / 2.0f * 16.0f);
+    VC4PointSize *  pVC4PointSize;
+    MoveToNextCommand(pVC4DepthOffset, pVC4PointSize, curCommandOffset);
+
+    *pVC4PointSize = vc4PointSize;
+
+    VC4LineWidth *  pVC4LineWidth;
+    MoveToNextCommand(pVC4PointSize, pVC4LineWidth, curCommandOffset);
+
+    *pVC4LineWidth = vc4LineWidth;
 
     //
     // Write Clipper XY Scaling command
     //
 
     VC4ClipperXYScaling *   pVC4ClipperXYScaling;
-    MoveToNextCommand(pVC4ViewportOffset, pVC4ClipperXYScaling, curCommandOffset);
+    MoveToNextCommand(pVC4LineWidth, pVC4ClipperXYScaling, curCommandOffset);
 
     *pVC4ClipperXYScaling = vc4ClipperXYScaling;
 
@@ -1204,6 +1246,27 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
     pVC4ClipperZScaleAndOffset->ViewportZOffset = (m_viewports[0].MaxDepth - m_viewports[0].MinDepth) / 2.0f;
     pVC4ClipperZScaleAndOffset->ViewportZScale = pVC4ClipperZScaleAndOffset->ViewportZOffset;
 
+    //
+    // Write Viewport Offset command
+    //
+
+    VC4ViewportOffset * pVC4ViewportOffset;
+    MoveToNextCommand(pVC4ClipperZScaleAndOffset, pVC4ViewportOffset, curCommandOffset);
+
+    *pVC4ViewportOffset = vc4ViewportOffset;
+
+    pVC4ViewportOffset->ViewportCenterX = (SHORT)(m_viewports[0].Width / 2.0f * 16.0f);
+    pVC4ViewportOffset->ViewportCenterY = (SHORT)(m_viewports[0].Height / 2.0f * 16.0f);
+
+    //
+    // Write Flat Shade Flags command
+    //
+
+    VC4FlatShadeFlags * pVC4FlatShadeFlags;
+    MoveToNextCommand(pVC4ViewportOffset, pVC4FlatShadeFlags, curCommandOffset);
+
+    *pVC4FlatShadeFlags = vc4FlatShadeFlags;
+
 #ifdef SSR_END_DMA
 
     UINT vc4GLShaderStateRecordOffset = PAGE_SIZE - sizeof(VC4GLShaderStateRecord);
@@ -1217,7 +1280,7 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
     //
 
     VC4Branch * pVC4Branch;
-    MoveToNextCommand(pVC4ClipperZScaleAndOffset, pVC4Branch, curCommandOffset);
+    MoveToNextCommand(pVC4FlatShadeFlags, pVC4Branch, curCommandOffset);
 
     UINT vc4GLShaderStateRecordOffset = curCommandOffset + sizeof(VC4Branch);
     AlignValue(vc4GLShaderStateRecordOffset, 16);
@@ -1241,11 +1304,8 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
 
     *pVC4GLShaderStateRecord = vc4GLShaderStateRecord;
 
-#if 0
 
     pVC4GLShaderStateRecord->EnableClipping = 1;
-
-#endif
     
     pVC4GLShaderStateRecord->FragmentShaderIsSingleThreaded = 1;
 
@@ -1257,7 +1317,7 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
     UINT    numEntries = m_pixelShader->m_pCompiler->GetInputSignature(&pInputEntry);
     BYTE    numVaryings = 0;
 
-    for (UINT i = 0; i < numEntries; i++,pInputEntry++)
+    for (UINT i = 0; i < numEntries; i++, pInputEntry++)
     {
         if (pInputEntry->SystemValue != D3D10_SB_NAME_UNDEFINED)
         {
@@ -1312,13 +1372,26 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
         allocListIndex,
         vc4GLShaderStateRecordOffset + offsetof(VC4GLShaderStateRecord, VertexShaderCodeAddress));
 
-    // TODO[indyz] : Set VertexShaderUniformsAddress to constant buffer's address
+    // NOTE[indyz] : Before shader compiler is ready, half of the constant
+    //               buffer is used for VS, the other half for CS (Coordinate Shader)
     //
 
-    m_commandBuffer.SetPatchLocation(
-        pCurPatchLocation,
-        dummyAllocIndex,
-        vc4GLShaderStateRecordOffset + offsetof(VC4GLShaderStateRecord, VertexShaderUniformsAddress));
+    if (m_vsConstantBuffer[0])
+    {
+        allocListIndex = m_commandBuffer.UseResource(m_vsConstantBuffer[0], false);
+
+        m_commandBuffer.SetPatchLocation(
+            pCurPatchLocation,
+            allocListIndex,
+            vc4GLShaderStateRecordOffset + offsetof(VC4GLShaderStateRecord, VertexShaderUniformsAddress));
+    }
+    else
+    {
+        m_commandBuffer.SetPatchLocation(
+            pCurPatchLocation,
+            dummyAllocIndex,
+            vc4GLShaderStateRecordOffset + offsetof(VC4GLShaderStateRecord, VertexShaderUniformsAddress));
+    }
     
 #if DBG
     pVC4GLShaderStateRecord->CoordinateShaderCodeAddress        = 0xDEADBEEF;
@@ -1337,10 +1410,24 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
     // TODO[indyz] : Set CoordinateShaderUniformsAddress to constant buffer's address
     //
 
-    m_commandBuffer.SetPatchLocation(
-        pCurPatchLocation,
-        dummyAllocIndex,
-        vc4GLShaderStateRecordOffset + offsetof(VC4GLShaderStateRecord, CoordinateShaderUniformsAddress));
+    if (m_vsConstantBuffer[0])
+    {
+        allocListIndex = m_commandBuffer.UseResource(m_vsConstantBuffer[0], false);
+
+        m_commandBuffer.SetPatchLocation(
+            pCurPatchLocation,
+            allocListIndex,
+            vc4GLShaderStateRecordOffset + offsetof(VC4GLShaderStateRecord, CoordinateShaderUniformsAddress),
+            0,
+            m_vsConstantBuffer[0]->m_hwSizeBytes/2);
+    }
+    else
+    {
+        m_commandBuffer.SetPatchLocation(
+            pCurPatchLocation,
+            dummyAllocIndex,
+            vc4GLShaderStateRecordOffset + offsetof(VC4GLShaderStateRecord, CoordinateShaderUniformsAddress));
+    }
 
     curCommandOffset = vc4GLShaderStateRecordOffset;
 

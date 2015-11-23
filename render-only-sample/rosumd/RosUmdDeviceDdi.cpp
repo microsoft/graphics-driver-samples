@@ -25,7 +25,7 @@
 const D3D11_1DDI_DEVICEFUNCS RosUmdDeviceDdi::s_deviceFuncs11_1 =
 {
     RosUmdDeviceDdi::DefaultConstantBufferUpdateSubresourceUP11_1_Default,
-    RosUmdDeviceDdi::VsSetConstantBuffers11_1_Default,
+    RosUmdDeviceDdi::DdiVsSetConstantBuffers11_1,
     RosUmdDeviceDdi::PSSetShaderResources_Default,
     RosUmdDeviceDdi::DdiPsSetShader,
     RosUmdDeviceDdi::DdiPSSetSamplers,
@@ -1181,5 +1181,20 @@ void APIENTRY RosUmdDeviceDdi::DdiIaSetIndexBuffer(
 
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     pDevice->SetIndexBuffer(hIndexBuffer, hIndexFormat, offset);
+}
+
+void APIENTRY RosUmdDeviceDdi::DdiVsSetConstantBuffers11_1(
+    D3D10DDI_HDEVICE hDevice,
+    UINT startBuffer,
+    UINT numberBuffers, 
+    const D3D10DDI_HRESOURCE *  phResources,
+    const UINT *    pFirstConstant,
+    const UINT *    pNumberConstants)
+{
+    RosUmdLogging::Call(__FUNCTION__);
+
+    RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
+
+    pDevice->VsSetConstantBuffers11_1(startBuffer, numberBuffers, phResources, pFirstConstant, pNumberConstants);
 }
 

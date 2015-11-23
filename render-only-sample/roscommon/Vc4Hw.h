@@ -587,6 +587,43 @@ typedef enum _VC4DepthTestFunc
     VC4_DEPTH_TEST_ALWAYS           = 7
 } VC4DepthTestFunc;
 
+// Code: 97
+typedef struct _VC4FlatShadeFlags
+{
+    VC4_COMMAND_ID  CommandCode;
+    UINT            FlatShadingFlags;
+} VC4FlatShadeFlags;
+
+const VC4FlatShadeFlags vc4FlatShadeFlags = { VC4_CMD_FLAT_SHADE_FLAGS, 0 };
+
+// Code: 98
+typedef struct _VC4PointSize
+{
+    VC4_COMMAND_ID  CommandCode;
+    FLOAT           PointSize;
+} VC4PointSize;
+
+const VC4PointSize vc4PointSize = { VC4_CMD_POINT_SIZE, 1.0 };
+
+// Code: 99
+typedef struct _VC4LineWidth
+{
+    VC4_COMMAND_ID  CommandCode;
+    FLOAT           LineWidth;
+} VC4LineWidth;
+
+const VC4LineWidth vc4LineWidth = { VC4_CMD_LINE_WIDTH, 1.0 };
+
+// Code: 101
+typedef struct _VC4DepthOffset
+{
+    VC4_COMMAND_ID  CommandCode;
+    USHORT          DepthOffsetUnits;   // float 1-8-7
+    USHORT          DepthOffsetFactor;  // float 1-8-7
+} VC4DepthOffset;
+
+const VC4DepthOffset vc4DepthOffset = { VC4_CMD_DEPTH_OFFSET, 0 };
+
 // Code: 102
 typedef struct _VC4ClipWindow
 {

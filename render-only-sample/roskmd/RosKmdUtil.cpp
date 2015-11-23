@@ -125,6 +125,18 @@ static VC4NVShaderStateRecord      *pVC4NVShaderStateRecord = NULL;
 // Code: 96
 static VC4ConfigBits               *pVC4ConfigBits = NULL;
 
+// Code: 97
+static VC4FlatShadeFlags           *pVC4FlatShadeFlags = NULL;
+
+// Code: 98
+static VC4PointSize                *pVC4PointSize = NULL;
+
+// Code: 99
+static VC4LineWidth                *pVC4LineWidth = NULL;
+
+// Code: 101
+static VC4DepthOffset              *pVC4DepthOffset = NULL;
+
 // Code: 102
 static VC4ClipWindow               *pVC4ClipWindow = NULL;
 
