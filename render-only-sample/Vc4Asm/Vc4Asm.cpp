@@ -208,6 +208,12 @@ INT ParseSmallImmediate(TCHAR *p)
     RETURN_ERROR(0, TEXT("Invalid or unsupported small immediate value %s\n"), p);
 }
 
+HRESULT ParseLoadImmediate(VC4_QPU_INSTRUCTION QpuInst, TCHAR *pOpCodeNext, UINT Line)
+{
+    _ftprintf_s(stderr, TEXT("Load Immediate is not supported, line %d\n"), Line);
+    return E_NOTIMPL;
+}
+
 HRESULT ParseALUInstruction(VC4_QPU_INSTRUCTION &QpuInst, TCHAR *pOpCode, UINT Line)
 {
     boolean bPackedRegfileA = false;
@@ -628,13 +634,13 @@ HRESULT ParseALUInstruction(VC4_QPU_INSTRUCTION &QpuInst, TCHAR *pOpCode, UINT L
             RaddrB = VC4_QPU_RADDR_NOP;
         }
     }
-    
+
     // Set write swap,
     bWriteSwap = (AddMuxDest == VC4_QPU_ALU_REG_B) || (MulMuxDest == VC4_QPU_ALU_REG_A);
 
     // TODO:
-    bSetFlags = false; 
-    
+    bSetFlags = false;
+
     // Build instruction
     VC4_QPU_SET_UNPACK(QpuInst, Unpack);
     VC4_QPU_SET_PM(QpuInst, bPackUnpackSelect);
@@ -653,13 +659,13 @@ HRESULT ParseALUInstruction(VC4_QPU_INSTRUCTION &QpuInst, TCHAR *pOpCode, UINT L
     VC4_QPU_SET_ADD_B(QpuInst, AddMuxSrc[1]);
     VC4_QPU_SET_MUL_A(QpuInst, MulMuxSrc[0]);
     VC4_QPU_SET_MUL_B(QpuInst, MulMuxSrc[1]);
-        
+
     return S_OK;
 }
 
 void Printer(void *pFile, const TCHAR* szStr, int Line, void* m_pCustomCtx)
 {
-    _ftprintf_s(stderr, TEXT("\t\t\t// %s\n"), szStr);
+    _ftprintf_s(stderr, TEXT("// %s"), szStr);
 }
 
 int _tmain(int argc, TCHAR *argv[])
@@ -668,6 +674,8 @@ int _tmain(int argc, TCHAR *argv[])
     Disasm.SetPrinterW(Printer);
 
     boolean ShowDisassemble = false;
+    boolean ShowOriginal = false;
+    boolean Disassemble = false;
 
     if (argc <= 1)
     {
@@ -681,6 +689,14 @@ int _tmain(int argc, TCHAR *argv[])
             if (_tcsicmp(argv[i], TEXT("-ShowDisassemble")) == 0)
             {
                 ShowDisassemble = true;
+            }
+            else if (_tcsicmp(argv[i], TEXT("-ShowOriginal")) == 0)
+            {
+                ShowOriginal = true;
+            }
+            else if (_tcsicmp(argv[i], TEXT("-Disassemble")) == 0)
+            {
+                Disassemble = true;
             }
             else
             {
@@ -698,7 +714,7 @@ int _tmain(int argc, TCHAR *argv[])
     }
 
     FILE* fpASM = NULL;
-    
+
     errno_t err = _tfopen_s(&fpASM, szAsmFile, _TEXT("r"));
     if (err)
     {
@@ -712,69 +728,128 @@ int _tmain(int argc, TCHAR *argv[])
         VC4_QPU_INSTRUCTION QpuInst = 0;
         Line++;
 
-        // Copy original before token break it.
-        _tcscpy_s(szOriginal, szBuff);
-
-        // Parse Signature if provided.
-        UINT Sig = VC4_QPU_SIG_NO_SIGNAL;
-        TCHAR *pOpCodeNext = NULL;
-        if (!IsOpEmpty(szBuff, &pOpCodeNext))
+        if (Disassemble)
         {
-            TCHAR *pTokenNext;
-            TCHAR *pToken = _tcstok_s(szBuff, szDelimiters, &pTokenNext);
-
-            // Parse Signature if provided.
-            Sig = VC4_QPU_LOOKUP_VALUE(SIG, pToken);
-            if (Sig == VC4_QPU_INVALID_VALUE)
+            TCHAR *pTokenNext = NULL;
+            TCHAR *pValue = _tcstok_s(szBuff, szDelimiters, &pTokenNext);
+            do
             {
-                _ftprintf_s(stderr, TEXT("Invalid Signature %s, line %d\n"), pToken, Line);
-                break;
+                INT c = 0;
+                if (pValue[0] == '0' && pValue[1] == 'x')
+                {
+                    c += 2; // Skip 0x.
+                }
+                
+                INT cLen = _tcslen(pValue);
+                if (cLen == 16 + c)
+                {
+                    if (QpuInst)
+                    {
+                        _ftprintf_s(stderr, TEXT("Invalid immediate format %s, line %d\n"), pValue, Line);
+                        hr = E_INVALIDARG;
+                        break;
+                    }
+                    QpuInst = (VC4_QPU_INSTRUCTION) _tcstoull(pValue, NULL, 16);
+                    break;
+                }
+                else if (cLen == 8 + c)
+                {
+                    VC4_QPU_INSTRUCTION value = (VC4_QPU_INSTRUCTION) _tcstoul(pValue, NULL, 16);
+                    if (QpuInst)
+                    {
+                        assert((0xffffffff00000000ULL & QpuInst) == 0);
+                        QpuInst |= (value << 32);
+                        break;
+                    }
+                    else
+                    {
+                        QpuInst = value;
+                    }
+                    pValue = _tcstok_s(NULL, szDelimiters, &pTokenNext);
+                }
+                else
+                {
+                    _ftprintf_s(stderr, TEXT("Invalid immediate format %s, line %d\n"), pValue, Line);
+                    hr = E_INVALIDARG;
+                    break;
+                }
             }
-        }
-        VC4_QPU_SET_SIG(QpuInst, Sig);
-        
-        switch (Sig)
-        {
-        case VC4_QPU_SIG_BREAK:
-        case VC4_QPU_SIG_NO_SIGNAL:
-        case VC4_QPU_SIG_THREAD_SWITCH:
-        case VC4_QPU_SIG_PROGRAM_END:
-        case VC4_QPU_SIG_WAIT_FOR_SCOREBOARD:
-        case VC4_QPU_SIG_SCOREBOARD_UNBLOCK:
-        case VC4_QPU_SIG_LAST_THREAD_SWITCH:
-        case VC4_QPU_SIG_COVERAGE_LOAD:
-        case VC4_QPU_SIG_COLOR_LOAD:
-        case VC4_QPU_SIG_COLOR_LOAD_AND_PROGRAM_END:
-        case VC4_QPU_SIG_LOAD_TMU0:
-        case VC4_QPU_SIG_LOAD_TMU1:
-        case VC4_QPU_SIG_ALPAH_MASK_LOAD:
-        case VC4_QPU_SIG_ALU_WITH_RADDR_B:
-            hr = ParseALUInstruction(QpuInst, pOpCodeNext, Line);
-            break;
-        case VC4_QPU_SIG_LOAD_IMMEDIATE:
-            _ftprintf_s(stderr, TEXT("Load Immediate is not supported, line %d\n"), Line);
-            hr = E_NOTIMPL;
-            break;  
-        case VC4_QPU_SIG_BRANCH:
-            _ftprintf_s(stderr, TEXT("Branch is not supported, line %d\n"), Line);
-            hr = E_NOTIMPL;
-        default:
-            assert(false); // this should never happen.
-            break;
-        }
-
-        if (hr == S_OK)
-        {
-            _ftprintf_s(stdout, TEXT("0x%016llx\t // %s"), QpuInst, szOriginal);
-            if (ShowDisassemble)
-            {
-                Disasm.Run(&QpuInst, sizeof(QpuInst));
-            }
+            while (true);
         }
         else
         {
-            break;
+            // Copy original before token break it.
+            _tcscpy_s(szOriginal, szBuff);
+
+            // Parse Signature if provided.
+            UINT Sig = VC4_QPU_SIG_NO_SIGNAL;
+            TCHAR *pOpCodeNext = NULL;
+            if (!IsOpEmpty(szBuff, &pOpCodeNext))
+            {
+                TCHAR *pTokenNext;
+                TCHAR *pToken = _tcstok_s(szBuff, szDelimiters, &pTokenNext);
+
+                // Parse Signature if provided.
+                Sig = VC4_QPU_LOOKUP_VALUE(SIG, pToken);
+                if (Sig == VC4_QPU_INVALID_VALUE)
+                {
+                    _ftprintf_s(stderr, TEXT("Invalid Signature %s, line %d\n"), pToken, Line);
+                    break;
+                }
+            }
+            VC4_QPU_SET_SIG(QpuInst, Sig);
+
+            switch (Sig)
+            {
+            case VC4_QPU_SIG_BREAK:
+            case VC4_QPU_SIG_NO_SIGNAL:
+            case VC4_QPU_SIG_THREAD_SWITCH:
+            case VC4_QPU_SIG_PROGRAM_END:
+            case VC4_QPU_SIG_WAIT_FOR_SCOREBOARD:
+            case VC4_QPU_SIG_SCOREBOARD_UNBLOCK:
+            case VC4_QPU_SIG_LAST_THREAD_SWITCH:
+            case VC4_QPU_SIG_COVERAGE_LOAD:
+            case VC4_QPU_SIG_COLOR_LOAD:
+            case VC4_QPU_SIG_COLOR_LOAD_AND_PROGRAM_END:
+            case VC4_QPU_SIG_LOAD_TMU0:
+            case VC4_QPU_SIG_LOAD_TMU1:
+            case VC4_QPU_SIG_ALPAH_MASK_LOAD:
+            case VC4_QPU_SIG_ALU_WITH_RADDR_B:
+                hr = ParseALUInstruction(QpuInst, pOpCodeNext, Line);
+                break;
+            case VC4_QPU_SIG_LOAD_IMMEDIATE:
+                hr = ParseLoadImmediate(QpuInst, pOpCodeNext, Line);
+                hr = E_NOTIMPL;
+                break;
+            case VC4_QPU_SIG_BRANCH:
+                _ftprintf_s(stderr, TEXT("Branch is not supported, line %d\n"), Line);
+                hr = E_NOTIMPL;
+            default:
+                assert(false); // this should never happen.
+                break;
+            }
+
+            if (hr == S_OK)
+            {
+                _ftprintf_s(stdout, TEXT("0x%016llx,\t"), QpuInst);
+                if (ShowOriginal)
+                {
+                    TCHAR *p = _tcschr(szOriginal, TEXT('\n'));
+                    if (p) *p = NULL;
+                    _ftprintf_s(stdout, TEXT("// %s \t"), szOriginal);
+                }
+            }
+            else
+            {
+                break;
+            }
         }
+
+        if ((hr == S_OK) && (ShowDisassemble || Disassemble))
+        {
+            Disasm.Run(&QpuInst, sizeof(QpuInst));
+        }
+        _ftprintf(stdout, TEXT("\n"));
     }
 
     if (fpASM)

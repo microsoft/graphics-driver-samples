@@ -202,7 +202,7 @@ HRESULT Vc4Disasm::ParseLoadImmInstruction(VC4_QPU_INSTRUCTION Instruction)
         this->xprintf(TEXT("%s"), VC4_QPU_LOOKUP_STRING(COND, VC4_QPU_GET_COND_MUL(Instruction)));
         this->xprintf(TEXT(", "));
     }
-    this->xprintf(TEXT("%x"), VC4_QPU_GET_IMMEDIATE_32(Instruction));
+    this->xprintf(TEXT("0x%08x"), VC4_QPU_GET_IMMEDIATE_32(Instruction));
     return S_OK;
 }
 
