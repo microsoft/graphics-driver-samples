@@ -693,10 +693,10 @@ public:
 
 #else
 
-            //    X,     Y,    Z,    W,    R,    G,    B // See Input layout.
-            { -1.0f,  1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f },
-            {  0.0f,  1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f },
-            {  0.0f,  0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f }
+            //     X,      Y,    Z,    W,    R,    G,    B // See Input layout.
+            {  0.00f,  0.75f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f },
+            { -0.75f, -0.75f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f },
+            {  0.75f, -0.75f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f }
 
 #endif
 
@@ -970,13 +970,13 @@ public:
         FLOAT data[] =
         {
             kWidth*16.0f/2.0f,
-            kHeight*16.0f/2.0f,
+           -kHeight*16.0f/2.0f,
             1.0f,
             0.0f,
 
             // For Coordinate Shader, not used
             kWidth*16.0f/2.0f,
-            kHeight*16.0f/2.0f,
+           -kHeight*16.0f/2.0f,
             0.0f,
             0.0f,
         };
