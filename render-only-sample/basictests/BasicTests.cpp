@@ -13,9 +13,17 @@
 //using namespace DirectX;
 
 // #define NV_SHADER       1
-#define SHAREDTEX_CVS   1
-// #define PASSTHROUGH_CVS 1
-// #define SIMPLETRANS_CVS 1
+
+#define SHAREDTEX_CVS       1
+// #define ST_ROTATION_ZERO    1
+// #define ST_FLIP_DOWN        1
+
+// #define PASSTHROUGH_CVS     1
+// #define PT_NORMAL           1
+// #define PT_ANY_XS_YS        1
+// #define PT_CLIPPED          1
+
+// #define SIMPLETRANS_CVS     1
 
 #if VC4
 
@@ -41,6 +49,17 @@ struct SimpleVertex
     FLOAT   y;
     FLOAT   u;
     FLOAT   v;
+
+#elif PASSTHROUGH_CVS
+
+    FLOAT   x;
+    FLOAT   y;
+    FLOAT   z;
+    SHORT   xs;
+    SHORT   ys;
+    FLOAT   r;
+    FLOAT   g;
+    FLOAT   b;
 
 #else
 
@@ -609,21 +628,77 @@ public:
 #elif PASSTHROUGH_CVS
 
             //
-            // NOTE[indyz]: Only for demonstrating range of VS/CS output
-            //  1. Only works when coordinates are at the boundary or zero
-            //  2. Color is flat shaded, and green channel is missing
+            // NOTE[indyz]: 
+            //     Only for demonstrating range of VS/CS output
+            //     1. VS/CS uses fixed Wc of 1.0f
+            //     2. Input Layout and HLSL are not fixed to match SimpleVertex,
+            //        instead the W channel is used to overload Xs + Ys
+            //
 
-            //        X,         Y,    Z,    W,    R,    G,    B // See Input layout.
-            { -2048.00f,  2048.00f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f },
-            {  2048.00f,  2048.00f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f },
-            {  2048.00f, -2048.00f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f }
+#if PT_NORMAL
+
+            //
+            // NOTE[indyz]:
+            //     Clipper Space's X and Y range from -1 to 1 with Y axis pointing up
+            //
+            //     The Screen Space's X ranges from -kWidth*16/2 to kWidth*16/2 and
+            //     the Y ranges from -kHeight*16/2 to KHeight*16/2.
+            //     Y axis points down.
+            //     Normally Viewport Offset command puts Clipper space in the center
+            //     of Screen Space
+            //
+
+            //     X,      Y,    Z,       Xs,       Ys,     R,    G,    B // See Input layout.
+            {  0.00f,  0.75f, 0.0f, (SHORT)0, (SHORT)0,  1.0f, 0.0f, 0.0f },
+            { -0.75f, -0.75f, 0.0f, (SHORT)0, (SHORT)0,  0.0f, 1.0f, 0.0f },
+            {  0.75f, -0.75f, 0.0f, (SHORT)0, (SHORT)0,  0.0f, 0.0f, 1.0f }
+
+#elif PT_ANY_XS_YS
+
+            //
+            // NOTE[indyz]:
+            //     When trianle is not clipped, Xs and Ys don't have to match
+            //     what is calculated from X and Y linearly.
+            //
+
+            //              X,               Y,    Z,            Xs,            Ys,    R,    G,    B // See Input layout.
+            { -0.00097656259f,  0.00097656259f, 0.0f, (SHORT)0xFC00, (SHORT)0x0400, 1.0f, 0.0f, 0.0f },
+            {  0.00097656259f,  0.00097656259f, 0.0f, (SHORT)0x0400, (SHORT)0x0400, 0.0f, 1.0f, 0.0f },
+            {  0.00000000000f, -0.00097656259f, 0.0f, (SHORT)0x0000, (SHORT)0xFC00, 0.0f, 0.0f, 1.0f }
+
+#elif PT_CLIPPED
+
+            //
+            // NOTE[indyz]:
+            //     When triangle is clipped, assuming CS is run, then its 
+            //     output Xs and Ys are discarded. VS may not even be invoked.
+            //     Otherwise a different triangle should be rendered.
+            //
+
+            //        X,         Y,    Z,            Xs,            Ys,    R,    G,    B // See Input layout.
+            { -2048.00f,  2048.00f, 0.0f, (SHORT)0xF100, (SHORT)0xF100, 1.0f, 0.0f, 0.0f },
+            {  2048.00f,  2048.00f, 0.0f, (SHORT)0x0100, (SHORT)0xF100, 1.0f, 1.0f, 0.0f },
+            {  2048.00f, -2048.00f, 0.0f, (SHORT)0x0100, (SHORT)0x0100, 1.0f, 0.0f, 1.0f }
+
+#endif
 
 #elif SIMPLETRANS_CVS
 
-            //    X,     Y,    Z,    W,    R,    G,    B // See Input layout.
-            { -1.0f,  1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f },
-            {  0.0f,  1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f },
-            {  0.0f,  0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f }
+#if 0
+
+            //              X,               Y,    Z,    W,    R,    G,    B // See Input layout.
+            { -0.00097656259f,  0.00097656259f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f },
+            {  0.00097656259f,  0.00097656259f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f },
+            {  0.00000000000f, -0.00097656259f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f }
+
+#else
+
+            //     X,      Y,    Z,    W,    R,    G,    B // See Input layout.
+            {  0.00f,  0.75f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f },
+            { -0.75f, -0.75f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f },
+            {  0.75f, -0.75f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f }
+
+#endif
 
 #endif
 
@@ -645,6 +720,16 @@ public:
             DirectX::XMFLOAT3(0.5f, -0.5f, 0.5f),
             DirectX::XMFLOAT3(-0.5f, -0.5f, 0.5f),
         };
+#endif
+
+#if PASSTHROUGH_CVS && PT_NORMAL
+
+        for (UINT i = 0; i < (sizeof(vertices)/sizeof(vertices[0])); i++)
+        {
+            vertices[i].xs = (SHORT)round(vertices[i].x*((float)kWidth)*16.0/2.0f);
+            vertices[i].ys = (SHORT)round(vertices[i].y*((float)-kHeight)*16.0/2.0f);
+        }
+
 #endif
 
         D3D11_BUFFER_DESC bd;
@@ -833,6 +918,36 @@ public:
     {
 #if SHAREDTEX_CVS
 
+#if ST_ROTATION_ZERO
+
+        UINT data[] =
+        {
+            0x00000000, 0x00000000, 0x3f800000, 0x00000000,
+            0x00000000, 0x3f800000, 0x80000000, 0x00000000,
+            0x3f800000, 0x00000000, 0x45160000, 0x00000000,
+            0xc5160000, 0x00000000, 0x3f000000, 0x3f000000,
+            0x00000000, 0x3f800000, 0x00000000, 0x00000000,
+            0x00000000, 0x3f800000, 0x80000000, 0x00000000,
+            0x00000000, 0x3f800000, 0x00000000, 0x00000000,
+            0x45160000, 0xc5160000, 0x3f000000, 0x3f000000
+        };
+
+#elif ST_FLIP_DOWN
+
+        UINT data[] =
+        {
+            0x00000000, 0x00000000, 0x3f800000, 0x00000000,
+            0x00000000, 0x3f800000, 0x80000000, 0x00000000,
+            0x3f800000, 0x00000000, 0x45160000, 0x00000000,
+            0x45160000, 0x00000000, 0x3f000000, 0x3f000000,
+            0x00000000, 0x3f800000, 0x00000000, 0x00000000,
+            0x00000000, 0x3f800000, 0x80000000, 0x00000000,
+            0x00000000, 0x3f800000, 0x00000000, 0x00000000,
+            0x45160000, 0x45160000, 0x3f000000, 0x3f000000
+        };
+
+#else
+
         UINT data[] =
         {
             0x00000000, 0x00000000, 0xbf1e3964, 0x3ea8423c,
@@ -845,6 +960,9 @@ public:
             0x45160000, 0xc5160000, 0x3f000000, 0x3f000000
         };
 
+
+#endif
+
 #else
 
         // TODO: The XY scaling should be generated by shader comiler internally
@@ -852,13 +970,13 @@ public:
         FLOAT data[] =
         {
             kWidth*16.0f/2.0f,
-            kHeight*16.0f/2.0f,
+           -kHeight*16.0f/2.0f,
             1.0f,
             0.0f,
 
             // For Coordinate Shader, not used
             kWidth*16.0f/2.0f,
-            kHeight*16.0f/2.0f,
+           -kHeight*16.0f/2.0f,
             0.0f,
             0.0f,
         };
