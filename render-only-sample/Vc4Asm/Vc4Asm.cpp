@@ -12,8 +12,13 @@ TCHAR szOriginal[4096] = { 0 };
 const TCHAR szDelimiters[] = _TEXT(" ,;\n\t");
 const TCHAR szPeriod[] = _TEXT(".");
 
+#if _DEBUG
 #define RETURN_WHEN_INVALID(x,msg,arg,line) if ((x) == VC4_QPU_INVALID_VALUE) { _ftprintf_s(stderr, msg, arg, Line); __debugbreak(); return E_FAIL; }
 #define RETURN_ERROR(err,msg,param) _ftprintf_s(stderr, msg, param); __debugbreak(); return err;
+#else
+#define RETURN_WHEN_INVALID(x,msg,arg,line) if ((x) == VC4_QPU_INVALID_VALUE) { _ftprintf_s(stderr, msg, arg, Line); return E_FAIL; }
+#define RETURN_ERROR(err,msg,param) _ftprintf_s(stderr, msg, param); return err;
+#endif // _DBG
 
 INT Vc4_QPU_LookUp_Value(VC4QPU_TOKENLOOKUP_TABLE *pTable, TCHAR *pToken)
 {
@@ -208,10 +213,26 @@ INT ParseSmallImmediate(TCHAR *p)
     RETURN_ERROR(0, TEXT("Invalid or unsupported small immediate value %s\n"), p);
 }
 
-HRESULT ParseLoadImmediate(VC4_QPU_INSTRUCTION QpuInst, TCHAR *pOpCodeNext, UINT Line)
+INT32 ParseImmediate(TCHAR *p)
 {
-    _ftprintf_s(stderr, TEXT("Load Immediate is not supported, line %d\n"), Line);
-    return E_NOTIMPL;
+    if (p[0] == NULL)
+    {
+        RETURN_ERROR(E_INVALIDARG, TEXT("Missing immediate value, %s\n"), TEXT("NULL"));
+    }
+    if ((p[0] == TEXT('0')) && (p[1] == TEXT('x')))
+    {
+        return (INT32)_tcstoul(p, NULL, 16);
+    }
+    else if ((p[_tcslen(p)] == TEXT('f')) || (_tcschr(p, TEXT('.')) != NULL))
+    {
+        union { int i; float f; } iandf;
+        iandf.f = _tcstof(p, NULL);
+        return (INT32)iandf.i;
+    }
+    else
+    {
+        return (INT32)_tcstoul(p, NULL, 10);
+    }
 }
 
 HRESULT ParseALUInstruction(VC4_QPU_INSTRUCTION &QpuInst, TCHAR *pOpCode, UINT Line)
@@ -265,6 +286,12 @@ HRESULT ParseALUInstruction(VC4_QPU_INSTRUCTION &QpuInst, TCHAR *pOpCode, UINT L
     INT RaddrA = VC4_QPU_INVALID_VALUE;
     INT RaddrB = VC4_QPU_INVALID_VALUE;
 
+    boolean bSetImmediateValue1 = false;
+    boolean bSetImmediateValue2 = false;
+
+    INT32 ImmediateValue1 = 0;
+    INT32 ImmediateValue2 = 0;
+
     TCHAR *pOpCodeNext;
     if (!IsOpEmpty(pOpCode,&pOpCodeNext))
     {
@@ -279,6 +306,13 @@ HRESULT ParseALUInstruction(VC4_QPU_INSTRUCTION &QpuInst, TCHAR *pOpCode, UINT L
             RETURN_WHEN_INVALID(AddOp, TEXT("Invalid AddOp %s, line %d\n"), _AddOp, Line);
             AddCond = VC4_QPU_LOOKUP_VALUE(COND, _AddCond);
             RETURN_WHEN_INVALID(AddCond, TEXT("Invalid AddOp Cond %s, line %d\n"), _AddCond, Line);
+            if (VC4_QPU_GET_SIG(QpuInst) == VC4_QPU_SIG_LOAD_IMMEDIATE)
+            {
+                if (AddOp != VC4_QPU_OPCODE_ADD_MOV && AddOp != VC4_QPU_OPCODE_ADD_NOP)
+                {
+                    RETURN_ERROR(E_INVALIDARG, TEXT("Load immediate must be mov instruction, line %d\n"), Line);
+                }
+            }
         }
 
         // Parse parameters.
@@ -295,10 +329,9 @@ HRESULT ParseALUInstruction(VC4_QPU_INSTRUCTION &QpuInst, TCHAR *pOpCode, UINT L
             for (INT i = 0; i < AddArgc; i++)
             {
                 TCHAR* _Pack = NULL;
-                TCHAR* _Reg = _tcstok_s(_AddArgv[i], szPeriod, &_Pack);
-
                 if (i == 0)
                 {
+                    TCHAR* _Reg = _tcstok_s(_AddArgv[i], szPeriod, &_Pack);
                     AddWaddr = VC4_QPU_LOOKUP_ADDR_VALUE(WADDR, 0, _Reg, &AddRegfileExchangeable[i]);
                     if (AddWaddr == VC4_QPU_INVALID_VALUE)
                     {
@@ -313,8 +346,15 @@ HRESULT ParseALUInstruction(VC4_QPU_INSTRUCTION &QpuInst, TCHAR *pOpCode, UINT L
                         AddMuxDest = VC4_QPU_ALU_REG_A;
                     }
                 }
+                else if (VC4_QPU_GET_SIG(QpuInst) == VC4_QPU_SIG_LOAD_IMMEDIATE)
+                {
+                    assert(i == 1);
+                    ImmediateValue1 = ParseImmediate(_AddArgv[i]);
+                    bSetImmediateValue1 = true;
+                }
                 else
                 {
+                    TCHAR* _Reg = _tcstok_s(_AddArgv[i], szPeriod, &_Pack);
                     AddMuxSrc[i-1] = VC4_QPU_LOOKUP_VALUE(ALU, _Reg);
                     if (AddMuxSrc[i-1] == VC4_QPU_INVALID_VALUE)
                     {
@@ -372,8 +412,15 @@ HRESULT ParseALUInstruction(VC4_QPU_INSTRUCTION &QpuInst, TCHAR *pOpCode, UINT L
             RETURN_WHEN_INVALID(MulOp, TEXT("Invalid MulOp %s, line %d\n"), _MulOp, Line);
             MulCond = VC4_QPU_LOOKUP_VALUE(COND, _MulCond);
             RETURN_WHEN_INVALID(MulCond, TEXT("Invalid AddOp Cond %s, line %d\n"), _MulCond, Line);
+            if (VC4_QPU_GET_SIG(QpuInst) == VC4_QPU_SIG_LOAD_IMMEDIATE)
+            {
+                if (MulOp != VC4_QPU_OPCODE_MUL_MOV && MulOp != VC4_QPU_OPCODE_MUL_NOP)
+                {
+                    RETURN_ERROR(E_INVALIDARG, TEXT("Load immediate must be mov instruction, line %d\n"), Line);
+                }
+            }
         }
-
+        
         // Parse parameters.
         {
             MulArgc = (VC4_QPU_GET_SIG(QpuInst) == VC4_QPU_SIG_ALU_WITH_RADDR_B) ? 2 : Vc4_QPU_LookUp_MulOp_ArgCount(MulOp);
@@ -408,6 +455,12 @@ HRESULT ParseALUInstruction(VC4_QPU_INSTRUCTION &QpuInst, TCHAR *pOpCode, UINT L
                     assert(i == 1);
                     MulMuxSrc[i-1] = VC4_QPU_ALU_REG_B;
                     MulRaddr[i-1] = ParseSmallImmediate(_MulArgv[i]);
+                }
+                else if (VC4_QPU_GET_SIG(QpuInst) == VC4_QPU_SIG_LOAD_IMMEDIATE)
+                {
+                    assert(i == 1);
+                    ImmediateValue2 = ParseImmediate(_MulArgv[i]);
+                    bSetImmediateValue2 = true;
                 }
                 else
                 {
@@ -479,13 +532,13 @@ HRESULT ParseALUInstruction(VC4_QPU_INSTRUCTION &QpuInst, TCHAR *pOpCode, UINT L
     }
     
     // Any instruction only with 2 parameters, copy [1] to [2].
-    if (AddArgc == 2)
+    if (AddArgc <= 2)
     {
         AddMuxSrc[1] = AddMuxSrc[0];
         AddRaddr[1] = AddRaddr[0];
         AddUnpack[1] = AddUnpack[0];
     }
-    if (MulArgc == 2)
+    if (MulArgc <= 2)
     {
         MulMuxSrc[1] = MulMuxSrc[0];
         MulRaddr[1] = MulRaddr[0];
@@ -544,11 +597,11 @@ HRESULT ParseALUInstruction(VC4_QPU_INSTRUCTION &QpuInst, TCHAR *pOpCode, UINT L
     {
         RETURN_ERROR(E_FAIL, _TEXT("AddOp wants to use regfile A pack, but it's not writing to regfile A, line %d\n"), Line);
 
-        // TODO: regfile reassignment.
-        // if (!MulRegfileExchangeable[0])
-        // {
-        //    RETURN_ERROR(E_FAIL, _TEXT("MulOp wants to use regfile A pack, but it's writing to regfile only available on B, line %d\n"), Line);
-        // }
+// TODO: regfile reassignment.
+// if (!MulRegfileExchangeable[0])
+// {
+//    RETURN_ERROR(E_FAIL, _TEXT("MulOp wants to use regfile A pack, but it's writing to regfile only available on B, line %d\n"), Line);
+// }
     }
 
     if (MulPack && (bMulUsePack_A == false))
@@ -568,6 +621,7 @@ HRESULT ParseALUInstruction(VC4_QPU_INSTRUCTION &QpuInst, TCHAR *pOpCode, UINT L
     }
 
     // Validate Unpack.
+    if (VC4_QPU_GET_SIG(QpuInst) != VC4_QPU_SIG_LOAD_IMMEDIATE)
     {
         INT _Mux[4] = { AddMuxSrc[0], AddMuxSrc[1], MulMuxSrc[0], MulMuxSrc[1] };
         INT _Unpack[4] = { AddUnpack[0], AddUnpack[1], MulUnpack[0], MulUnpack[1] };
@@ -590,6 +644,7 @@ HRESULT ParseALUInstruction(VC4_QPU_INSTRUCTION &QpuInst, TCHAR *pOpCode, UINT L
     }
 
     // Set and validate RaddrA/B.
+    if (VC4_QPU_GET_SIG(QpuInst) != VC4_QPU_SIG_LOAD_IMMEDIATE)
     {
         INT _Mux[4] = { AddMuxSrc[0], AddMuxSrc[1], MulMuxSrc[0], MulMuxSrc[1] };
         INT _Raddr[4] = { AddRaddr[0], AddRaddr[1], MulRaddr[0], MulRaddr[1] };
@@ -642,23 +697,43 @@ HRESULT ParseALUInstruction(VC4_QPU_INSTRUCTION &QpuInst, TCHAR *pOpCode, UINT L
     bSetFlags = false;
 
     // Build instruction
-    VC4_QPU_SET_UNPACK(QpuInst, Unpack);
-    VC4_QPU_SET_PM(QpuInst, bPackUnpackSelect);
-    VC4_QPU_SET_PACK(QpuInst, Pack);
-    VC4_QPU_SET_COND_ADD(QpuInst, AddCond);
-    VC4_QPU_SET_COND_MUL(QpuInst, MulCond);
-    VC4_QPU_SET_SETFLAGS(QpuInst, bSetFlags);
-    VC4_QPU_SET_WRITESWAP(QpuInst, bWriteSwap);
-    VC4_QPU_SET_WADDR_ADD(QpuInst, AddWaddr);
-    VC4_QPU_SET_WADDR_MUL(QpuInst, MulWaddr);
-    VC4_QPU_SET_OPCODE_ADD(QpuInst, AddOp);
-    VC4_QPU_SET_OPCODE_MUL(QpuInst, MulOp);
-    VC4_QPU_SET_RADDR_A(QpuInst, RaddrA);
-    VC4_QPU_SET_RADDR_B(QpuInst, RaddrB);
-    VC4_QPU_SET_ADD_A(QpuInst, AddMuxSrc[0]);
-    VC4_QPU_SET_ADD_B(QpuInst, AddMuxSrc[1]);
-    VC4_QPU_SET_MUL_A(QpuInst, MulMuxSrc[0]);
-    VC4_QPU_SET_MUL_B(QpuInst, MulMuxSrc[1]);
+    if (VC4_QPU_GET_SIG(QpuInst) == VC4_QPU_SIG_LOAD_IMMEDIATE)
+    {
+        if (bSetImmediateValue1 && bSetImmediateValue2 && (ImmediateValue1 != ImmediateValue2))
+        {
+            RETURN_ERROR(E_INVALIDARG, TEXT("ImmedicateValue is not consistent, Line %d\n"), Line);
+        }
+        VC4_QPU_SET_IMMEDIATE_TYPE(QpuInst, VC4_QPU_IMMEDIATE_TYPE_32);
+        VC4_QPU_SET_PM(QpuInst, bPackUnpackSelect);
+        VC4_QPU_SET_PACK(QpuInst, Pack);
+        VC4_QPU_SET_COND_ADD(QpuInst, AddCond);
+        VC4_QPU_SET_COND_MUL(QpuInst, MulCond);
+        VC4_QPU_SET_SETFLAGS(QpuInst, bSetFlags);
+        VC4_QPU_SET_WRITESWAP(QpuInst, bWriteSwap);
+        VC4_QPU_SET_WADDR_ADD(QpuInst, AddWaddr);
+        VC4_QPU_SET_WADDR_MUL(QpuInst, MulWaddr);
+        VC4_QPU_SET_IMMEDIATE_32(QpuInst, ImmediateValue1 ? ImmediateValue1 : ImmediateValue2);
+    }   
+    else
+    {
+        VC4_QPU_SET_UNPACK(QpuInst, Unpack);
+        VC4_QPU_SET_PM(QpuInst, bPackUnpackSelect);
+        VC4_QPU_SET_PACK(QpuInst, Pack);
+        VC4_QPU_SET_COND_ADD(QpuInst, AddCond);
+        VC4_QPU_SET_COND_MUL(QpuInst, MulCond);
+        VC4_QPU_SET_SETFLAGS(QpuInst, bSetFlags);
+        VC4_QPU_SET_WRITESWAP(QpuInst, bWriteSwap);
+        VC4_QPU_SET_WADDR_ADD(QpuInst, AddWaddr);
+        VC4_QPU_SET_WADDR_MUL(QpuInst, MulWaddr);
+        VC4_QPU_SET_OPCODE_ADD(QpuInst, AddOp);
+        VC4_QPU_SET_OPCODE_MUL(QpuInst, MulOp);
+        VC4_QPU_SET_RADDR_A(QpuInst, RaddrA);
+        VC4_QPU_SET_RADDR_B(QpuInst, RaddrB);
+        VC4_QPU_SET_ADD_A(QpuInst, AddMuxSrc[0]);
+        VC4_QPU_SET_ADD_B(QpuInst, AddMuxSrc[1]);
+        VC4_QPU_SET_MUL_A(QpuInst, MulMuxSrc[0]);
+        VC4_QPU_SET_MUL_B(QpuInst, MulMuxSrc[1]);
+    }
 
     return S_OK;
 }
@@ -815,11 +890,8 @@ int _tmain(int argc, TCHAR *argv[])
             case VC4_QPU_SIG_LOAD_TMU1:
             case VC4_QPU_SIG_ALPAH_MASK_LOAD:
             case VC4_QPU_SIG_ALU_WITH_RADDR_B:
-                hr = ParseALUInstruction(QpuInst, pOpCodeNext, Line);
-                break;
             case VC4_QPU_SIG_LOAD_IMMEDIATE:
-                hr = ParseLoadImmediate(QpuInst, pOpCodeNext, Line);
-                hr = E_NOTIMPL;
+                hr = ParseALUInstruction(QpuInst, pOpCodeNext, Line);
                 break;
             case VC4_QPU_SIG_BRANCH:
                 _ftprintf_s(stderr, TEXT("Branch is not supported, line %d\n"), Line);

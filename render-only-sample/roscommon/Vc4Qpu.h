@@ -507,8 +507,11 @@ _declspec(selectany) VC4QPU_TOKENLOOKUP_TABLE VC4_QPU_SIG_LOOKUP[] =
     { VC4_QPU_SIG_LOAD_TMU0, _TEXT("ldtmu0") },
     { VC4_QPU_SIG_LOAD_TMU1, _TEXT("ldtmu1") },
     { VC4_QPU_SIG_ALPAH_MASK_LOAD, _TEXT("loadam") },
+    { VC4_QPU_SIG_ALPAH_MASK_LOAD, _TEXT("lda") },
     { VC4_QPU_SIG_ALU_WITH_RADDR_B, _TEXT("loadsm") },
+    { VC4_QPU_SIG_ALU_WITH_RADDR_B, _TEXT("lds") },
     { VC4_QPU_SIG_LOAD_IMMEDIATE, _TEXT("loadim") },
+    { VC4_QPU_SIG_LOAD_IMMEDIATE, _TEXT("ldi") },
     { VC4_QPU_SIG_BRANCH, _TEXT("branch") },
     { VC4_QPU_END_OF_LOOKUPTABLE, NULL }
 };
@@ -647,6 +650,8 @@ _declspec(selectany) VC4QPU_TOKENLOOKUP_ADDR_TABLE VC4_QPU_WADDR_LOOKUP[] =
              VC4_QPU_WADDR_VPM, _TEXT("vpm") },
     { false, VC4_QPU_WADDR_VPMVCD_RD_SETUP, _TEXT("vpm_rd_setup"),   // regfile A
              VC4_QPU_WADDR_VPMVCD_WR_SETUP, _TEXT("vpm_wr_setup") }, // regfile B
+    { false, VC4_QPU_WADDR_VPMVCD_RD_SETUP, _TEXT("vr_setup"),   // regfile A
+             VC4_QPU_WADDR_VPMVCD_WR_SETUP, _TEXT("vw_setup") }, // regfile B
     { false, VC4_QPU_WADDR_VPM_LD_ADDR, _TEXT("vpm_ld_addr"),   // regfile A
              VC4_QPU_WADDR_VPM_ST_ADDR, _TEXT("vpm_st_addr") }, // regfile B
     { true,  VC4_QPU_WADDR_MUTEX_RELEASE, _TEXT("mutex_release"),

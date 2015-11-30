@@ -256,7 +256,8 @@ HRESULT Vc4Disasm::ParseFlags(VC4_QPU_INSTRUCTION Instruction)
     case VC4_QPU_SIG_ALPAH_MASK_LOAD:
     case VC4_QPU_SIG_ALU_WITH_RADDR_B:
     case VC4_QPU_SIG_LOAD_IMMEDIATE:
-        if (!VC4_QPU_IS_OPCODE_NOP(Instruction))
+        if (!VC4_QPU_IS_OPCODE_NOP(Instruction) || 
+            (VC4_QPU_GET_SIG(Instruction) == VC4_QPU_SIG_LOAD_IMMEDIATE))
         {
             this->xprintf(TEXT("\t // pm = %d, sf = %d, ws = %d"),
                 VC4_QPU_IS_PM_SET(Instruction) ? 1 : 0,
