@@ -516,11 +516,34 @@ void RosUmdDevice::SetException(std::exception & e)
 
 void RosUmdDevice::Draw(UINT vertexCount, UINT startVertexLocation)
 {
-    // Do nothing
-    vertexCount; // unused
-    startVertexLocation; // unused
+    //
+    // Refresh render state
+    //
 
-    __debugbreak();
+    RefreshPipelineState(0);
+
+    BYTE *  pCommandBuffer;
+
+    m_commandBuffer.ReserveCommandBufferSpace(
+        false,                                  // HW command
+        sizeof(VC4VertexArrayPrimitives),
+        &pCommandBuffer);
+
+#if VC4
+
+    VC4VertexArrayPrimitives *   pVC4VertexArrayPrimitives = (VC4VertexArrayPrimitives *)pCommandBuffer;
+
+    *pVC4VertexArrayPrimitives = vc4VertexArrayPrimitives;
+
+    pVC4VertexArrayPrimitives->PrimitiveMode = (BYTE)ConvertD3D11Topology(m_topology);
+
+    pVC4VertexArrayPrimitives->Length = vertexCount;
+
+    pVC4VertexArrayPrimitives->IndexOfFirstVertex = startVertexLocation;
+
+#endif
+
+    m_commandBuffer.CommitCommandBufferSpace(sizeof(VC4VertexArrayPrimitives), 1);
 
     // Update device flag to indicate comamnd buffer has Draw call
     m_flags.m_hasDrawCall = true;

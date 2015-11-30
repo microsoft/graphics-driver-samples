@@ -423,6 +423,17 @@ typedef struct _VC4IndexedPrimitiveList
 
 const VC4IndexedPrimitiveList vc4IndexedPrimitiveList = { VC4_CMD_INDEXED_PRIMITIVE_LIST, 0 };
 
+// Code: 33
+typedef struct _VC4VertexArrayPrimitives
+{
+    VC4_COMMAND_ID  CommandCode;
+    BYTE            PrimitiveMode;          // 0,1,2,3,4,5,6 = points, lines, line_loop, line_strip, triangles, triangle_strip,  triangle_fan
+    UINT            Length;                 // Number of indices
+    UINT            IndexOfFirstVertex;
+} VC4VertexArrayPrimitives;
+
+const VC4VertexArrayPrimitives vc4VertexArrayPrimitives = { VC4_CMD_VERTEX_ARRAY_PRIMITIVES, 0 };
+
 // Code: 56     
 // TODO[indyz]: Verify this command is Rendering CL only
 //              Verify if 3 for 16 bit x/y
