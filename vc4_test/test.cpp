@@ -36,11 +36,16 @@ SOFTWARE.
 volatile unsigned *v3d;
 int mbox;
 
-#define screen_x  800
-#define screen_y  600
+#define USE_TEX 1
+
+#define screen_x 1024
+#define screen_y 1024
 
 int tile_x = (screen_x / 64) + ((screen_x % 64) ? 1 : 0);
 int tile_y = (screen_y / 64) + ((screen_y % 64) ? 1 : 0);
+
+#define tex_x 16
+#define tex_y 16
 
 int SaveBMP(const char* pFileName, void *pImage)
 {
@@ -187,9 +192,9 @@ uint32_t offsets[] = {
     0x10100, // VS shader
     0x10200, // CS shader
     0x10300, // vertex buffer
-    0x10800, // shader record
+    0x10800, // shader record;
     0x10a00, // FS uniforms
-    0x11000, // texture data (64*64*4)
+    0x11000, // texture data; must be 1k aligned; 
     0x20000, // frame buffer
     0xa00000, // Total size
 };
@@ -211,7 +216,13 @@ void testTriangle() {
   assert((tile_x * 32 * tile_y) < (offsets[BO_TA+1] - offsets[BO_TA])); // make sure tile allocation memory is enough 
 
   printf("FB size check: %d %d\n", (screen_x * 4 * screen_y), (offsets[BO_FB+1] - offsets[BO_FB])); // make file frame buffer is enough
-  assert((screen_x * 4 * screen_y) < (offsets[BO_FB+1] - offsets[BO_FB])); // make file frame buffer is enough
+  assert((screen_x * 4 * screen_y) < (offsets[BO_FB+1] - offsets[BO_FB])); // make sure frame buffer is enough
+
+  printf("TEXTURE size check: %d %d\n", (tex_x * 4 * tex_y), (offsets[BO_TEXTURE+1] - offsets[BO_TEXTURE])); // make file frame buffer is enough
+  assert((tex_x * 4 * tex_y) < (offsets[BO_TEXTURE+1] - offsets[BO_TEXTURE])); // make sure texture buffer is enough
+
+  assert((offsets[BO_SHADER]  & 0x7) == 0);
+  assert((offsets[BO_TEXTURE] & 0xfff) == 0);
 
   uint8_t *p = list;
 
@@ -249,8 +260,8 @@ void testTriangle() {
 
   // Viewport offset
   addbyte(&p, 103);
-  addshort(&p, (screen_x / 2) * 16.0f); // width
-  addshort(&p, (screen_y / 2) * 16.0f); // height
+  addshort(&p, (int16_t)((screen_x / 2) * 16.0f)); // width
+  addshort(&p, (int16_t)((screen_y / 2) * 16.0f)); // height
 
   // Z min/max
   //addbyte(&p, 104);
@@ -264,8 +275,8 @@ void testTriangle() {
 
   // clipper z scaling
   addbyte(&p, 106);
-  addfloat(&p, 0.5f); // scale
-  addfloat(&p, 0.5f); // offset
+  addfloat(&p, 1.0f); // scale
+  addfloat(&p, 0.0f); // offset
 
   // GL shader state
   addbyte(&p, 64);
@@ -297,31 +308,52 @@ void testTriangle() {
 
 // Vertex Data
   p = list + offsets[BO_VERTEX];
-#define NUM_VERTEX 7
-#define NUM_VARY   3
+#if USE_TEX
+  #define NUM_VERTEX 6
+  #define NUM_VARY   2
+#else
+  #define NUM_VERTEX 7
+  #define NUM_VARY   3
+#endif // USE_TEX
+
   addfloat(&p,   0.0f); // Xc
   addfloat(&p,  -0.5f); // Yc
   addfloat(&p,   1.0f); // Z
   addfloat(&p,   1.0f); // W
+#if USE_TEX
+  addfloat(&p,   0.0f); // t
+  addfloat(&p,   0.5f); // s
+#else
   addfloat(&p,   1.0f); // Varying 0 (b)
   addfloat(&p,   0.0f); // Varying 1 (g)
   addfloat(&p,   0.0f); // Varying 2 (r)
+#endif // USE_TEX
 
   addfloat(&p,  -1.0f); // Xc
   addfloat(&p,   1.0f); // Yc
   addfloat(&p,   1.0f); // Z
   addfloat(&p,   1.0f); // W
+#if USE_TEX
+  addfloat(&p,   1.0f); // t
+  addfloat(&p,   0.0f); // s
+#else
   addfloat(&p,   0.0f); // Varying 0 (b)
   addfloat(&p,   1.0f); // Varying 1 (g)
   addfloat(&p,   0.0f); // Varying 2 (r)
+#endif // USE_TEX
 
   addfloat(&p,   1.0f); // Xc
   addfloat(&p,   1.0f); // Yc
   addfloat(&p,   1.0f); // Z
   addfloat(&p,   1.0f); // W
+#if USE_TEX
+  addfloat(&p,   1.0f); // t
+  addfloat(&p,   1.0f); // s
+#else
   addfloat(&p,   0.0f); // Varying 0 (b)
   addfloat(&p,   0.0f); // Varying 1 (g)
   addfloat(&p,   1.0f); // Varying 2 (r)
+#endif // USE_TEX
 
 // VS uniforms
   p = list + offsets[BO_VSUNIFORM];
@@ -337,7 +369,29 @@ void testTriangle() {
 
 // FS uniforms
   p = list + offsets[BO_FSUNIFORM];
-#define NUM_FSUNIFORM 0 
+#if USE_TEX
+  #define NUM_FSUNIFORM 2
+  addword(&p, ((1 << 4) | // texture data type RGBX8888
+               ((bus_addr + offsets[BO_TEXTURE]))));
+  addword(&p, ((1 << 4) | // Nearest
+               (1 << 7) | // Neaaest
+               (tex_x << 8) |  
+               (tex_y << 20)));
+#else
+  #define NUM_FSUNIFORM 0
+#endif // USE_TEX
+
+// Texture data
+  p = list + offsets[BO_TEXTURE];
+  uint32_t *pTex = (uint32_t*)p;
+  for (uint32_t x = 0; x < tex_x * 4 * tex_y; x++) {
+    if (x & (1 << 4)) {
+      *pTex = (x & (1 << 6)) ? 0xff0000ff : 0xff00ff00;
+    } else {
+      *pTex = (x & (1 << 6)) ? 0xff00ff00 : 0xff0000ff;
+    }
+    pTex++;
+  }
 
 // GL Shader Record
   p = list + offsets[BO_SHADER];
@@ -369,22 +423,39 @@ void testTriangle() {
 // fragment shader
   p = list + offsets[BO_FS];
   uint64_t fs[] = {  
-    0xd1724823958e0dbf, /* mov r0, vary; mov r3.8d, 1.0 */
-    0x40024821818e7176, /* fadd r0, r0, r5; mov r1, vary */
-    0x10024862818e7376, /* fadd r1, r1, r5; mov r2, vary */
-    0x114248a3819e7540, /* fadd r2, r2, r5; mov r3.8a, r0 */
-    0x115049e3809e7009, /* nop; mov r3.8b, r1 */
-    0x116049e3809e7012, /* nop; mov r3.8c, r2 */
-    0x30020ba7159e76c0, /* mov tlbc, r3; nop; thrend */
-    0x100009e7009e7000, /* nop; nop; nop */
-    0x500009e7009e7000, /* nop; nop; sbdone */
+#if USE_TEX
+    0x10020827158e7d80, //        ; mov r0, varying ; nop          // pm = 0, sf = 0, ws = 0
+    0x10020867158e7d80, //        ; mov r1, varying ; nop          // pm = 0, sf = 0, ws = 0
+    0x400208a7019e7140, // sbwait ; fadd r2, r0, r5 ; nop          // pm = 0, sf = 0, ws = 0
+    0x100208e7019e7340, //        ; fadd r3, r1, r5 ; nop          // pm = 0, sf = 0, ws = 0
+    0x10020e67159e7480, //        ; mov tmu0_t, r2 ; nop   // pm = 0, sf = 0, ws = 0
+    0x10020e27159e76c0, //        ; mov tmu0_s, r3 ; nop   // pm = 0, sf = 0, ws = 0
+    0xa00009e7009e7000, // ldtmu0 ; nop  ; nop
+    0x30020ba7159e7900, // thrend ; mov tlb_colour, r4 ; nop       // pm = 0, sf = 0, ws = 0
+    0x100009e7009e7000, //        ; nop  ; nop
+    0x500009e7009e7000, // sbdone ; nop  ; nop
+#else
+    0xd1724823958e0dbf, // loadsm ; mov r0, varying ; mov r3.8d, 1.0       // pm = 1, sf = 0, ws = 0
+    0x10024821818e7176, //        ; fadd r0, r0, r5 ; mov r1, varying      // pm = 0, sf = 0, ws = 0
+    0x40024862818e7376, // sbwait ; fadd r1, r1, r5 ; mov r2, varying      // pm = 0, sf = 0, ws = 0
+    0x114248a3819e7540, //        ; fadd r2, r2, r5 ; mov r3.8a, r0        // pm = 1, sf = 0, ws = 0
+    0x115049e3809e7009, //        ; nop  ; mov r3.8b, r1   // pm = 1, sf = 0, ws = 0
+    0x116049e3809e7012, //        ; nop  ; mov r3.8c, r2   // pm = 1, sf = 0, ws = 0
+    0x30020ba7159e76c0, // thrend ; mov tlb_colour, r3 ; nop       // pm = 0, sf = 0, ws = 0
+    0x100009e7009e7000, //        ; nop  ; nop
+    0x500009e7009e7000, // sbdone ; nop  ; nop
+#endif // USE_TEX
   };
   memcpy((void *)p,(void *)fs, sizeof(fs));
 
 // VS
   p = list + offsets[BO_VS];
   uint64_t vs[] = {
+#if USE_TEX
+    0xe0020c6700601a00, // ldi  ; mov vr_setup, 0x00601a00 
+#else
     0xe0020c6700701a00, // ldi  ; mov vr_setup, 0x00701a00 
+#endif // USE_TEX
     0xe0021c6700001a00, // ldi  ; mov vw_setup, 0x00001a00 
     0x1002082715c27d80, //      ; mov r0, vpm ; nop      // pm = 0, sf = 0, ws = 0
     0x1002086715c27d80, //      ; mov r1, vpm ; nop      // pm = 0, sf = 0, ws = 0
@@ -396,13 +467,21 @@ void testTriangle() {
     0x1022012707067d80, //      ; ftoi ra4.16b, ra1, ra1 ; nop   // pm = 0, sf = 0, ws = 0
     0x1002016715c27d80, //      ; mov ra5, vpm ; nop     // pm = 0, sf = 0, ws = 0
     0x100201a715c27d80, //      ; mov ra6, vpm ; nop     // pm = 0, sf = 0, ws = 0
+#if USE_TEX
+
+#else
     0x100201e715c27d80, //      ; mov ra7, vpm ; nop     // pm = 0, sf = 0, ws = 0
+#endif // USE_TEX
     0x10020c2715127d80, //      ; mov vpm, ra4 ; nop     // pm = 0, sf = 0, ws = 0
     0x10020c27150a7d80, //      ; mov vpm, ra2 ; nop     // pm = 0, sf = 0, ws = 0
     0x10020c27150e7d80, //      ; mov vpm, ra3 ; nop     // pm = 0, sf = 0, ws = 0
     0x10020c2715167d80, //      ; mov vpm, ra5 ; nop     // pm = 0, sf = 0, ws = 0
     0x10020c27151a7d80, //      ; mov vpm, ra6 ; nop     // pm = 0, sf = 0, ws = 0
+#if USE_TEX
+
+#else
     0x10020c27151e7d80, //      ; mov vpm, ra7 ; nop     // pm = 0, sf = 0, ws = 0
+#endif // USE_TEX
     0x300009e7009e7000, // thrend       ; nop  ; nop
     0x100009e7009e7000, //      ; nop  ; nop
     0x100009e7009e7000, //      ; nop  ; nop
@@ -413,7 +492,11 @@ void testTriangle() {
   p = list + offsets[BO_CS];
   uint64_t cs[] =
   {
+#if USE_TEX
+    0xe0020c6700601a00, // ldi  ; mov vr_setup, 0x00601a00 
+#else
     0xe0020c6700701a00, // ldi  ; mov vr_setup, 0x00701a00 
+#endif // USE_TEX
     0xe0021c6700001a00, // ldi  ; mov vw_setup, 0x00001a00 
     0x1002082715c27d80, //      ; mov r0, vpm ; nop      // pm = 0, sf = 0, ws = 0
     0x1002086715c27d80, //      ; mov r1, vpm ; nop      // pm = 0, sf = 0, ws = 0
@@ -425,7 +508,11 @@ void testTriangle() {
     0x1022012707067d80, //      ; ftoi ra4.16b, ra1, ra1 ; nop   // pm = 0, sf = 0, ws = 0
     0x1002016715c27d80, //      ; mov ra5, vpm ; nop     // pm = 0, sf = 0, ws = 0
     0x100201a715c27d80, //      ; mov ra6, vpm ; nop     // pm = 0, sf = 0, ws = 0
+#if USE_TEX
+
+#else
     0x100201e715c27d80, //      ; mov ra7, vpm ; nop     // pm = 0, sf = 0, ws = 0
+#endif // USE_TEX
     0x10020c27159e7000, //      ; mov vpm, r0 ; nop      // pm = 0, sf = 0, ws = 0
     0x10020c27159e7240, //      ; mov vpm, r1 ; nop      // pm = 0, sf = 0, ws = 0
     0x10020c27150a7d80, //      ; mov vpm, ra2 ; nop     // pm = 0, sf = 0, ws = 0
