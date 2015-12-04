@@ -428,7 +428,7 @@ typedef struct _VC4VertexArrayPrimitives
 {
     VC4_COMMAND_ID  CommandCode;
     BYTE            PrimitiveMode;          // 0,1,2,3,4,5,6 = points, lines, line_loop, line_strip, triangles, triangle_strip,  triangle_fan
-    UINT            Length;                 // Number of indices
+    UINT            Length;                 // Number of vertices
     UINT            IndexOfFirstVertex;
 } VC4VertexArrayPrimitives;
 
@@ -780,6 +780,83 @@ typedef struct _VC4TileCoordinates
 
 const VC4TileCoordinates vc4TileCoordinates = { VC4_CMD_TILE_COORDINATES, 0 };
 
+//
+// Texture Config Parameter 0/1/2/3 in uniform buffer
+//
+
+typedef struct _VC4TextureConfigParameter0
+{
+    union
+    {
+        struct
+        {
+            UINT    MIPLVLS : 4;    // Number of Mipmap Levels minus 1
+            UINT    TYPE    : 4;    // Texture Data Type
+            UINT    FLIPY   : 1;    // Flip Texture Y Axis
+            UINT    CMMODE  : 1;    // Cube Map Mode
+            UINT    CSWIZ   : 2;    // Cache Swizzle
+            UINT    BASE    : 20;   // Texture Base Pointer(in multiples of 4Kbytes)
+        };
+
+        UINT        UInt0;
+    };
+} VC4TextureConfigParameter0;
+
+typedef struct _VC4TextureConfigParameter1
+{
+    union
+    {
+        struct
+        {
+            UINT    WRAP_S  : 2;    // S Wrap Mode(0, 1, 2, 3 = repeat, clamp, mirror, border)
+            UINT    WRAP_T  : 2;    // T Wrap Mode(0, 1, 2, 3 = repeat, clamp, mirror, border)
+            UINT    MINFILT : 3;    // Minification Filter
+            UINT    MAGFILT : 1;    // Magnification Filter
+            UINT    WIDTH   : 11;   // Image Width(0 = 2048)
+            UINT    ETCFLIP : 1;    // Flip ETC Y(per block)
+            UINT    HEIGHT  : 11;   // Image Height (0 = 2048)
+            UINT    TYPE4   : 1;    // Texture Data Type Extended(bit 4 of texture type)
+        };
+
+        UINT        UInt0;
+    };
+} VC4TextureConfigParameter1;
+
+typedef enum _VC4TextureDataType
+{
+    VC4_TEX_RGBA8888  = 0,  // 32 8 - bit per channel red, green, blue, alpha
+    VC4_TEX_RGBX8888  = 1,  // 32 8 - bit per channel RGA, alpha set to 1.0
+    VC4_TEX_RGBA4444  = 2,  // 16 4 - bit per channel red, green, blue, alpha
+    VC4_TEX_RGBA5551  = 3,  // 16 5 - bit per channel red, green, blue, 1 - bit alpha
+    VC4_TEX_RGB565    = 4,  // 16 Alpha channel set to 1.0
+    VC4_TEX_LUMINANCE = 5,  // 8 8 - bit luminance(alpha channel set to 1.0)
+    VC4_TEX_ALPHA     = 6,  // 8 8 - bit alpha(RGA channels set to 0)
+    VC4_TEX_LUMALPHA  = 7,  // 16 8 - bit luminance, 8 - bit alpha
+    VC4_TEX_ETC1      = 8,  // 4 Ericsson Texture Compression format
+    VC4_TEX_S16F      = 9,  // 16 16 - bit float sample(blending supported)
+    VC4_TEX_S8        = 10, // 8 8 - bit integer sample(blending supported)
+    VC4_TEX_S16       = 11, // 16 16 - bit integer sample(point sampling only)
+    VC4_TEX_BW1       = 12, // 1 1 - bit black and white
+    VC4_TEX_A4        = 13, // 4 4 - bit alpha
+    VC4_TEX_A1        = 14, // 1 1 - bit alpha
+    VC4_TEX_RGBA64    = 15, // 64 16 - bit float per RGBA channel
+    VC4_TEX_RGBA32R   = 16, // 32 Raster format 8 - bit per channel red, green, blue, alpha
+    VC4_TEX_YUYV422R  = 17  // 32 Raster format 8 - bit per channel Y, U, Y, V
+} VC4TextureDataType;
+
+typedef struct _VC4TextureType
+{
+    union
+    {
+        struct
+        {
+            UINT    TYPE    : 4;
+            UINT    TYPE4   : 1;
+        };
+
+        UINT        TextureType;
+    };
+} VC4TextureType;
 
 //
 // Constants

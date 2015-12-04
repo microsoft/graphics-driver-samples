@@ -57,6 +57,8 @@ RosCompiler::~RosCompiler()
 #define SHAREDTEX_CVS   1
 // #define PASSTHROUGH_CVS 1
 // #define SIMPLETRANS_CVS 1
+// #define CUBETEST_CVFS   1
+
 
 BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize,
                              UINT * pCoordinateShaderOffset)
@@ -173,6 +175,37 @@ BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize,
             /* 0x000000c8: */ 0x009e7000, 0x100009e7, /* nop ; nop */
         };
 
+#elif CUBETEST_CVFS
+
+        UINT vertexShader[] =
+        {
+            /* Assembled Program */
+            /* 0x00000000: */ 0x00601a00, 0xe0020c67, /* ldi vr_setup, 0x00601a00 */
+            /* 0x00000008: */ 0x15c27d80, 0x10020027, /* mov ra0, vpm ; nop */
+            /* 0x00000010: */ 0x15c27d80, 0x10020067, /* mov ra1, vpm ; nop */
+            /* 0x00000018: */ 0x15c27d80, 0x100200a7, /* mov ra2, vpm ; nop */
+            /* 0x00000020: */ 0x15c27d80, 0x100200e7, /* mov ra3, vpm ; nop */
+            /* 0x00000028: */ 0x15c27d80, 0x10020127, /* mov ra4, vpm ; nop */
+            /* 0x00000030: */ 0x15c27d80, 0x10020167, /* mov ra5, vpm ; nop */
+            /* 0x00000038: */ 0x15827d80, 0x100208a7, /* mov r2, unif ; nop */
+            /* 0x00000040: */ 0x15027d80, 0x10020867, /* mov r1, ra0  ; nop */
+            /* 0x00000048: */ 0x209e700a, 0x100049e0, /* nop ; fmul r0, r1, r2 */
+            /* 0x00000050: */ 0x079e7000, 0x10120227, /* ftoi ra8.16a, r0 ; nop */
+            /* 0x00000058: */ 0x15827d80, 0x100208a7, /* mov r2, unif ; nop */
+            /* 0x00000060: */ 0x15067d80, 0x10020867, /* mov r1, ra1  ; nop */
+            /* 0x00000068: */ 0x209e700a, 0x100049e0, /* nop ; fmul r0, r1, r2 */
+            /* 0x00000070: */ 0x079e7000, 0x10220227, /* ftoi ra8.16b, r0 ; nop */
+            /* 0x00000078: */ 0x00001a00, 0xe0021c67, /* ldi vw_setup, 0x00001a00 */
+            /* 0x00000080: */ 0x15227d80, 0x10020c27, /* mov vpm, ra8 ; nop */
+            /* 0x00000088: */ 0x150a7d80, 0x10020c27, /* mov vpm, ra2 ; nop */
+            /* 0x00000090: */ 0x150e7d80, 0x10020c27, /* mov vpm, ra3 ; nop */
+            /* 0x00000098: */ 0x15127d80, 0x10020c27, /* mov vpm, ra4 */
+            /* 0x000000a0: */ 0x15167d80, 0x10020c27, /* mov vpm, ra5 */
+            /* 0x000000a8: */ 0x009e7000, 0x300009e7, /* nop ; nop ; thrend */
+            /* 0x000000b0: */ 0x009e7000, 0x100009e7, /* nop ; nop */
+            /* 0x000000b8: */ 0x009e7000, 0x100009e7, /* nop ; nop */
+        };
+
 #else
 
 #endif
@@ -274,6 +307,39 @@ BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize,
             /* 0x000000d0: */ 0x009e7000, 0x100009e7, /* nop ; nop */
         };
 
+#elif CUBETEST_CVFS
+
+        UINT coordinateShader[] =
+        {
+            /* Assembled Program */
+            /* 0x00000000: */ 0x00601a00, 0xe0020c67, /* ldi vr_setup, 0x00601a00 */
+            /* 0x00000008: */ 0x15c27d80, 0x10020027, /* mov ra0, vpm ; nop */
+            /* 0x00000010: */ 0x15c27d80, 0x10020067, /* mov ra1, vpm ; nop */
+            /* 0x00000018: */ 0x15c27d80, 0x100200a7, /* mov ra2, vpm ; nop */
+            /* 0x00000020: */ 0x15c27d80, 0x100200e7, /* mov ra3, vpm ; nop */
+            /* 0x00000028: */ 0x15c27d80, 0x10020127, /* mov ra4, vpm ; nop */
+            /* 0x00000030: */ 0x15c27d80, 0x10020167, /* mov ra5, vpm ; nop */
+            /* 0x00000038: */ 0x15827d80, 0x100208a7, /* mov r2, unif ; nop */
+            /* 0x00000040: */ 0x15027d80, 0x10020867, /* mov r1, ra0  ; nop */
+            /* 0x00000048: */ 0x209e700a, 0x100049e0, /* nop ; fmul r0, r1, r2 */
+            /* 0x00000050: */ 0x079e7000, 0x10120227, /* ftoi ra8.16a, r0 ; nop */
+            /* 0x00000058: */ 0x15827d80, 0x100208a7, /* mov r2, unif ; nop */
+            /* 0x00000060: */ 0x15067d80, 0x10020867, /* mov r1, ra1  ; nop */
+            /* 0x00000068: */ 0x209e700a, 0x100049e0, /* nop ; fmul r0, r1, r2 */
+            /* 0x00000070: */ 0x079e7000, 0x10220227, /* ftoi ra8.16b, r0 ; nop */
+            /* 0x00000078: */ 0x00001a00, 0xe0021c67, /* ldi vw_setup, 0x00001a00 */
+            /* 0x00000080: */ 0x15027d80, 0x10020c27, /* mov vpm, ra0 */
+            /* 0x00000088: */ 0x15067d80, 0x10020c27, /* mov vpm, ra1 */
+            /* 0x00000090: */ 0x150a7d80, 0x10020c27, /* mov vpm, ra2 */
+            /* 0x00000098: */ 0x150e7d80, 0x10020c27, /* mov vpm, ra3 */
+            /* 0x000000a0: */ 0x15227d80, 0x10020c27, /* mov vpm, ra8 ; nop */
+            /* 0x000000a8: */ 0x150a7d80, 0x10020c27, /* mov vpm, ra2 ; nop */
+            /* 0x000000b0: */ 0x150e7d80, 0x10020c27, /* mov vpm, ra3 ; nop */
+            /* 0x000000b8: */ 0x009e7000, 0x300009e7, /* nop ; nop ; thrend */
+            /* 0x000000c0: */ 0x009e7000, 0x100009e7, /* nop ; nop */
+            /* 0x000000c8: */ 0x009e7000, 0x100009e7, /* nop ; nop */
+        };
+
 #else
 
 #endif
@@ -299,6 +365,31 @@ BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize,
     else if (D3D10_SB_PIXEL_SHADER == m_ProgramType)
     {
 #if VC4
+
+#if CUBETEST_CVFS
+
+        DWORD PS[] =
+        {
+            /* Assembled Program */
+            /* 0x00000000: */ 0x158e7d80, 0x10020827, /* mov r0, vary    ; nop */
+            /* 0x00000008: */ 0x818e7176, 0x10024821, /* fadd r0, r0, r5 ; mov r1, vary */
+            /* 0x00000010: */ 0x019e7340, 0x40020867, /* sbwait    ; fadd r1, r1, r5 ; nop */
+            /* 0x00000018: */ 0x159e7000, 0x10020e67, /* mov t0t, r0     ; nop */
+            /* 0x00000020: */ 0x159e7240, 0x10020e27, /* mov t0s, r1     ; nop */
+            /* 0x00000028: */ 0x009e7000, 0xa00009e7, /* ldtmu0          ; nop */
+            /* 0x00000030: */ 0x159e7900, 0x19020827, /* mov r0, r4.8a   ; nop */
+            /* 0x00000038: */ 0x35827906, 0x1b624860, /* mov r1, r4.8b   ; fmul r0.8c, r0, unif */
+            /* 0x00000040: */ 0x3582790e, 0x1d5248a0, /* mov r2, r4.8c   ; fmul r0.8b, r1, unif */
+            /* 0x00000048: */ 0x20827016, 0x114049e0, /* nop             ; fmul r0.8a, r2, unif */
+            /* 0x00000050: */ 0x809e003f, 0xd17049e0, /* nop             ; mov r0.8d, 1.0 */
+            /* 0x00000058: */ 0x159cffc0, 0x10020b27, /* mov tlbz, rb15  ; nop */
+            /* 0x00000060: */ 0x159e7000, 0x30020ba7, /* thrend    ; mov tlbc, r0    ; nop */
+            /* 0x00000068: */ 0x009e7000, 0x100009e7, /* nop             ; nop */
+            /* 0x00000070: */ 0x009e7000, 0x500009e7, /* sbdone    ; nop             ; nop */
+        };
+
+#else
+
         VC4_QPU_INSTRUCTION PS[] =
         {
             0xd1724823958e0dbf,    // load_sm   ; mov r0, vary    ; mov r3.8d, 1.0
@@ -312,7 +403,9 @@ BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize,
             0x100009e7009e7000,    //             nop             ; nop
             0x500009e7009e7000     // sbdone    ; nop             ; nop
         };
-   
+
+#endif
+
         m_HwCodeSize = sizeof(PS);
         m_pHwCode = new BYTE[m_HwCodeSize];
 

@@ -13,10 +13,10 @@
 //using namespace DirectX;
 
 //
-// Only works when SIMPLETRANS_CVS is defined in RosCompiler.cpp
+// Only works when CUBETEST_CVFS is defined in RosCompiler.cpp
 //
 
-#define SIMPLETRANS_CVS     1
+#define CUBETEST_CVFS     1
 
 #if VC4
 
@@ -28,9 +28,8 @@ struct SimpleVertex
     FLOAT   y;
     FLOAT   z;
     FLOAT   w;
-    FLOAT   r;
-    FLOAT   g;
-    FLOAT   b;
+    FLOAT   u;
+    FLOAT   v;
 };
 
 #pragma pack(pop)
@@ -56,6 +55,8 @@ static const int kHeight = 256;
 
 #endif
 
+static const int kTexWidth = 64;
+static const int kTexHeight = 64;
 
 template<class T> class D3DPointer
 {
@@ -320,6 +321,92 @@ private:
     std::shared_ptr<D3DDevice>      m_pDevice;
 };
 
+class D3DDefaultTexture
+{
+public:
+
+    D3DDefaultTexture(std::shared_ptr<D3DDevice> & inDevice, int inWidth, int inHeight)
+    {
+        D3D11_TEXTURE2D_DESC desc;
+
+        desc.CPUAccessFlags = 0;
+        desc.Width = inWidth;
+        desc.Height = inHeight;
+        desc.MipLevels = 1;
+        desc.ArraySize = 1;
+        desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        desc.SampleDesc.Count = 1;
+        desc.SampleDesc.Quality = 0;
+        desc.Usage = D3D11_USAGE_DEFAULT;
+        desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        desc.MiscFlags = 0;
+
+        DWORD * pTexels = new DWORD[inWidth*inHeight];
+        if (!pTexels)
+        {
+            throw std::exception("Failed to allocate texels");
+        }
+
+        DWORD   checkerColors[] =
+        {
+            0x00400000,
+            0x00000040
+        };
+
+        for (int j = 0; j < inHeight; j++)
+        {
+            for (int i = 0; i < inWidth; i++)
+            {
+                pTexels[j*inWidth + i] =  checkerColors[((i >> 3 & 0x1) ^ (j >> 3 & 0x1))];
+            }
+        }
+
+        D3D11_SUBRESOURCE_DATA initData;
+
+        ZeroMemory(&initData, sizeof(initData));
+        initData.pSysMem = pTexels;
+        initData.SysMemPitch = inWidth*4;
+        initData.SysMemSlicePitch = inWidth*4*inHeight;
+
+        ID3D11Texture2D * pTexture;
+
+        HRESULT hr = inDevice->GetDevice()->CreateTexture2D(&desc, &initData, &pTexture);
+
+        delete pTexels;
+
+        if (FAILED(hr))
+        {
+            throw std::exception("Failed to create texture");
+        }
+
+        ID3D11ShaderResourceView *  pShaderResourceView;
+
+        hr = inDevice->GetDevice()->CreateShaderResourceView(pTexture, NULL, &pShaderResourceView);
+        if (FAILED(hr))
+        {
+            throw std::exception("Failed to create shader resource view");
+        }
+
+        m_pTexture = pTexture;
+        m_pDevice = inDevice;
+        m_pShaderResourceView = pShaderResourceView;
+    }
+
+    ~D3DDefaultTexture()
+    {
+        // do nothing
+    }
+
+    ID3D11Texture2D * GetTexture() { return m_pTexture; }
+    ID3D11ShaderResourceView * GetShaderResourceView() { return m_pShaderResourceView;  }
+
+private:
+
+    D3DPointer<ID3D11Texture2D>             m_pTexture;
+    D3DPointer<ID3D11ShaderResourceView>    m_pShaderResourceView;
+    std::shared_ptr<D3DDevice>              m_pDevice;
+};
+
 class D3DRenderTarget
 {
 public:
@@ -443,17 +530,8 @@ public:
         // Define the input layout
         D3D11_INPUT_ELEMENT_DESC layout[] =
         {
-#if VC4
-
             { "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-            { "COLOR",    0, DXGI_FORMAT_R32G32B32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-
-#else
-
-            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-            { "COLOR",    0, DXGI_FORMAT_R32G32B32_FLOAT,    0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-
-#endif
+            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,       0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
         };
         UINT numElements = ARRAYSIZE(layout);
 
@@ -537,11 +615,11 @@ public:
 
         SimpleVertex vertices[] =
         {
-            //     X,      Y,    Z,    W,    R,    G,    B // See Input layout.
-            { -0.75f,  0.75f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f },
-            {  0.75f,  0.75f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f },
-            { -0.75f, -0.75f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f },
-            {  0.75f, -0.75f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f }
+            //     X,      Y,    Z,    W,    U,    V // See Input layout.
+            { -0.75f,  0.75f, 0.0f, 1.0f, 0.0f, 0.0f },
+            {  0.75f,  0.75f, 0.0f, 1.0f, 1.0f, 0.0f },
+            { -0.75f, -0.75f, 0.0f, 1.0f, 0.0f, 1.0f },
+            {  0.75f, -0.75f, 0.0f, 1.0f, 1.0f, 1.0f }
         };
 
 #else
@@ -562,12 +640,12 @@ public:
         bd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
         bd.CPUAccessFlags = 0;
 
-        D3D11_SUBRESOURCE_DATA InitData;
-        ZeroMemory(&InitData, sizeof(InitData));
-        InitData.pSysMem = vertices;
+        D3D11_SUBRESOURCE_DATA initData;
+        ZeroMemory(&initData, sizeof(initData));
+        initData.pSysMem = vertices;
 
         ID3D11Buffer * pVertexBuffer;
-        HRESULT hr = inDevice->GetDevice()->CreateBuffer(&bd, &InitData, &pVertexBuffer);
+        HRESULT hr = inDevice->GetDevice()->CreateBuffer(&bd, &initData, &pVertexBuffer);
         if (FAILED(hr)) throw std::exception("Unable to create vertex buffer");
 
         m_pVertexBuffer = pVertexBuffer;
@@ -607,12 +685,12 @@ public:
         bd.BindFlags = D3D11_BIND_INDEX_BUFFER;
         bd.CPUAccessFlags = 0;
 
-        D3D11_SUBRESOURCE_DATA InitData;
-        ZeroMemory(&InitData, sizeof(InitData));
-        InitData.pSysMem = indices;
+        D3D11_SUBRESOURCE_DATA initData;
+        ZeroMemory(&initData, sizeof(initData));
+        initData.pSysMem = indices;
 
         ID3D11Buffer * pIndexBuffer;
-        HRESULT hr = inDevice->GetDevice()->CreateBuffer(&bd, &InitData, &pIndexBuffer);
+        HRESULT hr = inDevice->GetDevice()->CreateBuffer(&bd, &initData, &pIndexBuffer);
         if (FAILED(hr)) throw std::exception("Unable to create Index buffer");
 
         m_pIndexBuffer = pIndexBuffer;
@@ -694,7 +772,7 @@ public:
 
         depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
 
-#if 0
+#if 1
 
         depthStencilDesc.DepthEnable = 1;
         depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS;
@@ -758,18 +836,63 @@ public:
         bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
         bd.CPUAccessFlags = 0;
 
-        D3D11_SUBRESOURCE_DATA InitData;
-        ZeroMemory(&InitData, sizeof(InitData));
-        InitData.pSysMem = data;
+        D3D11_SUBRESOURCE_DATA initData;
+        ZeroMemory(&initData, sizeof(initData));
+        initData.pSysMem = data;
 
         ID3D11Buffer * pConstantBuffer;
-        HRESULT hr = inDevice->GetDevice()->CreateBuffer(&bd, &InitData, &pConstantBuffer);
+        HRESULT hr = inDevice->GetDevice()->CreateBuffer(&bd, &initData, &pConstantBuffer);
         if (FAILED(hr)) throw std::exception("Unable to create Constant buffer");
 
         m_pConstantBuffer = pConstantBuffer;
     }
 
     ~D3DConstantBuffer()
+    {
+        // do nothing
+    }
+
+    ID3D11Buffer * GetConstantBuffer() { return m_pConstantBuffer; }
+
+private:
+
+    D3DPointer<ID3D11Buffer> m_pConstantBuffer;
+
+};
+
+class D3DPSConstantBuffer
+{
+public:
+
+    D3DPSConstantBuffer(std::shared_ptr<D3DDevice> & inDevice)
+    {
+        FLOAT data[] =
+        {
+            2.0f,
+            2.0f,
+            4.0f,
+            0.0f
+        };
+
+        D3D11_BUFFER_DESC bd;
+        ZeroMemory(&bd, sizeof(bd));
+        bd.Usage = D3D11_USAGE_DEFAULT;
+        bd.ByteWidth = sizeof(data);
+        bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+        bd.CPUAccessFlags = 0;
+
+        D3D11_SUBRESOURCE_DATA initData;
+        ZeroMemory(&initData, sizeof(initData));
+        initData.pSysMem = data;
+
+        ID3D11Buffer * pConstantBuffer;
+        HRESULT hr = inDevice->GetDevice()->CreateBuffer(&bd, &initData, &pConstantBuffer);
+        if (FAILED(hr)) throw std::exception("Unable to create Constant buffer");
+
+        m_pConstantBuffer = pConstantBuffer;
+    }
+
+    ~D3DPSConstantBuffer()
     {
         // do nothing
     }
@@ -826,6 +949,10 @@ public:
 
         m_pPixelShader = std::unique_ptr<D3DPixelShader>(new D3DPixelShader(m_pDevice));
 
+        m_pPSConstantBuffer = std::unique_ptr<D3DPSConstantBuffer>(new D3DPSConstantBuffer(m_pDevice));
+
+        m_pDefaultTexture = std::unique_ptr<D3DDefaultTexture>(new D3DDefaultTexture(m_pDevice, kTexWidth, kTexHeight));
+
         m_pVertexBuffer = std::unique_ptr<D3DVertexBuffer>(new D3DVertexBuffer(m_pDevice));
 
         m_pIndexBuffer = std::unique_ptr<D3DIndexBuffer>(new D3DIndexBuffer(m_pDevice));
@@ -868,6 +995,12 @@ public:
 
         m_pDevice->GetContext()->PSSetShader(m_pPixelShader->GetPixelShader(), nullptr, 0);
 
+        ID3D11ShaderResourceView *  pShaderResourceViews = m_pDefaultTexture->GetShaderResourceView();
+        m_pDevice->GetContext()->PSSetShaderResources(0, 1, &pShaderResourceViews);
+
+        ID3D11Buffer *  pPSConstantBuffer = m_pPSConstantBuffer->GetConstantBuffer();
+        m_pDevice->GetContext()->PSSetConstantBuffers(0, 1, &pPSConstantBuffer);
+
 #if 1
 
         m_pDevice->GetContext()->Draw(4, 0);
@@ -902,11 +1035,13 @@ private:
     std::unique_ptr<D3DTexture>             m_pTexture;
     std::unique_ptr<D3DDepthStencilState>   m_pDepthStencilState;
     std::unique_ptr<D3DConstantBuffer>      m_pConstantBuffer;
+    std::unique_ptr<D3DPSConstantBuffer>    m_pPSConstantBuffer;
+    std::unique_ptr<D3DDefaultTexture>      m_pDefaultTexture;
 };
 
 int main()
 {
-#if SIMPLETRANS_CVS
+#if CUBETEST_CVFS
 
     try
     {

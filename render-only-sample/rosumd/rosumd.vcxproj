@@ -76,6 +76,7 @@
     <ClInclude Include="RosUmdResource.h" />
     <ClInclude Include="RosUmdSampler.h" />
     <ClInclude Include="RosUmdShader.h" />
+    <ClInclude Include="RosUmdShaderResourceView.h" />
     <ClInclude Include="RosUmdUtil.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

@@ -11,6 +11,7 @@
 #include "RosUmdBlendState.h"
 #include "RosUmdRenderTargetView.h"
 #include "RosUmdDepthStencilView.h"
+#include "RosUmdShaderResourceView.h"
 
 #include "RosContext.h"
 
@@ -26,7 +27,7 @@ const D3D11_1DDI_DEVICEFUNCS RosUmdDeviceDdi::s_deviceFuncs11_1 =
 {
     RosUmdDeviceDdi::DefaultConstantBufferUpdateSubresourceUP11_1_Default,
     RosUmdDeviceDdi::DdiVsSetConstantBuffers11_1,
-    RosUmdDeviceDdi::PSSetShaderResources_Default,
+    RosUmdDeviceDdi::DdiPSSetShaderResources,
     RosUmdDeviceDdi::DdiPsSetShader,
     RosUmdDeviceDdi::DdiPSSetSamplers,
     RosUmdDeviceDdi::DdiVsSetShader,
@@ -37,7 +38,7 @@ const D3D11_1DDI_DEVICEFUNCS RosUmdDeviceDdi::s_deviceFuncs11_1 =
     RosUmdDeviceDdi::DynamicConstantBufferMapDiscard_Default,
     RosUmdDeviceDdi::DynamicIABufferMapDiscard_Default,
     RosUmdDeviceDdi::DynamicConstantBufferUnmap_Default,
-    RosUmdDeviceDdi::PsSetConstantBuffers11_1_Default,
+    RosUmdDeviceDdi::DdiPsSetConstantBuffers11_1,
     RosUmdDeviceDdi::DdiIaSetInputLayout,
     RosUmdDeviceDdi::DdiIaSetVertexBuffers,
     RosUmdDeviceDdi::DdiIaSetIndexBuffer,
@@ -87,9 +88,9 @@ const D3D11_1DDI_DEVICEFUNCS RosUmdDeviceDdi::s_deviceFuncs11_1 =
     RosUmdDeviceDdi::DdiCreateResource,
     RosUmdDeviceDdi::OpenResource_Default,
     RosUmdDeviceDdi::DdiDestroyResource,
-    RosUmdDeviceDdi::CalcPrivateShaderResourceViewSize11_Default,
-    RosUmdDeviceDdi::CreateShaderResourceView11_Default,
-    RosUmdDeviceDdi::DestroyShaderResourceView_Default,
+    RosUmdDeviceDdi::DdiCalcPrivateShaderResourceViewSize11,
+    RosUmdDeviceDdi::DdiCreateShaderResourceView11,
+    RosUmdDeviceDdi::DdiDestroyShaderResourceView,
     RosUmdDeviceDdi::DdiCalcPrivateRenderTargetViewSize,
     RosUmdDeviceDdi::DdiCreateRenderTargetView,
     RosUmdDeviceDdi::DdiDestroyRenderTargetView,
@@ -257,6 +258,40 @@ void APIENTRY RosUmdDeviceDdi::DdiDestroyResource(
     RosUmdResource * pResource = (RosUmdResource *)hResource.pDrvPrivate;
 
     pRosUmdDevice->DestroyResource(pResource);
+
+    RosUmdLogging::Exit(__FUNCTION__);
+}
+
+SIZE_T APIENTRY RosUmdDeviceDdi::DdiCalcPrivateShaderResourceViewSize11(
+    D3D10DDI_HDEVICE, 
+    const D3D11DDIARG_CREATESHADERRESOURCEVIEW*)
+{
+    RosUmdLogging::Call(__FUNCTION__);
+
+    return sizeof(RosUmdShaderResourceView);
+}
+
+void APIENTRY RosUmdDeviceDdi::DdiCreateShaderResourceView11(
+    D3D10DDI_HDEVICE,
+    const D3D11DDIARG_CREATESHADERRESOURCEVIEW* pCreate,
+    D3D10DDI_HSHADERRESOURCEVIEW hShaderResourceView,
+    D3D10DDI_HRTSHADERRESOURCEVIEW hRTShaderResourceView)
+{
+    RosUmdLogging::Entry(__FUNCTION__);
+
+    new(hShaderResourceView.pDrvPrivate) RosUmdShaderResourceView(pCreate, hRTShaderResourceView);
+
+    RosUmdLogging::Exit(__FUNCTION__);
+}
+
+void APIENTRY RosUmdDeviceDdi::DdiDestroyShaderResourceView(
+    D3D10DDI_HDEVICE,
+    D3D10DDI_HSHADERRESOURCEVIEW hShaderResourceView)
+{
+    RosUmdLogging::Entry(__FUNCTION__);
+
+    RosUmdShaderResourceView * pShaderResourceView = RosUmdShaderResourceView::CastFrom(hShaderResourceView);
+    pShaderResourceView->~RosUmdShaderResourceView();
 
     RosUmdLogging::Exit(__FUNCTION__);
 }
@@ -671,6 +706,20 @@ void APIENTRY RosUmdDeviceDdi::DdiDestroyElementLayout(
 
 }
 
+void APIENTRY RosUmdDeviceDdi::DdiPsSetConstantBuffers11_1(
+    D3D10DDI_HDEVICE hDevice,
+    UINT offset,
+    UINT numBuffers,
+    const D3D10DDI_HRESOURCE* phBuffers,
+    const UINT* pFirstConstant,
+    const UINT* pNumConstants)
+{
+    RosUmdLogging::Call(__FUNCTION__);
+    
+    RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
+
+    pDevice->PsSetConstantBuffers11_1(offset, numBuffers, phBuffers, pFirstConstant, pNumConstants);
+}
 void APIENTRY RosUmdDeviceDdi::DdiIaSetInputLayout(
     D3D10DDI_HDEVICE hDevice,
     D3D10DDI_HELEMENTLAYOUT hElementLayout)
@@ -869,6 +918,19 @@ void APIENTRY RosUmdDeviceDdi::DdiDestroyShader(
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
 
     pDevice->DestroyShader(hShader);
+}
+
+void APIENTRY RosUmdDeviceDdi::DdiPSSetShaderResources(
+    D3D10DDI_HDEVICE hDevice,
+    UINT offset,
+    UINT numViews,
+    const D3D10DDI_HSHADERRESOURCEVIEW* pShaderResourceViews)
+{
+    RosUmdLogging::Call(__FUNCTION__);
+
+    RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
+
+    pDevice->PSSetShaderResources(offset, numViews, pShaderResourceViews);
 }
 
 void APIENTRY RosUmdDeviceDdi::DdiPsSetShader(D3D10DDI_HDEVICE hDevice, D3D10DDI_HSHADER hShader) { 

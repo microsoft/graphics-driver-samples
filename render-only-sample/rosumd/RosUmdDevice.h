@@ -30,6 +30,7 @@ class RosUmdElementLayout;
 class RosUmdDepthStencilState;
 class RosUmdRasterizerState;
 class RosUmdSampler;
+class RosUmdShaderResourceView;
 
 typedef union _RosUmdDeviceFlags
 {
@@ -166,6 +167,7 @@ public:
     static const UINT kMaxRenderTargets = D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT;
     static const UINT kMaxSamplers = D3D11_COMMONSHADER_SAMPLER_SLOT_COUNT;
     static const UINT kMaxConstantBuffers = D3D11_COMMONSHADER_CONSTANT_BUFFER_API_SLOT_COUNT;
+    static const UINT kMaxShaderResourceViews = D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT;
 
     void SetVertexBuffers(UINT startBuffer, UINT numBuffers, const D3D10DDI_HRESOURCE* phBuffers, const UINT* pStrides,  const UINT* pOffsets);
     void SetIndexBuffer(const D3D10DDI_HRESOURCE indexBuffer, DXGI_FORMAT indexFormat, UINT offset);
@@ -176,6 +178,8 @@ public:
         const UINT* pUAVInitialCounts, UINT UAVIndex, UINT NumUAVs, UINT UAVFirsttoSet, UINT UAVNumberUpdated);
     void SetBlendState(RosUmdBlendState * pBlendState, const FLOAT pBlendFactor[4], UINT sampleMask);
     void SetPixelShader(RosUmdShader * pShader);
+    void PSSetShaderResources(UINT, UINT, const D3D10DDI_HSHADERRESOURCEVIEW*);
+    void PsSetConstantBuffers11_1(UINT, UINT, const D3D10DDI_HRESOURCE*, const UINT*, const UINT*);
     void SetPixelSamplers(UINT Offset, UINT NumSamplers, const D3D10DDI_HSAMPLER* phSamplers);
     void SetVertexShader(RosUmdShader * pShader);
     void SetVertexSamplers(UINT Offset, UINT NumSamplers, const D3D10DDI_HSAMPLER* phSamplers);
@@ -217,7 +221,12 @@ public:
     UINT                            m_sampleMask;
 
     RosUmdShader *                  m_pixelShader;
+    RosUmdShaderResourceView *      m_psResourceViews[kMaxShaderResourceViews];
     RosUmdSampler *                 m_pixelSamplers[kMaxSamplers];
+
+    RosUmdResource *                m_psConstantBuffer[kMaxConstantBuffers];
+    UINT                            m_ps1stConstant[kMaxConstantBuffers];
+    UINT                            m_psNumberContants[kMaxConstantBuffers];
 
     RosUmdShader *                  m_vertexShader;
     RosUmdSampler *                 m_vertexSamplers[kMaxSamplers];

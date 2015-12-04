@@ -4,20 +4,29 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 //--------------------------------------------------------------------------------------
 
+Texture2D Texture;
+
+SamplerState Sampler
+{
+    Filter = MIN_MAG_MIP_LINEAR;
+    AddressU = Wrap;
+    AddressV = Wrap;
+};
+
 struct PSInput
 {
     float4 pos : SV_POSITION;
-    float3 color : COLOR0;
+    float2 texcoord : TEXCOORD0;
 };
 
 //--------------------------------------------------------------------------------------
 // Vertex Shader
 //--------------------------------------------------------------------------------------
-PSInput VS( float4 Pos : POSITION, float3 Color : COLOR )
+PSInput VS( float4 Pos : POSITION, float3 TexCoord : TEXCOORD )
 {
     PSInput output;
     output.pos = Pos;
-    output.color = Color;
+    output.texcoord = TexCoord;
     return output;
 }
 
@@ -26,5 +35,5 @@ PSInput VS( float4 Pos : POSITION, float3 Color : COLOR )
 //--------------------------------------------------------------------------------------
 float4 PS( PSInput input ) : SV_Target
 {
-    return float4(input.color, 1.0f); // vertex color
+    return Texture.Sample(Sampler, input.texcoord);
 }

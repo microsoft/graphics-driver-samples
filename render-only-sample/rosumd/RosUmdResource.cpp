@@ -65,6 +65,8 @@ RosUmdResource::Standup(
     m_mostRecentFence = RosUmdCommandBuffer::s_nullFence;
 
     m_allocationListIndex = 0;
+
+    m_pSysMemCopy = NULL;
 }
 
 void
@@ -182,7 +184,8 @@ RosUmdResource::CalculateMemoryLayout(
 #if VC4
 
             // TODO[indyz]: Enable tiled render target
-            if (m_bindFlags & D3D10_DDI_BIND_RENDER_TARGET)
+            if ((m_bindFlags & D3D10_DDI_BIND_RENDER_TARGET) ||
+                (m_bindFlags & D3D10_DDI_BIND_SHADER_RESOURCE))
             {
                 m_hwLayout = RosHwLayout::Linear;
             }

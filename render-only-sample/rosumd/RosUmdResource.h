@@ -49,6 +49,9 @@ public:
     ULONGLONG               m_mostRecentFence;
     UINT                    m_allocationListIndex;
 
+    // Used by constant buffer
+    BYTE                   *m_pSysMemCopy;
+
     void
     Standup(
         RosUmdDevice *pUmdDevice,
@@ -84,9 +87,9 @@ public:
         RosAllocationExchange * pOutAllocationExchange);
 };
 
-inline RosUmdResource* RosUmdResource::CastFrom(D3D10DDI_HRESOURCE hDevice)
+inline RosUmdResource* RosUmdResource::CastFrom(D3D10DDI_HRESOURCE hResource)
 {
-    return static_cast< RosUmdResource* >(hDevice.pDrvPrivate);
+    return static_cast< RosUmdResource* >(hResource.pDrvPrivate);
 }
 
 inline D3D10DDI_HRESOURCE RosUmdResource::CastTo() const

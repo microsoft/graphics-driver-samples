@@ -15,6 +15,7 @@
 #include "RosUmdBlendState.h"
 #include "RosUmdSampler.h"
 #include "RosUmdShader.h"
+#include "RosUmdShaderResourceView.h"
 #include "RosUmdRasterizerState.h"
 #include "RosUmdDepthStencilState.h"
 #include "RosUmdElementLayout.h"
@@ -234,6 +235,20 @@ void RosUmdDevice::CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResou
         unlock.phAllocations = &pResource->m_hKMAllocation;
 
         Unlock(&unlock);
+
+        if (pCreateResource->BindFlags & D3D10_DDI_BIND_CONSTANT_BUFFER)
+        {
+            pResource->m_pSysMemCopy = new BYTE[pResource->m_hwSizeBytes];
+
+            if (pResource->m_pSysMemCopy)
+            {
+                memcpy(pResource->m_pSysMemCopy, pCreateResource->pInitialDataUP[0].pSysMem, pResource->m_hwSizeBytes);
+            }
+            else
+            {
+                SetError(E_OUTOFMEMORY);
+            }
+        }
     }
 }
 
@@ -776,6 +791,40 @@ void RosUmdDevice::SetPixelSamplers(UINT Offset, UINT NumSamplers, const D3D10DD
     }
 }
 
+void RosUmdDevice::PSSetShaderResources(UINT offset, UINT numViews, const D3D10DDI_HSHADERRESOURCEVIEW * phShaderResourceViews)
+{
+    for (UINT i = 0; i < numViews; i++)
+    {
+        m_psResourceViews[offset + i] = RosUmdShaderResourceView::CastFrom(phShaderResourceViews[i]);
+    }
+}
+
+void RosUmdDevice::PsSetConstantBuffers11_1(
+    UINT startBuffer,
+    UINT numberBuffers,
+    const D3D10DDI_HRESOURCE *  phResources,
+    const UINT *    pFirstConstant,
+    const UINT *    pNumberConstants)
+{
+    UINT bufIndex;
+
+    bufIndex = startBuffer;
+    for (UINT i = 0; i < numberBuffers; i++, bufIndex++)
+    {
+        m_psConstantBuffer[bufIndex] = RosUmdResource::CastFrom(phResources[i]);
+    }
+
+    if (pFirstConstant && pNumberConstants)
+    {
+        bufIndex = startBuffer;
+        for (UINT i = 0; i < numberBuffers; i++, bufIndex++)
+        {
+            m_ps1stConstant[bufIndex] = pFirstConstant[i];
+            m_psNumberContants[bufIndex] = pNumberConstants[i];
+        }
+    }
+}
+
 void RosUmdDevice::SetVertexShader(RosUmdShader * pShader)
 {
     m_vertexShader = pShader;
@@ -902,6 +951,7 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
 #if VC4
 
     BYTE *  pCommandBuffer;
+    BYTE *  pCurCommand;
     UINT    curCommandOffset;
     D3DDDI_PATCHLOCATIONLIST *  pPatchLocation;
     D3DDDI_PATCHLOCATIONLIST *  pCurPatchLocation;
@@ -913,15 +963,56 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
     //
 
     UINT    maxStateComamnds = 160;
-    UINT    maxAllocationsUsed = 12;
-    UINT    maxPathLocations = 20;
+    UINT    maxAllocationsUsed = 15;
+    UINT    maxPatchLocations = 22;
+
+    //
+    // To simplify patching and merging of internal and user constant data,
+    // the pixel shader constant buffer is copied directly into command buffer.
+    //
+
+    UINT    psContantDataSize = 0;
+
+    for (UINT i = 0; i < kMaxShaderResourceViews; i++)
+    {
+        if (m_psResourceViews[i])
+        {
+            RosUmdResource *    pTexture = RosUmdResource::CastFrom(m_psResourceViews[i]->m_create.hDrvResource);
+
+            switch (pTexture->m_resourceDimension)
+            {
+            case D3D10DDIRESOURCE_TEXTURE2D:
+                psContantDataSize += 2 * sizeof(VC4TextureConfigParameter0);
+                break;
+            case D3D10DDIRESOURCE_TEXTURECUBE:
+                psContantDataSize += 4 * sizeof(VC4TextureConfigParameter0);
+                break;
+            default:
+                // 3D texture creation should have failed
+                // TODO[indyz] : decide if 1D texture can be supported
+                assert(false);
+                break;
+            }            
+        }
+    }
+
+    //
+    // TODO[indyz] : Decide if multiple constant buffers need to be supported
+    //
+
+    if (m_psConstantBuffer[0])
+    {
+        psContantDataSize += m_psConstantBuffer[0]->m_hwSizeBytes;
+    }
+
+    maxStateComamnds += psContantDataSize;
 
     m_commandBuffer.ReserveCommandBufferSpace(
         false,                                  // HW command
         maxStateComamnds,
         &pCommandBuffer,
         maxAllocationsUsed,
-        maxPathLocations,
+        maxPatchLocations,
         &curCommandOffset,
         &pPatchLocation);
 
@@ -1218,7 +1309,7 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
     UINT patchLocationUsed = (UINT)(pCurPatchLocation - pPatchLocation);
 
     assert(commandsWritten <= maxStateComamnds);
-    assert(patchLocationUsed <= maxPathLocations);
+    assert(patchLocationUsed <= maxPatchLocations);
 
     m_commandBuffer.CommitCommandBufferSpace(
         commandsWritten,
@@ -1299,7 +1390,7 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
 #else
 
     //
-    // Write Branch command to skip over Shader State Record
+    // Write Branch command to skip over Fragment Shader Uniforms and Shader State Record
     //
 
     VC4Branch * pVC4Branch;
@@ -1315,7 +1406,10 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
         dummyAllocIndex,
         curCommandOffset + offsetof(VC4Branch, BranchAddress),
         VC4_SLOT_BRANCH,
-        vc4GLShaderStateRecordOffset + sizeof(VC4GLShaderStateRecord) + m_elementLayout->m_numElements*sizeof(VC4VertexAttribute));
+        vc4GLShaderStateRecordOffset +
+            sizeof(VC4GLShaderStateRecord) +
+            m_elementLayout->m_numElements*sizeof(VC4VertexAttribute) +
+            psContantDataSize);
 
     //
     // Write Shader State Record for the subsequent NV Shader State command
@@ -1372,16 +1466,33 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
         allocListIndex,
         vc4GLShaderStateRecordOffset + offsetof(VC4GLShaderStateRecord, FragmentShaderCodeAddress));
 
-    // TODO[indyz] : Set FragmentShaderUniformsAddress to constant buffer's address
     //
-    // Set the uniforms address to dummy allocation when there is not constant buffer
-    // VC4 probably has read-ahead capability, it seems to hang without an valid address
+    // Set Fragment Shader Uniforms Address
     //
 
-    m_commandBuffer.SetPatchLocation(
-        pCurPatchLocation,
-        dummyAllocIndex,
-        vc4GLShaderStateRecordOffset + offsetof(VC4GLShaderStateRecord, FragmentShaderUniformsAddress));
+    if (psContantDataSize)
+    {
+        m_commandBuffer.SetPatchLocation(
+            pCurPatchLocation,
+            dummyAllocIndex,
+            vc4GLShaderStateRecordOffset + offsetof(VC4GLShaderStateRecord, FragmentShaderUniformsAddress),
+            VC4_SLOT_FS_UNIFORM_ADDRESS,
+            vc4GLShaderStateRecordOffset +
+                sizeof(VC4GLShaderStateRecord) + 
+                m_elementLayout->m_numElements*sizeof(VC4VertexAttribute));
+    }
+    else
+    {
+        //
+        // Set the uniforms address to dummy allocation when there is not constant buffer
+        // VC4 probably has read-ahead capability, it seems to hang without an valid address
+        //
+
+        m_commandBuffer.SetPatchLocation(
+            pCurPatchLocation,
+            dummyAllocIndex,
+            vc4GLShaderStateRecordOffset + offsetof(VC4GLShaderStateRecord, FragmentShaderUniformsAddress));
+    }
 
 #if DBG
     pVC4GLShaderStateRecord->VertexShaderCodeAddress        = 0xDEADBEEF;
@@ -1430,7 +1541,7 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
         0,
         m_vertexShader->m_vc4CoordinateShaderOffset);
 
-    // TODO[indyz] : Set CoordinateShaderUniformsAddress to constant buffer's address
+    // Set CoordinateShaderUniformsAddress to constant buffer's address
     //
 
     if (m_vsConstantBuffer[0])
@@ -1456,6 +1567,10 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
 
     VC4VertexAttribute *    pVC4VertexAttribute;
     MoveToNextCommand(pVC4GLShaderStateRecord, pVC4VertexAttribute, curCommandOffset);
+
+    //
+    // TODO[indyz]: Avoid reading vertex data that Coordinate shader doesn't need
+    //
 
     D3D10DDIARG_INPUT_ELEMENT_DESC *    pElementDesc = m_elementLayout->m_pElementDesc;
     BYTE    vpmOffset = 0;
@@ -1497,6 +1612,105 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
     pVC4GLShaderStateRecord->CoordinateShaderTotalAttributesSize = vpmOffset;
 
     //
+    // Copy internal Fragment Shader Uniforms (Texture Config Paramater0/1/2/3)
+    // and Uniforms from PS constant buffers into the command buffer
+    //
+
+    pCurCommand = (BYTE *)pVC4VertexAttribute;
+
+    if (psContantDataSize)
+    {
+        VC4TextureConfigParameter0 *    pVC4TexConfigParam0 = (VC4TextureConfigParameter0 *)pCurCommand;
+
+        for (UINT i = 0; i < kMaxShaderResourceViews; i++)
+        {
+            if (m_psResourceViews[i])
+            {
+                RosUmdResource *    pTexture = RosUmdResource::CastFrom(m_psResourceViews[i]->m_create.hDrvResource);
+
+                pVC4TexConfigParam0->UInt0 = 0;
+
+                //
+                // TODO[indyz]: Support all VC4 texture formats and tiling
+                //
+
+                assert(pTexture->m_hwFormat == RosHwFormat::X8888);
+                assert(pTexture->m_hwLayout == RosHwLayout::Linear);
+
+                VC4TextureType  vc4TextureType;
+
+                vc4TextureType.TextureType = VC4_TEX_RGBA32R;
+
+                pVC4TexConfigParam0->TYPE = vc4TextureType.TYPE;
+
+                allocListIndex = m_commandBuffer.UseResource(pTexture, false);
+
+                m_commandBuffer.SetPatchLocation(
+                    pCurPatchLocation,
+                    allocListIndex,
+                    curCommandOffset,
+                    0,
+                    pVC4TexConfigParam0->UInt0);
+
+#if DBG
+
+                pVC4TexConfigParam0->BASE = 0xDEADB;
+
+#endif
+
+                VC4TextureConfigParameter1 *    pVC4TexConfigParam1;
+                MoveToNextCommand(pVC4TexConfigParam0, pVC4TexConfigParam1, curCommandOffset);
+
+                pVC4TexConfigParam1->UInt0 = 0;
+
+                //
+                // TODO[indyz] : Set up filter and wrap mode
+                //
+
+                pVC4TexConfigParam1->WIDTH = pTexture->m_hwWidthPixels;
+                pVC4TexConfigParam1->HEIGHT = pTexture->m_hwHeightPixels;
+
+                pVC4TexConfigParam1->TYPE4 = vc4TextureType.TYPE4;
+
+                if (pTexture->m_resourceDimension == D3D10DDIRESOURCE_TEXTURECUBE)
+                {
+                    // 
+                    // TODO[indyz] : Add support for cube texture
+                    //
+
+                    DWORD * pVC4TexConfigParam23;
+
+                    MoveToNextCommand(pVC4TexConfigParam1, pVC4TexConfigParam23, curCommandOffset);
+                    *pVC4TexConfigParam23 = 0;
+
+                    MoveToNextCommand(pVC4TexConfigParam23, pVC4TexConfigParam23, curCommandOffset);
+                    *pVC4TexConfigParam23 = 0;
+
+                    MoveToNextCommand(pVC4TexConfigParam23, pVC4TexConfigParam0, curCommandOffset);
+                }
+                else
+                {
+                    MoveToNextCommand(pVC4TexConfigParam1, pVC4TexConfigParam0, curCommandOffset);
+                }
+            }
+        }
+
+        //
+        // Copy the data in user constant buffer(s)
+        //
+
+        pCurCommand = (BYTE*)pVC4TexConfigParam0;
+
+        if (m_psConstantBuffer[0])
+        {
+            memcpy(pCurCommand, m_psConstantBuffer[0]->m_pSysMemCopy, m_psConstantBuffer[0]->m_hwSizeBytes);
+
+            pCurCommand += m_psConstantBuffer[0]->m_hwSizeBytes;
+            curCommandOffset += m_psConstantBuffer[0]->m_hwSizeBytes;
+        }
+    }
+
+    //
     // Write GL Shader State command
     //
     VC4GLShaderState *  pVC4GLShaderState;
@@ -1507,7 +1721,7 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
 
 #else
 
-    pVC4GLShaderState = (VC4GLShaderState *)pVC4VertexAttribute;
+    pVC4GLShaderState = (VC4GLShaderState *)(pCurCommand);
 
 #endif
 
@@ -1546,7 +1760,7 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
     UINT patchLocationUsed = (UINT)(pCurPatchLocation - pPatchLocation);
 
     assert(commandsWritten <= maxStateComamnds);
-    assert(patchLocationUsed <= maxPathLocations);
+    assert(patchLocationUsed <= maxPatchLocations);
 
     m_commandBuffer.CommitCommandBufferSpace(
         commandsWritten,

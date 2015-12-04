@@ -107,6 +107,9 @@ static VC4StoreTileBufferGeneral   *pVC4StoreTileBufferGeneral = NULL;
 // Code: 32
 static VC4IndexedPrimitiveList     *pVC4IndexedPrimitiveList = NULL;
 
+// Code: 33
+static VC4VertexArrayPrimitives    *pVC4VertexArrayPrimitives = NULL;
+
 // Code: 56
 static VC4PrimitiveListFormat      *pVC4PrimitiveListFormat = NULL;
 
@@ -121,6 +124,10 @@ static VC4VertexAttribute          *pVC4VertexAttribute = NULL;
 static VC4NVShaderState            *pVC4NVShaderState = NULL;
 
 static VC4NVShaderStateRecord      *pVC4NVShaderStateRecord = NULL;
+
+static VC4TextureConfigParameter0  *pVC4TextureConfigParameter0 = NULL;
+static VC4TextureConfigParameter1  *pVC4TextureConfigParameter1 = NULL;
+static VC4TextureDataType          vc4TextureDataType = { VC4_TEX_RGBA32R };
 
 // Code: 96
 static VC4ConfigBits               *pVC4ConfigBits = NULL;
