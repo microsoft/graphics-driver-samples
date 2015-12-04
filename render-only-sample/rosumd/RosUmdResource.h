@@ -35,7 +35,7 @@ public:
     UINT                    m_hwHeightPixels;
     RosHwFormat             m_hwFormat;
     UINT                    m_hwPitchBytes;
-    size_t                  m_hwSizeBytes;
+    UINT                    m_hwSizeBytes;
 
     UINT                    m_hwWidthTilePixels;
     UINT                    m_hwHeightTilePixels;

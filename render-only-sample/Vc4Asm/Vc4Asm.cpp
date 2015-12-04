@@ -815,7 +815,7 @@ int _tmain(int argc, TCHAR *argv[])
                     c += 2; // Skip 0x.
                 }
                 
-                INT cLen = _tcslen(pValue);
+                size_t cLen = _tcslen(pValue);
                 if (cLen == 16 + c)
                 {
                     if (QpuInst)
