@@ -119,6 +119,16 @@ void RosUmdDevice::Standup()
     memset(m_viewports, 0, sizeof(m_viewports));
     m_numViewports = 0;
 
+    memset(m_psResourceViews, 0, sizeof(m_psResourceViews));
+
+    memset(m_psConstantBuffer, 0, sizeof(m_psConstantBuffer));
+    memset(m_ps1stConstant, 0, sizeof(m_ps1stConstant));
+    memset(m_psNumberContants, 0, sizeof(m_psNumberContants));
+
+    memset(m_vsConstantBuffer, 0, sizeof(m_vsConstantBuffer));
+    memset(m_vs1stConstant, 0, sizeof(m_vs1stConstant));
+    memset(m_vsNumberContants, 0, sizeof(m_vsNumberContants));
+        
     memset(m_renderTargetViews, 0, sizeof(m_renderTargetViews));
 
     m_blendState = nullptr;
