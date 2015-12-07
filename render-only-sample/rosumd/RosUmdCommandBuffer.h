@@ -47,6 +47,10 @@ public:
         RosUmdResource *    pResource,
         BOOL                bWriteOperation);
 
+    bool
+    IsResourceUsed(
+        RosUmdResource *    pResource);
+
     void
     SetPatchLocation(
         D3DDDI_PATCHLOCATIONLIST *  &pPatchLocation,

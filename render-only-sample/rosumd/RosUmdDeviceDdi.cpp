@@ -33,11 +33,11 @@ const D3D11_1DDI_DEVICEFUNCS RosUmdDeviceDdi::s_deviceFuncs11_1 =
     RosUmdDeviceDdi::DdiVsSetShader,
     RosUmdDeviceDdi::DdiDrawIndexed,
     RosUmdDeviceDdi::DdiDraw,
-    RosUmdDeviceDdi::DynamicIABufferMapNoOverwrite_Default,
-    RosUmdDeviceDdi::DynamicIABufferUnmap_Default,
-    RosUmdDeviceDdi::DynamicConstantBufferMapDiscard_Default,
-    RosUmdDeviceDdi::DynamicIABufferMapDiscard_Default,
-    RosUmdDeviceDdi::DynamicConstantBufferUnmap_Default,
+    RosUmdDeviceDdi::DdiDynamicIABufferMapNoOverwrite,
+    RosUmdDeviceDdi::DdiDynamicIABufferUnmap,
+    RosUmdDeviceDdi::DdiDynamicConstantBufferMapDiscard,
+    RosUmdDeviceDdi::DdiDynamicIABufferMapDiscard,
+    RosUmdDeviceDdi::DdiDynamicConstantBufferUnmap,
     RosUmdDeviceDdi::DdiPsSetConstantBuffers11_1,
     RosUmdDeviceDdi::DdiIaSetInputLayout,
     RosUmdDeviceDdi::DdiIaSetVertexBuffers,
@@ -335,7 +335,7 @@ void APIENTRY RosUmdDeviceDdi::DdiStagingResourceMap(
 
     try
     {
-        pRosUmdDevice->StagingResourceMap(pResource, subResource, mapType, mapFlags, pMappedSubRes);
+        pRosUmdDevice->ResourceMap(pResource, subResource, mapType, mapFlags, pMappedSubRes);
     }
 
     catch (std::exception & e)
@@ -358,7 +358,7 @@ void APIENTRY RosUmdDeviceDdi::DdiStagingResourceUnmap(
 
     try
     {
-        pRosUmdDevice->StagingResourceUnmap(pResource, subResource);
+        pRosUmdDevice->ResourceUnmap(pResource, subResource);
     }
 
     catch (std::exception & e)
@@ -1245,6 +1245,81 @@ void APIENTRY RosUmdDeviceDdi::DdiIaSetIndexBuffer(
     pDevice->SetIndexBuffer(hIndexBuffer, hIndexFormat, offset);
 }
 
+void APIENTRY RosUmdDeviceDdi::DdiDynamicIABufferMapNoOverwrite(
+    D3D10DDI_HDEVICE hDevice,
+    D3D10DDI_HRESOURCE hResource,
+    UINT subResource,
+    D3D10_DDI_MAP mapType,
+    UINT mapFlags,
+    D3D10DDI_MAPPED_SUBRESOURCE* pMappedSubRes)
+{
+    RosUmdLogging::Entry(__FUNCTION__);
+
+    RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
+    RosUmdResource * pResource = (RosUmdResource *)hResource.pDrvPrivate;
+
+    try
+    {
+        pRosUmdDevice->ResourceMap(pResource, subResource, mapType, mapFlags, pMappedSubRes);
+    }
+
+    catch (std::exception & e)
+    {
+        pRosUmdDevice->SetException(e);
+    }
+
+    RosUmdLogging::Exit(__FUNCTION__);
+}
+
+void APIENTRY RosUmdDeviceDdi::DdiDynamicIABufferMapDiscard(
+    D3D10DDI_HDEVICE hDevice,
+    D3D10DDI_HRESOURCE hResource,
+    UINT subResource,
+    D3D10_DDI_MAP mapType,
+    UINT mapFlags,
+    D3D10DDI_MAPPED_SUBRESOURCE* pMappedSubRes)
+{
+    RosUmdLogging::Entry(__FUNCTION__);
+
+    RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
+    RosUmdResource * pResource = (RosUmdResource *)hResource.pDrvPrivate;
+
+    try
+    {
+        pRosUmdDevice->ResourceMap(pResource, subResource, mapType, mapFlags, pMappedSubRes);
+    }
+
+    catch (std::exception & e)
+    {
+        pRosUmdDevice->SetException(e);
+    }
+
+    RosUmdLogging::Exit(__FUNCTION__);
+}
+
+void APIENTRY RosUmdDeviceDdi::DdiDynamicIABufferUnmap(
+    D3D10DDI_HDEVICE hDevice,
+    D3D10DDI_HRESOURCE hResource,
+    UINT subResource)
+{
+    RosUmdLogging::Entry(__FUNCTION__);
+
+    RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
+    RosUmdResource * pResource = (RosUmdResource *)hResource.pDrvPrivate;
+
+    try
+    {
+        pRosUmdDevice->ResourceUnmap(pResource, subResource);
+    }
+
+    catch (std::exception & e)
+    {
+        pRosUmdDevice->SetException(e);
+    }
+
+    RosUmdLogging::Exit(__FUNCTION__);
+}
+
 void APIENTRY RosUmdDeviceDdi::DdiVsSetConstantBuffers11_1(
     D3D10DDI_HDEVICE hDevice,
     UINT startBuffer,
@@ -1258,5 +1333,54 @@ void APIENTRY RosUmdDeviceDdi::DdiVsSetConstantBuffers11_1(
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
 
     pDevice->VsSetConstantBuffers11_1(startBuffer, numberBuffers, phResources, pFirstConstant, pNumberConstants);
+}
+
+void APIENTRY RosUmdDeviceDdi::DdiDynamicConstantBufferMapDiscard(
+    D3D10DDI_HDEVICE hDevice,
+    D3D10DDI_HRESOURCE hResource,
+    UINT subResource,
+    D3D10_DDI_MAP mapType,
+    UINT mapFlags,
+    D3D10DDI_MAPPED_SUBRESOURCE* pMappedSubRes)
+{
+    RosUmdLogging::Entry(__FUNCTION__);
+
+    RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
+    RosUmdResource * pResource = (RosUmdResource *)hResource.pDrvPrivate;
+
+    try
+    {
+        pRosUmdDevice->ResourceMap(pResource, subResource, mapType, mapFlags, pMappedSubRes);
+    }
+
+    catch (std::exception & e)
+    {
+        pRosUmdDevice->SetException(e);
+    }
+
+    RosUmdLogging::Exit(__FUNCTION__);
+}
+
+void APIENTRY RosUmdDeviceDdi::DdiDynamicConstantBufferUnmap(
+    D3D10DDI_HDEVICE hDevice,
+    D3D10DDI_HRESOURCE hResource,
+    UINT subResource)
+{
+    RosUmdLogging::Entry(__FUNCTION__);
+
+    RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
+    RosUmdResource * pResource = (RosUmdResource *)hResource.pDrvPrivate;
+
+    try
+    {
+        pRosUmdDevice->ResourceUnmap(pResource, subResource);
+    }
+
+    catch (std::exception & e)
+    {
+        pRosUmdDevice->SetException(e);
+    }
+
+    RosUmdLogging::Exit(__FUNCTION__);
 }
 

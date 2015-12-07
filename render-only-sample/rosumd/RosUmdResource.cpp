@@ -94,15 +94,43 @@ RosUmdResource::Map(
     memset(&lock, 0, sizeof(lock));
 
     lock.hAllocation = m_hKMAllocation;
+
+    //
+    // TODO[indyz]: Consider how to optimize D3D10_DDI_MAP_WRITE_NOOVERWRITE
+    //
+    //    D3DDDICB_LOCKFLAGS::IgnoreSync and IgnoreReadSync are used for
+    //    D3D10_DDI_MAP_WRITE_NOOVERWRITE optimization and are only allowed
+    //    for allocations that can resides in aperture segment.
+    //
+    //    Currently ROS driver puts all allocations in local video memory.
+    //
+
     SetLockFlags(mapType, mapFlags, &lock.Flags);
 
     pUmdDevice->Lock(&lock);
 
+    if (lock.Flags.Discard)
+    {
+        assert(m_hKMAllocation != lock.hAllocation);
+
+        m_hKMAllocation = lock.hAllocation;
+
+        if (pUmdDevice->m_commandBuffer.IsResourceUsed(this))
+        {
+            //
+            // Indicate that the new allocation instance of the resource
+            // is not used in the current command batch.
+            //
+
+            m_mostRecentFence -= 1;
+        }
+    }
+
     pMappedSubRes->pData = lock.pData;
+    m_pData = (BYTE*)lock.pData;
 
     pMappedSubRes->RowPitch = m_hwPitchBytes;
     pMappedSubRes->DepthPitch = (UINT)m_hwSizeBytes;
-
 }
 
 void
@@ -111,6 +139,13 @@ RosUmdResource::Unmap(
     UINT subResource)
 {
     UNREFERENCED_PARAMETER(subResource);
+
+    if (m_bindFlags & D3D10_DDI_BIND_CONSTANT_BUFFER)
+    {
+        memcpy(m_pSysMemCopy, m_pData, m_hwSizeBytes);
+    }
+
+    m_pData = NULL;
 
     D3DDDICB_UNLOCK unlock;
     memset(&unlock, 0, sizeof(unlock));

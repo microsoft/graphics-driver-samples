@@ -49,6 +49,9 @@ public:
     ULONGLONG               m_mostRecentFence;
     UINT                    m_allocationListIndex;
 
+    // CPU mapping of the allocation
+    BYTE                   *m_pData;
+
     // Used by constant buffer
     BYTE                   *m_pSysMemCopy;
 

@@ -215,6 +215,16 @@ void RosUmdDevice::CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResou
     pResource->m_hKMResource = allocate.hKMResource;
     pResource->m_hKMAllocation = allocationInfo.hAllocation;
 
+    if (pCreateResource->BindFlags & D3D10_DDI_BIND_CONSTANT_BUFFER)
+    {
+        pResource->m_pSysMemCopy = new BYTE[pResource->m_hwSizeBytes];
+
+        if (NULL == pResource->m_pSysMemCopy)
+        {
+            throw RosUmdException(E_OUTOFMEMORY);
+        }
+    }
+
     if (pCreateResource->pInitialDataUP != NULL && pCreateResource->pInitialDataUP[0].pSysMem != NULL)
     {
         D3DDDICB_LOCK lock;
@@ -238,16 +248,7 @@ void RosUmdDevice::CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResou
 
         if (pCreateResource->BindFlags & D3D10_DDI_BIND_CONSTANT_BUFFER)
         {
-            pResource->m_pSysMemCopy = new BYTE[pResource->m_hwSizeBytes];
-
-            if (pResource->m_pSysMemCopy)
-            {
-                memcpy(pResource->m_pSysMemCopy, pCreateResource->pInitialDataUP[0].pSysMem, pResource->m_hwSizeBytes);
-            }
-            else
-            {
-                SetError(E_OUTOFMEMORY);
-            }
+            memcpy(pResource->m_pSysMemCopy, pCreateResource->pInitialDataUP[0].pSysMem, pResource->m_hwSizeBytes);
         }
     }
 }
@@ -390,7 +391,7 @@ void RosUmdDevice::DestroyShader(
     pShader->~RosUmdShader();
 }
 
-void RosUmdDevice::StagingResourceMap(
+void RosUmdDevice::ResourceMap(
     RosUmdResource * pResource,
     UINT subResource,
     D3D10_DDI_MAP mapType,
@@ -400,7 +401,7 @@ void RosUmdDevice::StagingResourceMap(
     pResource->Map(this, subResource, mapType, mapFlags, pMappedSubRes);
 }
 
-void RosUmdDevice::StagingResourceUnmap(
+void RosUmdDevice::ResourceUnmap(
     RosUmdResource * pResource,
     UINT subResource)
 {
@@ -466,6 +467,11 @@ void RosUmdDevice::Allocate(D3DDDICB_ALLOCATE * pAllocate)
 void RosUmdDevice::Lock(D3DDDICB_LOCK * pLock)
 {
     HRESULT hr = m_pMSKTCallbacks->pfnLockCb(m_hRTDevice.handle, pLock);
+
+    if (pLock->Flags.DonotWait && (hr == D3DDDIERR_WASSTILLDRAWING))
+    {
+        SetError(DXGI_DDI_ERR_WASSTILLDRAWING);
+    }
 
     if (hr != S_OK) throw RosUmdException(hr);
 }
@@ -962,7 +968,7 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
     // TODO[indyz] : Decide maximal value to cover all cases
     //
 
-    UINT    maxStateComamnds = 160;
+    UINT    maxStateComamnds = 170;
     UINT    maxAllocationsUsed = 15;
     UINT    maxPatchLocations = 22;
 

@@ -79,8 +79,8 @@ public:
 
     void DestroyShader(D3D10DDI_HSHADER hShader);
 
-    void StagingResourceMap(RosUmdResource * pResource, UINT subResource, D3D10_DDI_MAP mapType, UINT mapFlags, D3D10DDI_MAPPED_SUBRESOURCE* pMappedSubRes);
-    void StagingResourceUnmap(RosUmdResource * pResource, UINT subResource);
+    void ResourceMap(RosUmdResource * pResource, UINT subResource, D3D10_DDI_MAP mapType, UINT mapFlags, D3D10DDI_MAPPED_SUBRESOURCE* pMappedSubRes);
+    void ResourceUnmap(RosUmdResource * pResource, UINT subResource);
 
 public:
 

@@ -267,6 +267,13 @@ RosUmdCommandBuffer::UseResource(
     return pResource->m_allocationListIndex;
 }
 
+bool
+RosUmdCommandBuffer::IsResourceUsed(
+    RosUmdResource *    pResource)
+{
+    return (pResource->m_mostRecentFence == m_submissionFence);
+}
+
 #if VC4
 
 void RosUmdCommandBuffer::UpdateClearColor(

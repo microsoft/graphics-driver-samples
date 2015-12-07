@@ -77,11 +77,11 @@ public:
     static void APIENTRY QueryEnd_Default(D3D10DDI_HDEVICE, D3D10DDI_HQUERY) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY QueryGetData_Default(D3D10DDI_HDEVICE, D3D10DDI_HQUERY, void*, UINT, UINT) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
 
-    static void APIENTRY DynamicIABufferMapNoOverwrite_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT, D3D10_DDI_MAP, UINT, D3D10DDI_MAPPED_SUBRESOURCE*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
-    static void APIENTRY DynamicIABufferMapDiscard_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT, D3D10_DDI_MAP, UINT, D3D10DDI_MAPPED_SUBRESOURCE*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
-    static void APIENTRY DynamicIABufferUnmap_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
-    static void APIENTRY DynamicConstantBufferMapDiscard_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT, D3D10_DDI_MAP, UINT, D3D10DDI_MAPPED_SUBRESOURCE*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
-    static void APIENTRY DynamicConstantBufferUnmap_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
+    static void APIENTRY DdiDynamicIABufferMapNoOverwrite(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT, D3D10_DDI_MAP, UINT, D3D10DDI_MAPPED_SUBRESOURCE*);
+    static void APIENTRY DdiDynamicIABufferMapDiscard(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT, D3D10_DDI_MAP, UINT, D3D10DDI_MAPPED_SUBRESOURCE*);
+    static void APIENTRY DdiDynamicIABufferUnmap(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT);
+    static void APIENTRY DdiDynamicConstantBufferMapDiscard(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT, D3D10_DDI_MAP, UINT, D3D10DDI_MAPPED_SUBRESOURCE*);
+    static void APIENTRY DdiDynamicConstantBufferUnmap(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT);
     static void APIENTRY DynamicResourceMapDiscard_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT, D3D10_DDI_MAP, UINT, D3D10DDI_MAPPED_SUBRESOURCE*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY DynamicResourceUnmap_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY DdiStagingResourceMap(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT, D3D10_DDI_MAP, UINT, D3D10DDI_MAPPED_SUBRESOURCE*);
