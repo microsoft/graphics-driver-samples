@@ -12,6 +12,10 @@ All code within this project is covered by the MIT license with Microsoft as the
 
 If you wish to get involved in the project, please email grfxdrvsamples@microsoft.com and include how you wish to contribute.
 
+# Render Only Driver Status
+
+The render only driver builds and installs on a raspberry pi 2 and supports a variety of operations but is currently not ready for general DX usage.  The driver is still in the early stages of development.  We are currently working on getting a functional shader compiler working to support basic rendering operations.
+
 # Roles
 
 ##Project Coordinator
