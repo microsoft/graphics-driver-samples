@@ -22,7 +22,7 @@ struct PSInput
 //--------------------------------------------------------------------------------------
 // Vertex Shader
 //--------------------------------------------------------------------------------------
-PSInput VS( float4 Pos : POSITION, float3 TexCoord : TEXCOORD )
+PSInput VS( float4 Pos : POSITION, float2 TexCoord : TEXCOORD )
 {
     PSInput output;
     output.pos = Pos;
