@@ -19,4 +19,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Tutorial02.fx">
+      <Filter>Source Files</Filter>
+    </FxCompile>
+    <FxCompile Include="VC4Test-Cube.fx">
+      <Filter>Source Files</Filter>
+    </FxCompile>
+  </ItemGroup>
 </Project>
