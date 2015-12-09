@@ -1409,6 +1409,7 @@ RosKmAdapter::Escape(
 
     UINT    EscapeId = *((UINT *)pEscape->pPrivateDriverData);
 
+#pragma warning( disable : 4065 )
     switch (EscapeId)
     {
 
