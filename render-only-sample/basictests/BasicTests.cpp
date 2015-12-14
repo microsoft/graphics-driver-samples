@@ -649,7 +649,7 @@ public:
             //
 
             //     X,      Y,    Z,       Xs,       Ys,     R,    G,    B // See Input layout.
-            {  0.00f,  0.75f, 0.0f, (SHORT)0, (SHORT)0,  1.0f, 0.0f, 0.0f },
+            {  0.00f,  0.75f, 1.0f, (SHORT)0, (SHORT)0,  1.0f, 0.0f, 0.0f },
             { -0.75f, -0.75f, 0.0f, (SHORT)0, (SHORT)0,  0.0f, 1.0f, 0.0f },
             {  0.75f, -0.75f, 0.0f, (SHORT)0, (SHORT)0,  0.0f, 0.0f, 1.0f }
 
@@ -974,7 +974,7 @@ public:
             1.0f,
             0.0f,
 
-            // For Coordinate Shader, not used
+            // For Coordinate Shader
             kWidth*16.0f/2.0f,
            -kHeight*16.0f/2.0f,
             0.0f,
@@ -1098,10 +1098,10 @@ public:
 #else
 
         m_pDevice->GetContext()->ClearDepthStencilView(
-            m_pDepthStencilBuffer->GetDepthStencilView(),
-            D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,
-            0.75,
-            3);
+                                    m_pDepthStencilBuffer->GetDepthStencilView(),
+                                    D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,
+                                    0.5,
+                                    3);
 
 #endif
 

@@ -1373,8 +1373,19 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
 
     *pVC4ClipperZScaleAndOffset = vc4ClipperZScaleAndOffset;
 
-    pVC4ClipperZScaleAndOffset->ViewportZOffset = (m_viewports[0].MaxDepth - m_viewports[0].MinDepth) / 2.0f;
-    pVC4ClipperZScaleAndOffset->ViewportZScale = pVC4ClipperZScaleAndOffset->ViewportZOffset;
+    // Scale and offset the depth range from MinDepth to MaxDepth to 0.0 to 1.0
+    //
+
+    pVC4ClipperZScaleAndOffset->ViewportZOffset = -m_viewports[0].MinDepth;
+
+    if (m_viewports[0].MaxDepth != m_viewports[0].MinDepth)
+    {
+        pVC4ClipperZScaleAndOffset->ViewportZScale = 1.0f/(m_viewports[0].MaxDepth - m_viewports[0].MinDepth);
+    }
+    else
+    {
+        pVC4ClipperZScaleAndOffset->ViewportZScale = 0.0;
+    }
 
     //
     // Write Viewport Offset command
