@@ -27,7 +27,7 @@ const UINT  VC4_MAX_DMA_BUFFER_SELF_REF = 31;
 
 //
 // TODO[indyz]: Decide the proper size of the needed memory for binning
-//              Understand how binning memory usage spill over works
+//              and handle binning memory usage spill over
 //
 // For now, reserve at the end of allocated contiguous memory:
 //   1. 64KB for Rendering Control List, 
@@ -43,8 +43,11 @@ const UINT  VC4_TILE_ALLOCATION_MEMORY_SIZE = 1024 * 1024;
 const UINT  VC4_TILE_STATE_DATA_ARRAY_SIZE = 1024 * 1024;
 
 //
-// TODO[indyz]: Allow UMD to specify the size in
-//              VC4TileBinningModeConfig::TileAllocationBlockSize
+// TODO[indyz]: Choose proper size for VC4TileBinningModeConfig::TileAllocationBlockSize
+//
+// Each Allocation Block is a Control List and they are chained together with 
+// branch command of 4 bytes. So 32 bytes is probably too small, this is an 
+// efficiency tuning issue.
 //
 
 const UINT  VC4_TILE_ALLOCATION_BLOCK_SIZE  = 32;
