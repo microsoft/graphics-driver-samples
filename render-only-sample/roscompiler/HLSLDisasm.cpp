@@ -189,23 +189,15 @@ HRESULT PrintOperandD3D10(HLSLDisasm *pCtx, COperandBase *pOperand, BOOL bFloat,
         }
         else if (pOperand->m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_SWIZZLE_MODE)
         {
-            if ( ( D3D10_SB_4_COMPONENT_X != pOperand->m_Swizzle[0] ) ||
-                 ( D3D10_SB_4_COMPONENT_Y != pOperand->m_Swizzle[1] ) ||
-                 ( D3D10_SB_4_COMPONENT_Z != pOperand->m_Swizzle[2] ) ||
-                 ( D3D10_SB_4_COMPONENT_W != pOperand->m_Swizzle[3] ) )
+            if ((D3D10_SB_4_COMPONENT_X != pOperand->m_Swizzle[0]) ||
+                (D3D10_SB_4_COMPONENT_Y != pOperand->m_Swizzle[1]) ||
+                (D3D10_SB_4_COMPONENT_Z != pOperand->m_Swizzle[2]) ||
+                (D3D10_SB_4_COMPONENT_W != pOperand->m_Swizzle[3]))
             {
                 pCtx->xprintf(TEXT("."));
-                PrintComponent(pCtx,(D3D10_SB_4_COMPONENT_NAME)pOperand->m_Swizzle[0]);
-                for(UINT i = 1; i < 4; ++i)
+                for (UINT i = 0; i < 4; i++)
                 {
-                    for(UINT j = i; j < 4; ++j)
-                    {
-                        if ( pOperand->m_Swizzle[j] != pOperand->m_Swizzle[i-1] )
-                        {
-                            PrintComponent(pCtx,(D3D10_SB_4_COMPONENT_NAME)pOperand->m_Swizzle[i]);
-                            break;
-                        }
-                    }
+                    PrintComponent(pCtx, (D3D10_SB_4_COMPONENT_NAME)pOperand->m_Swizzle[i]);
                 }
             }
         }

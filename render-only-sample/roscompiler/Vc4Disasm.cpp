@@ -1,5 +1,4 @@
 #include "roscompiler.h"
-#include "Vc4Disasm.hpp"
 
 #if VC4
 
@@ -186,23 +185,37 @@ HRESULT Vc4Disasm::ParseALUInstruction(VC4_QPU_INSTRUCTION Instruction)
 
 HRESULT Vc4Disasm::ParseLoadImmInstruction(VC4_QPU_INSTRUCTION Instruction)
 {
-    this->xprintf(TEXT("%s%s%s "),
-        VC4_QPU_Name_Op_Move,
-        ((VC4_QPU_GET_IMMEDIATE_TYPE(Instruction) == VC4_QPU_IMMEDIATE_TYPE_32) ? TEXT("") : (VC4_QPU_GET_IMMEDIATE_TYPE(Instruction) == VC4_QPU_IMMEDIATE_TYPE_PER_ELEMENT_SIGNED) ? TEXT("_per_element_signed") : (VC4_QPU_GET_IMMEDIATE_TYPE(Instruction) == VC4_QPU_IMMEDIATE_TYPE_PER_ELEMENT_UNSIGNED) ? TEXT("per_element_unsigned") : TEXT("Invalid")),
-        (VC4_QPU_IS_SETFLAGS_SET(Instruction) ? VC4_QPU_Name_SetFlag : VC4_QPU_Name_Empty));
     if (VC4_QPU_GET_WADDR_ADD(Instruction) != VC4_QPU_WADDR_NOP)
     {
+        this->xprintf(TEXT("%s%s%s "),
+            VC4_QPU_Name_Op_Move,
+            ((VC4_QPU_GET_IMMEDIATE_TYPE(Instruction) == VC4_QPU_IMMEDIATE_TYPE_32) ? TEXT("") : (VC4_QPU_GET_IMMEDIATE_TYPE(Instruction) == VC4_QPU_IMMEDIATE_TYPE_PER_ELEMENT_SIGNED) ? TEXT("_per_element_signed") : (VC4_QPU_GET_IMMEDIATE_TYPE(Instruction) == VC4_QPU_IMMEDIATE_TYPE_PER_ELEMENT_UNSIGNED) ? TEXT("per_element_unsigned") : TEXT("Invalid")),
+            (VC4_QPU_IS_SETFLAGS_SET(Instruction) ? VC4_QPU_Name_SetFlag : VC4_QPU_Name_Empty));
         ParseWrite(Instruction, true);
         this->xprintf(TEXT("%s"), VC4_QPU_LOOKUP_STRING(COND, VC4_QPU_GET_COND_ADD(Instruction)));
         this->xprintf(TEXT(", "));
+        this->xprintf(TEXT("0x%08x"), VC4_QPU_GET_IMMEDIATE_32(Instruction));
     }
+    else
+    {
+        this->xprintf(TEXT("%s"), VC4_QPU_LOOKUP_STRING(OPCODE_ADD, VC4_QPU_OPCODE_ADD_NOP));
+    }
+    this->xprintf(TEXT(" ; "));
     if (VC4_QPU_GET_WADDR_MUL(Instruction) != VC4_QPU_WADDR_NOP)
     {
+        this->xprintf(TEXT("%s%s%s "),
+            VC4_QPU_Name_Op_Move,
+            ((VC4_QPU_GET_IMMEDIATE_TYPE(Instruction) == VC4_QPU_IMMEDIATE_TYPE_32) ? TEXT("") : (VC4_QPU_GET_IMMEDIATE_TYPE(Instruction) == VC4_QPU_IMMEDIATE_TYPE_PER_ELEMENT_SIGNED) ? TEXT("_per_element_signed") : (VC4_QPU_GET_IMMEDIATE_TYPE(Instruction) == VC4_QPU_IMMEDIATE_TYPE_PER_ELEMENT_UNSIGNED) ? TEXT("per_element_unsigned") : TEXT("Invalid")),
+            (VC4_QPU_IS_SETFLAGS_SET(Instruction) ? VC4_QPU_Name_SetFlag : VC4_QPU_Name_Empty));
         ParseWrite(Instruction, false);
         this->xprintf(TEXT("%s"), VC4_QPU_LOOKUP_STRING(COND, VC4_QPU_GET_COND_MUL(Instruction)));
         this->xprintf(TEXT(", "));
+        this->xprintf(TEXT("0x%08x"), VC4_QPU_GET_IMMEDIATE_32(Instruction));
     }
-    this->xprintf(TEXT("0x%08x"), VC4_QPU_GET_IMMEDIATE_32(Instruction));
+    else
+    {
+        this->xprintf(TEXT("%s"), VC4_QPU_LOOKUP_STRING(OPCODE_MUL, VC4_QPU_OPCODE_MUL_NOP));
+    }
     return S_OK;
 }
 
@@ -273,8 +286,9 @@ HRESULT Vc4Disasm::ParseFlags(VC4_QPU_INSTRUCTION Instruction)
 }
 
 HRESULT
-Vc4Disasm::Run(const VC4_QPU_INSTRUCTION* pShader, ULONG ShaderSize)
+Vc4Disasm::Run(const VC4_QPU_INSTRUCTION* pShader, ULONG ShaderSize, TCHAR *pTitle)
 {
+    if (pTitle) this->xprintf(TEXT("---------- %s ----------\n"), pTitle);
     ULONG cInstruction = ShaderSize / sizeof(VC4_QPU_INSTRUCTION);
     for (ULONG i = 0; i < cInstruction; i++)
     {

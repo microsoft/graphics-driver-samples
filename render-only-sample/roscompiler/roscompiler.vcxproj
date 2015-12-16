@@ -42,6 +42,8 @@
     <ClInclude Include="HLSLDisasm.hpp" />
     <ClInclude Include="roscompiler.h" />
     <ClInclude Include="Vc4Disasm.hpp" />
+    <ClInclude Include="Vc4Emit.hpp" />
+    <ClInclude Include="Vc4Shader.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DisasmBase.cpp" />
@@ -49,6 +51,8 @@
     <ClCompile Include="HLSLDisasm.cpp" />
     <ClCompile Include="roscompiler.cpp" />
     <ClCompile Include="Vc4Disasm.cpp" />
+    <ClCompile Include="Vc4Emit.cpp" />
+    <ClCompile Include="Vc4Shader.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{98E16C06-7E74-4A0C-A5E6-24219CAE527D}</ProjectGuid>

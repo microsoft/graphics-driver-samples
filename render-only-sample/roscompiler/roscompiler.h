@@ -3,7 +3,10 @@
 #include "HLSLBinary.hpp"
 #include "HLSLDisasm.hpp"
 #if VC4
+#include "..\roscommon\Vc4Qpu.h"
 #include "Vc4Disasm.hpp"
+#include "Vc4Emit.hpp"
+#include "Vc4Shader.hpp"
 #endif // VC4
 
 class RosCompiler

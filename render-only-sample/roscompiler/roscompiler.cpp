@@ -54,12 +54,6 @@ RosCompiler::~RosCompiler()
     delete[] m_pHwCode;
 }
 
-#define SHAREDTEX_CVS   1
-// #define PASSTHROUGH_CVS 1
-// #define SIMPLETRANS_CVS 1
-// #define CUBETEST_CVFS   1
-
-
 BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize,
                              UINT * pCoordinateShaderOffset)
 {
@@ -73,12 +67,42 @@ BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize,
     Disassemble_Signatures();
     Disassemble_HLSL();
 #endif // DBG
-        
+
+#if VC4
+    Vc4Shader Vc4ShaderCompiler;
+    Vc4ShaderCompiler.SetShaderCode(m_pCode);
+    Vc4ShaderCompiler.Translate();
+    
+    m_HwCodeSize = Vc4ShaderCompiler.GetVc4ShaderCodeSize();
+
+    m_pHwCode = new BYTE[m_HwCodeSize];
+    memset(m_pHwCode, 0, m_HwCodeSize);
+
+    Vc4ShaderCompiler.GetVc4ShaderCode(m_pHwCode, m_HwCodeSize);
+
+    if (D3D10_SB_VERTEX_SHADER == m_ProgramType)
+    {
+        *pCoordinateShaderOffset = (m_HwCodeSize / 2);
+    }
+    *puiShaderCodeSize = m_HwCodeSize;
+#else
+    assert(false);
+#endif // VC4
+
+   return TRUE;
+
+#if 0
+
+// #define SHAREDTEX_CVS   1
+// #define PASSTHROUGH_CVS 1
+// #define SIMPLETRANS_CVS 1
+#define CUBETEST_CVFS   1
+
     if (D3D10_SB_VERTEX_SHADER == m_ProgramType)
     {
         // Implement vertex shader compiling
 #if VC4
-
+       
 #if SHAREDTEX_CVS
 
         VC4_QPU_INSTRUCTION vertexShader[] =
@@ -368,6 +392,20 @@ BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize,
 
 #if CUBETEST_CVFS
 
+#if 1
+     ULONGLONG PS[] = {
+            0x10020827158e7d80, //        ; mov r0, varying ; nop          // pm = 0, sf = 0, ws = 0
+            0x10020867158e7d80, //        ; mov r1, varying ; nop          // pm = 0, sf = 0, ws = 0
+            0x400208a7019e7140, // sbwait ; fadd r2, r0, r5 ; nop          // pm = 0, sf = 0, ws = 0
+            0x100208e7019e7340, //        ; fadd r3, r1, r5 ; nop          // pm = 0, sf = 0, ws = 0
+            0x10020e67159e7480, //        ; mov tmu0_t, r2 ; nop   // pm = 0, sf = 0, ws = 0
+            0x10020e27159e76c0, //        ; mov tmu0_s, r3 ; nop   // pm = 0, sf = 0, ws = 0
+            0xa00009e7009e7000, // ldtmu0 ; nop  ; nop
+            0x30020ba7159e7900, // thrend ; mov tlb_colour, r4 ; nop       // pm = 0, sf = 0, ws = 0
+            0x100009e7009e7000, //        ; nop  ; nop
+            0x500009e7009e7000, // sbdone ; nop  ; nop
+    };
+#else
         DWORD PS[] =
         {
             /* Assembled Program */
@@ -387,6 +425,7 @@ BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize,
             /* 0x00000068: */ 0x009e7000, 0x100009e7, /* nop             ; nop */
             /* 0x00000070: */ 0x009e7000, 0x500009e7, /* sbdone    ; nop             ; nop */
         };
+#endif
 
 #else
 
@@ -427,6 +466,7 @@ BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize,
     }
    
     return FALSE;
+#endif // 0
 }
 
 BYTE * RosCompiler::GetShaderCode()

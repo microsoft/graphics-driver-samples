@@ -1,7 +1,7 @@
 #pragma once
 #include <stdio.h>
+#include <stdint.h>
 #include <tchar.h>
-
 #include <windows.h>
 
 //
@@ -450,6 +450,16 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 #define VC4_QPU_SET_BRANCH_RADDR_A(Inst,Value) DEFINE_VC4_QPU_SET(Inst,Value,BRANCH_RADDR_A)
 
 //
+// VR_SETUP/VR_SETUP
+//
+#define VC4_QPU_8BIT_VECTOR  0
+#define VC4_QPU_16BIT_VECTOR 1
+#define VC4_QPU_32BIT_VECTOR 2
+
+#define MAKE_VR_SETUP(NUM, STRIDE, HORIZ, LANED, VSIZE, ADDR) ((((NUM) & 0xf) << 20) | ((STRIDE & 0x1f) << 12) | ((HORIZ ? 1 : 0) << 11) | ((LANED ? 1 : 0) << 10) | ((VSIZE & 0x3) << 8) | (ADDR & 0xff))
+#define MAKE_VW_SETUP(STRIDE, HORIZ, LANED, VSIZE, ADDR)                              (((STRIDE & 0x1f) << 12) | ((HORIZ ? 1 : 0) << 11) | ((LANED ? 1 : 0) << 10) | ((VSIZE & 0x3) << 8) | (ADDR & 0xff))
+
+//
 // Others
 //
 #define VC4_QPU_IS_OPCODE_ADD_MOV(Inst) ((VC4_QPU_GET_OPCODE_ADD(Inst) == VC4_QPU_OPCODE_ADD_OR) && (VC4_QPU_GET_ADD_A(Inst) == VC4_QPU_GET_ADD_B(Inst)))
@@ -608,6 +618,38 @@ _declspec(selectany) VC4QPU_TOKENLOOKUP_ADDR_TABLE VC4_QPU_WADDR_LOOKUP[] =
              14, _TEXT("rb14") },
     { false, 15, _TEXT("ra15"), 
              15, _TEXT("rb15") },
+    { false, 16, _TEXT("ra16"),
+             16, _TEXT("rb16") },
+    { false, 17, _TEXT("ra17"),
+             17, _TEXT("rb17") },
+    { false, 18, _TEXT("ra18"),
+             18, _TEXT("rb18") },
+    { false, 19, _TEXT("ra19"),
+             19, _TEXT("rb19") },
+    { false, 20, _TEXT("ra20"),
+             20, _TEXT("rb20") },
+    { false, 21, _TEXT("ra21"),
+             21, _TEXT("rb21") },
+    { false, 22, _TEXT("ra22"),
+             22, _TEXT("rb22") },
+    { false, 23, _TEXT("ra23"),
+             23, _TEXT("rb23") },
+    { false, 24, _TEXT("ra24"),
+             24, _TEXT("rb24") },
+    { false, 25, _TEXT("ra25"),
+             25, _TEXT("rb25") },
+    { false, 26, _TEXT("ra26"),
+             26, _TEXT("rb26") },
+    { false, 27, _TEXT("ra27"),
+             27, _TEXT("rb27") },
+    { false, 28, _TEXT("ra28"),
+             28, _TEXT("rb28") },
+    { false, 29, _TEXT("ra29"),
+             29, _TEXT("rb29") },
+    { false, 30, _TEXT("ra30"),
+             30, _TEXT("rb30") },
+    { false, 31, _TEXT("ra31"),
+             31, _TEXT("rb31") },
     { true,  VC4_QPU_WADDR_ACC0, _TEXT("r0"),
              VC4_QPU_WADDR_ACC0, _TEXT("r0") },
     { true,  VC4_QPU_WADDR_ACC1, _TEXT("r1"),
@@ -762,6 +804,38 @@ _declspec(selectany) VC4QPU_TOKENLOOKUP_ADDR_TABLE VC4_QPU_RADDR_LOOKUP[] =
              14, _TEXT("rb14") },
     { false, 15, _TEXT("ra15"),
              15, _TEXT("rb15") },
+    { false, 16, _TEXT("ra16"),
+             16, _TEXT("rb16") },
+    { false, 17, _TEXT("ra17"),
+             17, _TEXT("rb17") },
+    { false, 18, _TEXT("ra18"),
+             18, _TEXT("rb18") },
+    { false, 19, _TEXT("ra19"),
+             19, _TEXT("rb19") },
+    { false, 20, _TEXT("ra20"),
+             20, _TEXT("rb20") },
+    { false, 21, _TEXT("ra21"),
+             21, _TEXT("rb21") },
+    { false, 22, _TEXT("ra22"),
+             22, _TEXT("rb22") },
+    { false, 23, _TEXT("ra23"),
+             23, _TEXT("rb23") },
+    { false, 24, _TEXT("ra24"),
+             24, _TEXT("rb24") },
+    { false, 25, _TEXT("ra25"),
+             25, _TEXT("rb25") },
+    { false, 26, _TEXT("ra26"),
+             26, _TEXT("rb26") },
+    { false, 27, _TEXT("ra27"),
+             27, _TEXT("rb27") },
+    { false, 28, _TEXT("ra28"),
+             28, _TEXT("rb28") },
+    { false, 29, _TEXT("ra29"),
+             29, _TEXT("rb29") },
+    { false, 30, _TEXT("ra30"),
+             30, _TEXT("rb30") },
+    { false, 31, _TEXT("ra31"),
+             31, _TEXT("rb31") },
     { true,  VC4_QPU_RADDR_UNIFORM, _TEXT("uniform"),
              VC4_QPU_RADDR_UNIFORM, _TEXT("uniform") },
     { true,  VC4_QPU_RADDR_VERYING, _TEXT("varying"),

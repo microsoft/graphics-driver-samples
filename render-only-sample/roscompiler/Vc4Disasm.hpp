@@ -8,7 +8,7 @@ class Vc4Disasm : public BaseDisasm
 public:
     Vc4Disasm() { }
     ~Vc4Disasm() { }
-    HRESULT Run(const VC4_QPU_INSTRUCTION* pShader, ULONG Size);
+    HRESULT Run(const VC4_QPU_INSTRUCTION* pShader, ULONG Size, TCHAR* Title = NULL);
 
 private:
     HRESULT ParseSignature(VC4_QPU_INSTRUCTION Instruction);

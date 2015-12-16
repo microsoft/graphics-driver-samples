@@ -39,6 +39,12 @@
     <ClInclude Include="DisasmBase.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Vc4Emit.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Vc4Shader.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="roscompiler.cpp">
@@ -54,6 +60,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="DisasmBase.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Vc4Emit.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Vc4Shader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
