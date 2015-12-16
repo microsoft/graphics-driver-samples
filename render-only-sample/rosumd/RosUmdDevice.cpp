@@ -645,7 +645,7 @@ void RosUmdDevice::DrawIndexed(UINT indexCount, UINT startIndexLocation, INT bas
 
 void RosUmdDevice::ClearRenderTargetView(RosUmdRenderTargetView * pRenderTargetView, FLOAT clearColor[4])
 {
-    // TODO[indyz]: Use pRenderTargetView to decide if 
+    // TODO[indyz]: Use format from pRenderTargetView to decide if 
     //              VC4ClearColors::ClearColor16 should be used
     pRenderTargetView; // unused
 
@@ -1013,7 +1013,7 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
     }
 
     //
-    // TODO[indyz] : Decide if multiple constant buffers need to be supported
+    // TODO[indyz] : Decide how multiple constant buffers should be supported
     //
 
     if (m_psConstantBuffer[0])
@@ -1135,7 +1135,7 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
     //
     // Write Configuration Bits command to update render state
     //
-    // TODO[indyz]: Set up more config from rasterizer state, etc
+    // TODO[indyz]: Set up more VC4ConfigBits from rasterizer state, etc
     //
 
     VC4ConfigBits *  pVC4ConfigBits;
@@ -1373,8 +1373,19 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
 
     *pVC4ClipperZScaleAndOffset = vc4ClipperZScaleAndOffset;
 
-    pVC4ClipperZScaleAndOffset->ViewportZOffset = (m_viewports[0].MaxDepth - m_viewports[0].MinDepth) / 2.0f;
-    pVC4ClipperZScaleAndOffset->ViewportZScale = pVC4ClipperZScaleAndOffset->ViewportZOffset;
+    // Scale and offset the depth range from MinDepth to MaxDepth to 0.0 to 1.0
+    //
+
+    pVC4ClipperZScaleAndOffset->ViewportZOffset = -m_viewports[0].MinDepth;
+
+    if (m_viewports[0].MaxDepth != m_viewports[0].MinDepth)
+    {
+        pVC4ClipperZScaleAndOffset->ViewportZScale = 1.0f/(m_viewports[0].MaxDepth - m_viewports[0].MinDepth);
+    }
+    else
+    {
+        pVC4ClipperZScaleAndOffset->ViewportZScale = 0.0;
+    }
 
     //
     // Write Viewport Offset command
@@ -1680,7 +1691,7 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
                 pVC4TexConfigParam1->UInt0 = 0;
 
                 //
-                // TODO[indyz] : Set up filter and wrap mode
+                // TODO[indyz] : Set up texture filter and wrap mode
                 //
 
                 pVC4TexConfigParam1->WIDTH = pTexture->m_hwWidthPixels;
