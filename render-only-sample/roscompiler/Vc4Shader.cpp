@@ -2,13 +2,13 @@
 
 HRESULT Vc4ShaderStorage::Initialize()
 {
-    this->pStream = new VC4_QPU_INSTRUCTION[VC4_DEFAULT_STORAGE_SIZE];
-    if (this->pStream == NULL)
+    this->pStorage = new BYTE[VC4_DEFAULT_STORAGE_SIZE];
+    if (this->pStorage == NULL)
     {
         return E_OUTOFMEMORY;
     }
-    this->cStream = VC4_DEFAULT_STORAGE_SIZE;
-    this->pCurrent = this->pStream;
+    this->cStorage = VC4_DEFAULT_STORAGE_SIZE;
+    this->pCurrent = this->pStorage;
     this->cUsed = 0;
 
     return S_OK;
@@ -16,35 +16,25 @@ HRESULT Vc4ShaderStorage::Initialize()
 
 HRESULT Vc4ShaderStorage::Grow(uint32_t size)
 {
-    uint32_t NewSize = this->cStream + max(size, VC4_DEFAULT_STORAGE_INCREMENT);
-    VC4_QPU_INSTRUCTION *pNew = new VC4_QPU_INSTRUCTION[NewSize];
+    uint32_t NewSize = this->cStorage + max(size, VC4_DEFAULT_STORAGE_INCREMENT);
+    BYTE *pNew = new BYTE[NewSize];
     if (pNew == NULL)
     {
         return E_OUTOFMEMORY;
     }
-    memcpy(pNew, this->pStream, this->cStream * sizeof(VC4_QPU_INSTRUCTION));
-    delete[] this->pStream;
+    memcpy(pNew, this->pStorage, this->cStorage);
+    delete[] this->pStorage;
 
-    this->pStream = pNew;
-    this->pCurrent = this->pStream + this->cUsed;
-    this->cStream = NewSize;
+    this->pStorage = pNew;
+    this->pCurrent = this->pStorage + this->cUsed;
+    this->cStorage = NewSize;
 
     return S_OK;
 }
 
-HRESULT Vc4ShaderStorage::Emit(VC4_QPU_INSTRUCTION Instruction)
-{
-    HRESULT hr = this->Ensure(1);
-    if (SUCCEEDED(hr))
-    {
-        this->Store(Instruction);
-    }
-    return hr;
-}
-
 void Vc4Shader::Emit_Prologue_VS()
 {
-    this->ShaderStorage.Ensure(this->cInput + 3); // +2 for vr_setup/vw_setup and NOP.
+    this->ShaderStorage.EnsureInstruction(this->cInput + 3); // +2 for vr_setup/vw_setup and NOP.
 
     assert(cInput < 16); // VR_SETUP:NUM limitation, vpm only can read up to 16 values.
 
@@ -53,7 +43,7 @@ void Vc4Shader::Emit_Prologue_VS()
         Vc4Register vr_setup(VC4_QPU_ALU_REG_A, VC4_QPU_WADDR_VPMVCD_RD_SETUP);
         Vc4Value value; value.i = MAKE_VR_SETUP(cInput, 1, true, false, VC4_QPU_32BIT_VECTOR, 0);
         Vc4Inst.Vc4_a_LOAD32(vr_setup, value);
-        ShaderStorage.Emit(Vc4Inst.GetInstruction());
+        ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
     }
 
     {
@@ -61,7 +51,7 @@ void Vc4Shader::Emit_Prologue_VS()
         Vc4Register vw_setup(VC4_QPU_ALU_REG_B, VC4_QPU_WADDR_VPMVCD_WR_SETUP);
         Vc4Value value; value.i = MAKE_VW_SETUP(1, true, false, VC4_QPU_32BIT_VECTOR, 0);
         Vc4Inst.Vc4_a_LOAD32(vw_setup, value);
-        ShaderStorage.Emit(Vc4Inst.GetInstruction());
+        ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
     }
 
     for (uint8_t iRegUsed = 0, iRegIndex = 0; iRegUsed < this->cInput; iRegIndex++)
@@ -73,14 +63,14 @@ void Vc4Shader::Emit_Prologue_VS()
             assert(raX.mux == VC4_QPU_ALU_REG_A || raX.mux == VC4_QPU_ALU_REG_B);
             Vc4Register vpm(raX.mux, VC4_QPU_RADDR_VPM);
             Vc4Inst.Vc4_a_MOV(raX, vpm);
-            ShaderStorage.Emit(Vc4Inst.GetInstruction());
+            ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
             iRegUsed++;
         }
     }
 
     { // Emit a NOP
         Vc4Instruction Vc4Inst;
-        ShaderStorage.Emit(Vc4Inst.GetInstruction());
+        ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
     }
 }
 
@@ -89,7 +79,7 @@ void Vc4Shader::Emit_Prologue_PS()
     // assume all requires interpolation. 1 instruction for load, 1 instruction for interpolation, and 1 instruction to store back.
     // +1 for NOP (after read all varying).
     // +1 for sbwait (after interporation).
-    this->ShaderStorage.Ensure((this->cInput * 3) + 1 + 1);
+    this->ShaderStorage.EnsureInstruction((this->cInput * 3) + 1 + 1);
 
     // Issue load inputs from varying.
     for (uint8_t iRegUsed = 0, iRegIndex = 0; iRegUsed < this->cInput; iRegIndex++)
@@ -102,7 +92,7 @@ void Vc4Shader::Emit_Prologue_PS()
             assert(raX.mux == VC4_QPU_ALU_REG_A || raX.mux == VC4_QPU_ALU_REG_B);
             Vc4Register varying(raX.mux, VC4_QPU_RADDR_VERYING);
             Vc4Inst.Vc4_a_MOV(raX, varying);
-            ShaderStorage.Emit(Vc4Inst.GetInstruction());
+            ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
             iRegUsed++;
         }
     }
@@ -110,7 +100,7 @@ void Vc4Shader::Emit_Prologue_PS()
     // Issue NOP.
     {
         Vc4Instruction Vc4Inst;
-        ShaderStorage.Emit(Vc4Inst.GetInstruction());
+        ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
     }
 
     // Issue interporation to each data.
@@ -125,14 +115,14 @@ void Vc4Shader::Emit_Prologue_PS()
                 Vc4Register r1(VC4_QPU_ALU_REG_A, VC4_QPU_WADDR_ACC1);
                 Vc4Register r5(VC4_QPU_ALU_R5);
                 Vc4Inst.Vc4_a_FADD(r1, raX, r5);
-                ShaderStorage.Emit(Vc4Inst.GetInstruction());
+                ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
             }
         
             {
                 Vc4Instruction Vc4Inst;
                 Vc4Register r1(VC4_QPU_ALU_R1);
                 Vc4Inst.Vc4_a_MOV(raX, r1);
-                ShaderStorage.Emit(Vc4Inst.GetInstruction());
+                ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
             }
 
             iRegUsed++;
@@ -142,15 +132,15 @@ void Vc4Shader::Emit_Prologue_PS()
     { // Emit a NOP with 'sbwait'
         Vc4Instruction Vc4Inst;
         Vc4Inst.Vc4_Sig(VC4_QPU_SIG_WAIT_FOR_SCOREBOARD);
-        ShaderStorage.Emit(Vc4Inst.GetInstruction());
+        ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
     }
 }
 
 void Vc4Shader::Emit_ShaderOutput_VS(boolean bVS, Vc4ShaderStorage *Storage)
 {
-    Storage->Ensure((bVS ? 0 : 4)                        // raw coordinate outputs X/Y/Z/W.
-                     + 8                                 // 2 fmul, 2 ftoi, 1 NOP and 1 mov.
-                     + (bVS ? (this->cOutput - 4) : 0)); // varying output
+    Storage->EnsureInstruction((bVS ? 0 : 4)                        // raw coordinate outputs X/Y/Z/W.
+                               + 8                                 // 2 fmul, 2 ftoi, 1 NOP and 1 mov.
+                               + (bVS ? (this->cOutput - 4) : 0)); // varying output
     
     Vc4Register vpm(VC4_QPU_ALU_REG_B, VC4_QPU_WADDR_VPM);
 
@@ -178,7 +168,7 @@ void Vc4Shader::Emit_ShaderOutput_VS(boolean bVS, Vc4ShaderStorage *Storage)
             Vc4Register src = pos[i];
             Vc4Instruction Vc4Inst;
             Vc4Inst.Vc4_m_MOV(vpm, src);
-            Storage->Emit(Vc4Inst.GetInstruction());
+            Storage->EmitInstruction(Vc4Inst.GetInstruction());
         }
     }
 
@@ -192,7 +182,7 @@ void Vc4Shader::Emit_ShaderOutput_VS(boolean bVS, Vc4ShaderStorage *Storage)
                 Vc4Register unif((pos[i].mux == VC4_QPU_ALU_REG_A ? VC4_QPU_ALU_REG_B : VC4_QPU_ALU_REG_A), VC4_QPU_RADDR_UNIFORM); // use opossit register file.
                 Vc4Instruction Vc4Inst;
                  Vc4Inst.Vc4_m_FMUL(rX, pos[i], unif);
-                Storage->Emit(Vc4Inst.GetInstruction());
+                Storage->EmitInstruction(Vc4Inst.GetInstruction());
             }
         }
 
@@ -205,20 +195,20 @@ void Vc4Shader::Emit_ShaderOutput_VS(boolean bVS, Vc4ShaderStorage *Storage)
                 Vc4Instruction Vc4Inst;
                 Vc4Inst.Vc4_a_FTOI(ra16, rX); // REUSE ra16 as temp is no longer needed.
                 Vc4Inst.Vc4_a_Pack(VC4_QPU_PACK_A_16a + i);
-                Storage->Emit(Vc4Inst.GetInstruction());
+                Storage->EmitInstruction(Vc4Inst.GetInstruction());
             }
 
             // Issue NOP as ra16 is just written.
             {
                 Vc4Instruction Vc4Inst;
-                ShaderStorage.Emit(Vc4Inst.GetInstruction());
+                ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
             }
 
             // Output to vpm.
             {
                 Vc4Instruction Vc4Inst;
                 Vc4Inst.Vc4_m_MOV(vpm, ra16);
-                Storage->Emit(Vc4Inst.GetInstruction());
+                Storage->EmitInstruction(Vc4Inst.GetInstruction());
             }
         }
     }
@@ -227,7 +217,7 @@ void Vc4Shader::Emit_ShaderOutput_VS(boolean bVS, Vc4ShaderStorage *Storage)
     {
         Vc4Instruction Vc4Inst;
         Vc4Inst.Vc4_m_MOV(vpm, pos[2]);
-        Storage->Emit(Vc4Inst.GetInstruction());
+        Storage->EmitInstruction(Vc4Inst.GetInstruction());
     }
 
     // 1/W // TODO: this must be 1/Wc
@@ -235,7 +225,7 @@ void Vc4Shader::Emit_ShaderOutput_VS(boolean bVS, Vc4ShaderStorage *Storage)
         Vc4Register w;
         Vc4Instruction Vc4Inst;
         Vc4Inst.Vc4_m_MOV(vpm, pos[3]);
-        Storage->Emit(Vc4Inst.GetInstruction());
+        Storage->EmitInstruction(Vc4Inst.GetInstruction());
     }
 
     // Only VS emits "varying" (everything read from vpm except position data).
@@ -248,7 +238,7 @@ void Vc4Shader::Emit_ShaderOutput_VS(boolean bVS, Vc4ShaderStorage *Storage)
                 Vc4Register src = this->OutputRegister[i / 4][i % 4];
                 Vc4Instruction Vc4Inst;
                 Vc4Inst.Vc4_m_MOV(vpm, src);
-                Storage->Emit(Vc4Inst.GetInstruction());
+                Storage->EmitInstruction(Vc4Inst.GetInstruction());
             }
         }
     }
@@ -263,7 +253,20 @@ void Vc4Shader::Emit_Epilogue(Vc4ShaderStorage *Storage)
 
     // +1 for thrend with color output.
     // +2 for NOP(s) and unblock.
-    Storage->Ensure(3);
+    Storage->EnsureInstruction(3);
+
+    // output 'Z'.
+    if (D3D10_SB_PIXEL_SHADER == this->uShaderType)
+    {
+        if (true) // TODO: check if Z is enabled.
+        {
+            Vc4Register tlb_z(VC4_QPU_ALU_REG_B, VC4_QPU_WADDR_TLB_Z);
+            Vc4Register rb15(VC4_QPU_ALU_REG_B, 15); // reserved for Z
+            Vc4Instruction Vc4Inst;
+            Vc4Inst.Vc4_m_MOV(tlb_z, rb15);
+            Storage->EmitInstruction(Vc4Inst.GetInstruction());
+        }
+    }
 
     // output 'thrend', and output pixel data is PS.
     {
@@ -275,7 +278,7 @@ void Vc4Shader::Emit_Epilogue(Vc4ShaderStorage *Storage)
             Vc4Register tlb_c(VC4_QPU_ALU_REG_A, VC4_QPU_WADDR_TLB_COLOUR_ALL);
             Vc4Inst.Vc4_a_MOV(tlb_c, this->OutputRegister[0][0]);
         }
-        Storage->Emit(Vc4Inst.GetInstruction());
+        Storage->EmitInstruction(Vc4Inst.GetInstruction());
     }
 
     // output 2 NOP(s).
@@ -286,14 +289,14 @@ void Vc4Shader::Emit_Epilogue(Vc4ShaderStorage *Storage)
         {
             Vc4Inst.Vc4_Sig(VC4_QPU_SIG_SCOREBOARD_UNBLOCK);
         }
-        Storage->Emit(Vc4Inst.GetInstruction());
+        Storage->EmitInstruction(Vc4Inst.GetInstruction());
     }
 }
 
 void Vc4Shader::Emit_Mov(CInstruction &Inst)
 {
     // max 4 mov(s) + 1 NOP.
-    this->ShaderStorage.Ensure(5);
+    this->ShaderStorage.EnsureInstruction(5);
 
     assert(Inst.m_NumOperands == 2);
 
@@ -333,7 +336,7 @@ void Vc4Shader::Emit_Mov(CInstruction &Inst)
                     }
                     Vc4Inst.Vc4_m_LOAD32(dst, value);
                     Vc4Inst.Vc4_m_Pack(pack);
-                    ShaderStorage.Emit(Vc4Inst.GetInstruction());
+                    ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
                     break;
                 }
                 case D3D10_SB_OPERAND_TYPE_IMMEDIATE64:
@@ -349,7 +352,7 @@ void Vc4Shader::Emit_Mov(CInstruction &Inst)
                     Vc4Instruction Vc4Inst;
                     Vc4Inst.Vc4_m_MOV(dst, src);
                     Vc4Inst.Vc4_m_Pack(pack);
-                    ShaderStorage.Emit(Vc4Inst.GetInstruction());
+                    ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
                     break;
                 }
                 }
@@ -360,8 +363,14 @@ void Vc4Shader::Emit_Mov(CInstruction &Inst)
 
     { // Emit a NOP
         Vc4Instruction Vc4Inst;
-        ShaderStorage.Emit(Vc4Inst.GetInstruction());
+        ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
     }
+}
+
+void Vc4Shader::Emit_Mul(CInstruction &Inst)
+{
+    assert(Inst.m_NumOperands == 3);
+    __debugbreak();
 }
 
 void Vc4Shader::Emit_Sample(CInstruction &Inst)
@@ -370,8 +379,9 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
     
     assert(Inst.m_NumOperands == 4);
 
-    // Output : only supports 8888RGBA output for now.
-    Vc4Register o;
+    boolean bUnpack = false;
+
+    Vc4Register o[4];
 
     assert(Inst.m_Operands[0].m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
     assert(Inst.m_Operands[0].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
@@ -379,7 +389,21 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
     {
         assert(Inst.m_Operands[0].m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_MASK_MODE);
         assert(Inst.m_Operands[0].m_WriteMask == (D3D10_SB_OPERAND_4_COMPONENT_MASK_R | D3D10_SB_OPERAND_4_COMPONENT_MASK_G | D3D10_SB_OPERAND_4_COMPONENT_MASK_B | D3D10_SB_OPERAND_4_COMPONENT_MASK_A));
-        o = Find_Vc4Register(Inst.m_Operands[0], (Inst.m_Operands[0].m_WriteMask & D3D10_SB_OPERAND_4_COMPONENT_MASK_MASK));
+        o[0] = Find_Vc4Register(Inst.m_Operands[0], (Inst.m_Operands[0].m_WriteMask & D3D10_SB_OPERAND_4_COMPONENT_MASK_MASK));
+    }
+    else if (Inst.m_Operands[0].m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_MASK_MODE)
+    {
+        assert(Inst.m_Operands[0].m_WriteMask == (D3D10_SB_OPERAND_4_COMPONENT_MASK_R | D3D10_SB_OPERAND_4_COMPONENT_MASK_G | D3D10_SB_OPERAND_4_COMPONENT_MASK_B | D3D10_SB_OPERAND_4_COMPONENT_MASK_A));
+        uint8_t aCurrent = D3D10_SB_OPERAND_4_COMPONENT_MASK_X;
+        for (uint8_t i = 0; i < 4; i++)
+        {
+            if (Inst.m_Operands[0].m_WriteMask & aCurrent)
+            {
+                o[i] = Find_Vc4Register(Inst.m_Operands[0], aCurrent);
+            }
+            aCurrent <<= 1;
+        }
+        bUnpack = true;
     }
     else
     {
@@ -426,8 +450,11 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
         assert(false);
     }
             
-    // + 1 for sample instruction, 'ldtmu0', and + 1 for moving r4 to output register, and + 1 for NOP.
-    this->ShaderStorage.Ensure((r.flags.valid && t.flags.valid ? 3 : t.flags.valid ? 2 : 1) + 3); 
+    // + 3 or 2 or 1 to set texture coordinate.
+    // + 1 for sample instruction, 'ldtmu0', 
+    // + 1 or up to 4 for moving r4 to output register or unpacking r4 to other register(s).
+    // + 1 for NOP.
+    this->ShaderStorage.EnsureInstruction((r.flags.valid && t.flags.valid ? 3 : t.flags.valid ? 2 : 1) + 1 + (bUnpack ? 4 : 1) + 1);
 
     // texture address : z
     if (r.flags.valid)
@@ -435,7 +462,7 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
         Vc4Instruction Vc4Inst;
         Vc4Register tmu0_r(VC4_QPU_ALU_REG_A, VC4_QPU_WADDR_TMU0_R);
         Vc4Inst.Vc4_a_MOV(tmu0_r, r);
-        ShaderStorage.Emit(Vc4Inst.GetInstruction());
+        ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
     }
 
     // texture address : y
@@ -444,7 +471,7 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
         Vc4Instruction Vc4Inst;
         Vc4Register tmu0_t(VC4_QPU_ALU_REG_A, VC4_QPU_WADDR_TMU0_T);
         Vc4Inst.Vc4_a_MOV(tmu0_t, t);
-        ShaderStorage.Emit(Vc4Inst.GetInstruction());
+        ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
     }
 
     // texture address : x and must write 's' at last.
@@ -453,25 +480,40 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
         Vc4Instruction Vc4Inst;
         Vc4Register tmu0_s(VC4_QPU_ALU_REG_A, VC4_QPU_WADDR_TMU0_S);
         Vc4Inst.Vc4_a_MOV(tmu0_s, s);
-        ShaderStorage.Emit(Vc4Inst.GetInstruction());
+        ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
     }
 
     // Sample texture, result come up in r4.
     {
         Vc4Instruction Vc4Inst;
         Vc4Inst.Vc4_Sig(VC4_QPU_SIG_LOAD_TMU0);
-        ShaderStorage.Emit(Vc4Inst.GetInstruction());
+        ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
     }
 
     // TODO: Swizzle texture channel when texture format and RT format are different.
-    
+    Vc4Register r4(VC4_QPU_ALU_R4);
+
     // Move result to r4 to output register.
     if (Inst.m_Operands[0].m_Type == D3D10_SB_OPERAND_TYPE_OUTPUT)
     {
         Vc4Instruction Vc4Inst;
-        Vc4Register r4(VC4_QPU_ALU_R4);
-        Vc4Inst.Vc4_a_MOV(o, r4);
-        ShaderStorage.Emit(Vc4Inst.GetInstruction());
+        Vc4Inst.Vc4_a_MOV(o[0], r4);
+        ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
+    }
+    else if (Inst.m_Operands[0].m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_MASK_MODE)
+    {
+        assert(bUnpack);
+        // Move each color channel in r4 to o[4].
+        for (uint8_t i = 0; i < 4; i++)
+        {
+            if (o[i].flags.valid)
+            {
+                Vc4Instruction Vc4Inst;
+                Vc4Inst.Vc4_m_MOV(o[i], r4);
+                Vc4Inst.Vc4_m_Unpack(VC4_QPU_UNPACK_8a + i, true); // Use R4 unpack.
+                ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
+            }
+        }
     }
     else
     {
@@ -480,7 +522,7 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
 
     { // Emit a NOP
         Vc4Instruction Vc4Inst;
-        ShaderStorage.Emit(Vc4Inst.GetInstruction());
+        ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
     }
 }
 
@@ -500,6 +542,7 @@ void Vc4Shader::HLSL_ParseDecl()
             break;
         case D3D10_SB_OPCODE_DCL_CONSTANT_BUFFER:
             HLSL_GetShaderInstruction(&Inst);
+            cConstants++;
             break;
         case D3D10_SB_OPCODE_DCL_SAMPLER:
             HLSL_GetShaderInstruction(&Inst);
@@ -526,11 +569,11 @@ void Vc4Shader::HLSL_ParseDecl()
             {
                 if (aMask & aCurrent)
                 {
-                    assert(cInput < 16);
+                    assert((ROS_VC4_INPUT_REGISTER_FILE_START + cInput) <= ROS_VC4_INPUT_REGISTER_FILE_END);
                     this->InputRegister[iRegIndex][i].flags.valid = true;
                     this->InputRegister[iRegIndex][i].flags.require_linear_conversion = (Inst.m_OpCode == D3D10_SB_OPCODE_DCL_INPUT_PS ? true : false);
-                    this->InputRegister[iRegIndex][i].addr = cInput++;
-                    this->InputRegister[iRegIndex][i].mux = VC4_QPU_ALU_REG_A; // TODO: allocate register. currently Input are assigned to RA0~7.
+                    this->InputRegister[iRegIndex][i].addr = ROS_VC4_INPUT_REGISTER_FILE_START + cInput++;
+                    this->InputRegister[iRegIndex][i].mux = ROS_VC4_INPUT_REGISTER_FILE;
                     this->InputRegister[iRegIndex][i].swizzleMask = aCurrent;
                 }
                 aCurrent <<= 1;
@@ -546,6 +589,7 @@ void Vc4Shader::HLSL_ParseDecl()
             assert(Inst.m_Operands[0].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
             if (this->uShaderType == D3D10_SB_PIXEL_SHADER)
             {
+                // only support single 8888RGBA colour output from pixel shader.
                 assert(Inst.m_Operands[0].m_WriteMask == (D3D10_SB_OPERAND_4_COMPONENT_MASK_R | D3D10_SB_OPERAND_4_COMPONENT_MASK_G | D3D10_SB_OPERAND_4_COMPONENT_MASK_B | D3D10_SB_OPERAND_4_COMPONENT_MASK_A));
                 assert(Inst.m_Operands[0].m_Index[0].m_RegIndex == 0);
                 assert(cOutput == 0);
@@ -556,8 +600,6 @@ void Vc4Shader::HLSL_ParseDecl()
                 this->OutputRegister[0][0].mux = VC4_QPU_ALU_R0; // Pixel output is fixed at R0.
                 this->OutputRegister[0][0].swizzleMask = (uint8_t)(Inst.m_Operands[0].m_WriteMask & D3D10_SB_OPERAND_4_COMPONENT_MASK_MASK);
                 cOutput++;
-                // only support single 8888RGBA colour output from pixel shader.
-                // TODO: z output if requested.
             }
             else
             {
@@ -583,11 +625,11 @@ void Vc4Shader::HLSL_ParseDecl()
                 {
                     if (aMask & aCurrent)
                     {
-                        assert(cOutput < 16);
+                        assert((ROS_VC4_OUTPUT_REGISTER_FILE_START + cOutput) <= ROS_VC4_OUTPUT_REGISTER_FILE_END);
                         this->OutputRegister[iRegIndex][i].flags.valid = true;
                         this->OutputRegister[iRegIndex][i].flags.position = bPos;
-                        this->OutputRegister[iRegIndex][i].addr = cOutput++;
-                        this->OutputRegister[iRegIndex][i].mux = VC4_QPU_ALU_REG_B; // TODO: allocate register. currently Input are assigned to RA0~7.
+                        this->OutputRegister[iRegIndex][i].addr = ROS_VC4_OUTPUT_REGISTER_FILE_START + cOutput++;
+                        this->OutputRegister[iRegIndex][i].mux = ROS_VC4_OUTPUT_REGISTER_FILE;
                         this->OutputRegister[iRegIndex][i].swizzleMask = aCurrent;
                     }
                     aCurrent <<= 1;
@@ -604,11 +646,11 @@ void Vc4Shader::HLSL_ParseDecl()
             assert(Inst.m_TempsDecl.NumTemps <= 4);
             for (uint8_t i = 0; i < Inst.m_TempsDecl.NumTemps * 4; i++)
             {
-                assert(cTemp < 16);
+                assert((ROS_VC4_INPUT_REGISTER_FILE_START + cTemp) <= ROS_VC4_TEMP_REGISTER_FILE_END);
                 this->TempRegister[i / 4][i % 4].flags.valid = true;
                 this->TempRegister[i / 4][i % 4].flags.temp = true;
-                this->TempRegister[i / 4][i % 4].addr = 16 + cTemp++;  // TODO: don't hardcode 16, allocate register.
-                this->TempRegister[i / 4][i % 4].mux = VC4_QPU_ALU_REG_A;
+                this->TempRegister[i / 4][i % 4].addr = ROS_VC4_TEMP_REGISTER_FILE_START + cTemp++;
+                this->TempRegister[i / 4][i % 4].mux = ROS_VC4_TEMP_REGISTER_FILE;
                 this->TempRegister[i / 4][i % 4].swizzleMask = D3D10_SB_OPERAND_4_COMPONENT_MASK_X << (i % 4);
             }
             break;
@@ -681,8 +723,8 @@ HRESULT Vc4Shader::Translate_VS()
     this->Emit_Epilogue(&(this->ShaderStorageAux)); // CS
     
 #if DBG
-    Vc4Disasm().Run((const VC4_QPU_INSTRUCTION*)this->ShaderStorage.GetStorage(), this->ShaderStorage.GetStorageUsedSize() * sizeof(VC4_QPU_INSTRUCTION), TEXT("VC4 Vertex shader"));
-    Vc4Disasm().Run((const VC4_QPU_INSTRUCTION*)this->ShaderStorageAux.GetStorage(), this->ShaderStorageAux.GetStorageUsedSize() * sizeof(VC4_QPU_INSTRUCTION), TEXT("VC4 Coordinate shader"));
+    Vc4Disasm().Run((const VC4_QPU_INSTRUCTION*)this->ShaderStorage.GetStorage(), this->ShaderStorage.GetStorageUsedSize(), TEXT("VC4 Vertex shader"));
+    Vc4Disasm().Run((const VC4_QPU_INSTRUCTION*)this->ShaderStorageAux.GetStorage(), this->ShaderStorageAux.GetStorageUsedSize(), TEXT("VC4 Coordinate shader"));
 #endif   
 
     return S_OK;
@@ -706,13 +748,16 @@ HRESULT Vc4Shader::Translate_PS()
         {
             switch (Inst.m_OpCode)
             {
-            case D3D10_SB_OPCODE_SAMPLE:
-                this->Emit_Sample(Inst);
-                break;
             case D3D10_SB_OPCODE_MOV:
                 this->Emit_Mov(Inst);
                 break;
+            case D3D10_SB_OPCODE_MUL:
+                this->Emit_Mul(Inst);
+                break;
             case D3D10_SB_OPCODE_RET:
+                break;
+            case D3D10_SB_OPCODE_SAMPLE:
+                this->Emit_Sample(Inst);
                 break;
             default:
                 assert(false);
@@ -723,7 +768,7 @@ HRESULT Vc4Shader::Translate_PS()
     this->Emit_Epilogue(&(this->ShaderStorage));
 
 #if DBG
-    Vc4Disasm().Run((const VC4_QPU_INSTRUCTION*)this->ShaderStorage.GetStorage(), this->ShaderStorage.GetStorageUsedSize() * sizeof(VC4_QPU_INSTRUCTION), TEXT("VC4 Fragment shader"));
+    Vc4Disasm().Run((const VC4_QPU_INSTRUCTION*)this->ShaderStorage.GetStorage(), this->ShaderStorage.GetStorageUsedSize(), TEXT("VC4 Fragment shader"));
 #endif
 
     return S_OK;

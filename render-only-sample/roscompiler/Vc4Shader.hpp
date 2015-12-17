@@ -12,19 +12,18 @@ class Vc4ShaderStorage
 public:
 
     Vc4ShaderStorage() :
-        pStream(NULL),
-        cStream(0),
+        pStorage(NULL),
+        cStorage(0),
         pCurrent(NULL),
         cUsed(0)
     { ; }
     ~Vc4ShaderStorage()
     {
-        delete[] this->pStream;
+        delete[] this->pStorage;
     }
     
     HRESULT Initialize();
     HRESULT Grow(uint32_t size);
-    HRESULT Emit(VC4_QPU_INSTRUCTION Inst);
     HRESULT CopyFrom(Vc4ShaderStorage *Storage)
     {
         HRESULT hr = this->Ensure(Storage->GetStorageUsedSize());
@@ -32,36 +31,42 @@ public:
         {
             return hr;
         }
-        memcpy(this->pStream, Storage->GetStorage(), Storage->GetStorageUsedSize() * sizeof(VC4_QPU_INSTRUCTION));
+        memcpy(this->pStorage, Storage->GetStorage(), Storage->GetStorageUsedSize());
         this->cUsed = Storage->GetStorageUsedSize();
-        this->pCurrent = this->pStream + this->cUsed;
+        this->pCurrent = this->pStorage + this->cUsed;
         return S_OK;
     }
 
-    HRESULT Ensure(uint32_t size)
+    HRESULT Ensure(uint32_t size, boolean bGrow = true)
     {
-        assert(this->cStream >= this->cUsed);
-        if (size > this->cStream - this->cUsed)
+        assert(this->cStorage >= this->cUsed);
+        if (size > (this->cStorage - this->cUsed))
         {
-            return this->Grow(size);
+            if (bGrow)
+            {
+                return this->Grow(size);
+            }
+            return E_FAIL;
         }
         return S_OK;
     }
 
-    void Store(VC4_QPU_INSTRUCTION Inst)
+    void Store(BYTE *p, uint32_t size)
     { 
-        assert(this->cStream > this->cUsed);
-        *this->pCurrent++ = Inst;
-        this->cUsed++;
+        assert(this->cStorage > this->cUsed);
+        assert(SUCCEEDED(this->Ensure(size, false)));
+        memcpy(this->pCurrent, p, size);
+        this->pCurrent += size;
+        this->cUsed += size;
     }
     
-    VC4_QPU_INSTRUCTION *GetStorage(uint32_t *pSize = NULL)
+    BYTE *GetStorage(uint32_t *pSize = NULL)
     {
         if (pSize)
         {
             *pSize = this->cUsed;
         }
-        return this->pStream;
+        return this->pStorage;
     }
 
     uint32_t GetStorageUsedSize()
@@ -69,11 +74,26 @@ public:
         return this->cUsed;
     }
 
+    void EmitInstruction(VC4_QPU_INSTRUCTION Instruction)
+    {
+        assert(SUCCEEDED(this->Ensure(sizeof(Instruction), false)));
+        this->Store(reinterpret_cast<BYTE*>(&Instruction), sizeof(Instruction));
+    }
+    HRESULT EnsureInstruction(uint32_t size)
+    {
+        return this->Ensure(size * sizeof(VC4_QPU_INSTRUCTION));
+    }
+    uint32_t GetInstructionSize()
+    {
+        assert((this->cUsed % sizeof(VC4_QPU_INSTRUCTION)) == 0);
+        return this->cUsed / sizeof(VC4_QPU_INSTRUCTION);
+    }
+
 private:
 
-    VC4_QPU_INSTRUCTION *pStream;
-    VC4_QPU_INSTRUCTION *pCurrent;
-    uint32_t cStream;
+    BYTE *pStorage;
+    BYTE *pCurrent;
+    uint32_t cStorage;
     uint32_t cUsed;
 };
 
@@ -89,11 +109,12 @@ class Vc4Shader
 public:
 
     Vc4Shader() :
-        uShaderType(D3D11_SB_RESERVED0),
+        uShaderType(D3D11_SB_RESERVED0), // invalid shader type.
         cInput(0),
         cOutput(0),
         cTemp(0),
         cSampler(0),
+        cConstants(0),
         cResource(0)
     { 
         memset(this->InputRegister, 0, sizeof(this->InputRegister));
@@ -145,15 +166,15 @@ public:
 
     UINT GetVc4ShaderCodeSize()
     {
-        return (max(ShaderStorage.GetStorageUsedSize(), ShaderStorageAux.GetStorageUsedSize()) * 2 * sizeof(VC4_QPU_INSTRUCTION));
+        return (max(ShaderStorage.GetStorageUsedSize(), ShaderStorageAux.GetStorageUsedSize()) * 2);
     }
 
-    void GetVc4ShaderCode(BYTE *pCode, UINT uSize)
+    void GetVc4ShaderCode(BYTE *p, UINT size)
     {
-        assert(uSize == GetVc4ShaderCodeSize());
-        memcpy(pCode, ShaderStorage.GetStorage(), ShaderStorage.GetStorageUsedSize() * sizeof(VC4_QPU_INSTRUCTION));
-        pCode = pCode + (uSize / 2);
-        memcpy(pCode, ShaderStorageAux.GetStorage(), ShaderStorageAux.GetStorageUsedSize() * sizeof(VC4_QPU_INSTRUCTION));
+        assert(size == GetVc4ShaderCodeSize());
+        memcpy(p, ShaderStorage.GetStorage(), ShaderStorage.GetStorageUsedSize());
+        p += (size / 2);
+        memcpy(p, ShaderStorageAux.GetStorage(), ShaderStorageAux.GetStorageUsedSize());
     }
 
 private:
@@ -192,6 +213,7 @@ private:
     void Emit_Epilogue(Vc4ShaderStorage *Storage);
 
     void Emit_Mov(CInstruction &Inst);
+    void Emit_Mul(CInstruction &Inst);
     void Emit_Sample(CInstruction &Inst);
 
     Vc4Register Find_Vc4Register(COperandBase c, uint8_t swizzleMask)
@@ -267,7 +289,8 @@ private:
     Vc4ShaderStorage ShaderStorage; // Used for vertex/pixel shader.
     Vc4ShaderStorage ShaderStorageAux; // Used for coordinate shader.
 
-    uint32_t cSampler;
+    uint8_t cSampler;
+    uint8_t cConstants;
 
     // Register map
     uint8_t cInput;
@@ -277,10 +300,28 @@ private:
     Vc4Register OutputRegister[8][4];
 
     uint8_t cTemp;
-    Vc4Register TempRegister[8][4];
+    Vc4Register TempRegister[4][4];
 
     uint8_t cResource;
     uint32_t ResourceDimension[8];
+
+    // TEMPORARY Register Usage Map
+    //
+    // ra0 ~ ra14  : Input
+#define ROS_VC4_INPUT_REGISTER_FILE        VC4_QPU_ALU_REG_A
+#define ROS_VC4_INPUT_REGISTER_FILE_START  0
+#define ROS_VC4_INPUT_REGISTER_FILE_END    14
+    // ra15        : Reserved - W (in pixel shader only)
+    // ra16 ~ ra31 : Temp
+#define ROS_VC4_TEMP_REGISTER_FILE         VC4_QPU_ALU_REG_A
+#define ROS_VC4_TEMP_REGISTER_FILE_START   16
+#define ROS_VC4_TEMP_REGISTER_FILE_END     31
+    // rb0 ~ rb14  : Output
+#define ROS_VC4_OUTPUT_REGISTER_FILE       VC4_QPU_ALU_REG_B
+#define ROS_VC4_OUTPUT_REGISTER_FILE_START 0
+#define ROS_VC4_OUTPUT_REGISTER_FILE_END   14
+    // rb15        : Reserved - Z (in pixel shader only)
+
 };
 
 

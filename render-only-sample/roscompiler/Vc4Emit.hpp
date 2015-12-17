@@ -218,6 +218,22 @@ public:
         }
     }
 
+    void Vc4_a_Unpack(uint8_t unpack, boolean pm)
+    {
+        switch (this->Type)
+        {
+        case vc4_alu:
+        case vc4_alu_small_immediate:
+            assert(this->ALU.pack == 0);
+            this->ALU.unpack = unpack;
+            this->ALU.pm = pm;
+            break;
+        case vc4_load_immediate_32:
+        default:
+            assert(false);
+        }
+    }
+
     void Vc4_m_Inst(uint8_t opcode, Vc4Register dst, Vc4Register src, uint8_t cond)
     {
         assert(dst.flags.valid);
@@ -328,6 +344,22 @@ public:
         }
     }
     
+    void Vc4_m_Unpack(uint8_t unpack, boolean pm)
+    {
+        switch (this->Type)
+        {
+        case vc4_alu:
+        case vc4_alu_small_immediate:
+            assert(this->ALU.pack == 0);
+            this->ALU.unpack = unpack;
+            this->ALU.pm = pm;
+            break;
+        case vc4_load_immediate_32:
+        default:
+            assert(false);
+        }
+    }
+
     VC4_QPU_INSTRUCTION GetInstruction();
     
 private:
