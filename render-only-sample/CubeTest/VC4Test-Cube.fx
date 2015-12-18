@@ -13,6 +13,11 @@ SamplerState Sampler
     AddressV = Wrap;
 };
 
+cbuffer cb0 : register(b0)
+{
+    uniform float3 g_vAmbient;
+};
+
 struct PSInput
 {
     float4 pos : SV_POSITION;
@@ -22,18 +27,19 @@ struct PSInput
 //--------------------------------------------------------------------------------------
 // Vertex Shader
 //--------------------------------------------------------------------------------------
-PSInput VS( float4 Pos : POSITION, float2 TexCoord : TEXCOORD )
+PSInput VS(float4 Pos : POSITION, float2 TexCoord : TEXCOORD)
 {
     PSInput output;
     output.pos = Pos;
-    output.texcoord = TexCoord;
+    output.texcoord.xy = TexCoord.xy;
     return output;
 }
 
 //--------------------------------------------------------------------------------------
 // Pixel Shader
 //--------------------------------------------------------------------------------------
-float4 PS( PSInput input ) : SV_Target
+float4 PS(PSInput input) : SV_Target
 {
-    return Texture.Sample(Sampler, input.texcoord);
+    float3 color = Texture.Sample(Sampler, input.texcoord);
+    return float4(color * g_vAmbient, 1.0f);
 }

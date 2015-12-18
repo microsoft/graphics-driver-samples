@@ -1,1 +1,1 @@
-c:\debuggers\windbg.exe -k com:port=3,baud=912600
+c:\debuggers\windbg.exe -k com:port=%1,baud=912600
