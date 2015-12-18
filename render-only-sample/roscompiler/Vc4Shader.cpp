@@ -85,17 +85,17 @@ void Vc4Shader::Emit_Prologue_PS()
     // +1 for sbwait (after interporation).
     this->ShaderStorage.EnsureInstruction((this->cInput * 3) + 1 + 1);
 
-    // Issue load inputs from varying.
-    for (uint8_t iRegUsed = 0, iRegIndex = 0; iRegUsed < this->cInput; iRegIndex++)
+    // Issue mul inputs (from varying) with ra15 (W).
+    for (uint8_t i = 0, iRegUsed = 0; iRegUsed < this->cInput; i++)
     {
-        Vc4Register raX = this->InputRegister[iRegIndex / 4][iRegIndex % 4];
-
+        Vc4Register raX = this->InputRegister[i / 4][i % 4];
         if (raX.flags.valid)
         {
             Vc4Instruction Vc4Inst;
             assert(raX.mux == VC4_QPU_ALU_REG_A || raX.mux == VC4_QPU_ALU_REG_B);
-            Vc4Register varying(raX.mux, VC4_QPU_RADDR_VERYING);
-            Vc4Inst.Vc4_a_MOV(raX, varying);
+            Vc4Register varying(VC4_QPU_ALU_REG_B, VC4_QPU_RADDR_VERYING);
+            Vc4Register ra15(VC4_QPU_ALU_REG_A, 15);
+            Vc4Inst.Vc4_m_FMUL(raX, varying, ra15);
             ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
             iRegUsed++;
         }
@@ -107,7 +107,7 @@ void Vc4Shader::Emit_Prologue_PS()
         ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
     }
 
-    // Issue interporation to each data.
+    // Issue add r5 to each input data to complete interpolation.
     for (uint8_t iRegUsed = 0, iRegIndex = 0; iRegUsed < this->cInput; iRegIndex++)
     {
         Vc4Register raX = this->InputRegister[iRegIndex / 4][iRegIndex % 4];
