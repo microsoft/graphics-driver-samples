@@ -335,4 +335,11 @@ Vc4Disasm::Run(const VC4_QPU_INSTRUCTION* pShader, ULONG ShaderSize, TCHAR *pTit
     return S_OK;
 }
 
-#endif
+EXTERN_C void Vc4Disassemble(VC4_QPU_INSTRUCTION *pHwCode, UINT HwCodeSize, fnPrinter Printer)
+{
+    Vc4Disasm Disasm;
+    Disasm.SetPrinter(Printer);
+    Disasm.Run((const VC4_QPU_INSTRUCTION*)pHwCode, HwCodeSize, NULL);
+}
+
+#endif // VC4

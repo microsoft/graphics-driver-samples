@@ -31,4 +31,6 @@ private:
     HRESULT ParseFlags(VC4_QPU_INSTRUCTION Instruction);
 };
 
+EXTERN_C void Vc4Disassemble(VC4_QPU_INSTRUCTION *pHwCode, UINT HwCodeSize, fnPrinter Printer);
+
 #endif // VC4

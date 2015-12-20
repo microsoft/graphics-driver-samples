@@ -5,11 +5,11 @@
 #define COLOR_TEXT      2//(FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE)
 #define COLOR_LITERAL   3//(FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY)
 
+typedef void (fnPrinter)(void *pFile, const TCHAR* szStr, int Line, void* m_pCustomCtx);
+
 class BaseDisasm
 {
 public:
-    typedef void (fnPrinter)(void *pFile, const TCHAR* szStr, int Line, void* m_pCustomCtx);
-
     BaseDisasm();
     ~BaseDisasm();
 

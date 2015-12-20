@@ -4,6 +4,8 @@
 
 #include "stdafx.h"
 
+EXTERN_C void Vc4Disassemble(VC4_QPU_INSTRUCTION *pHwCode, UINT HwCodeSize, fnPrinter Printer);
+
 TCHAR szAsmFile[MAX_PATH] = { 0 };
 
 TCHAR szBuff[4096] = { 0 };
@@ -745,9 +747,6 @@ void Printer(void *pFile, const TCHAR* szStr, int Line, void* m_pCustomCtx)
 
 int _tmain(int argc, TCHAR *argv[])
 {
-    Vc4Disasm Disasm;
-    Disasm.SetPrinterW(Printer);
-
     boolean ShowDisassemble = false;
     boolean ShowOriginal = false;
     boolean Disassemble = false;
@@ -919,7 +918,7 @@ int _tmain(int argc, TCHAR *argv[])
 
         if ((hr == S_OK) && (ShowDisassemble || Disassemble))
         {
-            Disasm.Run(&QpuInst, sizeof(QpuInst));
+            Vc4Disassemble(&QpuInst, sizeof(QpuInst), Printer);
         }
         _ftprintf(stdout, TEXT("\n"));
     }
