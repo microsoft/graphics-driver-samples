@@ -330,6 +330,14 @@ typedef struct _VC4StartTileBinng
 
 const VC4StartTileBinng vc4StartTileBinng = { VC4_CMD_START_TILE_BINNING };
 
+// Code: 8
+typedef struct _VC4WaitOnSempahore
+{
+    VC4_COMMAND_ID CommandCode;
+} VC4WaitOnSemaphore;
+
+const VC4WaitOnSemaphore vc4WaitOnSemaphore = { VC4_CMD_WAIT_ON_SEMAPHORE };
+
 // Code: 16
 typedef struct _VC4Branch
 {

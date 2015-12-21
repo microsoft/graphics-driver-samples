@@ -1805,17 +1805,18 @@ void RosUmdDevice::WriteEpilog()
 
     m_commandBuffer.ReserveCommandBufferSpace(
         false,
-        3,
+        4,
         &pCommandBuffer);
 
     //
     // Write Flush All State, NOP and Halt commands
     //
-    pCommandBuffer[0] = VC4_CMD_FLUSH_ALL_STATE;
-    pCommandBuffer[1] = VC4_CMD_NOP;
-    pCommandBuffer[2] = VC4_CMD_HALT;
+    pCommandBuffer[0] = VC4_CMD_INCREMENT_SEMAPHORE;
+    pCommandBuffer[1] = VC4_CMD_FLUSH_ALL_STATE;
+    pCommandBuffer[2] = VC4_CMD_NOP;
+    pCommandBuffer[3] = VC4_CMD_HALT;
 
-    m_commandBuffer.CommitCommandBufferSpace(3);
+    m_commandBuffer.CommitCommandBufferSpace(4);
 
     //
     // Clear up state flag

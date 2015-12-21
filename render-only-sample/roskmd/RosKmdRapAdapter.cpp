@@ -317,6 +317,12 @@ RosKmdRapAdapter::SubmitControlList(
 
         m_pVC4RegFile->V3D_CT0EA = endAddress;
         KeMemoryBarrier();
+
+        //
+        // No need to wait for binning to be done.
+        // Render job waits on sempahore to be signaled by binning job.
+        //
+        return;
     }
     else
     {
@@ -402,7 +408,7 @@ RosKmdRapAdapter::GenerateRenderingControlList(
 
     // Write Clear Colors command from UMD
     VC4ClearColors *pVC4ClearColors;
-    VC4TileRenderingModeConfig *pVC4TileRenderingModeConfig;
+    VC4WaitOnSemaphore *pVC4WaitOnSempahore;
 
     if (pDmaBufInfo->m_DmaBufState.m_HasVC4ClearColors)
     {
@@ -410,12 +416,20 @@ RosKmdRapAdapter::GenerateRenderingControlList(
 
         *pVC4ClearColors = pDmaBufInfo->m_VC4ClearColors;
 
-        MoveToNextCommand(pVC4ClearColors, pVC4TileRenderingModeConfig);
+        MoveToNextCommand(pVC4ClearColors, pVC4WaitOnSempahore);
     }
     else
     {
-        pVC4TileRenderingModeConfig = (VC4TileRenderingModeConfig *)m_pRenderingControlList;
+        pVC4WaitOnSempahore = (VC4WaitOnSemaphore *)m_pRenderingControlList;
     }
+
+    // Wait binning to be done.
+
+    VC4WaitOnSemaphore waitOnSemaphore = vc4WaitOnSemaphore;
+    *pVC4WaitOnSempahore = waitOnSemaphore;
+
+    VC4TileRenderingModeConfig *pVC4TileRenderingModeConfig;
+    MoveToNextCommand(pVC4WaitOnSempahore, pVC4TileRenderingModeConfig);
 
     // Write Tile Rendering Mode Config command
 
