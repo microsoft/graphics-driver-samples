@@ -3,6 +3,8 @@
 
 #if VC4
 
+class Vc4ShaderStorage;
+
 enum Vc4InstructionType
 {
     vc4_alu,
@@ -59,6 +61,22 @@ struct Vc4Value
     {
         float f;
         uint32_t i;
+    };
+};
+
+enum Vc4OperandType
+{
+    vc4_register,
+    vc4_value,
+};
+
+struct Vc4Operand
+{
+    uint8_t OperandType;
+    union
+    {
+        Vc4Register r;
+        Vc4Value v;
     };
 };
 
@@ -360,7 +378,8 @@ public:
         }
     }
 
-    VC4_QPU_INSTRUCTION GetInstruction();
+    VC4_QPU_INSTRUCTION Build();
+    void Emit(Vc4ShaderStorage *Storage);
     
 private:
     

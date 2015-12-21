@@ -17,7 +17,7 @@ RosCompiler* RosCompilerCreate(D3D10_SB_TOKENIZED_PROGRAM_TYPE ProgramType,
                                UINT numPatchConstantSignatureEntries,
                                D3D11_1DDIARG_SIGNATURE_ENTRY *pPatchConstantSignatureEntries)
 {
-    return new RosCompiler(
+    RosCompiler *pCompiler = new RosCompiler(
         ProgramType,
         pCode,
         numInputSignatureEntries,
@@ -26,6 +26,15 @@ RosCompiler* RosCompilerCreate(D3D10_SB_TOKENIZED_PROGRAM_TYPE ProgramType,
         pOutputSignatureEntries,
         numPatchConstantSignatureEntries,
         pPatchConstantSignatureEntries);
+    if (pCompiler)
+    {
+        if (FAILED(pCompiler->InitializeStorage()))
+        {
+            delete pCompiler;
+            pCompiler = NULL;
+        }
+    }
+    return pCompiler;
 }
 
 RosCompiler::RosCompiler(D3D10_SB_TOKENIZED_PROGRAM_TYPE ProgramType,
@@ -43,53 +52,80 @@ RosCompiler::RosCompiler(D3D10_SB_TOKENIZED_PROGRAM_TYPE ProgramType,
     m_numOutputSignatureEntries(numOutputSignatureEntries),
     m_pOutputSignatureEntries(pOutputSignatureEntries),
     m_numPatchConstantSignatureEntries(numPatchConstantSignatureEntries),
-    m_pPatchConstantSignatureEntries(pPatchConstantSignatureEntries),
-    m_pHwCode(NULL),
-    m_HwCodeSize(0)
+    m_pPatchConstantSignatureEntries(pPatchConstantSignatureEntries)
 {
 }
 
 RosCompiler::~RosCompiler() 
 {
-    delete[] m_pHwCode;
 }
 
-BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize,
-                             UINT * pCoordinateShaderOffset)
+HRESULT RosCompiler::Compile()
 {
-    assert(puiShaderCodeSize);
-    *puiShaderCodeSize = 0;
+    HRESULT hr = E_NOTIMPL;
 
     assert(m_pCode);
     assert(m_ProgramType == (D3D10_SB_TOKENIZED_PROGRAM_TYPE)((m_pCode[0] & D3D10_SB_TOKENIZED_PROGRAM_TYPE_MASK) >> D3D10_SB_TOKENIZED_PROGRAM_TYPE_SHIFT));
-
+    
 #if DBG
+    // Disassemble HLSL
     Disassemble_Signatures();
     Disassemble_HLSL();
 #endif // DBG
 
 #if VC4
-    Vc4Shader Vc4ShaderCompiler;
+    Vc4Shader Vc4ShaderCompiler(this);
+
+    // Set HLSL bytecode.
     Vc4ShaderCompiler.SetShaderCode(m_pCode);
-    Vc4ShaderCompiler.Translate();
-    
-    m_HwCodeSize = Vc4ShaderCompiler.GetVc4ShaderCodeSize();
 
-    m_pHwCode = new BYTE[m_HwCodeSize];
-    memset(m_pHwCode, 0, m_HwCodeSize);
-
-    Vc4ShaderCompiler.GetVc4ShaderCode(m_pHwCode, m_HwCodeSize);
-
-    if (D3D10_SB_VERTEX_SHADER == m_ProgramType)
+    switch (m_ProgramType)
     {
-        *pCoordinateShaderOffset = (m_HwCodeSize / 2);
+    case D3D10_SB_VERTEX_SHADER:
+        // Set output hw shader storage.
+        // for vertex shader.
+        Vc4ShaderCompiler.SetShaderStorage(
+            &m_Storage[ROS_VERTEX_SHADER_STORAGE],
+            &m_Storage[ROS_VERTEX_SHADER_UNIFORM_STORAGE]);
+        // for coordinate shader
+        Vc4ShaderCompiler.SetShaderStorageAux(
+            &m_Storage[ROS_COORDINATE_SHADER_STORAGE],
+            &m_Storage[ROS_COORDINATE_SHADER_UNIFORM_STORAGE]);
+
+        // Compile shader
+        hr = Vc4ShaderCompiler.Translate_VS();
+
+#if DBG
+        // Disassemble h/w shader.
+        Disassemble_HW(m_Storage[ROS_VERTEX_SHADER_STORAGE], TEXT("VC4 Vertex shader"));
+        Disassemble_HW(m_Storage[ROS_COORDINATE_SHADER_STORAGE], TEXT("VC4 Coordinate shader"));
+#endif   
+        break;
+
+    case D3D10_SB_PIXEL_SHADER:
+        // Set output hw shader storage.
+        Vc4ShaderCompiler.SetShaderStorage(
+            &m_Storage[ROS_PIXEL_SHADER_STORAGE],
+            &m_Storage[ROS_PIXEL_SHADER_UNIFORM_STORAGE]);;
+
+        // Compile shader
+        hr = Vc4ShaderCompiler.Translate_PS();
+
+#if DBG
+        // Disassemble h/w shader.
+        Disassemble_HW(m_Storage[ROS_PIXEL_SHADER_STORAGE], TEXT("VC4 Pixel shader"));
+#endif 
+        break;
+
+    default:
+        assert(false);
     }
-    *puiShaderCodeSize = m_HwCodeSize;
 #else
     assert(false);
 #endif // VC4
 
-   return TRUE;
+    return hr;
+}
 
 #if 0
 
@@ -97,11 +133,6 @@ BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize,
 // #define PASSTHROUGH_CVS 1
 // #define SIMPLETRANS_CVS 1
 #define CUBETEST_CVFS   1
-
-    if (D3D10_SB_VERTEX_SHADER == m_ProgramType)
-    {
-        // Implement vertex shader compiling
-#if VC4
        
 #if SHAREDTEX_CVS
 
@@ -368,28 +399,6 @@ BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize,
 
 #endif
 
-        m_HwCodeSize = sizeof(vertexShader) + sizeof(coordinateShader);
-
-        m_pHwCode = new BYTE[m_HwCodeSize];
-
-        CopyMemory(m_pHwCode, vertexShader, sizeof(vertexShader));
-        CopyMemory(m_pHwCode + sizeof(vertexShader), coordinateShader, sizeof(coordinateShader));
-
-#if DBG
-        Disassemble_HW();
-#endif // DBG
-
-        *pCoordinateShaderOffset = sizeof(vertexShader);
-        *puiShaderCodeSize = m_HwCodeSize;
-        return TRUE;
-#else
-        __debugbreak();
-#endif
-    }
-    else if (D3D10_SB_PIXEL_SHADER == m_ProgramType)
-    {
-#if VC4
-
 #if CUBETEST_CVFS
 
 #if 1
@@ -445,46 +454,6 @@ BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize,
 
 #endif
 
-        m_HwCodeSize = sizeof(PS);
-        m_pHwCode = new BYTE[m_HwCodeSize];
-
-        CopyMemory(m_pHwCode, &PS[0], m_HwCodeSize);
-
-#if DBG
-        Disassemble_HW();
-#endif // DBG
-
-        *puiShaderCodeSize = m_HwCodeSize;
-        return TRUE;
-#else
-        __debugbreak();
-#endif
-    }
-    else
-    {
-        __debugbreak();
-    }
-   
-    return FALSE;
 #endif // 0
-}
 
-BYTE * RosCompiler::GetShaderCode()
-{
-    return m_pHwCode;
-}
-
-UINT RosCompiler::GetInputSignature(D3D11_1DDIARG_SIGNATURE_ENTRY ** ppInputSignatureEntries)
-{
-    *ppInputSignatureEntries = m_pInputSignatureEntries;
-
-    return m_numInputSignatureEntries;
-}
-
-UINT RosCompiler::GetOutputSignature(D3D11_1DDIARG_SIGNATURE_ENTRY ** ppOutputSignatureEntries)
-{
-    *ppOutputSignatureEntries = m_pOutputSignatureEntries;
-
-    return m_numOutputSignatureEntries;
-}
 

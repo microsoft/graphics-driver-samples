@@ -4,7 +4,44 @@
 
 #if VC4
 
-#define VC4_DEFAULT_STORAGE_SIZE 64
+class RosCompiler;
+
+typedef enum _VC4_UNIFORM_TYPE
+{
+    VC4_UNIFORM_TYPE_INVALID,
+    VC4_UNIFORM_TYPE_USER_CONSTANT,
+    VC4_UNIFORM_TYPE_SAMPLER_CONFIG_P0,
+    VC4_UNIFORM_TYPE_SAMPLER_CONFIG_P1,
+    VC4_UNIFORM_TYPE_SAMPLER_CONFIG_P2,
+    VC4_UNIFORM_TYPE_VIEWPORT_SCALE_X,
+    VC4_UNIFORM_TYPE_VIEWPORT_SCALE_Y,
+} VC4_UNIFORM_TYPE;
+
+struct VC4_UNIFORM_FORMAT
+{
+    VC4_UNIFORM_FORMAT() :
+        Type(VC4_UNIFORM_TYPE_INVALID)
+    {
+        memset(&value[0], 0, sizeof(value));
+    }
+
+    VC4_UNIFORM_TYPE Type;
+    union
+    {
+        struct
+        {
+            UINT32 bufferSlot;    // slot X as register (bX).
+            UINT32 bufferOffset;  // offset n as float[n]
+        } userConstant;
+        struct
+        {
+            UINT32 samplerIndex;
+        } sampilerConfiguration;
+        UINT32 value[2];
+    };
+};
+
+#define VC4_DEFAULT_STORAGE_SIZE      64
 #define VC4_DEFAULT_STORAGE_INCREMENT 32
 
 class Vc4ShaderStorage
@@ -17,22 +54,31 @@ public:
         pCurrent(NULL),
         cUsed(0)
     { ; }
+
     ~Vc4ShaderStorage()
     {
-        delete[] this->pStorage;
+        Reset();
     }
     
     HRESULT Initialize();
-    HRESULT Grow(uint32_t size);
-    HRESULT CopyFrom(Vc4ShaderStorage *Storage)
+    void Reset()
     {
-        HRESULT hr = this->Ensure(Storage->GetStorageUsedSize());
+        delete[] this->pStorage;
+        this->pStorage = NULL;
+        this->cStorage = 0;
+        this->pCurrent = NULL;
+        this->cUsed = 0;
+    }
+    HRESULT Grow(uint32_t size);
+    HRESULT CopyFrom(Vc4ShaderStorage &Storage)
+    {
+        HRESULT hr = this->Ensure(Storage.GetUsedSize());
         if (FAILED(hr))
         {
             return hr;
         }
-        memcpy(this->pStorage, Storage->GetStorage(), Storage->GetStorageUsedSize());
-        this->cUsed = Storage->GetStorageUsedSize();
+        memcpy(this->pStorage, Storage.GetStorage(), Storage.GetUsedSize());
+        this->cUsed = Storage.GetUsedSize();
         this->pCurrent = this->pStorage + this->cUsed;
         return S_OK;
     }
@@ -60,33 +106,40 @@ public:
         this->cUsed += size;
     }
     
-    BYTE *GetStorage(uint32_t *pSize = NULL)
+    BYTE *GetStorage()
     {
-        if (pSize)
-        {
-            *pSize = this->cUsed;
-        }
         return this->pStorage;
     }
 
-    uint32_t GetStorageUsedSize()
+    uint32_t GetUsedSize()
     {
         return this->cUsed;
     }
 
-    void EmitInstruction(VC4_QPU_INSTRUCTION Instruction)
+    template<class _Ty>
+    HRESULT Ensure(uint32_t size)
     {
-        assert(SUCCEEDED(this->Ensure(sizeof(Instruction), false)));
-        this->Store(reinterpret_cast<BYTE*>(&Instruction), sizeof(Instruction));
+        return Ensure(size * sizeof(_Ty));
     }
-    HRESULT EnsureInstruction(uint32_t size)
+
+    template <class _Ty>
+    void Store(_Ty p)
     {
-        return this->Ensure(size * sizeof(VC4_QPU_INSTRUCTION));
+        assert(SUCCEEDED(this->Ensure(sizeof(_Ty), false)));
+        this->Store(reinterpret_cast<BYTE*>(&p), (sizeof(_Ty)));
     }
-    uint32_t GetInstructionSize()
+
+    template<class _Ty>
+    _Ty *GetStorage()
     {
-        assert((this->cUsed % sizeof(VC4_QPU_INSTRUCTION)) == 0);
-        return this->cUsed / sizeof(VC4_QPU_INSTRUCTION);
+        return (_Ty*)(this->GetStorage());
+    }
+
+    template<class _Ty>
+    uint32_t GetUsedSize()
+    {
+        assert((this->cUsed % sizeof(_Ty)) == 0);
+        return this->cUsed / sizeof(_Ty);
     }
 
 private:
@@ -108,8 +161,15 @@ class Vc4Shader
 {
 public:
 
-    Vc4Shader() :
+    Vc4Shader(RosCompiler *Compiler) :
+        UmdCompiler(Compiler),
         uShaderType(D3D11_SB_RESERVED0), // invalid shader type.
+        CurrentStorage(NULL),
+        CurrentUniform(NULL),
+        ShaderStorage(NULL),
+        ShaderUniform(NULL),
+        ShaderStorageAux(NULL),
+        ShaderUniformAux(NULL),
         cInput(0),
         cOutput(0),
         cTemp(0),
@@ -130,6 +190,18 @@ public:
         uShaderType = HLSLParser.ShaderType();
     }
 
+    void SetShaderStorage(Vc4ShaderStorage *Storage, Vc4ShaderStorage *Uniform)
+    {
+        this->ShaderStorage = Storage;
+        this->ShaderUniform = Uniform;
+    }
+
+    void SetShaderStorageAux(Vc4ShaderStorage *Storage, Vc4ShaderStorage *Uniform)
+    {
+        this->ShaderStorageAux = Storage;
+        this->ShaderUniformAux = Uniform;
+    }
+
     void SetInputSignatures(UINT numInputSignatureEntries, D3D11_1DDIARG_SIGNATURE_ENTRY *pInputSignatureEntries)
     {
         numInputSignatureEntries;
@@ -141,77 +213,44 @@ public:
         pOutputSignatureEntries;
     }
 
-    HRESULT Translate()
-    {
-        // __debugbreak();
-
-        HRESULT hr = E_NOTIMPL;
-        if (this->uShaderType == D3D10_SB_VERTEX_SHADER)
-        {
-            hr = Translate_VS();
-        }
-        else if (this->uShaderType == D3D10_SB_PIXEL_SHADER)
-        {
-            hr = Translate_PS();
-        }
-        else
-        {
-            assert(false);
-        }
-
-        // __debugbreak();
-        
-        return hr;
-    }
-
-    UINT GetVc4ShaderCodeSize()
-    {
-        return (max(ShaderStorage.GetStorageUsedSize(), ShaderStorageAux.GetStorageUsedSize()) * 2);
-    }
-
-    void GetVc4ShaderCode(BYTE *p, UINT size)
-    {
-        assert(size == GetVc4ShaderCodeSize());
-        memcpy(p, ShaderStorage.GetStorage(), ShaderStorage.GetStorageUsedSize());
-        p += (size / 2);
-        memcpy(p, ShaderStorageAux.GetStorage(), ShaderStorageAux.GetStorageUsedSize());
-    }
+    HRESULT Translate_VS(); // vertex shader
+    HRESULT Translate_PS(); // Fragmaent shader
 
 private:
 
-    boolean HLSL_GetShaderInstruction(CInstruction *pInst)
+    void SetCurrentStorage(Vc4ShaderStorage *Storage, Vc4ShaderStorage *Uniform)
+    {
+        this->CurrentStorage = Storage;
+        this->CurrentUniform = Uniform;
+    }
+
+    boolean HLSL_GetShaderInstruction(CInstruction &Inst)
     {
         if (!HLSLParser.EndOfShader())
         {
-            HLSLParser.ParseInstruction(pInst);
+            HLSLParser.ParseInstruction(&Inst);
             return true;
         }
         return false;
     }
     
-    boolean HLSL_PeekShaderInstructionOpCode(D3D10_SB_OPCODE_TYPE *pOpCode)
+    boolean HLSL_PeekShaderInstructionOpCode(D3D10_SB_OPCODE_TYPE &OpCode)
     {
-        assert(pOpCode);
-        if (!HLSLParser.EndOfShader())
+          if (!HLSLParser.EndOfShader())
         {
-            *pOpCode = HLSLParser.PeekNextInstructionOpCode();
+            OpCode = HLSLParser.PeekNextInstructionOpCode();
             return true;
         }
         return false;
     }
 
-    HRESULT Translate_VS(); // vertex shader
-    HRESULT Translate_PS(); // Fragmaent shader
-
     void HLSL_ParseDecl();
 
     void Emit_Prologue_VS();
     void Emit_Prologue_PS();
-
-    void Emit_ShaderOutput_VS(boolean bVS, Vc4ShaderStorage *Storage);
-
-    void Emit_Epilogue(Vc4ShaderStorage *Storage);
-
+    void Emit_Epilogue();
+    void Emit_ShaderOutput_VS(boolean bVS);
+        
     void Emit_Mov(CInstruction &Inst);
     void Emit_Mul(CInstruction &Inst);
     void Emit_Sample(CInstruction &Inst);
@@ -281,13 +320,31 @@ private:
         return ret;
     }
 
+    HRESULT AddUniformReference(VC4_UNIFORM_FORMAT &fmt)
+    {
+        HRESULT hr = CurrentUniform->Ensure<VC4_UNIFORM_FORMAT>(1);
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+        CurrentUniform->Store<VC4_UNIFORM_FORMAT>(fmt);
+        return S_OK;
+    }
+
 private:
+
+    RosCompiler *UmdCompiler;
 
     D3D10_SB_TOKENIZED_PROGRAM_TYPE uShaderType;
 
     CShaderCodeParser HLSLParser;
-    Vc4ShaderStorage ShaderStorage; // Used for vertex/pixel shader.
-    Vc4ShaderStorage ShaderStorageAux; // Used for coordinate shader.
+
+    Vc4ShaderStorage *CurrentStorage;
+    Vc4ShaderStorage *CurrentUniform;
+    Vc4ShaderStorage *ShaderStorage; // Used for vertex/pixel shader.
+    Vc4ShaderStorage *ShaderUniform;
+    Vc4ShaderStorage *ShaderStorageAux; // Used for coordinate shader.
+    Vc4ShaderStorage *ShaderUniformAux;
 
     uint8_t cSampler;
     uint8_t cConstants;

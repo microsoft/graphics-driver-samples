@@ -2,7 +2,7 @@
 
 #if VC4
 
-VC4_QPU_INSTRUCTION Vc4Instruction::GetInstruction()
+VC4_QPU_INSTRUCTION Vc4Instruction::Build()
 {
     switch (this->Type)
     {
@@ -62,6 +62,12 @@ VC4_QPU_INSTRUCTION Vc4Instruction::GetInstruction()
     }
 
     return this->Instruction;
+}
+
+void Vc4Instruction::Emit(Vc4ShaderStorage *Storage)
+{
+    assert(Storage);
+    Storage->Store<VC4_QPU_INSTRUCTION>(this->Build());
 }
 
 #endif // VC4

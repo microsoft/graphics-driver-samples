@@ -81,11 +81,11 @@ RosUmdPipelineShader::Update()
                                     0,
                                     NULL);
 
-    if (m_pCompiler &&
-        m_pCompiler->Compile(&m_hwShaderCodeSize,
-                             &m_vc4CoordinateShaderOffset) &&
-        m_hwShaderCodeSize)
+    if (m_pCompiler && SUCCEEDED(m_pCompiler->Compile()))
     {
+        m_hwShaderCodeSize = m_pCompiler->GetShaderCodeSize();
+        assert(m_hwShaderCodeSize != 0);
+           
         m_pDevice->CreateInternalBuffer(
             &m_hwShaderCode,
             ROUND_TO_PAGES(m_hwShaderCodeSize)); // TODO: for now, for easier debugging, round allocation size to PAGE size aligned.
@@ -102,9 +102,9 @@ RosUmdPipelineShader::Update()
 
             if (mappedSubRes.pData)
             {
-                UINT* pShaderCode = (UINT *)mappedSubRes.pData;
-
-                RtlCopyMemory(pShaderCode, m_pCompiler->GetShaderCode(), m_hwShaderCodeSize);
+                m_pCompiler->GetShaderCode(
+                    mappedSubRes.pData, 
+                    &m_vc4CoordinateShaderOffset);
 
                 m_hwShaderCode.Unmap(
                     m_pDevice,
