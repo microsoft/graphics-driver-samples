@@ -3,7 +3,9 @@
 
 #if VC4
 
+class Vc4Shader;
 class Vc4ShaderStorage;
+class Vc4Instruction;
 
 enum Vc4InstructionType
 {
@@ -28,6 +30,7 @@ struct Vc4RegisterFlags
             uint32_t temp : 1;
             uint32_t color : 1;
             uint32_t packed : 1;
+            uint32_t immediate : 1;
         };
         uint32_t value;
     };
@@ -35,48 +38,72 @@ struct Vc4RegisterFlags
 
 struct Vc4Register
 {
+    friend class Vc4Shader;
+    // friend void Vc4Shader::HLSL_ParseDecl();
+    friend class Vc4Instruction;
+
     Vc4Register() :
-        addr(0),
-        mux(0),
-        swizzleMask(D3D10_SB_OPERAND_4_COMPONENT_MASK_X | D3D10_SB_OPERAND_4_COMPONENT_MASK_Y | D3D10_SB_OPERAND_4_COMPONENT_MASK_Z | D3D10_SB_OPERAND_4_COMPONENT_MASK_W)
+        value(0)
     {
-        flags.value = 0;
+        this->flags.value = 0;
     }
+
     Vc4Register(uint8_t _mux, uint8_t _addr = VC4_QPU_WADDR_NOP) :
         addr(_addr),
         mux(_mux),
         swizzleMask(D3D10_SB_OPERAND_4_COMPONENT_MASK_X | D3D10_SB_OPERAND_4_COMPONENT_MASK_Y | D3D10_SB_OPERAND_4_COMPONENT_MASK_Z | D3D10_SB_OPERAND_4_COMPONENT_MASK_W)
-    { this->flags.valid = true; }
+    {
+        this->flags.value = 0;
+        this->flags.valid = true;
+    }
+
+    void SetImmediateI(uint32_t _i)
+    {
+        this->flags.valid = true;
+        this->flags.immediate = true;
+        this->i = _i;
+    }
+
+    void SetImmediateF(float _f)
+    {
+        this->flags.valid = true;
+        this->flags.immediate = true;
+        this->f = _f;
+    }
+
+    Vc4RegisterFlags GetFlags()
+    {
+        return this->flags;
+    }
+
+    uint8_t GetMux()
+    {
+        return this->mux;
+    }
+
+    uint8_t GetSwizzleMask()
+    {
+        return this->swizzleMask;
+    }
+
+private:
 
     Vc4RegisterFlags flags;
-    uint8_t addr;
-    uint8_t mux;
-    uint8_t swizzleMask;
-};
-
-struct Vc4Value
-{
-    C_ASSERT(sizeof(float) == sizeof(uint32_t));
     union
     {
-        float f;
-        uint32_t i;
-    };
-};
-
-enum Vc4OperandType
-{
-    vc4_register,
-    vc4_value,
-};
-
-struct Vc4Operand
-{
-    uint8_t OperandType;
-    union
-    {
-        Vc4Register r;
-        Vc4Value v;
+        struct
+        {
+            uint8_t addr;
+            uint8_t mux;
+            uint8_t swizzleMask;
+        }; // register
+        union
+        {
+            C_ASSERT(sizeof(float) == sizeof(uint32_t));
+            float f;
+            uint32_t i;
+        }; // immediate
+        uint32_t value;
     };
 };
 
@@ -196,9 +223,10 @@ public:
         Vc4_a_Inst(VC4_QPU_OPCODE_ADD_OR, dst, src, cond);
     }
 
-    void Vc4_a_LOAD32(Vc4Register dst, Vc4Value immediate, uint8_t cond = VC4_QPU_COND_ALWAYS)
+    void Vc4_a_LOAD32(Vc4Register dst, Vc4Register src, uint8_t cond = VC4_QPU_COND_ALWAYS)
     {
         assert(dst.flags.valid);
+        assert(src.flags.valid && src.flags.immediate);
         assert(this->Type == vc4_load_immediate_32);
         this->Sig = VC4_QPU_SIG_LOAD_IMMEDIATE;
         this->LOAD32.cond_add = cond;
@@ -207,7 +235,7 @@ public:
         {
             this->LOAD32.ws = true;
         }
-        this->LOAD32.immediate = immediate.i;
+        this->LOAD32.immediate = src.i;
     }
 
     void Vc4_a_Pack(uint8_t pack)
@@ -322,9 +350,10 @@ public:
         Vc4_m_Inst(VC4_QPU_OPCODE_MUL_V8MIN, dst, src, cond);
     }
 
-    void Vc4_m_LOAD32(Vc4Register dst, Vc4Value immediate, uint8_t cond = VC4_QPU_COND_ALWAYS)
+    void Vc4_m_LOAD32(Vc4Register dst, Vc4Register src, uint8_t cond = VC4_QPU_COND_ALWAYS)
     {
         assert(dst.flags.valid);
+        assert(src.flags.valid && src.flags.immediate);
         assert(this->Type == vc4_load_immediate_32);
         this->Sig = VC4_QPU_SIG_LOAD_IMMEDIATE;
         this->LOAD32.cond_mul = cond;
@@ -333,7 +362,7 @@ public:
         {
             this->LOAD32.ws = true;
         }
-        this->LOAD32.immediate = immediate.i;
+        this->LOAD32.immediate = src.i;
     }
     
     void Vc4_m_Pack(uint8_t pack)

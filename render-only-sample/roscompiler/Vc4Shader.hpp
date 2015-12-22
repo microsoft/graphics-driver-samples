@@ -35,9 +35,12 @@ struct VC4_UNIFORM_FORMAT
         } userConstant;
         struct
         {
-            UINT32 samplerIndex;
+            UINT32 samplerIndex;  // sampler slot
+            UINT32 resourceIndex; // resource binding slot.
+            UINT32 samplerConfiguration; // default sampler configuration embeded in shader code.
         } sampilerConfiguration;
-        UINT32 value[2];
+
+        UINT32 value[4];
     };
 };
 
@@ -264,8 +267,8 @@ private:
         {
             for (uint8_t i = 0; i < 4; i++)
             {
-                if (this->InputRegister[c.m_Index[0].m_RegIndex][i].flags.valid && 
-                    (this->InputRegister[c.m_Index[0].m_RegIndex][i].swizzleMask & swizzleMask))
+                if (this->InputRegister[c.m_Index[0].m_RegIndex][i].GetFlags().valid && 
+                    (this->InputRegister[c.m_Index[0].m_RegIndex][i].GetSwizzleMask() & swizzleMask))
                 {
                     return this->InputRegister[c.m_Index[0].m_RegIndex][i];
                 }
@@ -275,8 +278,8 @@ private:
         {
             for (uint8_t i = 0; i < 4; i++)
             {
-                if (this->OutputRegister[c.m_Index[0].m_RegIndex][i].flags.valid && 
-                    (this->OutputRegister[c.m_Index[0].m_RegIndex][i].swizzleMask & swizzleMask))
+                if (this->OutputRegister[c.m_Index[0].m_RegIndex][i].GetFlags().valid && 
+                    (this->OutputRegister[c.m_Index[0].m_RegIndex][i].GetSwizzleMask() & swizzleMask))
                 {
                     return this->OutputRegister[c.m_Index[0].m_RegIndex][i];
                 }
@@ -286,14 +289,14 @@ private:
         {
             for (uint8_t i = 0; i < 4; i++)
             {
-                if (this->TempRegister[c.m_Index[0].m_RegIndex][i].flags.valid && 
-                    (this->TempRegister[c.m_Index[0].m_RegIndex][i].swizzleMask & swizzleMask))
+                if (this->TempRegister[c.m_Index[0].m_RegIndex][i].GetFlags().valid && 
+                    (this->TempRegister[c.m_Index[0].m_RegIndex][i].GetSwizzleMask() & swizzleMask))
                 {
                     return this->TempRegister[c.m_Index[0].m_RegIndex][i];
                 }
             }
         }
-        assert(ret.flags.valid);
+        assert(ret.GetFlags().valid);
         return ret;
     }
 

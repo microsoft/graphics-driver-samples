@@ -43,7 +43,7 @@ void Vc4Shader::Emit_Prologue_VS()
     {
         Vc4Instruction Vc4Inst(vc4_load_immediate_32);
         Vc4Register vr_setup(VC4_QPU_ALU_REG_A, VC4_QPU_WADDR_VPMVCD_RD_SETUP);
-        Vc4Value value; value.i = MAKE_VR_SETUP(cInput, 1, true, false, VC4_QPU_32BIT_VECTOR, 0);
+        Vc4Register value; value.SetImmediateI(MAKE_VR_SETUP(cInput, 1, true, false, VC4_QPU_32BIT_VECTOR, 0));
         Vc4Inst.Vc4_a_LOAD32(vr_setup, value);
         Vc4Inst.Emit(CurrentStorage);
     }
@@ -51,7 +51,7 @@ void Vc4Shader::Emit_Prologue_VS()
     {
         Vc4Instruction Vc4Inst(vc4_load_immediate_32);
         Vc4Register vw_setup(VC4_QPU_ALU_REG_B, VC4_QPU_WADDR_VPMVCD_WR_SETUP);
-        Vc4Value value; value.i = MAKE_VW_SETUP(1, true, false, VC4_QPU_32BIT_VECTOR, 0);
+        Vc4Register value; value.SetImmediateI(MAKE_VW_SETUP(1, true, false, VC4_QPU_32BIT_VECTOR, 0));
         Vc4Inst.Vc4_a_LOAD32(vw_setup, value);
         Vc4Inst.Emit(CurrentStorage);
     }
@@ -60,10 +60,10 @@ void Vc4Shader::Emit_Prologue_VS()
     {
         Vc4Instruction Vc4Inst;
         Vc4Register raX = this->InputRegister[iRegIndex / 4][iRegIndex % 4];
-        if (raX.flags.valid)
+        if (raX.GetFlags().valid)
         {
-            assert(raX.mux == VC4_QPU_ALU_REG_A || raX.mux == VC4_QPU_ALU_REG_B);
-            Vc4Register vpm(raX.mux, VC4_QPU_RADDR_VPM);
+            assert(raX.GetMux() == VC4_QPU_ALU_REG_A || raX.GetMux() == VC4_QPU_ALU_REG_B);
+            Vc4Register vpm(raX.GetMux(), VC4_QPU_RADDR_VPM);
             Vc4Inst.Vc4_a_MOV(raX, vpm);
             Vc4Inst.Emit(CurrentStorage);
             iRegUsed++;
@@ -89,10 +89,10 @@ void Vc4Shader::Emit_Prologue_PS()
     for (uint8_t i = 0, iRegUsed = 0; iRegUsed < this->cInput; i++)
     {
         Vc4Register raX = this->InputRegister[i / 4][i % 4];
-        if (raX.flags.valid)
+        if (raX.GetFlags().valid)
         {
             Vc4Instruction Vc4Inst;
-            assert(raX.mux == VC4_QPU_ALU_REG_A || raX.mux == VC4_QPU_ALU_REG_B);
+            assert(raX.GetMux() == VC4_QPU_ALU_REG_A || raX.GetMux() == VC4_QPU_ALU_REG_B);
             Vc4Register varying(VC4_QPU_ALU_REG_B, VC4_QPU_RADDR_VERYING);
             Vc4Register ra15(VC4_QPU_ALU_REG_A, 15);
             Vc4Inst.Vc4_m_FMUL(raX, varying, ra15);
@@ -111,7 +111,7 @@ void Vc4Shader::Emit_Prologue_PS()
     for (uint8_t iRegUsed = 0, iRegIndex = 0; iRegUsed < this->cInput; iRegIndex++)
     {
         Vc4Register raX = this->InputRegister[iRegIndex / 4][iRegIndex % 4];
-        if (raX.flags.valid && raX.flags.require_linear_conversion)
+        if (raX.GetFlags().valid && raX.GetFlags().require_linear_conversion)
         {
             {
                 Vc4Instruction Vc4Inst;
@@ -152,13 +152,13 @@ void Vc4Shader::Emit_ShaderOutput_VS(boolean bVS)
     Vc4Register pos[4]; // X/Y/Z/W.
     for (uint8_t iPos = 0; iPos < this->cOutput; iPos++)
     {
-        if (this->OutputRegister[iPos / 4][iPos % 4].flags.position)
+        if (this->OutputRegister[iPos / 4][iPos % 4].GetFlags().position)
         {
             for (uint8_t i = iPos; i < iPos + 4; i++)
             {
                 Vc4Register reg = this->OutputRegister[i / 4][i % 4];
-                assert(reg.flags.position);
-                pos[this->SwizzleMaskToIndex(reg.swizzleMask)] = reg;
+                assert(reg.GetFlags().position);
+                pos[this->SwizzleMaskToIndex(reg.GetSwizzleMask())] = reg;
             }
             break;
         }
@@ -184,7 +184,7 @@ void Vc4Shader::Emit_ShaderOutput_VS(boolean bVS)
             for (uint8_t i = 0; i < 2; i++)
             {
                 Vc4Register rX(VC4_QPU_ALU_REG_B, VC4_QPU_WADDR_ACC0 + i); // r0 and r1.
-                Vc4Register unif((pos[i].mux == VC4_QPU_ALU_REG_A ? VC4_QPU_ALU_REG_B : VC4_QPU_ALU_REG_A), VC4_QPU_RADDR_UNIFORM); // use opossit register file.
+                Vc4Register unif((pos[i].GetMux() == VC4_QPU_ALU_REG_A ? VC4_QPU_ALU_REG_B : VC4_QPU_ALU_REG_A), VC4_QPU_RADDR_UNIFORM); // use opossit register file.
                 Vc4Instruction Vc4Inst;
                 Vc4Inst.Vc4_m_FMUL(rX, pos[i], unif);
                 Vc4Inst.Emit(CurrentStorage);
@@ -243,7 +243,7 @@ void Vc4Shader::Emit_ShaderOutput_VS(boolean bVS)
     {
         for (uint8_t i = 0; i < this->cOutput; i++)
         {
-            if (this->OutputRegister[i / 4][i % 4].flags.position == false)
+            if (this->OutputRegister[i / 4][i % 4].GetFlags().position == false)
             {
                 Vc4Register src = this->OutputRegister[i / 4][i % 4];
                 Vc4Instruction Vc4Inst;
@@ -323,7 +323,7 @@ void Vc4Shader::Emit_Mov(CInstruction &Inst)
             {
                 Vc4Register dst = Find_Vc4Register(Inst.m_Operands[0], aCurrent);
                 uint8_t pack = VC4_QPU_PACK_A_32;
-                if (dst.flags.packed)
+                if (dst.GetFlags().packed)
                 {
                     pack = VC4_QPU_PACK_MUL_8a + SwizzleMaskToIndex(aCurrent);
                 }
@@ -333,14 +333,14 @@ void Vc4Shader::Emit_Mov(CInstruction &Inst)
                 case D3D10_SB_OPERAND_TYPE_IMMEDIATE32:
                 {
                     Vc4Instruction Vc4Inst(vc4_load_immediate_32);
-                    Vc4Value value;
+                    Vc4Register value;
                     switch (Inst.m_Operands[1].m_NumComponents)
                     {
                     case D3D10_SB_OPERAND_1_COMPONENT:
-                        value.i = Inst.m_Operands[1].m_Value[0];
+                        value.SetImmediateI(Inst.m_Operands[1].m_Value[0]);
                         break;
                     case D3D10_SB_OPERAND_4_COMPONENT:
-                        value.i = Inst.m_Operands[1].m_Value[i];
+                        value.SetImmediateI(Inst.m_Operands[1].m_Value[i]);
                         break;
                     default:
                         assert(false);
@@ -417,7 +417,7 @@ void Vc4Shader::Emit_Mul(CInstruction &Inst)
                 Vc4Register dst = Find_Vc4Register(Inst.m_Operands[0], aCurrent);
                 uint8_t swizzleIndex = SwizzleMaskToIndex(aCurrent);
                 uint8_t pack = VC4_QPU_PACK_A_32;
-                if (dst.flags.packed)
+                if (dst.GetFlags().packed)
                 {
                     pack = VC4_QPU_PACK_MUL_8a + swizzleIndex;
                 }
@@ -495,7 +495,7 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
     {
     case D3D10_SB_OPERAND_TYPE_OUTPUT:
         o[0] = Find_Vc4Register(Inst.m_Operands[0], (Inst.m_Operands[0].m_WriteMask & D3D10_SB_OPERAND_4_COMPONENT_MASK_MASK));
-        assert(o[0].flags.packed);
+        assert(o[0].GetFlags().packed);
         break;
     case D3D10_SB_OPERAND_TYPE_TEMP:
         for (uint8_t i = 0, aCurrent = D3D10_SB_OPERAND_4_COMPONENT_MASK_X; i < 4; i++)
@@ -517,7 +517,8 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
     assert(Inst.m_Operands[2].m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
     assert(Inst.m_Operands[2].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
     assert(Inst.m_Operands[2].m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
-    uint32_t texDimension = this->ResourceDimension[Inst.m_Operands[2].m_Index[0].m_RegIndex];
+    uint32_t resourceIndex = Inst.m_Operands[2].m_Index[0].m_RegIndex;
+    uint32_t texDimension = this->ResourceDimension[resourceIndex];
 
     // Texture coordinate
     assert(Inst.m_Operands[1].m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
@@ -560,11 +561,13 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
     // + 1 for sample instruction, 'ldtmu0', 
     // + 1 or up to 4 for moving r4 to output register or unpacking r4 to other register(s).
     // + 1 for NOP.
-    uint8_t dem = (r.flags.valid && t.flags.valid ? 3 : t.flags.valid ? 2 : 1);
-    CurrentStorage->Ensure<VC4_QPU_INSTRUCTION>(dem + 1 + (bUnpack ? 4 : 1) + 1);
+    {
+        uint8_t texDem = (r.GetFlags().valid && t.GetFlags().valid ? 3 : t.GetFlags().valid ? 2 : 1);
+        CurrentStorage->Ensure<VC4_QPU_INSTRUCTION>(texDem + 1 + (bUnpack ? 4 : 1) + 1);
+    }
 
     // texture address : z
-    if (r.flags.valid)
+    if (r.GetFlags().valid)
     {
         Vc4Instruction Vc4Inst;
         Vc4Register tmu0_r(VC4_QPU_ALU_REG_A, VC4_QPU_WADDR_TMU0_R);
@@ -573,7 +576,7 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
     }
 
     // texture address : y
-    if (t.flags.valid)
+    if (t.GetFlags().valid)
     {
         Vc4Instruction Vc4Inst;
         Vc4Register tmu0_t(VC4_QPU_ALU_REG_A, VC4_QPU_WADDR_TMU0_T);
@@ -582,7 +585,7 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
     }
 
     // texture address : x and must write 's' at last.
-    assert(s.flags.valid);
+    assert(s.GetFlags().valid);
     {
         Vc4Instruction Vc4Inst;
         Vc4Register tmu0_s(VC4_QPU_ALU_REG_A, VC4_QPU_WADDR_TMU0_S);
@@ -596,6 +599,7 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
             VC4_UNIFORM_FORMAT u;
             u.Type = VC4_UNIFORM_TYPE_SAMPLER_CONFIG_P0;
             u.sampilerConfiguration.samplerIndex = samplerIndex;
+            u.sampilerConfiguration.resourceIndex = resourceIndex;
             this->AddUniformReference(u);
         }
 
@@ -603,14 +607,16 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
             VC4_UNIFORM_FORMAT u;
             u.Type = VC4_UNIFORM_TYPE_SAMPLER_CONFIG_P1;
             u.sampilerConfiguration.samplerIndex = samplerIndex;
+            u.sampilerConfiguration.resourceIndex = resourceIndex;
             this->AddUniformReference(u);
         }
 
-        if (r.flags.valid) // only cube needs P2 config.
+        if (r.GetFlags().valid) // only cube needs P2 config.
         {
             VC4_UNIFORM_FORMAT u;
             u.Type = VC4_UNIFORM_TYPE_SAMPLER_CONFIG_P2;
             u.sampilerConfiguration.samplerIndex = samplerIndex;
+            u.sampilerConfiguration.resourceIndex = resourceIndex;
             this->AddUniformReference(u);
         }
     }
@@ -625,7 +631,7 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
     // TODO: Swizzle texture channel when texture format and RT format are different.
     Vc4Register r4(VC4_QPU_ALU_R4);
 
-    // Move result to r4 to output register.
+    // Move result at r4 to output register.
     if (Inst.m_Operands[0].m_Type == D3D10_SB_OPERAND_TYPE_OUTPUT)
     {
         Vc4Instruction Vc4Inst;
@@ -635,10 +641,10 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
     else if (Inst.m_Operands[0].m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_MASK_MODE)
     {
         assert(bUnpack);
-        // Move each color channel in r4 to o[4].
+        // Move each color channel at r4 to o[4].
         for (uint8_t i = 0; i < 4; i++)
         {
-            if (o[i].flags.valid)
+            if (o[i].GetFlags().valid)
             {
                 Vc4Instruction Vc4Inst;
                 Vc4Inst.Vc4_m_MOV(o[i], r4);
@@ -821,6 +827,9 @@ HRESULT Vc4Shader::Translate_VS()
             case D3D10_SB_OPCODE_MOV:
                 this->Emit_Mov(Inst);
                 break;
+            case D3D10_SB_OPCODE_MUL:
+                this->Emit_Mul(Inst);
+                break;
             case D3D10_SB_OPCODE_RET:
                 break;
             default:
@@ -830,10 +839,10 @@ HRESULT Vc4Shader::Translate_VS()
     }
 
     this->ShaderStorageAux->CopyFrom(*this->ShaderStorage); // Copy VS to CS.
-    this->Emit_ShaderOutput_VS(true); 
-    this->Emit_Epilogue(); 
+    this->Emit_ShaderOutput_VS(true);  // VS
+    this->Emit_Epilogue(); // VS
 
-    this->SetCurrentStorage(this->ShaderStorageAux, this->ShaderUniformAux);
+    this->SetCurrentStorage(this->ShaderStorageAux, this->ShaderUniformAux); // switch to CS storage.
     this->Emit_ShaderOutput_VS(false); // CS
     this->Emit_Epilogue(); // CS
     
