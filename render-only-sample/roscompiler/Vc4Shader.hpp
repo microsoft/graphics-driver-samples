@@ -253,18 +253,24 @@ private:
     void Emit_Prologue_PS();
     void Emit_Epilogue();
     void Emit_ShaderOutput_VS(boolean bVS);
-        
+
     void Emit_Mov(CInstruction &Inst);
+
+    void Emit_Add(CInstruction &Inst);
     void Emit_Mul(CInstruction &Inst);
+
     void Emit_Sample(CInstruction &Inst);
 
-    Vc4Register Find_Vc4Register(COperandBase c, uint8_t swizzleMask)
+    Vc4Register Find_Vc4Register_M(COperandBase c, uint8_t swizzleMask)
     {
         Vc4Register ret;
+
         assert(c.m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
-        
-        if (c.m_Type == D3D10_SB_OPERAND_TYPE_INPUT)
-        {
+        assert(c.m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
+ 
+        switch (c.m_Type)
+        { 
+        case D3D10_SB_OPERAND_TYPE_INPUT:
             for (uint8_t i = 0; i < 4; i++)
             {
                 if (this->InputRegister[c.m_Index[0].m_RegIndex][i].GetFlags().valid && 
@@ -273,9 +279,8 @@ private:
                     return this->InputRegister[c.m_Index[0].m_RegIndex][i];
                 }
             }
-        }
-        else if (c.m_Type == D3D10_SB_OPERAND_TYPE_OUTPUT)
-        {
+            break;
+        case D3D10_SB_OPERAND_TYPE_OUTPUT:
             for (uint8_t i = 0; i < 4; i++)
             {
                 if (this->OutputRegister[c.m_Index[0].m_RegIndex][i].GetFlags().valid && 
@@ -284,9 +289,8 @@ private:
                     return this->OutputRegister[c.m_Index[0].m_RegIndex][i];
                 }
             }
-        }
-        else if (c.m_Type == D3D10_SB_OPERAND_TYPE_TEMP)
-        {
+            break;
+        case D3D10_SB_OPERAND_TYPE_TEMP:
             for (uint8_t i = 0; i < 4; i++)
             {
                 if (this->TempRegister[c.m_Index[0].m_RegIndex][i].GetFlags().valid && 
@@ -295,11 +299,134 @@ private:
                     return this->TempRegister[c.m_Index[0].m_RegIndex][i];
                 }
             }
+            break;
+        default:
+            assert(false);
         }
+
         assert(ret.GetFlags().valid);
         return ret;
     }
 
+    Vc4Register Find_Vc4Register_I(COperandBase c, uint8_t swizzleIndex)
+    {
+        Vc4Register ret;
+
+        switch (c.m_Type)
+        {
+        case D3D10_SB_OPERAND_TYPE_IMMEDIATE32:
+        {
+            switch (c.m_NumComponents)
+            {
+            case D3D10_SB_OPERAND_1_COMPONENT:
+                ret.SetImmediateI(c.m_Value[0]);
+                break;
+            case D3D10_SB_OPERAND_4_COMPONENT:
+                ret.SetImmediateI(c.m_Value[swizzleIndex]);
+                break;
+            default:
+                assert(false);
+            }
+            break;
+        }
+        case D3D10_SB_OPERAND_TYPE_IMMEDIATE64:
+        {
+            // 64bit load is not supported.
+            assert(false);
+            break;
+        }
+        case D3D10_SB_OPERAND_TYPE_OUTPUT:
+        {
+            // output can't be source of move.
+            assert(false);
+            break;
+        }
+        case D3D10_SB_OPERAND_TYPE_CONSTANT_BUFFER:
+        {
+            assert(c.m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
+            assert(c.m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_SWIZZLE_MODE);
+
+            assert(c.m_IndexDimension == D3D10_SB_OPERAND_INDEX_2D);
+            assert(c.m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
+            assert(c.m_IndexType[1] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
+
+            Vc4Register unif(VC4_QPU_ALU_REG_B, VC4_QPU_RADDR_UNIFORM); // TODO: fix hardcoded REG_B.
+            ret = unif;
+
+            {
+                VC4_UNIFORM_FORMAT u;
+                u.Type = VC4_UNIFORM_TYPE_USER_CONSTANT;
+                u.userConstant.bufferSlot = c.m_Index[0].m_RegIndex;
+                u.userConstant.bufferOffset = (c.m_Index[1].m_RegIndex * 4) + c.m_Swizzle[swizzleIndex];
+                this->AddUniformReference(u);
+            }
+            break;
+        }
+        case D3D10_SB_OPERAND_TYPE_TEMP:
+        case D3D10_SB_OPERAND_TYPE_INPUT:
+        {
+            assert(c.m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
+            assert(c.m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
+            assert(c.m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
+
+            switch (c.m_ComponentSelection)
+            {
+            case D3D10_SB_OPERAND_4_COMPONENT_SWIZZLE_MODE:
+                ret = Find_Vc4Register_M(c, D3D10_SB_OPERAND_4_COMPONENT_MASK(c.m_Swizzle[swizzleIndex]));
+                break;
+            case D3D10_SB_OPERAND_4_COMPONENT_SELECT_1_MODE:
+                ret = Find_Vc4Register_M(c, D3D10_SB_OPERAND_4_COMPONENT_MASK(c.m_ComponentName));
+                break;
+            default:
+                assert(false);
+            }
+            break;
+        }
+        default:
+            assert(false);
+        }
+
+        assert(ret.GetFlags().valid);
+        return ret;
+    }
+
+    void Setup_SourceRegister(CInstruction &Inst, uint8_t opIndex, uint8_t sizzleIndex, Vc4Register &src)
+    {
+        assert(Inst.m_Operands[opIndex].m_Modifier == D3D10_SB_OPERAND_MODIFIER_NONE);
+        src = Find_Vc4Register_I(Inst.m_Operands[opIndex], sizzleIndex);
+        assert(src.GetFlags().valid);
+    }
+
+    void Setup_SourceRegisters(CInstruction &Inst, uint8_t swizzleIndex, Vc4Register src[], uint8_t len)
+    {
+        assert(len == 2);
+        for (uint8_t j = 1; j < 3; j++)
+        {
+            Setup_SourceRegister(Inst, j, swizzleIndex, src[j - 1]);
+            assert(src[j - 1].GetFlags().valid);
+            if (src[j - 1].GetFlags().immediate)
+            {
+                // move immediate value to r1~r2 temorary.
+                Vc4Register rX(VC4_QPU_ALU_R1 + (j - 1), VC4_QPU_WADDR_ACC1 + (j - 1));
+                Vc4Instruction Vc4Inst(vc4_load_immediate_32);
+                Vc4Inst.Vc4_m_LOAD32(rX, src[j - 1]);
+                Vc4Inst.Emit(CurrentStorage);
+                src[j - 1] = rX;
+            }
+            else if ((j == 2) &&
+                (src[0].GetMux() == src[1].GetMux()) &&
+                (src[0].GetAddr() != src[1].GetAddr()))
+            {
+                // move to r2 to avoid confilct in register file.
+                Vc4Register r2(VC4_QPU_ALU_R2, VC4_QPU_WADDR_ACC2);
+                Vc4Instruction Vc4Inst;
+                Vc4Inst.Vc4_m_MOV(r2, src[1]);
+                Vc4Inst.Emit(CurrentStorage);
+                src[1] = r2;
+            }
+        }
+    }
+    
     uint8_t SwizzleMaskToIndex(uint8_t aMask)
     {
         uint8_t ret = 0;

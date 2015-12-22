@@ -304,86 +304,106 @@ void Vc4Shader::Emit_Epilogue()
 void Vc4Shader::Emit_Mov(CInstruction &Inst)
 {
     assert(this->uShaderType == D3D10_SB_PIXEL_SHADER ||
-           this->uShaderType == D3D10_SB_VERTEX_SHADER);
-    
-    // max 4 mov(s) + 1 NOP.
-    CurrentStorage->Ensure<VC4_QPU_INSTRUCTION>(5);
+        this->uShaderType == D3D10_SB_VERTEX_SHADER);
 
     assert(Inst.m_NumOperands == 2);
 
-    assert(Inst.m_Operands[0].m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
-    assert(Inst.m_Operands[0].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
-    assert(Inst.m_Operands[0].m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
-    assert(Inst.m_Operands[0].m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_MASK_MODE);
+    // max 4 mov(s) + 1 NOP.
+    CurrentStorage->Ensure<VC4_QPU_INSTRUCTION>(5);
 
     {
         for (uint8_t i = 0, aCurrent = D3D10_SB_OPERAND_4_COMPONENT_MASK_X; i < 4; i++)
         {
             if (Inst.m_Operands[0].m_WriteMask & aCurrent)
             {
-                Vc4Register dst = Find_Vc4Register(Inst.m_Operands[0], aCurrent);
+                Vc4Register dst = Find_Vc4Register_M(Inst.m_Operands[0], aCurrent);
                 uint8_t pack = VC4_QPU_PACK_A_32;
                 if (dst.GetFlags().packed)
                 {
-                    pack = VC4_QPU_PACK_MUL_8a + SwizzleMaskToIndex(aCurrent);
+                    pack = VC4_QPU_PACK_MUL_8a + i;
                 }
 
-                switch (Inst.m_Operands[1].m_Type)
-                {
-                case D3D10_SB_OPERAND_TYPE_IMMEDIATE32:
+                Vc4Register src;
+                Setup_SourceRegister(Inst, 1, i, src);
+
+                if (src.GetFlags().immediate)
                 {
                     Vc4Instruction Vc4Inst(vc4_load_immediate_32);
-                    Vc4Register value;
-                    switch (Inst.m_Operands[1].m_NumComponents)
-                    {
-                    case D3D10_SB_OPERAND_1_COMPONENT:
-                        value.SetImmediateI(Inst.m_Operands[1].m_Value[0]);
-                        break;
-                    case D3D10_SB_OPERAND_4_COMPONENT:
-                        value.SetImmediateI(Inst.m_Operands[1].m_Value[i]);
-                        break;
-                    default:
-                        assert(false);
-                    }
-                    Vc4Inst.Vc4_m_LOAD32(dst, value);
+                    Vc4Inst.Vc4_m_LOAD32(dst, src);
                     Vc4Inst.Vc4_m_Pack(pack);
                     Vc4Inst.Emit(CurrentStorage);
-                    break;
                 }
-                case D3D10_SB_OPERAND_TYPE_IMMEDIATE64:
+                else
                 {
-                    // 64bit load is not supported.
-                    assert(false);
-                    break;
-                }
-                case D3D10_SB_OPERAND_TYPE_OUTPUT:
-                {
-                    // output can't be source of move.
-                    assert(false);
-                    break;
-                }
-                case D3D10_SB_OPERAND_TYPE_CONSTANT_BUFFER:
-                {
-                    // TODO:
-                    assert(false);
-                    break;
-                }
-                case D3D10_SB_OPERAND_TYPE_TEMP:
-                case D3D10_SB_OPERAND_TYPE_INPUT:
-                {
-                    assert(Inst.m_Operands[1].m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
-                    assert(Inst.m_Operands[1].m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_SWIZZLE_MODE);
-                    Vc4Register src = Find_Vc4Register(Inst.m_Operands[1], D3D10_SB_OPERAND_4_COMPONENT_MASK(Inst.m_Operands[1].m_Swizzle[i]));
                     Vc4Instruction Vc4Inst;
                     Vc4Inst.Vc4_m_MOV(dst, src);
                     Vc4Inst.Vc4_m_Pack(pack);
                     Vc4Inst.Emit(CurrentStorage);
-                    break;
-                }
-                default:
-                    assert(false);
                 }
             }
+
+            aCurrent <<= 1;
+        }
+    }
+
+    { // Emit a NOP
+        Vc4Instruction Vc4Inst;
+        Vc4Inst.Emit(CurrentStorage);
+    }
+}
+
+void Vc4Shader::Emit_Add(CInstruction &Inst)
+{
+    assert(this->uShaderType == D3D10_SB_PIXEL_SHADER ||
+           this->uShaderType == D3D10_SB_VERTEX_SHADER);
+
+    assert(Inst.m_NumOperands == 3);
+
+    // max 4 add, includes 1 add + 3 moves(s) for each, + 1 NOP.
+    CurrentStorage->Ensure<VC4_QPU_INSTRUCTION>(17);
+
+    {
+        for (uint8_t i = 0, aCurrent = D3D10_SB_OPERAND_4_COMPONENT_MASK_X; i < 4; i++)
+        {
+            if (Inst.m_Operands[0].m_WriteMask & aCurrent)
+            {
+                Vc4Register dst = Find_Vc4Register_M(Inst.m_Operands[0], aCurrent);
+                uint8_t pack = VC4_QPU_PACK_A_32;
+                if (dst.GetFlags().packed)
+                {
+                    pack = VC4_QPU_PACK_MUL_8a + i;
+                }
+
+                Vc4Register src[2];
+                this->Setup_SourceRegisters(Inst, i, src, ARRAYSIZE(src));
+
+                if (dst.GetFlags().packed)
+                {
+                    // pack has to be done at mul pipe, so move result to r3, 
+                    // then use mul pipe to move to final dst (with pack).
+                    Vc4Register r3(VC4_QPU_ALU_R3, VC4_QPU_WADDR_ACC3);
+
+                    {
+                        Vc4Instruction Vc4Inst;
+                        Vc4Inst.Vc4_a_FADD(r3, src[0], src[1]);
+                        Vc4Inst.Emit(CurrentStorage);
+                    }
+
+                    {
+                        Vc4Instruction Vc4Inst;
+                        Vc4Inst.Vc4_m_MOV(dst, r3);
+                        Vc4Inst.Vc4_m_Pack(pack);
+                        Vc4Inst.Emit(CurrentStorage);
+                    }
+                }
+                else
+                {
+                    Vc4Instruction Vc4Inst;
+                    Vc4Inst.Vc4_a_FADD(dst, src[0], src[1]);
+                    Vc4Inst.Emit(CurrentStorage);
+                }
+            }
+
             aCurrent <<= 1;
         }
     }
@@ -401,63 +421,23 @@ void Vc4Shader::Emit_Mul(CInstruction &Inst)
     
     assert(Inst.m_NumOperands == 3);
 
-    assert(Inst.m_Operands[0].m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
-    assert(Inst.m_Operands[0].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
-    assert(Inst.m_Operands[0].m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
-    assert(Inst.m_Operands[0].m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_MASK_MODE);
-    
-    // max 4 mul(s) + 1 NOP.
-    CurrentStorage->Ensure<VC4_QPU_INSTRUCTION>(5);
+    // max 4 mul, includes 1 mul + 2 moves(s) for each, + 1 NOP.
+    CurrentStorage->Ensure<VC4_QPU_INSTRUCTION>(13);
 
     {
         for (uint8_t i = 0, aCurrent = D3D10_SB_OPERAND_4_COMPONENT_MASK_X; i < 4; i++)
         {
             if (Inst.m_Operands[0].m_WriteMask & aCurrent)
             {
-                Vc4Register dst = Find_Vc4Register(Inst.m_Operands[0], aCurrent);
-                uint8_t swizzleIndex = SwizzleMaskToIndex(aCurrent);
+                Vc4Register dst = Find_Vc4Register_M(Inst.m_Operands[0], aCurrent);
                 uint8_t pack = VC4_QPU_PACK_A_32;
                 if (dst.GetFlags().packed)
                 {
-                    pack = VC4_QPU_PACK_MUL_8a + swizzleIndex;
+                    pack = VC4_QPU_PACK_MUL_8a + i;
                 }
 
                 Vc4Register src[2];
-                for (uint8_t j = 1; j < 3; j++)
-                {
-                    switch (Inst.m_Operands[j].m_Type)
-                    {
-                    case D3D10_SB_OPERAND_TYPE_TEMP:
-                    case D3D10_SB_OPERAND_TYPE_INPUT:
-                        assert(Inst.m_Operands[j].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
-                        assert(Inst.m_Operands[j].m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
-                        assert(Inst.m_Operands[j].m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
-                        assert(Inst.m_Operands[j].m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_SWIZZLE_MODE);
-                        src[j - 1] = Find_Vc4Register(Inst.m_Operands[j], D3D10_SB_OPERAND_4_COMPONENT_MASK(Inst.m_Operands[j].m_Swizzle[i]));
-                        break;
-                    case D3D10_SB_OPERAND_TYPE_CONSTANT_BUFFER:
-                    {
-                        assert(Inst.m_Operands[j].m_IndexDimension == D3D10_SB_OPERAND_INDEX_2D);
-                        assert(Inst.m_Operands[j].m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
-                        assert(Inst.m_Operands[j].m_IndexType[1] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
-                        assert(Inst.m_Operands[j].m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
-                        assert(Inst.m_Operands[j].m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_SWIZZLE_MODE);
-                        Vc4Register unif(VC4_QPU_ALU_REG_B, VC4_QPU_RADDR_UNIFORM); // TODO: fix hardcoded REG_B. This is safe for now since _TEMP and _INPUT is always at REG_A file.
-                        src[j - 1] = unif;
-                        {
-                            VC4_UNIFORM_FORMAT u;
-                            u.Type = VC4_UNIFORM_TYPE_USER_CONSTANT;
-                            u.userConstant.bufferSlot = Inst.m_Operands[j].m_Index[0].m_RegIndex;
-                            u.userConstant.bufferOffset = (Inst.m_Operands[j].m_Index[1].m_RegIndex * 4) + 
-                                                           Inst.m_Operands[j].m_Swizzle[swizzleIndex];
-                            this->AddUniformReference(u);
-                        }
-                        break;
-                    }
-                    default:
-                        assert(false);
-                    }
-                }
+                this->Setup_SourceRegisters(Inst, i, src, ARRAYSIZE(src));
 
                 {
                     Vc4Instruction Vc4Inst;
@@ -466,6 +446,7 @@ void Vc4Shader::Emit_Mul(CInstruction &Inst)
                     Vc4Inst.Emit(CurrentStorage);
                 }
             }
+
             aCurrent <<= 1;
         }
     }
@@ -494,7 +475,7 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
     switch (Inst.m_Operands[0].m_Type)
     {
     case D3D10_SB_OPERAND_TYPE_OUTPUT:
-        o[0] = Find_Vc4Register(Inst.m_Operands[0], (Inst.m_Operands[0].m_WriteMask & D3D10_SB_OPERAND_4_COMPONENT_MASK_MASK));
+        o[0] = Find_Vc4Register_M(Inst.m_Operands[0], (Inst.m_Operands[0].m_WriteMask & D3D10_SB_OPERAND_4_COMPONENT_MASK_MASK));
         assert(o[0].GetFlags().packed);
         break;
     case D3D10_SB_OPERAND_TYPE_TEMP:
@@ -502,7 +483,7 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
         {
             if (Inst.m_Operands[0].m_WriteMask & aCurrent)
             {
-                o[i] = Find_Vc4Register(Inst.m_Operands[0], aCurrent);
+                o[i] = Find_Vc4Register_M(Inst.m_Operands[0], aCurrent);
             }
             aCurrent <<= 1;
         }
@@ -533,13 +514,13 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
     switch (texDimension)
     {
     case D3D10_SB_RESOURCE_DIMENSION_TEXTURECUBE:
-        r = Find_Vc4Register(Inst.m_Operands[1], D3D10_SB_OPERAND_4_COMPONENT_MASK(Inst.m_Operands[1].m_Swizzle[2]));
+        r = Find_Vc4Register_M(Inst.m_Operands[1], D3D10_SB_OPERAND_4_COMPONENT_MASK(Inst.m_Operands[1].m_Swizzle[2]));
         __fallthrough;
     case D3D10_SB_RESOURCE_DIMENSION_TEXTURE2D:
-        t = Find_Vc4Register(Inst.m_Operands[1], D3D10_SB_OPERAND_4_COMPONENT_MASK(Inst.m_Operands[1].m_Swizzle[1]));
+        t = Find_Vc4Register_M(Inst.m_Operands[1], D3D10_SB_OPERAND_4_COMPONENT_MASK(Inst.m_Operands[1].m_Swizzle[1]));
         __fallthrough;
     case D3D10_SB_RESOURCE_DIMENSION_TEXTURE1D:
-        s = Find_Vc4Register(Inst.m_Operands[1], D3D10_SB_OPERAND_4_COMPONENT_MASK(Inst.m_Operands[1].m_Swizzle[0]));
+        s = Find_Vc4Register_M(Inst.m_Operands[1], D3D10_SB_OPERAND_4_COMPONENT_MASK(Inst.m_Operands[1].m_Swizzle[0]));
         break;
     case D3D10_SB_RESOURCE_DIMENSION_BUFFER:
     case D3D10_SB_RESOURCE_DIMENSION_TEXTURE3D:
@@ -824,6 +805,9 @@ HRESULT Vc4Shader::Translate_VS()
         {
             switch (Inst.m_OpCode)
             {
+            case D3D10_SB_OPCODE_ADD:
+                this->Emit_Add(Inst);
+                break;
             case D3D10_SB_OPCODE_MOV:
                 this->Emit_Mov(Inst);
                 break;
@@ -863,6 +847,9 @@ HRESULT Vc4Shader::Translate_PS()
         {
             switch (Inst.m_OpCode)
             {
+            case D3D10_SB_OPCODE_ADD:
+                this->Emit_Add(Inst);
+                break;
             case D3D10_SB_OPCODE_MOV:
                 this->Emit_Mov(Inst);
                 break;

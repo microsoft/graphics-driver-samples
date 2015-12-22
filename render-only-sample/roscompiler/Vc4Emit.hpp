@@ -81,6 +81,11 @@ struct Vc4Register
         return this->mux;
     }
 
+    uint8_t GetAddr()
+    {
+        return this->addr;
+    }
+
     uint8_t GetSwizzleMask()
     {
         return this->swizzleMask;
