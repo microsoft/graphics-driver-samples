@@ -256,8 +256,8 @@ private:
 
     void Emit_Mov(CInstruction &Inst);
 
-    void Emit_Add(CInstruction &Inst);
-    void Emit_Mul(CInstruction &Inst);
+    void Emit_with_Add_pipe(CInstruction &Inst);
+    void Emit_with_Mul_pipe(CInstruction &Inst);
 
     void Emit_Sample(CInstruction &Inst);
 
@@ -316,12 +316,16 @@ private:
         {
         case D3D10_SB_OPERAND_TYPE_IMMEDIATE32:
         {
+            assert(c.m_Modifier == D3D10_SB_OPERAND_MODIFIER_NONE);
+
             switch (c.m_NumComponents)
             {
             case D3D10_SB_OPERAND_1_COMPONENT:
+                assert(c.m_IndexDimension == D3D10_SB_OPERAND_INDEX_0D);
                 ret.SetImmediateI(c.m_Value[0]);
                 break;
             case D3D10_SB_OPERAND_4_COMPONENT:
+                assert(c.m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
                 ret.SetImmediateI(c.m_Value[swizzleIndex]);
                 break;
             default:
@@ -337,7 +341,7 @@ private:
         }
         case D3D10_SB_OPERAND_TYPE_OUTPUT:
         {
-            // output can't be source of move.
+            // output can't be source.
             assert(false);
             break;
         }
@@ -350,7 +354,7 @@ private:
             assert(c.m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
             assert(c.m_IndexType[1] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
 
-            Vc4Register unif(VC4_QPU_ALU_REG_B, VC4_QPU_RADDR_UNIFORM); // TODO: fix hardcoded REG_B.
+            Vc4Register unif(VC4_QPU_ALU_REG_A, VC4_QPU_RADDR_UNIFORM); // TODO: fix hardcoded REG_A.
             ret = unif;
 
             {
@@ -360,11 +364,15 @@ private:
                 u.userConstant.bufferOffset = (c.m_Index[1].m_RegIndex * 4) + c.m_Swizzle[swizzleIndex];
                 this->AddUniformReference(u);
             }
+
+            ret.SetModifier(c.m_Modifier);
             break;
         }
         case D3D10_SB_OPERAND_TYPE_TEMP:
         case D3D10_SB_OPERAND_TYPE_INPUT:
         {
+            assert(c.m_Modifier == D3D10_SB_OPERAND_MODIFIER_NONE);
+
             assert(c.m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
             assert(c.m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
             assert(c.m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
@@ -385,14 +393,55 @@ private:
         default:
             assert(false);
         }
-
+        
         assert(ret.GetFlags().valid);
         return ret;
     }
 
+    boolean Resolve_Modifier(Vc4Register &src, uint8_t tempRIndex = 0)
+    {
+        boolean bReplaced = false;
+
+        assert(src.GetFlags().immediate == false);
+        switch (src.modifier)
+        {
+        case D3D10_SB_OPERAND_MODIFIER_NONE:
+            break;
+        case D3D10_SB_OPERAND_MODIFIER_NEG:
+        {
+            Vc4Register value; value.SetImmediateF(-1.0f);
+            Vc4Register rX(VC4_QPU_ALU_R1 + tempRIndex, VC4_QPU_WADDR_ACC1 + tempRIndex);
+
+            {
+                Vc4Instruction Vc4Inst(vc4_load_immediate_32);
+                Vc4Inst.Vc4_m_LOAD32(rX, value);
+                Vc4Inst.Emit(CurrentStorage);
+            }
+
+            {
+                Vc4Instruction Vc4Inst;
+                Vc4Inst.Vc4_m_FMUL(rX, src, rX);
+                Vc4Inst.Emit(CurrentStorage);
+            }
+
+            src = rX;
+            bReplaced = true;
+            break;
+        }
+        case D3D10_SB_OPERAND_MODIFIER_ABS:
+        case D3D10_SB_OPERAND_MODIFIER_ABSNEG:
+            // TODO:
+            assert(false);
+            break;
+        default:
+            assert(false);
+        }
+
+        return bReplaced;
+    }
+
     void Setup_SourceRegister(CInstruction &Inst, uint8_t opIndex, uint8_t sizzleIndex, Vc4Register &src)
     {
-        assert(Inst.m_Operands[opIndex].m_Modifier == D3D10_SB_OPERAND_MODIFIER_NONE);
         src = Find_Vc4Register_I(Inst.m_Operands[opIndex], sizzleIndex);
         assert(src.GetFlags().valid);
     }
@@ -400,29 +449,47 @@ private:
     void Setup_SourceRegisters(CInstruction &Inst, uint8_t swizzleIndex, Vc4Register src[], uint8_t len)
     {
         assert(len == 2);
-        for (uint8_t j = 1; j < 3; j++)
+        for (uint8_t i = 0, j = 1; i < 2; i++, j++)
         {
-            Setup_SourceRegister(Inst, j, swizzleIndex, src[j - 1]);
-            assert(src[j - 1].GetFlags().valid);
-            if (src[j - 1].GetFlags().immediate)
+            Setup_SourceRegister(Inst, j, swizzleIndex, src[i]);
+            assert(src[i].GetFlags().valid);
+            if (src[i].GetFlags().immediate)
             {
                 // move immediate value to r1~r2 temorary.
-                Vc4Register rX(VC4_QPU_ALU_R1 + (j - 1), VC4_QPU_WADDR_ACC1 + (j - 1));
+                Vc4Register rX(VC4_QPU_ALU_R1 + i, VC4_QPU_WADDR_ACC1 + i);
                 Vc4Instruction Vc4Inst(vc4_load_immediate_32);
-                Vc4Inst.Vc4_m_LOAD32(rX, src[j - 1]);
+                Vc4Inst.Vc4_m_LOAD32(rX, src[i]);
                 Vc4Inst.Emit(CurrentStorage);
-                src[j - 1] = rX;
+                src[i] = rX;
+            }
+            else if (Resolve_Modifier(src[i], i))
+            {
+                // register is already replaced, so there should be no conflict.
             }
             else if ((j == 2) &&
-                (src[0].GetMux() == src[1].GetMux()) &&
-                (src[0].GetAddr() != src[1].GetAddr()))
+                     (src[0].GetMux() == src[1].GetMux()) &&
+                     (src[0].GetAddr() != src[1].GetAddr()))
             {
-                // move to r2 to avoid confilct in register file.
-                Vc4Register r2(VC4_QPU_ALU_R2, VC4_QPU_WADDR_ACC2);
-                Vc4Instruction Vc4Inst;
-                Vc4Inst.Vc4_m_MOV(r2, src[1]);
-                Vc4Inst.Emit(CurrentStorage);
-                src[1] = r2;
+                // if any of them is exchangeable (paticularly uniform), switch A and B file to avoid conflict.
+                if (VC4_QPU_RADDR_LOOKUP[src[0].GetAddr()].Exchangeable)
+                {
+                    assert(src[0].GetAddr() == VC4_QPU_RADDR_UNIFORM);
+                    src[0].SetMux(src[0].GetMux() == VC4_QPU_ALU_REG_A ? VC4_QPU_ALU_REG_B : VC4_QPU_ALU_REG_A);
+                }
+                else if (VC4_QPU_RADDR_LOOKUP[src[1].GetAddr()].Exchangeable)
+                {
+                    assert(src[1].GetAddr() == VC4_QPU_RADDR_UNIFORM);
+                    src[1].SetMux(src[1].GetMux() == VC4_QPU_ALU_REG_A ? VC4_QPU_ALU_REG_B : VC4_QPU_ALU_REG_A);
+                }
+                else
+                {
+                    // move to r2 to avoid confilct in register file.
+                    Vc4Register r2(VC4_QPU_ALU_R2, VC4_QPU_WADDR_ACC2);
+                    Vc4Instruction Vc4Inst;
+                    Vc4Inst.Vc4_m_MOV(r2, src[1]);
+                    Vc4Inst.Emit(CurrentStorage);
+                    src[1] = r2;
+                }
             }
         }
     }

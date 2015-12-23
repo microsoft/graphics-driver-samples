@@ -31,6 +31,7 @@ struct Vc4RegisterFlags
             uint32_t color : 1;
             uint32_t packed : 1;
             uint32_t immediate : 1;
+            uint32_t uniform : 1;
         };
         uint32_t value;
     };
@@ -55,6 +56,26 @@ struct Vc4Register
     {
         this->flags.value = 0;
         this->flags.valid = true;
+        if (_addr == VC4_QPU_RADDR_UNIFORM)
+        {
+            this->flags.uniform = true;
+        }
+    }
+
+    void SetMux(uint8_t _mux)
+    {
+        assert(this->flags.immediate == false);
+        this->mux = _mux;
+    }
+
+    void SetModifier(D3D10_SB_OPERAND_MODIFIER _modifier)
+    {
+        assert(this->flags.immediate == false);
+        assert(_modifier == D3D10_SB_OPERAND_MODIFIER_NONE ||
+            _modifier == D3D10_SB_OPERAND_MODIFIER_NEG ||
+            _modifier == D3D10_SB_OPERAND_MODIFIER_ABS ||
+            _modifier == D3D10_SB_OPERAND_MODIFIER_ABSNEG);
+        this->modifier = (uint8_t)_modifier;
     }
 
     void SetImmediateI(uint32_t _i)
@@ -78,16 +99,19 @@ struct Vc4Register
 
     uint8_t GetMux()
     {
+        assert(this->flags.immediate == false);
         return this->mux;
     }
 
     uint8_t GetAddr()
     {
+        assert(this->flags.immediate == false);
         return this->addr;
     }
 
     uint8_t GetSwizzleMask()
     {
+        assert(this->flags.immediate == false);
         return this->swizzleMask;
     }
 
@@ -101,6 +125,7 @@ private:
             uint8_t addr;
             uint8_t mux;
             uint8_t swizzleMask;
+            uint8_t modifier;
         }; // register
         union
         {
@@ -218,6 +243,16 @@ public:
         Vc4_a_Inst(VC4_QPU_OPCODE_ADD_FADD, dst, src1, src2, cond);
     }
 
+    void Vc4_a_FMAX(Vc4Register dst, Vc4Register src1, Vc4Register src2, uint8_t cond = VC4_QPU_COND_ALWAYS)
+    {
+        Vc4_a_Inst(VC4_QPU_OPCODE_ADD_FMAX, dst, src1, src2, cond);
+    }
+
+    void Vc4_a_FMIN(Vc4Register dst, Vc4Register src1, Vc4Register src2, uint8_t cond = VC4_QPU_COND_ALWAYS)
+    {
+        Vc4_a_Inst(VC4_QPU_OPCODE_ADD_FMIN, dst, src1, src2, cond);
+    }
+    
     void Vc4_a_FTOI(Vc4Register dst, Vc4Register src, uint8_t cond = VC4_QPU_COND_ALWAYS)
     {
         Vc4_a_Inst(VC4_QPU_OPCODE_ADD_FTOI, dst, src, cond);
