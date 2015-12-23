@@ -11,6 +11,12 @@ size_t RosKmdGlobal::s_videoMemorySize = 0;
 void * RosKmdGlobal::s_pVideoMemory = NULL;
 PHYSICAL_ADDRESS RosKmdGlobal::s_videoMemoryPhysicalAddress;
 
+#if USE_SIMPENROSE
+
+extern bool g_bUseSimPenrose;
+
+#endif
+
 void
 RosKmdGlobal::DdiUnload(
     void)
@@ -82,6 +88,17 @@ NTSTATUS RosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
 
     s_videoMemorySize = kMaxVideoMemorySize;
 
+    MEMORY_CACHING_TYPE CacheType = MmNonCached;
+    
+#if USE_SIMPENROSE
+
+    if (g_bUseSimPenrose)
+    {
+        CacheType = MmCached;
+    }
+
+#endif
+
     while (s_pVideoMemory == NULL)
     {
         //
@@ -94,7 +111,7 @@ NTSTATUS RosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
                             lowestAcceptableAddress,
                             highestAcceptableAddress,
                             boundaryAddressMultiple,
-                            MmNonCached);
+                            CacheType);
         if (s_pVideoMemory != NULL)
         {
             break;

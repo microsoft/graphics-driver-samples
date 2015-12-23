@@ -173,3 +173,49 @@ static VC4TileCoordinates          *pVC4TileCoordinates = NULL;
 
 #endif
 
+#if USE_SIMPENROSE
+
+extern "C"
+{
+
+void * __cdecl malloc(
+    _In_ size_t _Size)
+{
+    UNREFERENCED_PARAMETER(_Size);
+
+    return NULL;
+}
+
+//
+// TODO[indyz]: Add support for print out from SimPenrose
+//
+
+int __cdecl printf(
+    _In_z_ _Printf_format_string_ char const* const _Format,
+    ...)
+{
+    UNREFERENCED_PARAMETER(_Format);
+
+    return 0;
+}
+
+int __cdecl fprintf(
+    _Inout_                       FILE*       const _Stream,
+    _In_z_ _Printf_format_string_ char const* const _Format,
+    ...)
+{
+    UNREFERENCED_PARAMETER(_Stream);
+    UNREFERENCED_PARAMETER(_Format);
+
+    return 0;
+}
+
+FILE * __cdecl __acrt_iob_func(unsigned)
+{
+    return NULL;
+}
+
+}
+
+#endif // USE_SIMPENROSE
+

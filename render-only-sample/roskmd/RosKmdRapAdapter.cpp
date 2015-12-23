@@ -3,6 +3,13 @@
 
 #include "Vc4Mailbox.h"
 
+#if USE_SIMPENROSE
+
+#include "simpenrose.h"
+bool g_bUseSimPenrose = false;
+
+#endif
+
 RosKmdRapAdapter::RosKmdRapAdapter(IN_CONST_PDEVICE_OBJECT PhysicalDeviceObject, OUT_PPVOID MiniportDeviceContext) :
     RosKmAdapter(PhysicalDeviceObject, MiniportDeviceContext)
 {
@@ -123,6 +130,16 @@ RosKmdRapAdapter::Start(
 #endif
     }
 
+#if USE_SIMPENROSE
+
+    if (g_bUseSimPenrose)
+    {
+        simpenrose_init_hardware_supply_mem(RosKmdGlobal::s_pVideoMemory, RosKmdGlobal::s_videoMemorySize);
+        simpenrose_set_mem_base(RosKmdGlobal::s_videoMemoryPhysicalAddress.LowPart + m_busAddressOffset);
+    }
+
+#endif
+
     m_localVidMemSegmentSize = ((UINT)RosKmdGlobal::s_videoMemorySize) -
         (VC4_RENDERING_CTRL_LIST_POOL_SIZE +
             VC4_TILE_ALLOCATION_MEMORY_SIZE +
@@ -198,6 +215,56 @@ RosKmdRapAdapter::ProcessRenderBuffer(
         //
 
 #if VC4
+
+#if USE_SIMPENROSE
+
+        if (g_bUseSimPenrose)
+        {
+            //
+            // SimPenrose requires CL to be in the "local video memory segment"
+            //
+
+            //
+            // Copy the Binning CL to the end of Render CL pool
+            //
+            BYTE           *pBinningCL = m_pControlListPool + VC4_RENDERING_CTRL_LIST_POOL_SIZE - ROSD_COMMAND_BUFFER_SIZE;
+            UINT            binningCLPhysicalAddress = m_controlListPoolPhysicalAddress + VC4_RENDERING_CTRL_LIST_POOL_SIZE - ROSD_COMMAND_BUFFER_SIZE;
+
+            memcpy(pBinningCL, pDmaBufInfo->m_pDmaBuffer, pDmaBufSubmission->m_EndOffset);
+
+            //
+            // Re-patch the Binning CL
+            //
+            for (UINT i = 0; i < pDmaBufInfo->m_DmaBufState.m_NumDmaBufSelfRef; i++)
+            {
+                D3DDDI_PATCHLOCATIONLIST   *pPatchLoc = &pDmaBufInfo->m_DmaBufSelfRef[i];
+
+                *((UINT *)(pBinningCL + pPatchLoc->PatchOffset)) =
+                    binningCLPhysicalAddress +
+                    m_busAddressOffset +
+                    pPatchLoc->AllocationOffset;
+            }
+
+            simpenrose_do_binning(
+                binningCLPhysicalAddress + m_busAddressOffset + pDmaBufSubmission->m_StartOffset + sizeof(GpuCommand),
+                binningCLPhysicalAddress + m_busAddressOffset + pDmaBufSubmission->m_EndOffset);
+
+            //
+            // Generate the Rendering Control List
+            //
+            UINT    renderingControlListLength;
+            renderingControlListLength = GenerateRenderingControlList(pDmaBufInfo);
+
+            simpenrose_do_rendering(
+                m_renderingControlListPhysicalAddress + m_busAddressOffset,
+                m_renderingControlListPhysicalAddress + m_busAddressOffset + renderingControlListLength);
+
+            MoveToNextBinnerRenderMemChunk(renderingControlListLength);
+        }
+        else 
+
+#endif // USE_SIMPENROSE
+
         if (m_flags.m_isVC4)
         {
             //
