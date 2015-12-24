@@ -411,6 +411,57 @@ typedef struct _VC4StoreTileBufferGeneral
 
 const VC4StoreTileBufferGeneral vc4StoreTileBufferGeneral = { VC4_CMD_STORE_TILE_BUF_GENERAL, 0 };
 
+// Code: 29,    Rendering only
+typedef struct _VC4LoadTileBufferGeneral
+{
+    VC4_COMMAND_ID  CommandCode;
+    union
+    {
+        struct
+        {
+            USHORT  BufferToLoad                : 3;    // 0,1,2,3,4,5 = None, Color, Z/stencil, Z-only, VG-Mask, Full Dump
+            USHORT  Unused1                     : 1;
+            USHORT  Fortmat                     : 2;    // 0,1,2 = raster format, T-format, LT-format
+            USHORT  Unused2                     : 2;
+            USHORT  PixelColorFormat            : 2;    // 0,1,2 = rgba8888, bgr565 dithered, bgr565 no dither
+                                                        // Applies to non-HDR Color store only.
+            USHORT  Unused3                     : 6;
+        };
+        USHORT      UShort1;
+    };
+    union
+    {
+        struct
+        {
+            UINT    DisableColorBufferLoad      : 1;    // Applies to full dump mode only
+            UINT    DisableZStencilBufferLoad   : 1;
+            UINT    DisableVGMaskBufferLoad     : 1;
+            UINT    Unused4                     : 1;
+            UINT    MemoryBaseAddress           : 28;   // Address of frame/tile dump buffer, 16 bytes aligned
+        };
+        UINT        UInt3;
+    };
+} VC4LoadTileBufferGeneral;
+
+const VC4LoadTileBufferGeneral vc4LoadTileBufferGeneral = { VC4_CMD_LOAD_TILE_BUF_GENERAL, 0 };
+
+typedef enum _VC4TileBufferData
+{
+    VC4_TILE_BUFFER_NONE        = 0,
+    VC4_TILE_BUFFER_COLOR       = 1,
+    VC4_TILE_BUFFER_Z_STENCIL   = 2,
+    VC4_TILE_BUFFER_LOAD_NA     = 3,
+    VC4_TILE_BUFFER_VG_MASK     = 4,
+    VC4_TILE_BUFFER_FULL        = 5
+} VC4LoadTileBufferType;
+
+typedef enum _VC4TileBufferPixelFormat
+{
+    VC4_TILE_BUFFER_PIXEL_FORMAT_RGBA8888           = 0,
+    VC4_TILE_BUFFER_PIXEL_FORMAT_BGR565_DITHERED    = 1,
+    VC4_TILE_BUFFER_PIXEL_FORMAT_BGR565_NO_DITHER   = 2
+} VC4TileBufferPixelFormat;
+
 // Code: 32
 typedef struct _VC4IndexedPrimitiveList
 {
