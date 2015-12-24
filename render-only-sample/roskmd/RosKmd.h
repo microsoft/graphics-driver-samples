@@ -55,7 +55,7 @@ const int C_ROSD_GPU_ENGINE_COUNT = 1;
 
 #if DBG
 
-#define BINNER_DBG  1
+// #define BINNER_DBG  1
 
 #endif
 
