@@ -640,36 +640,6 @@ RosKmAdapter::DispatchIoRequest(
     return STATUS_SUCCESS;
 }
 
-BOOLEAN
-RosKmAdapter::InterruptRoutine(
-    IN_ULONG        MessageNumber)
-{
-    MessageNumber;
-
-#if VC4_TODO
-
-    RosKmAdapter  *pRosKmdAdapter = RosKmAdapter::Cast(MiniportDeviceContext);
-
-    if (!m_bReadyToHandleInterrupt)
-    {
-        return FALSE;
-    }
-
-    // Acknowledge the interrupt
-
-    // If the interrupt is for DMA buffer completion,
-    // queue the DPC to wake up the worker thread
-    KeInsertQueueDpc(&pRosKmAdapter->m_hwDmaBufCompletionDpc, NULL, NULL);
-
-    return TRUE;
-
-#else
-
-    return FALSE;
-
-#endif
-}
-
 NTSTATUS 
 RosKmAdapter::SubmitCommand(
     IN_CONST_PDXGKARG_SUBMITCOMMAND     pSubmitCommand)
@@ -686,6 +656,11 @@ RosKmAdapter::SubmitCommand(
         ROSDMABUFINFO  *pDmaBufInfo = (ROSDMABUFINFO *)pSubmitCommand->pDmaBufferPrivateData;
         BYTE           *pDmaBuf = pDmaBufInfo->m_pDmaBuffer;
         UINT            dmaBufPhysicalAddress;
+
+        //
+        // Need to record DMA buffer physical address for fully pre-patched DMA buffer
+        //
+        pDmaBufInfo->m_DmaBufferPhysicalAddress = pSubmitCommand->DmaBufferPhysicalAddress;
 
         dmaBufPhysicalAddress = GetAperturePhysicalAddress(
             pSubmitCommand->DmaBufferPhysicalAddress.LowPart);
@@ -796,7 +771,7 @@ RosKmAdapter::CreateAllocation(
     // Always mark allocation as CPU visible
     pAllocationInfo->Flags.CpuVisible = 1;
     // TODO[indyz]: Look into if Cached should be used
-    // pAllocationInfo->Flags.Cached = 1;
+    pAllocationInfo->Flags.Cached = 1;
 
     pAllocationInfo->HintedBank.Value = 0;
     pAllocationInfo->MaximumRenamingListLength = 0;

@@ -160,15 +160,17 @@ RosKmdRapAdapter::Start(
 
 #endif
 
-#if VC4_TODO
+    //
+    // Enable End of Frame interrupt when Render Control List completes
+    //
 
-    //
-    // Enable interrupt handling when device is ready
-    //
+    V3D_REG_INTENA  regIntEna = { 0 };
+
+    regIntEna.EI_FRDONE = 1;
+
+    m_pVC4RegFile->V3D_INTENA = regIntEna.Value;
 
     m_bReadyToHandleInterrupt = TRUE;
-
-#endif
 
     return STATUS_SUCCESS;
 
@@ -411,13 +413,13 @@ RosKmdRapAdapter::SubmitControlList(
     //
 
     NTSTATUS status;
+    LARGE_INTEGER timeOut;
 
-#if 1
+#if 0
     //
     // Set time out to 64 millisecond
     //
 
-    LARGE_INTEGER timeOut;
     timeOut.QuadPart = -64 * 1000 * 1000 / 10;
 
     UINT i;
@@ -454,12 +456,18 @@ RosKmdRapAdapter::SubmitControlList(
 
 #else
 
+    //
+    // Set time out to 2 seconds
+    //
+
+    timeOut.QuadPart = -2000 * 1000 * 1000 / 10;
+
     status = KeWaitForSingleObject(
         &m_hwDmaBufCompletionEvent,
         Executive,
         KernelMode,
         FALSE,
-        NULL);
+        &timeOut);
 
     NT_ASSERT(status == STATUS_SUCCESS);
 
@@ -671,5 +679,38 @@ RosKmdRapAdapter::SetVC4Power(
     {
         return STATUS_INVALID_PARAMETER;
     }
+}
+
+BOOLEAN
+RosKmdRapAdapter::InterruptRoutine(
+    IN_ULONG        MessageNumber)
+{
+    MessageNumber;
+
+    if (!m_bReadyToHandleInterrupt)
+    {
+        return FALSE;
+    }
+
+    V3D_REG_INTCTL  regIntCtl;
+
+    regIntCtl.Value = m_pVC4RegFile->V3D_INTCTL;
+
+    if (regIntCtl.INT_FRDONE)
+    {
+        regIntCtl.Value = 0;
+        regIntCtl.INT_FRDONE = 1;
+
+        // Acknowledge the interrupt
+        m_pVC4RegFile->V3D_INTCTL = regIntCtl.Value;
+
+        // If the interrupt is for DMA buffer completion,
+        // queue the DPC to wake up the worker thread
+        KeInsertQueueDpc(&m_hwDmaBufCompletionDpc, NULL, NULL);
+
+        return TRUE;
+    }
+
+    return FALSE;
 }
 

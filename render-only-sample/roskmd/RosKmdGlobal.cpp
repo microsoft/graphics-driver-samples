@@ -88,22 +88,14 @@ NTSTATUS RosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
 
     s_videoMemorySize = kMaxVideoMemorySize;
 
-    MEMORY_CACHING_TYPE CacheType = MmNonCached;
-    
-#if USE_SIMPENROSE
-
-    if (g_bUseSimPenrose)
-    {
-        CacheType = MmCached;
-    }
-
-#endif
-
     while (s_pVideoMemory == NULL)
     {
         //
-        // The allocated contiguous memory is as NonCached
-        // TODO[indyz]: Evaluate if cached memory and flush is a better option
+        // The allocated contiguous memory is mapped as cached
+        //
+        // TODO[indyz]: Evaluate if flushing CPU cache for GPU access is the best option
+        //
+        // Use this option because GenerateRenderControlList has data alignment issue
         //
 
         s_pVideoMemory = MmAllocateContiguousMemorySpecifyCache(
@@ -111,7 +103,7 @@ NTSTATUS RosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
                             lowestAcceptableAddress,
                             highestAcceptableAddress,
                             boundaryAddressMultiple,
-                            CacheType);
+                            MmCached);
         if (s_pVideoMemory != NULL)
         {
             break;

@@ -116,8 +116,8 @@ public:
         IN_ULONG                    VidPnSourceId,
         IN_PVIDEO_REQUEST_PACKET    VideoRequestPacket);
         
-    BOOLEAN InterruptRoutine(
-        IN_ULONG        MessageNumber);
+    virtual BOOLEAN InterruptRoutine(
+        IN_ULONG        MessageNumber) = NULL;
         
     NTSTATUS Patch(
         IN_CONST_PDXGKARG_PATCH     pPatch);

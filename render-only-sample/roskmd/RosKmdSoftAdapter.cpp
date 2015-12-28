@@ -54,3 +54,12 @@ RosKmdSoftAdapter::ProcessRenderBuffer(
         }
     }
 }
+
+BOOLEAN RosKmdSoftAdapter::InterruptRoutine(
+    IN_ULONG        MessageNumber)
+{
+    MessageNumber;
+
+    return false;
+}
+

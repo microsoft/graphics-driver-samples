@@ -156,6 +156,48 @@ typedef union _V3D_REG_SLCACTL
     UINT        Value;
 } V3D_REG_SLCACTL;
 
+// 0x0030   Interrupt Control
+typedef union _V3D_REG_INTCTL
+{
+    struct
+    {
+        UINT    INT_FRDONE      : 1;
+        UINT    INT_FLDONE      : 1;
+        UINT    INT_OUTOFMEM    : 1;
+        UINT    INT_SPILLUSE    : 1;
+    };
+
+    UINT        Value;
+} V3D_REG_INTCTL;
+
+// 0x0034   Interrupt Enables
+typedef union _V3D_REG_INTENA
+{
+    struct
+    {
+        UINT    EI_FRDONE   : 1;
+        UINT    EI_FLDONE   : 1;
+        UINT    EI_OUTOFMEM : 1;
+        UINT    EI_SPILLUSE : 1;
+    };
+
+    UINT        Value;
+} V3D_REG_INTENA;
+
+// 0x0038   Interrupt Disables
+typedef union _V3D_REG_INTDIS
+{
+    struct
+    {
+        UINT    DI_FRDONE   : 1;
+        UINT    DI_FLDONE   : 1;
+        UINT    DI_OUTOFMEM : 1;
+        UINT    DI_SPILLUSE : 1;
+    };
+
+    UINT        Value;
+} V3D_REG_INTDIS;
+
 // 0x0100   Control List Executor Thread 0 Control and Status
 typedef union _V3D_REG_CT0CS
 {

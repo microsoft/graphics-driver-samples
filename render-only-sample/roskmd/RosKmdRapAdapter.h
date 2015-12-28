@@ -24,6 +24,9 @@ protected:
         OUT_PULONG              NumberOfVideoPresentSources,
         OUT_PULONG              NumberOfChildren);
 
+    virtual BOOLEAN InterruptRoutine(
+        IN_ULONG        MessageNumber);
+
 private:
 
     VC4_REGISTER_FILE          *m_pVC4RegFile;
