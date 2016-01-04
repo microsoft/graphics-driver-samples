@@ -255,6 +255,7 @@ private:
     void Emit_ShaderOutput_VS(boolean bVS);
 
     void Emit_Mov(CInstruction &Inst);
+    void Emit_DPx(CInstruction &Inst);
 
     void Emit_with_Add_pipe(CInstruction &Inst);
     void Emit_with_Mul_pipe(CInstruction &Inst);
@@ -341,7 +342,7 @@ private:
         }
         case D3D10_SB_OPERAND_TYPE_OUTPUT:
         {
-            // output can't be source.
+            // output can't be source, can it ?
             assert(false);
             break;
         }
@@ -349,6 +350,7 @@ private:
         {
             assert(c.m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
             assert(c.m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_SWIZZLE_MODE);
+            assert(c.m_ExtendedOperandType == D3D10_SB_EXTENDED_OPERAND_EMPTY);
 
             assert(c.m_IndexDimension == D3D10_SB_OPERAND_INDEX_2D);
             assert(c.m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
@@ -561,6 +563,12 @@ private:
 
     // TEMPORARY Register Usage Map
     //
+    // r0 - output in pixel shader.
+    // r1/2 - temporary for source setup.
+    // r3 - scratch.
+    // r4 - Special register.
+    // r5 - C coefficient in pixel shader.
+    //
     // ra0 ~ ra14  : Input
 #define ROS_VC4_INPUT_REGISTER_FILE        VC4_QPU_ALU_REG_A
 #define ROS_VC4_INPUT_REGISTER_FILE_START  0
@@ -575,6 +583,10 @@ private:
 #define ROS_VC4_OUTPUT_REGISTER_FILE_START 0
 #define ROS_VC4_OUTPUT_REGISTER_FILE_END   14
     // rb15        : Reserved - Z (in pixel shader only)
+#define ROS_VC4_SCRATCH_REGISTER_FILE      VC4_QPU_ALU_REG_B
+#define ROS_VC4_SCRATCH_REGISTER_FILE_START 16
+#define ROS_VC4_SCRATCH_REGISTER_FILE_END   31
+
 
 };
 
