@@ -185,15 +185,16 @@ void Vc4Shader::Emit_ShaderOutput_VS(boolean bVS)
             }
         }
 
-        // Convert r0/r1 to 16bits float and packed into pos[0]
+        // Convert r0/r1 to 16bits float and pack them into ra16, then output to vpm.
         {
             Vc4Register ra16(VC4_QPU_ALU_REG_A, 16);
+
             for (uint8_t i = 0; i < 2; i++)
             {
                 Vc4Register rX(VC4_QPU_ALU_R0 + i); // r0 and r1.
                 Vc4Instruction Vc4Inst;
                 Vc4Inst.Vc4_a_FTOI(ra16, rX); // REUSE ra16 as temp is no longer needed.
-                Vc4Inst.Vc4_a_Pack(VC4_QPU_PACK_A_16a + i);
+                Vc4Inst.Vc4_a_Pack(VC4_QPU_PACK_A_16a + i); // Pack to 16a or 16b.
                 Vc4Inst.Emit(CurrentStorage);
             }
 
@@ -219,12 +220,30 @@ void Vc4Shader::Emit_ShaderOutput_VS(boolean bVS)
         Vc4Inst.Emit(CurrentStorage);
     }
 
-    // 1/W // TODO: this must be 1/Wc
+    // 1/Wc
     {
-        Vc4Register w;
-        Vc4Instruction Vc4Inst;
-        Vc4Inst.Vc4_m_MOV(vpm, pos[3]);
-        Vc4Inst.Emit(CurrentStorage);
+        // send W to sfu_recip.
+        {
+            Vc4Register sfu_recip((pos[3].GetMux() == VC4_QPU_ALU_REG_A ? VC4_QPU_ALU_REG_B : VC4_QPU_ALU_REG_A), VC4_QPU_WADDR_SFU_RECIP);
+            Vc4Instruction Vc4Inst;
+            Vc4Inst.Vc4_a_MOV(sfu_recip, pos[3]);
+            Vc4Inst.Emit(CurrentStorage);
+        }
+
+        // Issue 2 NOPs to wait result of sfu_recip.
+        for (uint8_t i = 0; i < 2; i++)
+        {
+            Vc4Instruction Vc4Inst;
+            Vc4Inst.Emit(CurrentStorage);
+        }
+
+        // Move result of sfu_recip (come up at r4) to vpm.
+        {
+            Vc4Register r4(VC4_QPU_ALU_R4);
+            Vc4Instruction Vc4Inst;
+            Vc4Inst.Vc4_m_MOV(vpm, r4);
+            Vc4Inst.Emit(CurrentStorage);
+        }
     }
 
     // Only VS emits "varying" (everything read from vpm except position data).
