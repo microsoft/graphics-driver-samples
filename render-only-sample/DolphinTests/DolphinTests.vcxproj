@@ -30,7 +30,7 @@
     <ProjectGuid>{00D7CFB0-452C-4EBA-A1FD-41339D01066B}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>DolphinTests</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.10240.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.10586.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
