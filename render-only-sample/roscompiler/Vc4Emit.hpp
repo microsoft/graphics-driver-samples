@@ -1,5 +1,7 @@
 #pragma once
+
 #include "..\roscommon\Vc4Qpu.h"
+#include "roscompilerdebug.h"
 
 #if VC4
 

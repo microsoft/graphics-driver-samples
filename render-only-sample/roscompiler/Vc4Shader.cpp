@@ -36,7 +36,7 @@ void Vc4Shader::Emit_Prologue_VS()
 {
     assert(this->uShaderType == D3D10_SB_VERTEX_SHADER);
 
-    assert(cInput < 16); // VR_SETUP:NUM limitation, vpm only can read up to 16 values.
+    VC4_ASSERT(cInput < 16); // VR_SETUP:NUM limitation, vpm only can read up to 16 values.
 
     {
         Vc4Instruction Vc4Inst(vc4_load_immediate_32);
@@ -297,9 +297,9 @@ void Vc4Shader::Emit_Epilogue()
 void Vc4Shader::Emit_Mad(CInstruction &Inst)
 {
     assert(this->uShaderType == D3D10_SB_PIXEL_SHADER ||
-        this->uShaderType == D3D10_SB_VERTEX_SHADER);
+           this->uShaderType == D3D10_SB_VERTEX_SHADER);
 
-    assert(Inst.m_NumOperands == 4);
+    VC4_ASSERT(Inst.m_NumOperands == 4);
 
     {
         for (uint8_t i = 0, aCurrent = D3D10_SB_OPERAND_4_COMPONENT_MASK_X; i < 4; i++)
@@ -376,7 +376,7 @@ void Vc4Shader::Emit_Mov(CInstruction &Inst)
     assert(this->uShaderType == D3D10_SB_PIXEL_SHADER ||
            this->uShaderType == D3D10_SB_VERTEX_SHADER);
 
-    assert(Inst.m_NumOperands == 2);
+    VC4_ASSERT(Inst.m_NumOperands == 2);
 
     {
         for (uint8_t i = 0, aCurrent = D3D10_SB_OPERAND_4_COMPONENT_MASK_X; i < 4; i++)
@@ -416,7 +416,7 @@ void Vc4Shader::Emit_DPx(CInstruction &Inst)
     assert(this->uShaderType == D3D10_SB_PIXEL_SHADER ||
            this->uShaderType == D3D10_SB_VERTEX_SHADER); 
 
-    assert(Inst.m_NumOperands == 3);
+    VC4_ASSERT(Inst.m_NumOperands == 3);
 
     {
         // DP2 loop 2 times.
@@ -481,7 +481,7 @@ void Vc4Shader::Emit_with_Add_pipe(CInstruction &Inst)
     assert(this->uShaderType == D3D10_SB_PIXEL_SHADER ||
            this->uShaderType == D3D10_SB_VERTEX_SHADER);
 
-    assert(Inst.m_NumOperands == 3);
+    VC4_ASSERT(Inst.m_NumOperands == 3);
 
     {
         for (uint8_t i = 0, aCurrent = D3D10_SB_OPERAND_4_COMPONENT_MASK_X; i < 4; i++)
@@ -525,7 +525,7 @@ void Vc4Shader::Emit_with_Add_pipe(CInstruction &Inst)
                         Vc4Inst.Vc4_a_FMIN(_dst, src[0], src[1]);
                         break;
                     default:
-                        assert(false);
+                        VC4_ASSERT(false);
                     }
                     Vc4Inst.Emit(CurrentStorage);
                 }
@@ -554,7 +554,7 @@ void Vc4Shader::Emit_with_Mul_pipe(CInstruction &Inst)
     assert(this->uShaderType == D3D10_SB_PIXEL_SHADER ||
            this->uShaderType == D3D10_SB_VERTEX_SHADER);
     
-    assert(Inst.m_NumOperands == 3);
+    VC4_ASSERT(Inst.m_NumOperands == 3);
 
     {
         for (uint8_t i = 0, aCurrent = D3D10_SB_OPERAND_4_COMPONENT_MASK_X; i < 4; i++)
@@ -579,7 +579,7 @@ void Vc4Shader::Emit_with_Mul_pipe(CInstruction &Inst)
                         Vc4Inst.Vc4_m_FMUL(dst, src[0], src[1]);
                         break;
                     default:
-                        assert(false);
+                        VC4_ASSERT(false);
                     }
                     Vc4Inst.Vc4_m_Pack(pack);
                     Vc4Inst.Emit(CurrentStorage);
@@ -600,7 +600,7 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
 {
     assert(this->uShaderType == D3D10_SB_PIXEL_SHADER);
     
-    assert(Inst.m_NumOperands == 4);
+    VC4_ASSERT(Inst.m_NumOperands == 4);
 
     boolean bUnpack = false;
 
@@ -615,7 +615,7 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
     {
     case D3D10_SB_OPERAND_TYPE_OUTPUT:
         o[0] = Find_Vc4Register_M(Inst.m_Operands[0], (Inst.m_Operands[0].m_WriteMask & D3D10_SB_OPERAND_4_COMPONENT_MASK_MASK));
-        assert(o[0].GetFlags().packed);
+        VC4_ASSERT(o[0].GetFlags().packed);
         break;
     case D3D10_SB_OPERAND_TYPE_TEMP:
         for (uint8_t i = 0, aCurrent = D3D10_SB_OPERAND_4_COMPONENT_MASK_X; i < 4; i++)
@@ -629,22 +629,22 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
         bUnpack = true;
         break;
     default:
-        assert(false);
+        VC4_ASSERT(false);
     }
 
     // Resource
-    assert(Inst.m_Operands[2].m_Type == D3D10_SB_OPERAND_TYPE_RESOURCE);
-    assert(Inst.m_Operands[2].m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
-    assert(Inst.m_Operands[2].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
-    assert(Inst.m_Operands[2].m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
+    VC4_ASSERT(Inst.m_Operands[2].m_Type == D3D10_SB_OPERAND_TYPE_RESOURCE);
+    VC4_ASSERT(Inst.m_Operands[2].m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
+    VC4_ASSERT(Inst.m_Operands[2].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
+    VC4_ASSERT(Inst.m_Operands[2].m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
     uint32_t resourceIndex = Inst.m_Operands[2].m_Index[0].m_RegIndex;
     uint32_t texDimension = this->ResourceDimension[resourceIndex];
 
     // Texture coordinate
-    assert(Inst.m_Operands[1].m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
-    assert(Inst.m_Operands[1].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
-    assert(Inst.m_Operands[1].m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
-    assert(Inst.m_Operands[1].m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_SWIZZLE_MODE);
+    VC4_ASSERT(Inst.m_Operands[1].m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
+    VC4_ASSERT(Inst.m_Operands[1].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
+    VC4_ASSERT(Inst.m_Operands[1].m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
+    VC4_ASSERT(Inst.m_Operands[1].m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_SWIZZLE_MODE);
 
     Vc4Register s;
     Vc4Register t;
@@ -672,9 +672,9 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
     }
     
     // Sampler
-    assert(Inst.m_Operands[3].m_Type == D3D10_SB_OPERAND_TYPE_SAMPLER);
-    assert(Inst.m_Operands[3].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
-    assert(Inst.m_Operands[3].m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
+    VC4_ASSERT(Inst.m_Operands[3].m_Type == D3D10_SB_OPERAND_TYPE_SAMPLER);
+    VC4_ASSERT(Inst.m_Operands[3].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
+    VC4_ASSERT(Inst.m_Operands[3].m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
     uint32_t samplerIndex = Inst.m_Operands[3].m_Index[0].m_RegIndex;
                
     // texture address : z
@@ -766,7 +766,7 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
     }
     else
     {
-        assert(false);
+        VC4_ASSERT(false);
     }
 
     { // Emit a NOP
@@ -789,7 +789,7 @@ void Vc4Shader::HLSL_ParseDecl()
         {
         case D3D10_SB_OPCODE_DCL_RESOURCE:
             HLSL_GetShaderInstruction(Inst);
-            assert(cResource < 8);
+            VC4_ASSERT(cResource < 8);
             this->ResourceDimension[cResource++] = Inst.m_ResourceDecl.SRVInfo.Dimension;
             break;
         case D3D10_SB_OPCODE_DCL_CONSTANT_BUFFER:
@@ -805,19 +805,19 @@ void Vc4Shader::HLSL_ParseDecl()
             HLSL_GetShaderInstruction(Inst);
             if (Inst.m_OpCode == D3D10_SB_OPCODE_DCL_INPUT_PS)
             {
-                assert(Inst.m_InputPSDecl.InterpolationMode == D3D10_SB_INTERPOLATION_LINEAR); // PS input must be linear.
+                VC4_ASSERT(Inst.m_InputPSDecl.InterpolationMode == D3D10_SB_INTERPOLATION_LINEAR); // PS input must be linear.
             }
-            assert(Inst.m_NumOperands == 1);
-            assert(Inst.m_Operands[0].m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_MASK_MODE);
-            assert(Inst.m_Operands[0].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
-            assert(Inst.m_Operands[0].m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
-            assert(Inst.m_Operands[0].m_Index[0].m_RegIndex < 8);
-            assert(Inst.m_Operands[0].m_WriteMask & D3D10_SB_OPERAND_4_COMPONENT_MASK_MASK);
+            VC4_ASSERT(Inst.m_NumOperands == 1);
+            VC4_ASSERT(Inst.m_Operands[0].m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_MASK_MODE);
+            VC4_ASSERT(Inst.m_Operands[0].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
+            VC4_ASSERT(Inst.m_Operands[0].m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
+            VC4_ASSERT(Inst.m_Operands[0].m_Index[0].m_RegIndex < 8);
+            VC4_ASSERT(Inst.m_Operands[0].m_WriteMask & D3D10_SB_OPERAND_4_COMPONENT_MASK_MASK);
             for (uint8_t i = 0, aCurrent = D3D10_SB_OPERAND_4_COMPONENT_MASK_X; i < 4; i++)
             {
                 if (Inst.m_Operands[0].m_WriteMask & aCurrent)
                 {
-                    assert((ROS_VC4_INPUT_REGISTER_FILE_START + cInput) <= ROS_VC4_INPUT_REGISTER_FILE_END);
+                    VC4_ASSERT((ROS_VC4_INPUT_REGISTER_FILE_START + cInput) <= ROS_VC4_INPUT_REGISTER_FILE_END);
                     this->InputRegister[Inst.m_Operands[0].m_Index[0].m_RegIndex][i].flags.valid = true;
                     this->InputRegister[Inst.m_Operands[0].m_Index[0].m_RegIndex][i].flags.require_linear_conversion = (Inst.m_OpCode == D3D10_SB_OPCODE_DCL_INPUT_PS ? true : false);
                     this->InputRegister[Inst.m_Operands[0].m_Index[0].m_RegIndex][i].addr = ROS_VC4_INPUT_REGISTER_FILE_START + cInput++;
@@ -830,16 +830,16 @@ void Vc4Shader::HLSL_ParseDecl()
         case D3D10_SB_OPCODE_DCL_OUTPUT:
         case D3D10_SB_OPCODE_DCL_OUTPUT_SIV:
             HLSL_GetShaderInstruction(Inst);
-            assert(Inst.m_NumOperands == 1);
-            assert(Inst.m_Operands[0].m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_MASK_MODE);
-            assert(Inst.m_Operands[0].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
-            assert(Inst.m_Operands[0].m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
+            VC4_ASSERT(Inst.m_NumOperands == 1);
+            VC4_ASSERT(Inst.m_Operands[0].m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_MASK_MODE);
+            VC4_ASSERT(Inst.m_Operands[0].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
+            VC4_ASSERT(Inst.m_Operands[0].m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
             if (this->uShaderType == D3D10_SB_PIXEL_SHADER)
             {
                 // only support single 8888RGBA colour output from pixel shader.
-                assert(Inst.m_Operands[0].m_WriteMask == (D3D10_SB_OPERAND_4_COMPONENT_MASK_R | D3D10_SB_OPERAND_4_COMPONENT_MASK_G | D3D10_SB_OPERAND_4_COMPONENT_MASK_B | D3D10_SB_OPERAND_4_COMPONENT_MASK_A));
-                assert(Inst.m_Operands[0].m_Index[0].m_RegIndex == 0);
-                assert(cOutput == 0);
+                VC4_ASSERT(Inst.m_Operands[0].m_WriteMask == (D3D10_SB_OPERAND_4_COMPONENT_MASK_R | D3D10_SB_OPERAND_4_COMPONENT_MASK_G | D3D10_SB_OPERAND_4_COMPONENT_MASK_B | D3D10_SB_OPERAND_4_COMPONENT_MASK_A));
+                VC4_ASSERT(Inst.m_Operands[0].m_Index[0].m_RegIndex == 0);
+                VC4_ASSERT(cOutput == 0);
                 this->OutputRegister[0][0].flags.valid = true;
                 this->OutputRegister[0][0].flags.color = true;
                 this->OutputRegister[0][0].flags.packed = true; // RGBA components are packed in single register (see above WriteMask assert).
@@ -850,8 +850,8 @@ void Vc4Shader::HLSL_ParseDecl()
             }
             else
             {
-                assert(this->uShaderType == D3D10_SB_VERTEX_SHADER);
-                assert(Inst.m_Operands[0].m_Index[0].m_RegIndex < 8);
+                VC4_ASSERT(this->uShaderType == D3D10_SB_VERTEX_SHADER);
+                VC4_ASSERT(Inst.m_Operands[0].m_Index[0].m_RegIndex < 8);
                 bool bPos;
                 uint8_t aMask;
                 if ((Inst.m_OpCode == D3D10_SB_OPCODE_DCL_OUTPUT_SIV) && (Inst.m_InputDeclSIV.Name == D3D10_SB_NAME_POSITION))
@@ -863,14 +863,15 @@ void Vc4Shader::HLSL_ParseDecl()
                 {
                     bPos = false;
                     aMask = (Inst.m_Operands[0].m_WriteMask & D3D10_SB_OPERAND_4_COMPONENT_MASK_MASK);
+                    VC4_ASSERT(aMask);
                 }
-                assert(aMask);
+
 
                 for (uint8_t i = 0, aCurrent = D3D10_SB_OPERAND_4_COMPONENT_MASK_X; i < 4; i++)
                 {
                     if (aMask & aCurrent)
                     {
-                        assert((ROS_VC4_OUTPUT_REGISTER_FILE_START + cOutput) <= ROS_VC4_OUTPUT_REGISTER_FILE_END);
+                        VC4_ASSERT((ROS_VC4_OUTPUT_REGISTER_FILE_START + cOutput) <= ROS_VC4_OUTPUT_REGISTER_FILE_END);
                         this->OutputRegister[Inst.m_Operands[0].m_Index[0].m_RegIndex][i].flags.valid = true;
                         this->OutputRegister[Inst.m_Operands[0].m_Index[0].m_RegIndex][i].flags.position = bPos;
                         this->OutputRegister[Inst.m_Operands[0].m_Index[0].m_RegIndex][i].addr = ROS_VC4_OUTPUT_REGISTER_FILE_START + cOutput++;
@@ -886,10 +887,10 @@ void Vc4Shader::HLSL_ParseDecl()
             // Temp register doesn't have swizzle mask, so assume all 4 components to be used.
             // TODO: AllocateRegister(); Currently temps are allocated at ra16~ra31.
             //       since currently reserve temp to ra16~31, so only upto 4 temps are allowed.
-            assert(Inst.m_TempsDecl.NumTemps <= 4);
+            VC4_ASSERT(Inst.m_TempsDecl.NumTemps <= 4);
             for (uint8_t i = 0; i < Inst.m_TempsDecl.NumTemps * 4; i++)
             {
-                assert((ROS_VC4_INPUT_REGISTER_FILE_START + cTemp) <= ROS_VC4_TEMP_REGISTER_FILE_END);
+                VC4_ASSERT((ROS_VC4_INPUT_REGISTER_FILE_START + cTemp) <= ROS_VC4_TEMP_REGISTER_FILE_END);
                 this->TempRegister[i / 4][i % 4].flags.valid = true;
                 this->TempRegister[i / 4][i % 4].flags.temp = true;
                 this->TempRegister[i / 4][i % 4].addr = ROS_VC4_TEMP_REGISTER_FILE_START + cTemp++;
@@ -909,12 +910,12 @@ void Vc4Shader::HLSL_ParseDecl()
         case D3D10_SB_OPCODE_DCL_INDEXABLE_TEMP:
         case D3D10_SB_OPCODE_DCL_GLOBAL_FLAGS:
             HLSL_GetShaderInstruction(Inst);
-            assert(false); // TODO
+            VC4_ASSERT(false); // TODO
             __fallthrough;
         default:
             if (OpCode >= D3D10_SB_OPCODE_RESERVED0)
             {
-                assert(false); // only 10.0 opcode is supported.
+                VC4_ASSERT(false); // only 10.0 opcode is supported.
             }
             bDone = true;
         }
@@ -957,7 +958,7 @@ HRESULT Vc4Shader::Translate_VS()
             case D3D10_SB_OPCODE_RET:
                 break;
             default:
-                assert(false);
+                VC4_ASSERT(false);
             }
         }
     }
@@ -1012,7 +1013,7 @@ HRESULT Vc4Shader::Translate_PS()
                 this->Emit_Sample(Inst);
                 break;
             default:
-                assert(false);
+                VC4_ASSERT(false);
             }
         }
     }

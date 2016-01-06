@@ -1,10 +1,13 @@
 #pragma once
+
 #include "..\roscommon\Vc4Qpu.h"
 #include "HLSLBinary.hpp"
+#include "roscompilerdebug.h"
 
 #if VC4
 
 class RosCompiler;
+class RosCompilerException;
 
 typedef enum _VC4_UNIFORM_TYPE
 {
@@ -76,8 +79,7 @@ public:
 
     void CopyFrom(Vc4ShaderStorage &Storage)
     {
-        HRESULT hr = this->Ensure(Storage.GetUsedSize());
-        assert(SUCCEEDED(hr)); // TODO: throw exception.
+        VC4_THROW(this->Ensure(Storage.GetUsedSize())); // throw RosCompilerException on failure.
         memcpy(this->pStorage, Storage.GetStorage(), Storage.GetUsedSize());
         this->cUsed = Storage.GetUsedSize();
         this->pCurrent = this->pStorage + this->cUsed;
@@ -102,8 +104,7 @@ public:
     template <class _Ty>
     void Store(_Ty p)
     {
-        HRESULT hr = this->Ensure(sizeof(_Ty));
-        assert(SUCCEEDED(hr)); // TODO: throw exception.
+        VC4_THROW(this->Ensure(sizeof(_Ty))); // throw RosCompilerException on failure.
         this->Store(reinterpret_cast<BYTE*>(&p), (sizeof(_Ty)));
     }
 
@@ -269,8 +270,8 @@ private:
     {
         Vc4Register ret;
 
-        assert(c.m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
-        assert(c.m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
+        VC4_ASSERT(c.m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
+        VC4_ASSERT(c.m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
  
         switch (c.m_Type)
         { 
@@ -305,7 +306,7 @@ private:
             }
             break;
         default:
-            assert(false);
+            VC4_ASSERT(false);
         }
 
         assert(ret.GetFlags().valid);
@@ -319,12 +320,12 @@ private:
         switch (c.m_Type)
         {
         case D3D10_SB_OPERAND_TYPE_IMMEDIATE32:
-            assert(c.m_Modifier == D3D10_SB_OPERAND_MODIFIER_NONE);
+            VC4_ASSERT(c.m_Modifier == D3D10_SB_OPERAND_MODIFIER_NONE);
 
             switch (c.m_NumComponents)
             {
             case D3D10_SB_OPERAND_1_COMPONENT:
-                assert(c.m_IndexDimension == D3D10_SB_OPERAND_INDEX_0D);
+                VC4_ASSERT(c.m_IndexDimension == D3D10_SB_OPERAND_INDEX_0D);
                 ret.SetImmediateI(c.m_Value[0]);
                 break;
             case D3D10_SB_OPERAND_4_COMPONENT:
@@ -334,27 +335,27 @@ private:
                 }
                 else
                 {
-                    assert(c.m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
+                    VC4_ASSERT(c.m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
                     ret.SetImmediateI(c.m_Value[swizzleIndex]);
                 }
                 break;
             default:
-                assert(false);
+                VC4_ASSERT(false);
             }
             break;
         case D3D10_SB_OPERAND_TYPE_IMMEDIATE64:
             // 64bit load is not supported.
-            assert(false);
+            VC4_ASSERT(false);
             break;
         case D3D10_SB_OPERAND_TYPE_OUTPUT:
             // output can't be source, can it ?
-            assert(false);
+            VC4_ASSERT(false);
             break;
         case D3D10_SB_OPERAND_TYPE_CONSTANT_BUFFER:
-            assert(c.m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
-            assert(c.m_IndexDimension == D3D10_SB_OPERAND_INDEX_2D);
-            assert(c.m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
-            assert(c.m_IndexType[1] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
+            VC4_ASSERT(c.m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
+            VC4_ASSERT(c.m_IndexDimension == D3D10_SB_OPERAND_INDEX_2D);
+            VC4_ASSERT(c.m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
+            VC4_ASSERT(c.m_IndexType[1] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
 
             {
                 Vc4Register unif(VC4_QPU_ALU_REG_A, VC4_QPU_RADDR_UNIFORM); // TODO: fix hardcoded REG_A.
@@ -375,7 +376,7 @@ private:
                     u.userConstant.bufferOffset = (c.m_Index[1].m_RegIndex * 4) + c.m_ComponentName;
                     break;
                 default:
-                    assert(false);
+                    VC4_ASSERT(false);
                 }
 
                 this->AddUniformReference(u);
@@ -385,9 +386,9 @@ private:
             break;
         case D3D10_SB_OPERAND_TYPE_TEMP:
         case D3D10_SB_OPERAND_TYPE_INPUT:
-            assert(c.m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
-            assert(c.m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
-            assert(c.m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
+            VC4_ASSERT(c.m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
+            VC4_ASSERT(c.m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
+            VC4_ASSERT(c.m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
 
             switch (c.m_ComponentSelection)
             {
@@ -398,13 +399,13 @@ private:
                 ret = Find_Vc4Register_M(c, D3D10_SB_OPERAND_4_COMPONENT_MASK(c.m_ComponentName));
                 break;
             default:
-                assert(false);
+                VC4_ASSERT(false);
             }
 
             ret.SetModifier(c.m_Modifier);
             break;
         default:
-            assert(false);
+            VC4_ASSERT(false);
         }
         
         assert(ret.GetFlags().valid);
@@ -415,7 +416,8 @@ private:
     {
         boolean bReplaced = false;
 
-        assert(src.GetFlags().immediate == false);
+        VC4_ASSERT(src.GetFlags().immediate == false);
+
         switch (src.modifier)
         {
         case D3D10_SB_OPERAND_MODIFIER_NONE:
@@ -444,10 +446,10 @@ private:
         case D3D10_SB_OPERAND_MODIFIER_ABS:
         case D3D10_SB_OPERAND_MODIFIER_ABSNEG:
             // TODO:
-            assert(false);
+            VC4_ASSERT(false);
             break;
         default:
-            assert(false);
+            VC4_ASSERT(false);
         }
 
         return bReplaced;
@@ -487,12 +489,10 @@ private:
                 // if any of them is exchangeable (paticularly uniform), switch A and B file to avoid conflict.
                 if (VC4_QPU_RADDR_LOOKUP[src[0].GetAddr()].Exchangeable)
                 {
-                    assert(src[0].GetAddr() == VC4_QPU_RADDR_UNIFORM);
                     src[0].SetMux(src[0].GetMux() == VC4_QPU_ALU_REG_A ? VC4_QPU_ALU_REG_B : VC4_QPU_ALU_REG_A);
                 }
                 else if (VC4_QPU_RADDR_LOOKUP[src[1].GetAddr()].Exchangeable)
                 {
-                    assert(src[1].GetAddr() == VC4_QPU_RADDR_UNIFORM);
                     src[1].SetMux(src[1].GetMux() == VC4_QPU_ALU_REG_A ? VC4_QPU_ALU_REG_B : VC4_QPU_ALU_REG_A);
                 }
                 else
@@ -526,7 +526,7 @@ private:
             ret = 3;
             break;
         default:
-            assert(false);
+            VC4_ASSERT(false);
         }
         return ret;
     }

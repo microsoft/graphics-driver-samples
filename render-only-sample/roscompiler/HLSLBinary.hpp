@@ -1,12 +1,5 @@
 #pragma once
 
-#define assert( _exp ) ( ( _exp ) ? true : (\
-    OutputDebugStringW( L"Assertion Failed\n" ),\
-    OutputDebugStringW( #_exp L"\n" ),\
-    DebugBreak() ) ); __assume( _exp )
-
-#define AssertAndAssume(expression)     {assert(expression); __analysis_assume(expression);}
-
 #define IFC(expr) {hr = expr; if (FAILED(hr)){goto Cleanup;}}
 
 #pragma warning(disable : 4706)
