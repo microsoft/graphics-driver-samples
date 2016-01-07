@@ -329,15 +329,7 @@ private:
                 ret.SetImmediateI(c.m_Value[0]);
                 break;
             case D3D10_SB_OPERAND_4_COMPONENT:
-                if (c.m_IndexDimension == D3D10_SB_OPERAND_INDEX_0D)
-                {
-                    ret.SetImmediateI(c.m_Value[0]);
-                }
-                else
-                {
-                    VC4_ASSERT(c.m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
-                    ret.SetImmediateI(c.m_Value[swizzleIndex]);
-                }
+                ret.SetImmediateI(c.m_Value[swizzleIndex]);
                 break;
             default:
                 VC4_ASSERT(false);
@@ -412,6 +404,32 @@ private:
         return ret;
     }
 
+    void Modifier_Abs(Vc4Register &dst, Vc4Register src)
+    {
+        { // perform fmaxabs(src, 0) for abs(src).
+            Vc4Register zero(VC4_QPU_ALU_REG_B, 0); // 0 as small immediate in raddr_b
+            Vc4Instruction Vc4Inst(vc4_alu_small_immediate);
+            Vc4Inst.Vc4_a_FMAXABS(dst, src, zero);
+            Vc4Inst.Emit(CurrentStorage);
+        }
+    }
+
+    void Modifier_Negate(Vc4Register &dst, Vc4Register src)
+    {
+        {
+            Vc4Register value; value.SetImmediateF(-1.0f);
+            Vc4Instruction Vc4Inst(vc4_load_immediate_32);
+            Vc4Inst.Vc4_m_LOAD32(dst, value);
+            Vc4Inst.Emit(CurrentStorage);
+        }
+
+        { // perform mul(src, -1.0f).
+            Vc4Instruction Vc4Inst;
+            Vc4Inst.Vc4_m_FMUL(dst, src, dst);
+            Vc4Inst.Emit(CurrentStorage);
+        }
+    }
+    
     boolean Resolve_Modifier(Vc4Register &src, uint8_t tempRIndex = 0)
     {
         boolean bReplaced = false;
@@ -423,30 +441,30 @@ private:
         case D3D10_SB_OPERAND_MODIFIER_NONE:
             break;
         case D3D10_SB_OPERAND_MODIFIER_NEG:
-        {
-            Vc4Register value; value.SetImmediateF(-1.0f);
-            Vc4Register rX(VC4_QPU_ALU_R1 + tempRIndex, VC4_QPU_WADDR_ACC1 + tempRIndex);
-
             {
-                Vc4Instruction Vc4Inst(vc4_load_immediate_32);
-                Vc4Inst.Vc4_m_LOAD32(rX, value);
-                Vc4Inst.Emit(CurrentStorage);
+                Vc4Register rX(VC4_QPU_ALU_R1 + tempRIndex, VC4_QPU_WADDR_ACC1 + tempRIndex);
+                Modifier_Negate(rX, src);
+                src = rX;
+                bReplaced = true;
             }
-
-            {
-                Vc4Instruction Vc4Inst;
-                Vc4Inst.Vc4_m_FMUL(rX, src, rX);
-                Vc4Inst.Emit(CurrentStorage);
-            }
-
-            src = rX;
-            bReplaced = true;
             break;
-        }
         case D3D10_SB_OPERAND_MODIFIER_ABS:
+            {
+                Vc4Register rX(VC4_QPU_ALU_R1 + tempRIndex, VC4_QPU_WADDR_ACC1 + tempRIndex);
+                Modifier_Abs(rX, src);
+                src = rX;
+                bReplaced = true;
+            }
+            break;
         case D3D10_SB_OPERAND_MODIFIER_ABSNEG:
-            // TODO:
-            VC4_ASSERT(false);
+            {
+                Vc4Register r0(VC4_QPU_ALU_R0, VC4_QPU_WADDR_ACC0);
+                Modifier_Abs(r0, src);
+                Vc4Register rX(VC4_QPU_ALU_R1 + tempRIndex, VC4_QPU_WADDR_ACC1 + tempRIndex);
+                Modifier_Negate(rX, r0);
+                src = rX;
+                bReplaced = true;
+            }
             break;
         default:
             VC4_ASSERT(false);
@@ -575,8 +593,8 @@ private:
 
     // TEMPORARY Register Usage Map
     //
-    // r0 - output in pixel shader.
-    // r1/2 - temporary for source setup.
+    // r0 - scratch. 
+    // r1/2 - temporary for source setup. r1 = src1, r2 = src2.
     // r3 - scratch.
     // r4 - Special register.
     // r5 - C coefficient in pixel shader.
@@ -598,8 +616,6 @@ private:
 #define ROS_VC4_SCRATCH_REGISTER_FILE      VC4_QPU_ALU_REG_B
 #define ROS_VC4_SCRATCH_REGISTER_FILE_START 16
 #define ROS_VC4_SCRATCH_REGISTER_FILE_END   31
-
-
 };
 
 
