@@ -315,6 +315,13 @@ void Vc4Shader::Emit_Mad(CInstruction &Inst)
 
                 Vc4Register accum(VC4_QPU_ALU_R3, VC4_QPU_WADDR_ACC3);
 
+                {
+                    Vc4Register zero(VC4_QPU_ALU_REG_B, 0); // 0 as small immediate in raddr_b
+                    Vc4Instruction Vc4Inst(vc4_alu_small_immediate);
+                    Vc4Inst.Vc4_m_MOV(accum, zero);
+                    Vc4Inst.Emit(CurrentStorage);
+                }
+
                 // perform mul first 2 operands
                 {
                     Vc4Register src[2];
@@ -423,10 +430,17 @@ void Vc4Shader::Emit_DPx(CInstruction &Inst)
         // DP3 loop 3 times.
         // DP4 loop 4 times.
         uint8_t c = (uint8_t)(Inst.m_OpCode - 13);
-        
+
         // where to accumulate result of mul.
         Vc4Register accum(VC4_QPU_ALU_R3, VC4_QPU_WADDR_ACC3);
-            
+
+        {
+            Vc4Register zero(VC4_QPU_ALU_REG_B, 0); // 0 as small immediate in raddr_b
+            Vc4Instruction Vc4Inst(vc4_alu_small_immediate);
+            Vc4Inst.Vc4_m_MOV(accum, zero);
+            Vc4Inst.Emit(CurrentStorage);
+        }
+           
         for(uint8_t i = 0; i < c; i++)
         {
             Vc4Register temp(VC4_QPU_ALU_R1, VC4_QPU_WADDR_ACC1);
