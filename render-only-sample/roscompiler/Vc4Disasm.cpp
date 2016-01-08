@@ -138,10 +138,17 @@ HRESULT Vc4Disasm::ParseAddOp(VC4_QPU_INSTRUCTION Instruction)
     {
         ParseWrite(Instruction, true);
         this->xprintf(TEXT(", "));
-        ParseRead(Instruction, VC4_QPU_GET_ADD_A(Instruction));
         if (!VC4_QPU_IS_OPCODE_ADD_MOV(Instruction))
         {
+            ParseRead(Instruction, VC4_QPU_GET_ADD_A(Instruction));
             this->xprintf(TEXT(", "));
+        }
+        if (VC4_QPU_IS_OPCODE_LOAD_SM(Instruction) && (VC4_QPU_GET_ADD_B(Instruction) == VC4_QPU_ALU_REG_B))
+        {
+            ParseSmallImmediate(Instruction);
+        }
+        else
+        {
             ParseRead(Instruction, VC4_QPU_GET_ADD_B(Instruction));
         }
     }
@@ -158,18 +165,18 @@ HRESULT Vc4Disasm::ParseMulOp(VC4_QPU_INSTRUCTION Instruction)
     {
         ParseWrite(Instruction, false);
         this->xprintf(TEXT(", "));
-        if (VC4_QPU_IS_OPCODE_LOAD_SM(Instruction))
+        if (!VC4_QPU_IS_OPCODE_MUL_MOV(Instruction))
+        {
+            ParseRead(Instruction, VC4_QPU_GET_MUL_A(Instruction));
+            this->xprintf(TEXT(", "));
+        }
+        if (VC4_QPU_IS_OPCODE_LOAD_SM(Instruction) && (VC4_QPU_GET_MUL_B(Instruction) == VC4_QPU_ALU_REG_B))
         {
             ParseSmallImmediate(Instruction);
         }
         else
         {
-            ParseRead(Instruction, VC4_QPU_GET_MUL_A(Instruction));
-            if (!VC4_QPU_IS_OPCODE_MUL_MOV(Instruction))
-            {
-                this->xprintf(TEXT(", "));
-                ParseRead(Instruction, VC4_QPU_GET_MUL_B(Instruction));
-            }
+            ParseRead(Instruction, VC4_QPU_GET_MUL_B(Instruction));
         }
     }
     return S_OK;

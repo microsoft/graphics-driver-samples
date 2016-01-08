@@ -91,8 +91,17 @@ RosUmdPipelineShader::Update()
                                     m_pOutputSignatureEntries,
                                     0,
                                     NULL);
+    if (m_pCompiler == NULL)
+    {
+        throw RosUmdException(E_OUTOFMEMORY);
+    }
 
-    if (m_pCompiler && SUCCEEDED(m_pCompiler->Compile()))
+    HRESULT hr;
+    if (FAILED(hr = m_pCompiler->Compile()))
+    {
+        throw RosUmdException(hr);
+    }
+
     {
         m_hwShaderCodeSize = m_pCompiler->GetShaderCodeSize();
         assert(m_hwShaderCodeSize != 0);
@@ -126,8 +135,7 @@ RosUmdPipelineShader::Update()
         }
     }
 
-    // TODO: error ?
-    __debugbreak();
+    throw RosUmdException(E_FAIL);
 }
 
 void

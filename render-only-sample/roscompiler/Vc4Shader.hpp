@@ -1,10 +1,13 @@
 #pragma once
+
 #include "..\roscommon\Vc4Qpu.h"
 #include "HLSLBinary.hpp"
+#include "roscompilerdebug.h"
 
 #if VC4
 
 class RosCompiler;
+class RosCompilerException;
 
 typedef enum _VC4_UNIFORM_TYPE
 {
@@ -64,6 +67,7 @@ public:
     }
     
     HRESULT Initialize();
+
     void Reset()
     {
         delete[] this->pStorage;
@@ -72,41 +76,13 @@ public:
         this->pCurrent = NULL;
         this->cUsed = 0;
     }
-    HRESULT Grow(uint32_t size);
-    HRESULT CopyFrom(Vc4ShaderStorage &Storage)
+
+    void CopyFrom(Vc4ShaderStorage &Storage)
     {
-        HRESULT hr = this->Ensure(Storage.GetUsedSize());
-        if (FAILED(hr))
-        {
-            return hr;
-        }
+        VC4_THROW(this->Ensure(Storage.GetUsedSize())); // throw RosCompilerException on failure.
         memcpy(this->pStorage, Storage.GetStorage(), Storage.GetUsedSize());
         this->cUsed = Storage.GetUsedSize();
         this->pCurrent = this->pStorage + this->cUsed;
-        return S_OK;
-    }
-
-    HRESULT Ensure(uint32_t size, boolean bGrow = true)
-    {
-        assert(this->cStorage >= this->cUsed);
-        if (size > (this->cStorage - this->cUsed))
-        {
-            if (bGrow)
-            {
-                return this->Grow(size);
-            }
-            return E_FAIL;
-        }
-        return S_OK;
-    }
-
-    void Store(BYTE *p, uint32_t size)
-    { 
-        assert(this->cStorage > this->cUsed);
-        assert(SUCCEEDED(this->Ensure(size, false)));
-        memcpy(this->pCurrent, p, size);
-        this->pCurrent += size;
-        this->cUsed += size;
     }
     
     BYTE *GetStorage()
@@ -128,7 +104,7 @@ public:
     template <class _Ty>
     void Store(_Ty p)
     {
-        assert(SUCCEEDED(this->Ensure(sizeof(_Ty), false)));
+        VC4_THROW(this->Ensure(sizeof(_Ty))); // throw RosCompilerException on failure.
         this->Store(reinterpret_cast<BYTE*>(&p), (sizeof(_Ty)));
     }
 
@@ -143,6 +119,33 @@ public:
     {
         assert((this->cUsed % sizeof(_Ty)) == 0);
         return this->cUsed / sizeof(_Ty);
+    }
+
+private:
+
+    HRESULT Grow(uint32_t size);
+    
+    HRESULT Ensure(uint32_t size, boolean bGrow = true)
+    {
+        assert(this->cStorage >= this->cUsed);
+        if (size > (this->cStorage - this->cUsed))
+        {
+            if (bGrow)
+            {
+                return this->Grow(size);
+            }
+            return E_FAIL;
+        }
+        return S_OK;
+    }
+
+    void Store(BYTE *p, uint32_t size)
+    {
+        assert(SUCCEEDED(this->Ensure(size, false)));
+        assert(this->cStorage > this->cUsed);
+        memcpy(this->pCurrent, p, size);
+        this->pCurrent += size;
+        this->cUsed += size;
     }
 
 private:
@@ -254,6 +257,7 @@ private:
     void Emit_Epilogue();
     void Emit_ShaderOutput_VS(boolean bVS);
 
+    void Emit_Mad(CInstruction &Inst);
     void Emit_Mov(CInstruction &Inst);
     void Emit_DPx(CInstruction &Inst);
 
@@ -266,8 +270,8 @@ private:
     {
         Vc4Register ret;
 
-        assert(c.m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
-        assert(c.m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
+        VC4_ASSERT(c.m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
+        VC4_ASSERT(c.m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
  
         switch (c.m_Type)
         { 
@@ -302,7 +306,7 @@ private:
             }
             break;
         default:
-            assert(false);
+            VC4_ASSERT(false);
         }
 
         assert(ret.GetFlags().valid);
@@ -316,68 +320,67 @@ private:
         switch (c.m_Type)
         {
         case D3D10_SB_OPERAND_TYPE_IMMEDIATE32:
-        {
-            assert(c.m_Modifier == D3D10_SB_OPERAND_MODIFIER_NONE);
+            VC4_ASSERT(c.m_Modifier == D3D10_SB_OPERAND_MODIFIER_NONE);
 
             switch (c.m_NumComponents)
             {
             case D3D10_SB_OPERAND_1_COMPONENT:
-                assert(c.m_IndexDimension == D3D10_SB_OPERAND_INDEX_0D);
+                VC4_ASSERT(c.m_IndexDimension == D3D10_SB_OPERAND_INDEX_0D);
                 ret.SetImmediateI(c.m_Value[0]);
                 break;
             case D3D10_SB_OPERAND_4_COMPONENT:
-                assert(c.m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
                 ret.SetImmediateI(c.m_Value[swizzleIndex]);
                 break;
             default:
-                assert(false);
+                VC4_ASSERT(false);
             }
             break;
-        }
         case D3D10_SB_OPERAND_TYPE_IMMEDIATE64:
-        {
             // 64bit load is not supported.
-            assert(false);
+            VC4_ASSERT(false);
             break;
-        }
         case D3D10_SB_OPERAND_TYPE_OUTPUT:
-        {
             // output can't be source, can it ?
-            assert(false);
+            VC4_ASSERT(false);
             break;
-        }
         case D3D10_SB_OPERAND_TYPE_CONSTANT_BUFFER:
-        {
-            assert(c.m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
-            assert(c.m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_SWIZZLE_MODE);
-            assert(c.m_ExtendedOperandType == D3D10_SB_EXTENDED_OPERAND_EMPTY);
+            VC4_ASSERT(c.m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
+            VC4_ASSERT(c.m_IndexDimension == D3D10_SB_OPERAND_INDEX_2D);
+            VC4_ASSERT(c.m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
+            VC4_ASSERT(c.m_IndexType[1] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
 
-            assert(c.m_IndexDimension == D3D10_SB_OPERAND_INDEX_2D);
-            assert(c.m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
-            assert(c.m_IndexType[1] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
-
-            Vc4Register unif(VC4_QPU_ALU_REG_A, VC4_QPU_RADDR_UNIFORM); // TODO: fix hardcoded REG_A.
-            ret = unif;
+            {
+                Vc4Register unif(VC4_QPU_ALU_REG_A, VC4_QPU_RADDR_UNIFORM); // TODO: fix hardcoded REG_A.
+                ret = unif;
+            }
 
             {
                 VC4_UNIFORM_FORMAT u;
                 u.Type = VC4_UNIFORM_TYPE_USER_CONSTANT;
                 u.userConstant.bufferSlot = c.m_Index[0].m_RegIndex;
-                u.userConstant.bufferOffset = (c.m_Index[1].m_RegIndex * 4) + c.m_Swizzle[swizzleIndex];
+
+                switch (c.m_ComponentSelection)
+                {
+                case D3D10_SB_OPERAND_4_COMPONENT_SWIZZLE_MODE:
+                    u.userConstant.bufferOffset = (c.m_Index[1].m_RegIndex * 4) + c.m_Swizzle[swizzleIndex];
+                    break;
+                case D3D10_SB_OPERAND_4_COMPONENT_SELECT_1_MODE:
+                    u.userConstant.bufferOffset = (c.m_Index[1].m_RegIndex * 4) + c.m_ComponentName;
+                    break;
+                default:
+                    VC4_ASSERT(false);
+                }
+
                 this->AddUniformReference(u);
             }
 
             ret.SetModifier(c.m_Modifier);
             break;
-        }
         case D3D10_SB_OPERAND_TYPE_TEMP:
         case D3D10_SB_OPERAND_TYPE_INPUT:
-        {
-            assert(c.m_Modifier == D3D10_SB_OPERAND_MODIFIER_NONE);
-
-            assert(c.m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
-            assert(c.m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
-            assert(c.m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
+            VC4_ASSERT(c.m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
+            VC4_ASSERT(c.m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
+            VC4_ASSERT(c.m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
 
             switch (c.m_ComponentSelection)
             {
@@ -388,99 +391,126 @@ private:
                 ret = Find_Vc4Register_M(c, D3D10_SB_OPERAND_4_COMPONENT_MASK(c.m_ComponentName));
                 break;
             default:
-                assert(false);
+                VC4_ASSERT(false);
             }
+
+            ret.SetModifier(c.m_Modifier);
             break;
-        }
         default:
-            assert(false);
+            VC4_ASSERT(false);
         }
         
         assert(ret.GetFlags().valid);
         return ret;
     }
 
+    void Modifier_Abs(Vc4Register &dst, Vc4Register src)
+    {
+        { // perform fmaxabs(src, 0) for abs(src).
+            Vc4Register zero(VC4_QPU_ALU_REG_B, 0); // 0 as small immediate in raddr_b
+            Vc4Instruction Vc4Inst(vc4_alu_small_immediate);
+            Vc4Inst.Vc4_a_FMAXABS(dst, src, zero);
+            Vc4Inst.Emit(CurrentStorage);
+        }
+    }
+
+    void Modifier_Negate(Vc4Register &dst, Vc4Register src)
+    {
+        {
+            Vc4Register value; value.SetImmediateF(-1.0f);
+            Vc4Instruction Vc4Inst(vc4_load_immediate_32);
+            Vc4Inst.Vc4_m_LOAD32(dst, value);
+            Vc4Inst.Emit(CurrentStorage);
+        }
+
+        { // perform mul(src, -1.0f).
+            Vc4Instruction Vc4Inst;
+            Vc4Inst.Vc4_m_FMUL(dst, src, dst);
+            Vc4Inst.Emit(CurrentStorage);
+        }
+    }
+    
     boolean Resolve_Modifier(Vc4Register &src, uint8_t tempRIndex = 0)
     {
         boolean bReplaced = false;
 
-        assert(src.GetFlags().immediate == false);
+        VC4_ASSERT(src.GetFlags().immediate == false);
+
         switch (src.modifier)
         {
         case D3D10_SB_OPERAND_MODIFIER_NONE:
             break;
         case D3D10_SB_OPERAND_MODIFIER_NEG:
-        {
-            Vc4Register value; value.SetImmediateF(-1.0f);
-            Vc4Register rX(VC4_QPU_ALU_R1 + tempRIndex, VC4_QPU_WADDR_ACC1 + tempRIndex);
-
             {
-                Vc4Instruction Vc4Inst(vc4_load_immediate_32);
-                Vc4Inst.Vc4_m_LOAD32(rX, value);
-                Vc4Inst.Emit(CurrentStorage);
+                Vc4Register rX(VC4_QPU_ALU_R1 + tempRIndex, VC4_QPU_WADDR_ACC1 + tempRIndex);
+                Modifier_Negate(rX, src);
+                src = rX;
+                bReplaced = true;
             }
-
-            {
-                Vc4Instruction Vc4Inst;
-                Vc4Inst.Vc4_m_FMUL(rX, src, rX);
-                Vc4Inst.Emit(CurrentStorage);
-            }
-
-            src = rX;
-            bReplaced = true;
             break;
-        }
         case D3D10_SB_OPERAND_MODIFIER_ABS:
+            {
+                Vc4Register rX(VC4_QPU_ALU_R1 + tempRIndex, VC4_QPU_WADDR_ACC1 + tempRIndex);
+                Modifier_Abs(rX, src);
+                src = rX;
+                bReplaced = true;
+            }
+            break;
         case D3D10_SB_OPERAND_MODIFIER_ABSNEG:
-            // TODO:
-            assert(false);
+            {
+                Vc4Register r0(VC4_QPU_ALU_R0, VC4_QPU_WADDR_ACC0);
+                Modifier_Abs(r0, src);
+                Vc4Register rX(VC4_QPU_ALU_R1 + tempRIndex, VC4_QPU_WADDR_ACC1 + tempRIndex);
+                Modifier_Negate(rX, r0);
+                src = rX;
+                bReplaced = true;
+            }
             break;
         default:
-            assert(false);
+            VC4_ASSERT(false);
         }
 
         return bReplaced;
     }
 
-    void Setup_SourceRegister(CInstruction &Inst, uint8_t opIndex, uint8_t sizzleIndex, Vc4Register &src)
+    void Setup_SourceRegister(CInstruction &Inst, uint8_t opIndex, uint8_t tempIndex, uint8_t sizzleIndex, Vc4Register &src)
     {
         src = Find_Vc4Register_I(Inst.m_Operands[opIndex], sizzleIndex);
+        if (src.GetFlags().immediate)
+        {
+            // move immediate value to r1~r2 temorary.
+            Vc4Register rX(VC4_QPU_ALU_R1 + tempIndex, VC4_QPU_WADDR_ACC1 + tempIndex);
+            Vc4Instruction Vc4Inst(vc4_load_immediate_32);
+            Vc4Inst.Vc4_m_LOAD32(rX, src);
+            Vc4Inst.Emit(CurrentStorage);
+            src = rX;
+        }
+        else if (src.modifier)
+        {
+            Resolve_Modifier(src, tempIndex);
+        }
         assert(src.GetFlags().valid);
     }
 
-    void Setup_SourceRegisters(CInstruction &Inst, uint8_t swizzleIndex, Vc4Register src[], uint8_t len)
+    void Setup_SourceRegisters(CInstruction &Inst, uint8_t opIndex, uint8_t opLen, uint8_t swizzleIndex, Vc4Register src[])
     {
-        assert(len == 2);
-        for (uint8_t i = 0, j = 1; i < 2; i++, j++)
+        assert(opLen && (opLen <= 2));
+        for (uint8_t i = 0, j = opIndex; i < opLen; i++, j++)
         {
-            Setup_SourceRegister(Inst, j, swizzleIndex, src[i]);
+            Setup_SourceRegister(Inst, j /* operand index */, i /* temp register index */, swizzleIndex, src[i]);
             assert(src[i].GetFlags().valid);
-            if (src[i].GetFlags().immediate)
-            {
-                // move immediate value to r1~r2 temorary.
-                Vc4Register rX(VC4_QPU_ALU_R1 + i, VC4_QPU_WADDR_ACC1 + i);
-                Vc4Instruction Vc4Inst(vc4_load_immediate_32);
-                Vc4Inst.Vc4_m_LOAD32(rX, src[i]);
-                Vc4Inst.Emit(CurrentStorage);
-                src[i] = rX;
-            }
-            else if (Resolve_Modifier(src[i], i))
-            {
-                // register is already replaced, so there should be no conflict.
-            }
-            else if ((j == 2) &&
-                     (src[0].GetMux() == src[1].GetMux()) &&
-                     (src[0].GetAddr() != src[1].GetAddr()))
+            if ((j == 2) &&
+                (src[0].GetMux() == src[1].GetMux()) &&
+                (src[0].GetMux() == VC4_QPU_ALU_REG_A || src[0].GetMux() == VC4_QPU_ALU_REG_B) &&
+                (src[0].GetAddr() != src[1].GetAddr()))
             {
                 // if any of them is exchangeable (paticularly uniform), switch A and B file to avoid conflict.
                 if (VC4_QPU_RADDR_LOOKUP[src[0].GetAddr()].Exchangeable)
                 {
-                    assert(src[0].GetAddr() == VC4_QPU_RADDR_UNIFORM);
                     src[0].SetMux(src[0].GetMux() == VC4_QPU_ALU_REG_A ? VC4_QPU_ALU_REG_B : VC4_QPU_ALU_REG_A);
                 }
                 else if (VC4_QPU_RADDR_LOOKUP[src[1].GetAddr()].Exchangeable)
                 {
-                    assert(src[1].GetAddr() == VC4_QPU_RADDR_UNIFORM);
                     src[1].SetMux(src[1].GetMux() == VC4_QPU_ALU_REG_A ? VC4_QPU_ALU_REG_B : VC4_QPU_ALU_REG_A);
                 }
                 else
@@ -514,7 +544,7 @@ private:
             ret = 3;
             break;
         default:
-            assert(false);
+            VC4_ASSERT(false);
         }
         return ret;
     }
@@ -563,32 +593,33 @@ private:
 
     // TEMPORARY Register Usage Map
     //
-    // r0 - output in pixel shader.
-    // r1/2 - temporary for source setup.
+    // r0 - scratch. 
+    // r1/2 - temporary for source setup. r1 = src1, r2 = src2.
     // r3 - scratch.
     // r4 - Special register.
     // r5 - C coefficient in pixel shader.
     //
-    // ra0 ~ ra14  : Input
-#define ROS_VC4_INPUT_REGISTER_FILE        VC4_QPU_ALU_REG_A
-#define ROS_VC4_INPUT_REGISTER_FILE_START  0
-#define ROS_VC4_INPUT_REGISTER_FILE_END    14
+    // ra0 ~ ra14  : Input (15 floats)
+#define ROS_VC4_INPUT_REGISTER_FILE         VC4_QPU_ALU_REG_A
+#define ROS_VC4_INPUT_REGISTER_FILE_START   0
+#define ROS_VC4_INPUT_REGISTER_FILE_END     14
+    // VC4 VPM limitation, max 15 float(s) input.
+    C_ASSERT((ROS_VC4_INPUT_REGISTER_FILE_END - ROS_VC4_INPUT_REGISTER_FILE_START + 1) < 16);
     // ra15        : Reserved - W (in pixel shader only)
-    // ra16 ~ ra31 : Temp
-#define ROS_VC4_TEMP_REGISTER_FILE         VC4_QPU_ALU_REG_A
-#define ROS_VC4_TEMP_REGISTER_FILE_START   16
-#define ROS_VC4_TEMP_REGISTER_FILE_END     31
-    // rb0 ~ rb14  : Output
-#define ROS_VC4_OUTPUT_REGISTER_FILE       VC4_QPU_ALU_REG_B
-#define ROS_VC4_OUTPUT_REGISTER_FILE_START 0
-#define ROS_VC4_OUTPUT_REGISTER_FILE_END   14
+    // ra16 ~ ra31 : Temp (4x4, up to 4 temps)
+#define ROS_VC4_TEMP_REGISTER_FILE          VC4_QPU_ALU_REG_A
+#define ROS_VC4_TEMP_REGISTER_FILE_START    16
+#define ROS_VC4_TEMP_REGISTER_FILE_END      31
+    C_ASSERT((ROS_VC4_TEMP_REGISTER_FILE_END - ROS_VC4_TEMP_REGISTER_FILE_START + 1) == (4*4));
+    // rb16 ~ rb31 : Scratch (15 floats)
+#define ROS_VC4_SCRATCH_REGISTER_FILE       VC4_QPU_ALU_REG_B
+#define ROS_VC4_SCRATCH_REGISTER_FILE_START 0
+#define ROS_VC4_SCRATCH_REGISTER_FILE_END   14
     // rb15        : Reserved - Z (in pixel shader only)
-#define ROS_VC4_SCRATCH_REGISTER_FILE      VC4_QPU_ALU_REG_B
-#define ROS_VC4_SCRATCH_REGISTER_FILE_START 16
-#define ROS_VC4_SCRATCH_REGISTER_FILE_END   31
-
-
+    // rb0 ~ rb14  : Output (up to 16 floats)
+#define ROS_VC4_OUTPUT_REGISTER_FILE        VC4_QPU_ALU_REG_B
+#define ROS_VC4_OUTPUT_REGISTER_FILE_START  16
+#define ROS_VC4_OUTPUT_REGISTER_FILE_END    31 
 };
-
 
 #endif // VC4

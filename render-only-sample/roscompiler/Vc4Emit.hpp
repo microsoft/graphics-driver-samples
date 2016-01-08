@@ -1,5 +1,7 @@
 #pragma once
+
 #include "..\roscommon\Vc4Qpu.h"
+#include "roscompilerdebug.h"
 
 #if VC4
 
@@ -150,6 +152,10 @@ public:
         {
         case vc4_alu:
         case vc4_alu_small_immediate:
+            if (_Type == vc4_alu_small_immediate)
+            {
+                Vc4_Sig(VC4_QPU_SIG_ALU_WITH_RADDR_B);
+            }
             memset(&this->ALU, 0, sizeof(this->ALU));
             this->ALU.op_add = VC4_QPU_OPCODE_ADD_NOP;
             this->ALU.op_mul = VC4_QPU_OPCODE_MUL_NOP;
@@ -172,7 +178,7 @@ public:
         }
     }
     ~Vc4Instruction() { ; }
-    
+
     void Vc4_Sig(uint8_t sig)
     {
         this->Sig = sig;
@@ -181,7 +187,7 @@ public:
     void Vc4_a_Inst(uint8_t opcode, Vc4Register dst, Vc4Register src, uint8_t cond)
     {
         assert(dst.flags.valid);
-        assert(src.flags.valid);
+        assert(src.flags.valid && (src.flags.immediate == false));
         assert(this->Type == vc4_alu);
         this->ALU.op_add = opcode;
         this->ALU.cond_add = cond;
@@ -204,9 +210,9 @@ public:
     void Vc4_a_Inst(uint8_t opcode, Vc4Register dst, Vc4Register src1, Vc4Register src2, uint8_t cond)
     {
         assert(dst.flags.valid);
-        assert(src1.flags.valid);
-        assert(src2.flags.valid);
-        assert(this->Type == vc4_alu);
+        assert(src1.flags.valid && (src1.flags.immediate == false));
+        assert(src2.flags.valid && (src2.flags.immediate == false));
+        assert(this->Type == vc4_alu || this->Type == vc4_alu_small_immediate);
         this->ALU.op_add = opcode;
         this->ALU.cond_add = cond;
         this->ALU.waddr_add = dst.addr;
@@ -237,7 +243,7 @@ public:
         this->ALU.add_a = src1.mux;
         this->ALU.add_b = src2.mux;
     }
-    
+
     void Vc4_a_FADD(Vc4Register dst, Vc4Register src1, Vc4Register src2, uint8_t cond = VC4_QPU_COND_ALWAYS)
     {
         Vc4_a_Inst(VC4_QPU_OPCODE_ADD_FADD, dst, src1, src2, cond);
@@ -246,6 +252,11 @@ public:
     void Vc4_a_FMAX(Vc4Register dst, Vc4Register src1, Vc4Register src2, uint8_t cond = VC4_QPU_COND_ALWAYS)
     {
         Vc4_a_Inst(VC4_QPU_OPCODE_ADD_FMAX, dst, src1, src2, cond);
+    }
+
+    void Vc4_a_FMAXABS(Vc4Register dst, Vc4Register src1, Vc4Register src2, uint8_t cond = VC4_QPU_COND_ALWAYS)
+    {
+        Vc4_a_Inst(VC4_QPU_OPCODE_ADD_FMAX_ABS, dst, src1, src2, cond);
     }
 
     void Vc4_a_FMIN(Vc4Register dst, Vc4Register src1, Vc4Register src2, uint8_t cond = VC4_QPU_COND_ALWAYS)
@@ -323,7 +334,7 @@ public:
     void Vc4_m_Inst(uint8_t opcode, Vc4Register dst, Vc4Register src, uint8_t cond)
     {
         assert(dst.flags.valid);
-        assert(src.flags.valid);
+        assert(src.flags.valid && (src.flags.immediate == false));
         assert(this->Type == vc4_alu);
         this->ALU.op_mul = opcode;
         this->ALU.cond_mul = cond;
@@ -346,9 +357,9 @@ public:
     void Vc4_m_Inst(uint8_t opcode, Vc4Register dst, Vc4Register src1, Vc4Register src2, uint8_t cond)
     {
         assert(dst.flags.valid);
-        assert(src1.flags.valid);
-        assert(src2.flags.valid);
-        assert(this->Type == vc4_alu);
+        assert(src1.flags.valid && (src1.flags.immediate == false));
+        assert(src2.flags.valid && (src2.flags.immediate == false));
+        assert(this->Type == vc4_alu || this->Type == vc4_alu_small_immediate);
         this->ALU.op_mul = opcode;
         this->ALU.cond_mul = cond;
         this->ALU.waddr_mul = dst.addr;

@@ -1,4 +1,7 @@
+#pragma once
+
 #include "d3dumddi_.h"
+#include "roscompilerdebug.h"
 #include "DisasmBase.hpp"
 #include "HLSLBinary.hpp"
 #include "HLSLDisasm.hpp"

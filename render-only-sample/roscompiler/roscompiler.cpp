@@ -92,14 +92,25 @@ HRESULT RosCompiler::Compile()
             &m_Storage[ROS_COORDINATE_SHADER_STORAGE],
             &m_Storage[ROS_COORDINATE_SHADER_UNIFORM_STORAGE]);
 
-        // Compile shader
-        hr = Vc4ShaderCompiler.Translate_VS();
+        try
+        {
+            // Compile shader
+            hr = Vc4ShaderCompiler.Translate_VS();
+        }
+        catch (RosCompilerException & e)
+        {
+            hr = e.GetError();
+        }
 
 #if DBG
-        // Disassemble h/w shader.
-        Disassemble_HW(m_Storage[ROS_VERTEX_SHADER_STORAGE], TEXT("VC4 Vertex shader"));
-        Disassemble_HW(m_Storage[ROS_COORDINATE_SHADER_STORAGE], TEXT("VC4 Coordinate shader"));
-#endif   
+        if (SUCCEEDED(hr))
+        {
+            // Disassemble h/w shader.
+            Disassemble_HW(m_Storage[ROS_VERTEX_SHADER_STORAGE], TEXT("VC4 Vertex shader"));
+            Disassemble_HW(m_Storage[ROS_COORDINATE_SHADER_STORAGE], TEXT("VC4 Coordinate shader"));
+        }
+#endif // DBG 
+
         break;
 
     case D3D10_SB_PIXEL_SHADER:
@@ -108,13 +119,24 @@ HRESULT RosCompiler::Compile()
             &m_Storage[ROS_PIXEL_SHADER_STORAGE],
             &m_Storage[ROS_PIXEL_SHADER_UNIFORM_STORAGE]);;
 
-        // Compile shader
-        hr = Vc4ShaderCompiler.Translate_PS();
+        try
+        {
+            // Compile shader
+            hr = Vc4ShaderCompiler.Translate_PS();
+        }
+        catch (RosCompilerException & e)
+        {
+            hr = e.GetError();
+        }
 
 #if DBG
-        // Disassemble h/w shader.
-        Disassemble_HW(m_Storage[ROS_PIXEL_SHADER_STORAGE], TEXT("VC4 Pixel shader"));
-#endif 
+        if (SUCCEEDED(hr))
+        {
+            // Disassemble h/w shader.
+            Disassemble_HW(m_Storage[ROS_PIXEL_SHADER_STORAGE], TEXT("VC4 Pixel shader"));
+        }
+#endif // DBG
+
         break;
 
     default:
