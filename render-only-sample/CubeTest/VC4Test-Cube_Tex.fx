@@ -13,9 +13,16 @@ SamplerState Sampler
     AddressV = Wrap;
 };
 
-cbuffer cb0 : register(b0)
+cbuffer VSConstantBuffer : register(b0)
 {
-    uniform float3 g_vAmbient;
+    uniform matrix World;
+    uniform matrix View;
+    uniform matrix Projection;
+}
+
+cbuffer PSConstantBuffer : register(b0)
+{
+    uniform float3 Ambient;
 };
 
 struct PSInput
@@ -30,7 +37,9 @@ struct PSInput
 PSInput VS(float4 Pos : POSITION, float2 TexCoord : TEXCOORD)
 {
     PSInput output;
-    output.pos = Pos;
+    output.pos = mul(Pos, World);
+    output.pos = mul(output.pos, View);
+    output.pos = mul(output.pos, Projection);
     output.texcoord.xy = TexCoord.xy;
     return output;
 }
@@ -41,5 +50,5 @@ PSInput VS(float4 Pos : POSITION, float2 TexCoord : TEXCOORD)
 float4 PS(PSInput input) : SV_Target
 {
     float3 color = Texture.Sample(Sampler, input.texcoord);
-    return float4(color * g_vAmbient, 1.0f);
+    return float4(color * Ambient, 1.0f);
 }
