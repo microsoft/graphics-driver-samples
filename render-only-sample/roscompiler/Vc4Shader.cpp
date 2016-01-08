@@ -813,6 +813,7 @@ void Vc4Shader::HLSL_ParseDecl()
             VC4_ASSERT(Inst.m_Operands[0].m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
             VC4_ASSERT(Inst.m_Operands[0].m_Index[0].m_RegIndex < 8);
             VC4_ASSERT(Inst.m_Operands[0].m_WriteMask & D3D10_SB_OPERAND_4_COMPONENT_MASK_MASK);
+
             for (uint8_t i = 0, aCurrent = D3D10_SB_OPERAND_4_COMPONENT_MASK_X; i < 4; i++)
             {
                 if (Inst.m_Operands[0].m_WriteMask & aCurrent)
@@ -866,7 +867,6 @@ void Vc4Shader::HLSL_ParseDecl()
                     VC4_ASSERT(aMask);
                 }
 
-
                 for (uint8_t i = 0, aCurrent = D3D10_SB_OPERAND_4_COMPONENT_MASK_X; i < 4; i++)
                 {
                     if (aMask & aCurrent)
@@ -890,7 +890,7 @@ void Vc4Shader::HLSL_ParseDecl()
             VC4_ASSERT(Inst.m_TempsDecl.NumTemps <= 4);
             for (uint8_t i = 0; i < Inst.m_TempsDecl.NumTemps * 4; i++)
             {
-                VC4_ASSERT((ROS_VC4_INPUT_REGISTER_FILE_START + cTemp) <= ROS_VC4_TEMP_REGISTER_FILE_END);
+                VC4_ASSERT((ROS_VC4_TEMP_REGISTER_FILE_START + cTemp) <= ROS_VC4_TEMP_REGISTER_FILE_END);
                 this->TempRegister[i / 4][i % 4].flags.valid = true;
                 this->TempRegister[i / 4][i % 4].flags.temp = true;
                 this->TempRegister[i / 4][i % 4].addr = ROS_VC4_TEMP_REGISTER_FILE_START + cTemp++;
