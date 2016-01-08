@@ -681,16 +681,16 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
         {
             VC4_UNIFORM_FORMAT u;
             u.Type = VC4_UNIFORM_TYPE_SAMPLER_CONFIG_P0;
-            u.sampilerConfiguration.samplerIndex = samplerIndex;
-            u.sampilerConfiguration.resourceIndex = resourceIndex;
+            u.samplerConfiguration.samplerIndex = samplerIndex;
+            u.samplerConfiguration.resourceIndex = resourceIndex;
             this->AddUniformReference(u);
         }
 
         {
             VC4_UNIFORM_FORMAT u;
             u.Type = VC4_UNIFORM_TYPE_SAMPLER_CONFIG_P1;
-            u.sampilerConfiguration.samplerIndex = samplerIndex;
-            u.sampilerConfiguration.resourceIndex = resourceIndex;
+            u.samplerConfiguration.samplerIndex = samplerIndex;
+            u.samplerConfiguration.resourceIndex = resourceIndex;
             this->AddUniformReference(u);
         }
 
@@ -698,8 +698,8 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
         {
             VC4_UNIFORM_FORMAT u;
             u.Type = VC4_UNIFORM_TYPE_SAMPLER_CONFIG_P2;
-            u.sampilerConfiguration.samplerIndex = samplerIndex;
-            u.sampilerConfiguration.resourceIndex = resourceIndex;
+            u.samplerConfiguration.samplerIndex = samplerIndex;
+            u.samplerConfiguration.resourceIndex = resourceIndex;
             this->AddUniformReference(u);
         }
     }

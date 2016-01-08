@@ -613,6 +613,18 @@ public:
     {
 #if VC4
 
+#if 1
+        SimpleVertex vertices[] =
+        {
+            //     X,      Y,    Z,    W,    U,    V // See Input layout.
+            { -1.00f,  1.00f, 0.0f, 1.0f, 0.0f, 0.0f },
+            {  1.00f,  1.00f, 0.0f, 1.0f, 1.0f, 0.0f },
+            { -1.00f, -1.00f, 0.0f, 1.0f, 0.0f, 1.0f },
+            {  1.00f, -1.00f, 0.0f, 1.0f, 1.0f, 1.0f }
+        };
+
+#else
+
         SimpleVertex vertices[] =
         {
             //     X,      Y,    Z,    W,    U,    V // See Input layout.
@@ -621,6 +633,8 @@ public:
             { -0.75f, -0.75f, 0.0f, 1.0f, 0.0f, 1.0f },
             {  0.75f, -0.75f, 0.0f, 1.0f, 1.0f, 1.0f }
         };
+
+#endif
 
 #else
 
@@ -807,6 +821,8 @@ private:
     D3DPointer<ID3D11DepthStencilState> m_pDepthStencilState;
 };
 
+#if 0
+
 class D3DConstantBuffer
 {
 public:
@@ -859,6 +875,8 @@ private:
     D3DPointer<ID3D11Buffer> m_pConstantBuffer;
 
 };
+
+#endif
 
 class D3DPSConstantBuffer
 {
@@ -943,7 +961,11 @@ public:
 
         m_pVertexShader = std::unique_ptr<D3DVertexShader>(new D3DVertexShader(m_pDevice));
 
+#if 0
+
         m_pConstantBuffer = std::unique_ptr<D3DConstantBuffer>(new D3DConstantBuffer(m_pDevice));
+
+#endif
 
         m_pDevice->GetContext()->IASetInputLayout(m_pVertexShader->GetVertexLayout());
 
@@ -990,8 +1012,12 @@ public:
 
         m_pDevice->GetContext()->VSSetShader(m_pVertexShader->GetVertexShader(), nullptr, 0);
 
+#if 0
+
         ID3D11Buffer *    pConstantBuffer = m_pConstantBuffer->GetConstantBuffer();
         m_pDevice->GetContext()->VSSetConstantBuffers(0, 1, &pConstantBuffer);
+
+#endif
 
         m_pDevice->GetContext()->PSSetShader(m_pPixelShader->GetPixelShader(), nullptr, 0);
 
@@ -1000,6 +1026,29 @@ public:
 
         ID3D11Buffer *  pPSConstantBuffer = m_pPSConstantBuffer->GetConstantBuffer();
         m_pDevice->GetContext()->PSSetConstantBuffers(0, 1, &pPSConstantBuffer);
+
+#if 0
+
+        for (UINT i = 0; i < 100; i++)
+        {
+            m_pDevice->GetContext()->Draw(3, 0);
+
+            m_pDevice->GetContext()->Flush();
+
+            m_pDevice->GetContext()->Draw(3, 1);
+        }
+
+#endif
+
+#if 0
+        for (UINT i = 0; i < 100; i++)
+        {
+            m_pDevice->GetContext()->Draw(4, 0);
+
+            m_pDevice->GetContext()->Flush();
+        }
+
+#endif
 
 #if 1
 
@@ -1034,7 +1083,11 @@ private:
     std::unique_ptr<D3DIndexBuffer>         m_pIndexBuffer;
     std::unique_ptr<D3DTexture>             m_pTexture;
     std::unique_ptr<D3DDepthStencilState>   m_pDepthStencilState;
+#if 0
+
     std::unique_ptr<D3DConstantBuffer>      m_pConstantBuffer;
+
+#endif
     std::unique_ptr<D3DPSConstantBuffer>    m_pPSConstantBuffer;
     std::unique_ptr<D3DDefaultTexture>      m_pDefaultTexture;
 };

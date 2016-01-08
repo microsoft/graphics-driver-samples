@@ -38,7 +38,7 @@ struct VC4_UNIFORM_FORMAT
             UINT32 samplerIndex;  // sampler slot
             UINT32 resourceIndex; // resource binding slot.
             UINT32 samplerConfiguration; // default sampler configuration embeded in shader code.
-        } sampilerConfiguration;
+        } samplerConfiguration;
 
         UINT32 value[4];
     };

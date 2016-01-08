@@ -33,6 +33,12 @@ public:
         return &m_hwShaderCode;
     }
 
+#if VC4
+
+    VC4_UNIFORM_FORMAT * GetShaderUniformFormat(UINT Type, UINT *pUniformFormatEntries);
+
+#endif
+
 protected:
 
     D3D10_SB_TOKENIZED_PROGRAM_TYPE m_ProgramType;
