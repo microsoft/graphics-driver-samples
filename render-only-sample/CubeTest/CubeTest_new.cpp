@@ -1034,13 +1034,13 @@ public:
 
         // Create depth stencil buffer
 
-        m_pDepthStencilBuffer = std::unique_ptr<D3DDepthStencilBuffer>(new D3DDepthStencilBuffer(m_pDevice, kWidth, kHeight));
+        //m_pDepthStencilBuffer = std::unique_ptr<D3DDepthStencilBuffer>(new D3DDepthStencilBuffer(m_pDevice, kWidth, kHeight));
 
-        ID3D11DepthStencilView * pDepthStencilView = m_pDepthStencilBuffer->GetDepthStencilView();
+        //ID3D11DepthStencilView * pDepthStencilView = m_pDepthStencilBuffer->GetDepthStencilView();
 
         // Set render target and depth stencil buffer
 
-        m_pDevice->GetContext()->OMSetRenderTargets(1, &pRenderTargetView, pDepthStencilView);
+        m_pDevice->GetContext()->OMSetRenderTargets(1, &pRenderTargetView, NULL); // pDepthStencilView);
 
         // Setup the viewport
 
@@ -1073,7 +1073,7 @@ public:
 
         m_pIndexBuffer = std::unique_ptr<D3DIndexBuffer>(new D3DIndexBuffer(m_pDevice));
 
-        m_pDepthStencilState = std::unique_ptr<D3DDepthStencilState>(new D3DDepthStencilState(m_pDevice));
+        //m_pDepthStencilState = std::unique_ptr<D3DDepthStencilState>(new D3DDepthStencilState(m_pDevice));
 
         // Set vertex buffer
         UINT stride = sizeof(SimpleVertex);
@@ -1104,11 +1104,13 @@ public:
             m_pRenderTarget->GetRenderTargetView(), 
             DirectX::Colors::MidnightBlue);
 
+        /*
         m_pDevice->GetContext()->ClearDepthStencilView(
             m_pDepthStencilBuffer->GetDepthStencilView(),
             D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,
             0.0f,
             0);
+            */
 
         m_pDevice->GetContext()->VSSetShader(m_pVertexShader->GetVertexShader(), nullptr, 0);
 
@@ -1151,7 +1153,7 @@ public:
 #endif
 
 #if NO_TRANSFORM
-        m_pDevice->GetContext()->Draw(4, 0);
+        m_pDevice->GetContext()->DrawIndexed(4, 0, 0);
 #else
         m_pDevice->GetContext()->DrawIndexed(36, 0, 0);
 #endif // NO_TRANSFORM
