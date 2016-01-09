@@ -29,5 +29,8 @@
     <FxCompile Include="VC4Test-Cube_Color.fx">
       <Filter>Source Files</Filter>
     </FxCompile>
+    <FxCompile Include="VC4Test-Cube.fx">
+      <Filter>Source Files</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

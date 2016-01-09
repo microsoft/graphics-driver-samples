@@ -12,18 +12,19 @@
 
 using namespace DirectX;
 
-#define USE_TEX 1
+#define NO_TRANSFORM 1
+//#define USE_TEX 1
 
-#ifdef USE_TEX
+#if defined(USE_TEX) || defined(NO_TRANSFORM)
 struct SimpleVertex
 {
-    XMFLOAT3 Pos;
+    XMFLOAT4 Pos;
     XMFLOAT2 Tex;
 };
 #else
 struct SimpleVertex
 {
-    XMFLOAT3 Pos;
+    XMFLOAT4 Pos;
     XMFLOAT4 Color;
 };
 #endif // USE_TEX
@@ -500,7 +501,9 @@ public:
     {
         ID3DBlob* pVSBlob = nullptr;
 
-#ifdef USE_TEX
+#if defined(NO_TRANSFORM)
+        HRESULT hr = CompileShaderFromFile(L"VC4Test-Cube.fx", "VS", "vs_4_0_level_9_1", &pVSBlob);
+#elif defined(USE_TEX)
         HRESULT hr = CompileShaderFromFile(L"VC4Test-Cube_Tex.fx", "VS", "vs_4_0_level_9_1", &pVSBlob);
 #else
         HRESULT hr = CompileShaderFromFile(L"VC4Test-Cube_Color.fx", "VS", "vs_4_0_level_9_1", &pVSBlob);
@@ -521,12 +524,12 @@ public:
         // Define the input layout
         D3D11_INPUT_ELEMENT_DESC layout[] =
         {
-#ifdef USE_TEX
-            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,   0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+#if defined(USE_TEX) || defined(NO_TRANSFORM)
+            { "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0,  0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,       0, 16, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 #else
-            { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT,    0,  0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-            { "COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            { "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0,  0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+            { "COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 16, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 #endif // USE_TEX
         };
         UINT numElements = ARRAYSIZE(layout);
@@ -565,7 +568,9 @@ public:
         // Compile the pixel shader
         ID3DBlob* pPSBlob = nullptr;
 
-#ifdef USE_TEX
+#if defined(NO_TRANSFORM)
+        HRESULT hr = CompileShaderFromFile(L"VC4Test-Cube.fx", "PS", "ps_4_0_level_9_1", &pPSBlob);
+#elif defined(USE_TEX)
         HRESULT hr = CompileShaderFromFile(L"VC4Test-Cube_Tex.fx", "PS", "ps_4_0_level_9_1", &pPSBlob);
 #else
         HRESULT hr = CompileShaderFromFile(L"VC4Test-Cube_Color.fx", "PS", "ps_4_0_level_9_1", &pPSBlob);
@@ -603,50 +608,58 @@ public:
 
     D3DVertexBuffer(std::shared_ptr<D3DDevice> & inDevice)
     {
-#if USE_TEX
+#if defined(NO_TRANSFORM)
         SimpleVertex vertices[] =
         {
-            { XMFLOAT3(-1.0f, 1.0f, -1.0f), XMFLOAT2(1.0f, 0.0f) },
-            { XMFLOAT3(1.0f, 1.0f, -1.0f), XMFLOAT2(0.0f, 0.0f) },
-            { XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT2(0.0f, 1.0f) },
-            { XMFLOAT3(-1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, 1.0f) },
+            { XMFLOAT4(-1.00f,  1.00f, 0.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) },
+            { XMFLOAT4( 1.00f,  1.00f, 0.0f, 1.0f), XMFLOAT2(1.0f, 0.0f) },
+            { XMFLOAT4(-1.00f, -1.00f, 0.0f, 1.0f), XMFLOAT2(0.0f, 1.0f) },
+            { XMFLOAT4( 1.00f, -1.00f, 0.0f, 1.0f), XMFLOAT2(1.0f, 1.0f) }
+        };
+#elif defined(USE_TEX)
+        SimpleVertex vertices[] =
+        {
+            { XMFLOAT4(-1.0f, 1.0f, -1.0f, 1.0f), XMFLOAT2(1.0f, 0.0f) },
+            { XMFLOAT4( 1.0f, 1.0f, -1.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) },
+            { XMFLOAT4( 1.0f, 1.0f,  1.0f, 1.0f), XMFLOAT2(0.0f, 1.0f) },
+            { XMFLOAT4(-1.0f, 1.0f,  1.0f, 1.0f), XMFLOAT2(1.0f, 1.0f) },
 
-            { XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT2(0.0f, 0.0f) },
-            { XMFLOAT3(1.0f, -1.0f, -1.0f), XMFLOAT2(1.0f, 0.0f) },
-            { XMFLOAT3(1.0f, -1.0f, 1.0f), XMFLOAT2(1.0f, 1.0f) },
-            { XMFLOAT3(-1.0f, -1.0f, 1.0f), XMFLOAT2(0.0f, 1.0f) },
+            { XMFLOAT4(-1.0f, -1.0f, -1.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) },
+            { XMFLOAT4( 1.0f, -1.0f, -1.0f, 1.0f), XMFLOAT2(1.0f, 0.0f) },
+            { XMFLOAT4( 1.0f, -1.0f,  1.0f, 1.0f), XMFLOAT2(1.0f, 1.0f) },
+            { XMFLOAT4(-1.0f, -1.0f,  1.0f, 1.0f), XMFLOAT2(0.0f, 1.0f) },
 
-            { XMFLOAT3(-1.0f, -1.0f, 1.0f), XMFLOAT2(0.0f, 1.0f) },
-            { XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT2(1.0f, 1.0f) },
-            { XMFLOAT3(-1.0f, 1.0f, -1.0f), XMFLOAT2(1.0f, 0.0f) },
-            { XMFLOAT3(-1.0f, 1.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) },
+            { XMFLOAT4(-1.0f, -1.0f,  1.0f, 1.0f), XMFLOAT2(0.0f, 1.0f) },
+            { XMFLOAT4(-1.0f, -1.0f, -1.0f, 1.0f), XMFLOAT2(1.0f, 1.0f) },
+            { XMFLOAT4(-1.0f,  1.0f, -1.0f, 1.0f), XMFLOAT2(1.0f, 0.0f) },
+            { XMFLOAT4(-1.0f,  1.0f,  1.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) },
 
-            { XMFLOAT3(1.0f, -1.0f, 1.0f), XMFLOAT2(1.0f, 1.0f) },
-            { XMFLOAT3(1.0f, -1.0f, -1.0f), XMFLOAT2(0.0f, 1.0f) },
-            { XMFLOAT3(1.0f, 1.0f, -1.0f), XMFLOAT2(0.0f, 0.0f) },
-            { XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, 0.0f) },
+            { XMFLOAT4( 1.0f, -1.0f,  1.0f, 1.0f), XMFLOAT2(1.0f, 1.0f) },
+            { XMFLOAT4( 1.0f, -1.0f, -1.0f, 1.0f), XMFLOAT2(0.0f, 1.0f) },
+            { XMFLOAT4( 1.0f,  1.0f, -1.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) },
+            { XMFLOAT4( 1.0f,  1.0f,  1.0f, 1.0f), XMFLOAT2(1.0f, 0.0f) },
 
-            { XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT2(0.0f, 1.0f) },
-            { XMFLOAT3(1.0f, -1.0f, -1.0f), XMFLOAT2(1.0f, 1.0f) },
-            { XMFLOAT3(1.0f, 1.0f, -1.0f), XMFLOAT2(1.0f, 0.0f) },
-            { XMFLOAT3(-1.0f, 1.0f, -1.0f), XMFLOAT2(0.0f, 0.0f) },
+            { XMFLOAT4(-1.0f, -1.0f, -1.0f, 1.0f), XMFLOAT2(0.0f, 1.0f) },
+            { XMFLOAT4( 1.0f, -1.0f, -1.0f, 1.0f), XMFLOAT2(1.0f, 1.0f) },
+            { XMFLOAT4( 1.0f,  1.0f, -1.0f, 1.0f), XMFLOAT2(1.0f, 0.0f) },
+            { XMFLOAT4(-1.0f,  1.0f, -1.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) },
 
-            { XMFLOAT3(-1.0f, -1.0f, 1.0f), XMFLOAT2(1.0f, 1.0f) },
-            { XMFLOAT3(1.0f, -1.0f, 1.0f), XMFLOAT2(0.0f, 1.0f) },
-            { XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) },
-            { XMFLOAT3(-1.0f, 1.0f, 1.0f), XMFLOAT2(1.0f, 0.0f) },
+            { XMFLOAT4(-1.0f, -1.0f,  1.0f, 1.0f), XMFLOAT2(1.0f, 1.0f) },
+            { XMFLOAT4( 1.0f, -1.0f,  1.0f, 1.0f), XMFLOAT2(0.0f, 1.0f) },
+            { XMFLOAT4( 1.0f,  1.0f,  1.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) },
+            { XMFLOAT4(-1.0f,  1.0f,  1.0f, 1.0f), XMFLOAT2(1.0f, 0.0f) },
         };
 #else
         SimpleVertex vertices[] =
         {
-            { XMFLOAT3(-1.0f, 1.0f, -1.0f), XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) },
-            { XMFLOAT3(1.0f, 1.0f, -1.0f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) },
-            { XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT4(0.0f, 1.0f, 1.0f, 1.0f) },
-            { XMFLOAT3(-1.0f, 1.0f, 1.0f), XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f) },
-            { XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f) },
-            { XMFLOAT3(1.0f, -1.0f, -1.0f), XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f) },
-            { XMFLOAT3(1.0f, -1.0f, 1.0f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f) },
-            { XMFLOAT3(-1.0f, -1.0f, 1.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) },
+            { XMFLOAT4(-1.0f,  1.0f, -1.0f, 1.0f), XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) },
+            { XMFLOAT4( 1.0f,  1.0f, -1.0f, 1.0f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) },
+            { XMFLOAT4( 1.0f,  1.0f,  1.0f, 1.0f), XMFLOAT4(0.0f, 1.0f, 1.0f, 1.0f) },
+            { XMFLOAT4(-1.0f,  1.0f,  1.0f, 1.0f), XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f) },
+            { XMFLOAT4(-1.0f, -1.0f, -1.0f, 1.0f), XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f) },
+            { XMFLOAT4( 1.0f, -1.0f, -1.0f, 1.0f), XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f) },
+            { XMFLOAT4( 1.0f, -1.0f,  1.0f, 1.0f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f) },
+            { XMFLOAT4(-1.0f, -1.0f,  1.0f, 1.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) },
         };
 #endif // USE_TEX
 
@@ -687,7 +700,15 @@ public:
 
     D3DIndexBuffer(std::shared_ptr<D3DDevice> & inDevice)
     {
-#if USE_TEX
+#if defined(NO_TRANSFORM)
+        USHORT indices[] =
+        {
+            0,
+            1,
+            2,
+            3
+        };
+#elif defined(USE_TEX)
         USHORT indices[] =
         {
             3,1,0,
@@ -1022,7 +1043,11 @@ public:
         m_pDevice->GetContext()->IASetIndexBuffer(pIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
 
         // Set primitive topology
+#if defined(NO_TRANSFORM)
+        m_pDevice->GetContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+#else
         m_pDevice->GetContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+#endif // NO_TRANSFORM
 
         // Set depth stencil state
         // m_pDevice->GetContext()->OMSetDepthStencilState(m_pDepthStencilState->GetDepthStencilState(), 0);
@@ -1079,7 +1104,11 @@ public:
 
 #endif
 
+#if defined(NO_TRANSFORM)
+        m_pDevice->GetContext()->Draw(4, 0);
+#else
         m_pDevice->GetContext()->DrawIndexed(36, 0, 0);
+#endif // NO_TRANSFORM
 
         m_pDevice->GetContext()->CopyResource(m_pTexture->GetTexture(), m_pRenderTarget->GetRenderTarget());
 
