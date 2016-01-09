@@ -155,21 +155,51 @@ void Vc4Shader::Emit_ShaderOutput_VS(boolean bVS)
         }
     }
 
+    // calculate 1/W
+    {
+        // send W to sfu_recip.
+        {
+            Vc4Register sfu_recip((pos[3].GetMux() == VC4_QPU_ALU_REG_A ? VC4_QPU_ALU_REG_B : VC4_QPU_ALU_REG_A), VC4_QPU_WADDR_SFU_RECIP);
+            Vc4Instruction Vc4Inst;
+            Vc4Inst.Vc4_a_MOV(sfu_recip, pos[3]);
+            Vc4Inst.Emit(CurrentStorage);
+        }
+
+        // Issue 2 NOPs to wait result of sfu_recip.
+        for (uint8_t i = 0; i < 2; i++)
+        {
+            Vc4Instruction Vc4Inst;
+            Vc4Inst.Emit(CurrentStorage);
+        }
+    }
+
+    // Now, r4 is 1/W.
+    Vc4Register r4(VC4_QPU_ALU_R4);
+    
     // Ys/Xs
     {
         // scale by RT dimension (read from uniform). Result in r0/r1.
         {
             for (uint8_t i = 0; i < 2; i++)
             {
-                Vc4Register rX(VC4_QPU_ALU_REG_B, VC4_QPU_WADDR_ACC0 + i); // r0 and r1.
-                Vc4Register unif((pos[i].GetMux() == VC4_QPU_ALU_REG_A ? VC4_QPU_ALU_REG_B : VC4_QPU_ALU_REG_A), VC4_QPU_RADDR_UNIFORM); // use opossit register file.
-                Vc4Instruction Vc4Inst;
-                Vc4Inst.Vc4_m_FMUL(rX, pos[i], unif);
-                Vc4Inst.Emit(CurrentStorage);
-                {
-                    VC4_UNIFORM_FORMAT u;
-                    u.Type = (i == 0 ? VC4_UNIFORM_TYPE_VIEWPORT_SCALE_X : VC4_UNIFORM_TYPE_VIEWPORT_SCALE_Y);
-                    this->AddUniformReference(u);
+                Vc4Register rX(VC4_QPU_ALU_R0 + i, VC4_QPU_WADDR_ACC0 + i); // r0 and r1.
+                
+                { // divide Xc/Yc by W.
+                    Vc4Instruction Vc4Inst;
+                    Vc4Inst.Vc4_m_FMUL(rX, pos[i], r4);
+                    Vc4Inst.Emit(CurrentStorage);
+                }
+
+                { // Scale Xc/Yc with viewport.
+                    Vc4Instruction Vc4Inst;
+                    Vc4Register unif((rX.GetMux() == VC4_QPU_ALU_REG_A ? VC4_QPU_ALU_REG_B : VC4_QPU_ALU_REG_A), VC4_QPU_RADDR_UNIFORM); // use opossit register file.
+                    Vc4Inst.Vc4_m_FMUL(rX, rX, unif);
+                    Vc4Inst.Emit(CurrentStorage);
+                    {
+                        VC4_UNIFORM_FORMAT u;
+                        u.Type = (i == 0 ? VC4_UNIFORM_TYPE_VIEWPORT_SCALE_X : VC4_UNIFORM_TYPE_VIEWPORT_SCALE_Y);
+                        this->AddUniformReference(u);
+                    }
                 }
             }
         }
@@ -211,24 +241,8 @@ void Vc4Shader::Emit_ShaderOutput_VS(boolean bVS)
 
     // 1/Wc
     {
-        // send W to sfu_recip.
-        {
-            Vc4Register sfu_recip((pos[3].GetMux() == VC4_QPU_ALU_REG_A ? VC4_QPU_ALU_REG_B : VC4_QPU_ALU_REG_A), VC4_QPU_WADDR_SFU_RECIP);
-            Vc4Instruction Vc4Inst;
-            Vc4Inst.Vc4_a_MOV(sfu_recip, pos[3]);
-            Vc4Inst.Emit(CurrentStorage);
-        }
-
-        // Issue 2 NOPs to wait result of sfu_recip.
-        for (uint8_t i = 0; i < 2; i++)
-        {
-            Vc4Instruction Vc4Inst;
-            Vc4Inst.Emit(CurrentStorage);
-        }
-
         // Move result of sfu_recip (come up at r4) to vpm.
         {
-            Vc4Register r4(VC4_QPU_ALU_R4);
             Vc4Instruction Vc4Inst;
             Vc4Inst.Vc4_m_MOV(vpm, r4);
             Vc4Inst.Emit(CurrentStorage);
