@@ -1,3 +1,4 @@
+#include "precomp.h"
 #include "RosKmdAdapter.h"
 #include "RosKmdDevice.h"
 #include "RosKmdAllocation.h"

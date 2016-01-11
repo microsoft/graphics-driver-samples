@@ -1,3 +1,4 @@
+#include "precomp.h"
 #include "RosKmdSoftAdapter.h"
 #include "RosGpuCommand.h"
 

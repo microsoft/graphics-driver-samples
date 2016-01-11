@@ -1,4 +1,4 @@
-#include <ntifs.h>
+#include "precomp.h"
 #include "RosKmd.h"
 #include "RosKmdAdapter.h"
 #include "RosKmdAllocation.h"

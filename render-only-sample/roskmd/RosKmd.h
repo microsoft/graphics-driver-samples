@@ -6,15 +6,6 @@
 //    Copyright (C) Microsoft.  All rights reserved.
 //
 
-extern "C" {
-#include <ntddk.h>
-#include <windef.h>
-#include <ntdef.h>
-#include <dispmprt.h>
-#include <ntintsafe.h>
-#include <ntstrsafe.h>
-}
-
 #include "RosAllocation.h"
 #include "RosAdapter.h"
 

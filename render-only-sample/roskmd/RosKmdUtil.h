@@ -8,17 +8,6 @@
 //
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-extern "C" {
-#include <ntddk.h>
-#include <windef.h>
-#include <ntdef.h>
-#include <dispmprt.h>
-#include <ntintsafe.h>
-#include <ntstrsafe.h>
-#include <dxgiformat.h>
-}
-
 D3DDDIFORMAT
 TranslateDxgiFormat(
     DXGI_FORMAT dxgiFormat);
-
