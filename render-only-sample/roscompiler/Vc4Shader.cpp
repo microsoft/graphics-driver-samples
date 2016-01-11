@@ -232,10 +232,10 @@ void Vc4Shader::Emit_ShaderOutput_VS(boolean bVS)
         }
     }
 
-    // Zc
-    {
+    // Zs
+    { // Zs = Zc / W // TODO: Z offset
         Vc4Instruction Vc4Inst;
-        Vc4Inst.Vc4_m_MOV(vpm, pos[2]);
+        Vc4Inst.Vc4_m_FMUL(vpm, pos[2], r4);
         Vc4Inst.Emit(CurrentStorage);
     }
 
