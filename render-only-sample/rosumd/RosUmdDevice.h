@@ -17,6 +17,8 @@
 
 #include "RosUmdResource.h"
 
+#include "RosUmdShader.h"
+
 #ifndef PAGE_SIZE
 #define PAGE_SIZE 4096
 #endif
@@ -265,6 +267,18 @@ private:
     //
 
     void RefreshPipelineState(UINT vertexOffset);
+
+#if VC4
+
+    void WriteUniforms(
+        BOOLEAN                     bPSUniform,
+        VC4_UNIFORM_FORMAT *        pUniformEntries,
+        UINT                        numUniformEntries,
+        BYTE *                     &pCurCommand,
+        UINT                       &curCommandOffset,
+        D3DDDI_PATCHLOCATIONLIST * &pCurPatchLocation);
+
+#endif
 
 public:
     void WriteEpilog();

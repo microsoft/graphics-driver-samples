@@ -36,6 +36,17 @@ RosUmdShader::Update()
 
 }
 
+#if VC4
+
+VC4_UNIFORM_FORMAT *
+RosUmdShader::GetShaderUniformFormat(
+    UINT Type, UINT *pUniformFormatEntries)
+{
+    return m_pCompiler->GetShaderUniformFormat(Type, pUniformFormatEntries);
+}
+
+#endif
+
 void
 RosUmdPipelineShader::Standup(
     const UINT * pCode, D3D10DDI_HRTSHADER hRTShader, const D3D11_1DDIARG_STAGE_IO_SIGNATURES * pSignatures)

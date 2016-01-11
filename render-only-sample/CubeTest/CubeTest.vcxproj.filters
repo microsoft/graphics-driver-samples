@@ -20,14 +20,17 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Tutorial02.fx">
+    <Text Include="ReadMe.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="VC4Test-Cube_Tex.fx">
+      <Filter>Source Files</Filter>
+    </FxCompile>
+    <FxCompile Include="VC4Test-Cube_Color.fx">
       <Filter>Source Files</Filter>
     </FxCompile>
     <FxCompile Include="VC4Test-Cube.fx">
       <Filter>Source Files</Filter>
     </FxCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="ReadMe.txt" />
   </ItemGroup>
 </Project>

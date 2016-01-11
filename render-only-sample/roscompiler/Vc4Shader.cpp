@@ -155,21 +155,51 @@ void Vc4Shader::Emit_ShaderOutput_VS(boolean bVS)
         }
     }
 
+    // calculate 1/W
+    {
+        // send W to sfu_recip.
+        {
+            Vc4Register sfu_recip((pos[3].GetMux() == VC4_QPU_ALU_REG_A ? VC4_QPU_ALU_REG_B : VC4_QPU_ALU_REG_A), VC4_QPU_WADDR_SFU_RECIP);
+            Vc4Instruction Vc4Inst;
+            Vc4Inst.Vc4_a_MOV(sfu_recip, pos[3]);
+            Vc4Inst.Emit(CurrentStorage);
+        }
+
+        // Issue 2 NOPs to wait result of sfu_recip.
+        for (uint8_t i = 0; i < 2; i++)
+        {
+            Vc4Instruction Vc4Inst;
+            Vc4Inst.Emit(CurrentStorage);
+        }
+    }
+
+    // Now, r4 is 1/W.
+    Vc4Register r4(VC4_QPU_ALU_R4);
+    
     // Ys/Xs
     {
         // scale by RT dimension (read from uniform). Result in r0/r1.
         {
             for (uint8_t i = 0; i < 2; i++)
             {
-                Vc4Register rX(VC4_QPU_ALU_REG_B, VC4_QPU_WADDR_ACC0 + i); // r0 and r1.
-                Vc4Register unif((pos[i].GetMux() == VC4_QPU_ALU_REG_A ? VC4_QPU_ALU_REG_B : VC4_QPU_ALU_REG_A), VC4_QPU_RADDR_UNIFORM); // use opossit register file.
-                Vc4Instruction Vc4Inst;
-                Vc4Inst.Vc4_m_FMUL(rX, pos[i], unif);
-                Vc4Inst.Emit(CurrentStorage);
-                {
-                    VC4_UNIFORM_FORMAT u;
-                    u.Type = (i == 0 ? VC4_UNIFORM_TYPE_VIEWPORT_SCALE_X : VC4_UNIFORM_TYPE_VIEWPORT_SCALE_Y);
-                    this->AddUniformReference(u);
+                Vc4Register rX(VC4_QPU_ALU_R0 + i, VC4_QPU_WADDR_ACC0 + i); // r0 and r1.
+                
+                { // divide Xc/Yc by W.
+                    Vc4Instruction Vc4Inst;
+                    Vc4Inst.Vc4_m_FMUL(rX, pos[i], r4);
+                    Vc4Inst.Emit(CurrentStorage);
+                }
+
+                { // Scale Xc/Yc with viewport.
+                    Vc4Instruction Vc4Inst;
+                    Vc4Register unif((rX.GetMux() == VC4_QPU_ALU_REG_A ? VC4_QPU_ALU_REG_B : VC4_QPU_ALU_REG_A), VC4_QPU_RADDR_UNIFORM); // use opossit register file.
+                    Vc4Inst.Vc4_m_FMUL(rX, rX, unif);
+                    Vc4Inst.Emit(CurrentStorage);
+                    {
+                        VC4_UNIFORM_FORMAT u;
+                        u.Type = (i == 0 ? VC4_UNIFORM_TYPE_VIEWPORT_SCALE_X : VC4_UNIFORM_TYPE_VIEWPORT_SCALE_Y);
+                        this->AddUniformReference(u);
+                    }
                 }
             }
         }
@@ -202,33 +232,17 @@ void Vc4Shader::Emit_ShaderOutput_VS(boolean bVS)
         }
     }
 
-    // Zc
-    {
+    // Zs
+    { // Zs = Zc / W // TODO: Z offset
         Vc4Instruction Vc4Inst;
-        Vc4Inst.Vc4_m_MOV(vpm, pos[2]);
+        Vc4Inst.Vc4_m_FMUL(vpm, pos[2], r4);
         Vc4Inst.Emit(CurrentStorage);
     }
 
     // 1/Wc
     {
-        // send W to sfu_recip.
-        {
-            Vc4Register sfu_recip((pos[3].GetMux() == VC4_QPU_ALU_REG_A ? VC4_QPU_ALU_REG_B : VC4_QPU_ALU_REG_A), VC4_QPU_WADDR_SFU_RECIP);
-            Vc4Instruction Vc4Inst;
-            Vc4Inst.Vc4_a_MOV(sfu_recip, pos[3]);
-            Vc4Inst.Emit(CurrentStorage);
-        }
-
-        // Issue 2 NOPs to wait result of sfu_recip.
-        for (uint8_t i = 0; i < 2; i++)
-        {
-            Vc4Instruction Vc4Inst;
-            Vc4Inst.Emit(CurrentStorage);
-        }
-
         // Move result of sfu_recip (come up at r4) to vpm.
         {
-            Vc4Register r4(VC4_QPU_ALU_R4);
             Vc4Instruction Vc4Inst;
             Vc4Inst.Vc4_m_MOV(vpm, r4);
             Vc4Inst.Emit(CurrentStorage);
@@ -314,6 +328,13 @@ void Vc4Shader::Emit_Mad(CInstruction &Inst)
                 }
 
                 Vc4Register accum(VC4_QPU_ALU_R3, VC4_QPU_WADDR_ACC3);
+
+                {
+                    Vc4Register zero(VC4_QPU_ALU_REG_B, 0); // 0 as small immediate in raddr_b
+                    Vc4Instruction Vc4Inst(vc4_alu_small_immediate);
+                    Vc4Inst.Vc4_m_MOV(accum, zero);
+                    Vc4Inst.Emit(CurrentStorage);
+                }
 
                 // perform mul first 2 operands
                 {
@@ -423,10 +444,17 @@ void Vc4Shader::Emit_DPx(CInstruction &Inst)
         // DP3 loop 3 times.
         // DP4 loop 4 times.
         uint8_t c = (uint8_t)(Inst.m_OpCode - 13);
-        
+
         // where to accumulate result of mul.
         Vc4Register accum(VC4_QPU_ALU_R3, VC4_QPU_WADDR_ACC3);
-            
+
+        {
+            Vc4Register zero(VC4_QPU_ALU_REG_B, 0); // 0 as small immediate in raddr_b
+            Vc4Instruction Vc4Inst(vc4_alu_small_immediate);
+            Vc4Inst.Vc4_m_MOV(accum, zero);
+            Vc4Inst.Emit(CurrentStorage);
+        }
+           
         for(uint8_t i = 0; i < c; i++)
         {
             Vc4Register temp(VC4_QPU_ALU_R1, VC4_QPU_WADDR_ACC1);
@@ -709,16 +737,16 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
         {
             VC4_UNIFORM_FORMAT u;
             u.Type = VC4_UNIFORM_TYPE_SAMPLER_CONFIG_P0;
-            u.sampilerConfiguration.samplerIndex = samplerIndex;
-            u.sampilerConfiguration.resourceIndex = resourceIndex;
+            u.samplerConfiguration.samplerIndex = samplerIndex;
+            u.samplerConfiguration.resourceIndex = resourceIndex;
             this->AddUniformReference(u);
         }
 
         {
             VC4_UNIFORM_FORMAT u;
             u.Type = VC4_UNIFORM_TYPE_SAMPLER_CONFIG_P1;
-            u.sampilerConfiguration.samplerIndex = samplerIndex;
-            u.sampilerConfiguration.resourceIndex = resourceIndex;
+            u.samplerConfiguration.samplerIndex = samplerIndex;
+            u.samplerConfiguration.resourceIndex = resourceIndex;
             this->AddUniformReference(u);
         }
 
@@ -726,8 +754,8 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
         {
             VC4_UNIFORM_FORMAT u;
             u.Type = VC4_UNIFORM_TYPE_SAMPLER_CONFIG_P2;
-            u.sampilerConfiguration.samplerIndex = samplerIndex;
-            u.sampilerConfiguration.resourceIndex = resourceIndex;
+            u.samplerConfiguration.samplerIndex = samplerIndex;
+            u.samplerConfiguration.resourceIndex = resourceIndex;
             this->AddUniformReference(u);
         }
     }
@@ -813,6 +841,7 @@ void Vc4Shader::HLSL_ParseDecl()
             VC4_ASSERT(Inst.m_Operands[0].m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
             VC4_ASSERT(Inst.m_Operands[0].m_Index[0].m_RegIndex < 8);
             VC4_ASSERT(Inst.m_Operands[0].m_WriteMask & D3D10_SB_OPERAND_4_COMPONENT_MASK_MASK);
+
             for (uint8_t i = 0, aCurrent = D3D10_SB_OPERAND_4_COMPONENT_MASK_X; i < 4; i++)
             {
                 if (Inst.m_Operands[0].m_WriteMask & aCurrent)
@@ -866,7 +895,6 @@ void Vc4Shader::HLSL_ParseDecl()
                     VC4_ASSERT(aMask);
                 }
 
-
                 for (uint8_t i = 0, aCurrent = D3D10_SB_OPERAND_4_COMPONENT_MASK_X; i < 4; i++)
                 {
                     if (aMask & aCurrent)
@@ -890,7 +918,7 @@ void Vc4Shader::HLSL_ParseDecl()
             VC4_ASSERT(Inst.m_TempsDecl.NumTemps <= 4);
             for (uint8_t i = 0; i < Inst.m_TempsDecl.NumTemps * 4; i++)
             {
-                VC4_ASSERT((ROS_VC4_INPUT_REGISTER_FILE_START + cTemp) <= ROS_VC4_TEMP_REGISTER_FILE_END);
+                VC4_ASSERT((ROS_VC4_TEMP_REGISTER_FILE_START + cTemp) <= ROS_VC4_TEMP_REGISTER_FILE_END);
                 this->TempRegister[i / 4][i % 4].flags.valid = true;
                 this->TempRegister[i / 4][i % 4].flags.temp = true;
                 this->TempRegister[i / 4][i % 4].addr = ROS_VC4_TEMP_REGISTER_FILE_START + cTemp++;

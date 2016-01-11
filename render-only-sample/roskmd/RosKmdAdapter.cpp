@@ -1567,6 +1567,8 @@ RosKmAdapter::PatchDmaBuffer(
                 case VC4_SLOT_BRANCH:
                 case VC4_SLOT_GL_SHADER_STATE:
                 case VC4_SLOT_FS_UNIFORM_ADDRESS:
+                case VC4_SLOT_VS_UNIFORM_ADDRESS:
+                case VC4_SLOT_CS_UNIFORM_ADDRESS:
                     // When PrePatch happens in DdiRender, DMA buffer physical
                     // address is not available, so DMA buffer self-reference
                     // patches are handled in SubmitCommand
@@ -1649,6 +1651,8 @@ RosKmAdapter::ValidateDmaBuffer(
             case VC4_SLOT_BRANCH:
             case VC4_SLOT_GL_SHADER_STATE:
             case VC4_SLOT_FS_UNIFORM_ADDRESS:
+            case VC4_SLOT_VS_UNIFORM_ADDRESS:
+            case VC4_SLOT_CS_UNIFORM_ADDRESS:
                 if (pDmaBufState->m_NumDmaBufSelfRef == VC4_MAX_DMA_BUFFER_SELF_REF)
                 {
                     return false;   // Allow up to VC4_MAX_DMA_BUFFER_SELF_REF

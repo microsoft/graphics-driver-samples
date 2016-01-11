@@ -88,6 +88,20 @@ RosUmdResource::Map(
 
     UNREFERENCED_PARAMETER(subResource);
 
+    //
+    // Constant data is copied into command buffer, so there is no need for flushing
+    //
+
+    if (m_bindFlags & D3D10_DDI_BIND_CONSTANT_BUFFER)
+    {
+        pMappedSubRes->pData = m_pSysMemCopy;
+
+        pMappedSubRes->RowPitch = m_hwPitchBytes;
+        pMappedSubRes->DepthPitch = (UINT)m_hwSizeBytes;
+
+        return;
+    }
+
     pUmdDevice->m_commandBuffer.FlushIfMatching(m_mostRecentFence);
 
     D3DDDICB_LOCK lock;
@@ -142,7 +156,7 @@ RosUmdResource::Unmap(
 
     if (m_bindFlags & D3D10_DDI_BIND_CONSTANT_BUFFER)
     {
-        memcpy(m_pSysMemCopy, m_pData, m_hwSizeBytes);
+        return;
     }
 
     m_pData = NULL;

@@ -41,7 +41,7 @@ struct VC4_UNIFORM_FORMAT
             UINT32 samplerIndex;  // sampler slot
             UINT32 resourceIndex; // resource binding slot.
             UINT32 samplerConfiguration; // default sampler configuration embeded in shader code.
-        } sampilerConfiguration;
+        } samplerConfiguration;
 
         UINT32 value[4];
     };
@@ -599,24 +599,27 @@ private:
     // r4 - Special register.
     // r5 - C coefficient in pixel shader.
     //
-    // ra0 ~ ra14  : Input
-#define ROS_VC4_INPUT_REGISTER_FILE        VC4_QPU_ALU_REG_A
-#define ROS_VC4_INPUT_REGISTER_FILE_START  0
-#define ROS_VC4_INPUT_REGISTER_FILE_END    14
+    // ra0 ~ ra14  : Input (15 floats)
+#define ROS_VC4_INPUT_REGISTER_FILE         VC4_QPU_ALU_REG_A
+#define ROS_VC4_INPUT_REGISTER_FILE_START   0
+#define ROS_VC4_INPUT_REGISTER_FILE_END     14
+    // VC4 VPM limitation, max 15 float(s) input.
+    C_ASSERT((ROS_VC4_INPUT_REGISTER_FILE_END - ROS_VC4_INPUT_REGISTER_FILE_START + 1) < 16);
     // ra15        : Reserved - W (in pixel shader only)
-    // ra16 ~ ra31 : Temp
-#define ROS_VC4_TEMP_REGISTER_FILE         VC4_QPU_ALU_REG_A
-#define ROS_VC4_TEMP_REGISTER_FILE_START   16
-#define ROS_VC4_TEMP_REGISTER_FILE_END     31
-    // rb0 ~ rb14  : Output
-#define ROS_VC4_OUTPUT_REGISTER_FILE       VC4_QPU_ALU_REG_B
-#define ROS_VC4_OUTPUT_REGISTER_FILE_START 0
-#define ROS_VC4_OUTPUT_REGISTER_FILE_END   14
+    // ra16 ~ ra31 : Temp (4x4, up to 4 temps)
+#define ROS_VC4_TEMP_REGISTER_FILE          VC4_QPU_ALU_REG_A
+#define ROS_VC4_TEMP_REGISTER_FILE_START    16
+#define ROS_VC4_TEMP_REGISTER_FILE_END      31
+    C_ASSERT((ROS_VC4_TEMP_REGISTER_FILE_END - ROS_VC4_TEMP_REGISTER_FILE_START + 1) == (4*4));
+    // rb16 ~ rb31 : Scratch (15 floats)
+#define ROS_VC4_SCRATCH_REGISTER_FILE       VC4_QPU_ALU_REG_B
+#define ROS_VC4_SCRATCH_REGISTER_FILE_START 0
+#define ROS_VC4_SCRATCH_REGISTER_FILE_END   14
     // rb15        : Reserved - Z (in pixel shader only)
-#define ROS_VC4_SCRATCH_REGISTER_FILE      VC4_QPU_ALU_REG_B
-#define ROS_VC4_SCRATCH_REGISTER_FILE_START 16
-#define ROS_VC4_SCRATCH_REGISTER_FILE_END   31
+    // rb0 ~ rb14  : Output (up to 16 floats)
+#define ROS_VC4_OUTPUT_REGISTER_FILE        VC4_QPU_ALU_REG_B
+#define ROS_VC4_OUTPUT_REGISTER_FILE_START  16
+#define ROS_VC4_OUTPUT_REGISTER_FILE_END    31 
 };
-
 
 #endif // VC4
