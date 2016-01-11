@@ -213,7 +213,8 @@ RosKmAdapter::ProcessPagingBuffer(
         case DXGK_OPERATION_FILL:
         {
             NT_ASSERT(pPagingBuffer->Fill.Destination.SegmentId == ROSD_SEGMENT_VIDEO_MEMORY);
-
+            NT_ASSERT(pPagingBuffer->Fill.FillSize % sizeof(ULONG) == 0);
+            
             ULONG * const startAddress = reinterpret_cast<ULONG*>(
                 (BYTE *)RosKmdGlobal::s_pVideoMemory + 
                 pPagingBuffer->Fill.Destination.SegmentAddress.QuadPart);
