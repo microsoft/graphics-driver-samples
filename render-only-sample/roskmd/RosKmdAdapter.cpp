@@ -1,6 +1,5 @@
 
-#define INITGUID
-#include <ntifs.h>
+#include "precomp.h"
 #include "RosKmd.h"
 #include "RosKmdAdapter.h"
 #include "RosKmdRapAdapter.h"
@@ -214,11 +213,17 @@ RosKmAdapter::ProcessPagingBuffer(
         case DXGK_OPERATION_FILL:
         {
             NT_ASSERT(pPagingBuffer->Fill.Destination.SegmentId == ROSD_SEGMENT_VIDEO_MEMORY);
-
-            RtlFillMemoryUlong(
-                ((BYTE *)RosKmdGlobal::s_pVideoMemory) + pPagingBuffer->Fill.Destination.SegmentAddress.QuadPart,
-                pPagingBuffer->Fill.FillSize,
-                pPagingBuffer->Fill.FillPattern);
+            NT_ASSERT(pPagingBuffer->Fill.FillSize % sizeof(ULONG) == 0);
+            
+            ULONG * const startAddress = reinterpret_cast<ULONG*>(
+                (BYTE *)RosKmdGlobal::s_pVideoMemory + 
+                pPagingBuffer->Fill.Destination.SegmentAddress.QuadPart);
+            for (ULONG * ptr = startAddress;
+                 ptr != (startAddress + pPagingBuffer->Fill.FillSize / sizeof(ULONG));
+                 ++ptr)
+            {
+                *ptr = pPagingBuffer->Fill.FillPattern;
+            }
         }
         break;
         case DXGK_OPERATION_TRANSFER:

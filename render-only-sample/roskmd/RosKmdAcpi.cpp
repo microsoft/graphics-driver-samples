@@ -1,3 +1,4 @@
+#include "precomp.h"
 #include "RosKmdAcpi.h"
 
 RosKmAcpiReader::RosKmAcpiReader(RosKmAdapter* pAdapter, ULONG DeviceUid) :

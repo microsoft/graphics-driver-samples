@@ -1,3 +1,4 @@
+#include "precomp.h"
 #include "RosKmd.h"
 
 #include "RosKmdAdapter.h"
