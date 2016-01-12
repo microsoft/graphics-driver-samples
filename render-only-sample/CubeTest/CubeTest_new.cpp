@@ -10,28 +10,11 @@
 #include <exception>
 #include <memory>
 
-#define NO_TRANSFORM 1
-//#define USE_TEX 1
-
-#if NO_TRANSFORM
-
-#pragma pack(push, 1)
-
-struct SimpleVertex
-{
-    FLOAT   x;
-    FLOAT   y;
-    FLOAT   z;
-    FLOAT   w;
-    FLOAT   u;
-    FLOAT   v;
-};
-
-#pragma pack(pop)
-
-#else // NO_TRANSFORM
-
 using namespace DirectX;
+
+#define NO_TRANSFORM 1
+#define USE_QUAD 1
+#define USE_TEX 1
 
 #if USE_TEX
 struct SimpleVertex
@@ -56,11 +39,8 @@ struct VSConstantBuffer
 
 struct PSConstantBuffer
 {
-    XMFLOAT3 Ambient;
-    float _padding;
+    XMFLOAT4 Ambient;
 };
-
-#endif // NO_TRANSFORM
 
 #if 0
 
@@ -523,13 +503,11 @@ public:
     {
         ID3DBlob* pVSBlob = nullptr;
 
-#if NO_TRANSFORM
-        HRESULT hr = CompileShaderFromFile(L"VC4Test-Cube.fx", "VS", "vs_4_0_level_9_1", &pVSBlob);
-#elif USE_TEX
+#if USE_TEX
         HRESULT hr = CompileShaderFromFile(L"VC4Test-Cube_Tex.fx", "VS", "vs_4_0_level_9_1", &pVSBlob);
 #else
         HRESULT hr = CompileShaderFromFile(L"VC4Test-Cube_Color.fx", "VS", "vs_4_0_level_9_1", &pVSBlob);
-#endif // NO_TRANSFORM
+#endif // USE_TEX
         if (FAILED(hr)) throw std::exception("Failed to compile shader from file");
 
         D3DPointer<ID3DBlob> vsBlob;
@@ -546,13 +524,13 @@ public:
         // Define the input layout
         D3D11_INPUT_ELEMENT_DESC layout[] =
         {
-#if USE_TEX || NO_TRANSFORM
+#if USE_TEX
             { "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
             { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,       0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 #else
             { "POSITION", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
             { "COLOR",    0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-#endif // USE_TEX || NO_TRANSFORM
+#endif // USE_TEX
         };
         UINT numElements = ARRAYSIZE(layout);
 
@@ -590,13 +568,11 @@ public:
         // Compile the pixel shader
         ID3DBlob* pPSBlob = nullptr;
 
-#if NO_TRANSFORM
-        HRESULT hr = CompileShaderFromFile(L"VC4Test-Cube.fx", "PS", "ps_4_0_level_9_1", &pPSBlob);
-#elif USE_TEX
+#if USE_TEX
         HRESULT hr = CompileShaderFromFile(L"VC4Test-Cube_Tex.fx", "PS", "ps_4_0_level_9_1", &pPSBlob);
 #else
         HRESULT hr = CompileShaderFromFile(L"VC4Test-Cube_Color.fx", "PS", "ps_4_0_level_9_1", &pPSBlob);
-#endif // NO_TRANSFORM
+#endif // USE_TEX
         if (FAILED(hr)) throw std::exception("Unable to compile pixel shader");
 
         D3DPointer<ID3DBlob> psBlob;
@@ -630,14 +606,14 @@ public:
 
     D3DVertexBuffer(std::shared_ptr<D3DDevice> & inDevice)
     {
-#if NO_TRANSFORM
+#if USE_QUAD
         SimpleVertex vertices[] =
         {
-            //     X,      Y,    Z,    W,    U,    V // See Input layout.
-            { -1.00f,  1.00f, 0.0f, 1.0f, 0.0f, 0.0f },
-            {  1.00f,  1.00f, 0.0f, 1.0f, 1.0f, 0.0f },
-            { -1.00f, -1.00f, 0.0f, 1.0f, 0.0f, 1.0f },
-            {  1.00f, -1.00f, 0.0f, 1.0f, 1.0f, 1.0f }
+            //              X,      Y,    Z,    W,              U,    V // See Input layout.
+            { XMFLOAT4(-1.00f,  1.00f, 0.0f, 1.0f), XMFLOAT2(0.0f, 0.0f) },
+            { XMFLOAT4( 1.00f,  1.00f, 0.0f, 1.0f), XMFLOAT2(1.0f, 0.0f) },
+            { XMFLOAT4(-1.00f, -1.00f, 0.0f, 1.0f), XMFLOAT2(0.0f, 1.0f) },
+            { XMFLOAT4( 1.00f, -1.00f, 0.0f, 1.0f), XMFLOAT2(1.0f, 1.0f) }
         };
 #elif USE_TEX
         SimpleVertex vertices[] =
@@ -684,7 +660,7 @@ public:
             { XMFLOAT4( 1.0f, -1.0f,  1.0f, 1.0f), XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f) },
             { XMFLOAT4(-1.0f, -1.0f,  1.0f, 1.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) },
         };
-#endif // NO_TRANSFORM
+#endif // USE_TEX
 
         D3D11_BUFFER_DESC bd;
         ZeroMemory(&bd, sizeof(bd));
@@ -723,7 +699,7 @@ public:
 
     D3DIndexBuffer(std::shared_ptr<D3DDevice> & inDevice)
     {
-#if NO_TRANSFORM
+#if USE_QUAD
         USHORT indices[] =
         {
             0,
@@ -773,7 +749,7 @@ public:
             6,4,5,
             7,4,6,
         };
-#endif // NO_TRANSFORM
+#endif // USE_QUAD
 
         D3D11_BUFFER_DESC bd;
         ZeroMemory(&bd, sizeof(bd));
@@ -904,17 +880,21 @@ private:
     D3DPointer<ID3D11DepthStencilState> m_pDepthStencilState;
 };
 
-#if NO_TRANSFORM
-     // No VS constants
-#else
-
 class D3DVSConstantBuffer
 {
 public:
 
     D3DVSConstantBuffer(std::shared_ptr<D3DDevice> & inDevice)
     {
-        // mWorld = DirectX::XMMatrixIdentity();
+        XMMATRIX mWorld;
+        XMMATRIX mView;
+        XMMATRIX mProjection;
+
+#if NO_TRANSFORM
+        mWorld = DirectX::XMMatrixIdentity();
+        mView  = DirectX::XMMatrixIdentity();
+        mProjection = DirectX::XMMatrixIdentity();
+#else
         mWorld = DirectX::XMMatrixRotationY(40);
 
         DirectX::XMVECTOR Eye = DirectX::XMVectorSet(0.0f, 0.7f, -4.0f, 0.0f);
@@ -923,6 +903,7 @@ public:
         mView = DirectX::XMMatrixLookAtLH(Eye, At, Up);
 
         mProjection = DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV2, (FLOAT)kWidth / (FLOAT)kHeight, 0.01f, 100.0f);
+#endif // NO_TRANSFORM
         
         VSConstantBuffer data;
         data.World = DirectX::XMMatrixTranspose(mWorld);
@@ -957,13 +938,7 @@ public:
 private:
 
     D3DPointer<ID3D11Buffer> m_pVSConstantBuffer;
-
-    XMMATRIX mWorld;
-    XMMATRIX mView;
-    XMMATRIX mProjection;
 };
-
-#endif // !defined(NO_TRANSFORM)
 
 class D3DPSConstantBuffer
 {
@@ -971,18 +946,8 @@ public:
 
     D3DPSConstantBuffer(std::shared_ptr<D3DDevice> & inDevice)
     {
-#if NO_TRANSFORM
-        FLOAT data[] =
-        {
-            2.0f,
-            2.0f,
-            4.0f,
-            0.0f
-        };
-#else
         PSConstantBuffer data;
-        data.Ambient = XMFLOAT3(2.0f, 2.0f, 4.0f);
-#endif // NO_TRANSFORM
+        data.Ambient = XMFLOAT4(2.0f, 2.0f, 4.0f, 0.0f);
 
         D3D11_BUFFER_DESC bd;
         ZeroMemory(&bd, sizeof(bd));
@@ -1055,11 +1020,7 @@ public:
 
         m_pVertexShader = std::unique_ptr<D3DVertexShader>(new D3DVertexShader(m_pDevice));
 
-#if NO_TRANSFORM
-        // No VS constant
-#else
         m_pVSConstantBuffer = std::unique_ptr<D3DVSConstantBuffer>(new D3DVSConstantBuffer(m_pDevice));
-#endif // !defined(NO_TRANSFORM)
 
         m_pDevice->GetContext()->IASetInputLayout(m_pVertexShader->GetVertexLayout());
 
@@ -1086,11 +1047,11 @@ public:
         m_pDevice->GetContext()->IASetIndexBuffer(pIndexBuffer, DXGI_FORMAT_R16_UINT, 0);
 
         // Set primitive topology
-#if NO_TRANSFORM
+#if USE_QUAD
         m_pDevice->GetContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 #else
         m_pDevice->GetContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-#endif // NO_TRANSFORM
+#endif // USE_QUAD
 
         // Set depth stencil state
         // m_pDevice->GetContext()->OMSetDepthStencilState(m_pDepthStencilState->GetDepthStencilState(), 0);
@@ -1114,12 +1075,8 @@ public:
 
         m_pDevice->GetContext()->VSSetShader(m_pVertexShader->GetVertexShader(), nullptr, 0);
 
-#if NO_TRANSFORM
-        // no VS constant
-#else
         ID3D11Buffer *pVSConstantBuffer = m_pVSConstantBuffer->GetConstantBuffer();
         m_pDevice->GetContext()->VSSetConstantBuffers(0, 1, &pVSConstantBuffer);
-#endif // NO_TRANSFORM
 
         m_pDevice->GetContext()->PSSetShader(m_pPixelShader->GetPixelShader(), nullptr, 0);
         
@@ -1152,11 +1109,11 @@ public:
 
 #endif
 
-#if NO_TRANSFORM
+#if USE_QUAD
         m_pDevice->GetContext()->DrawIndexed(4, 0, 0);
 #else
         m_pDevice->GetContext()->DrawIndexed(36, 0, 0);
-#endif // NO_TRANSFORM
+#endif // USE_QUAD
 
         m_pDevice->GetContext()->CopyResource(m_pTexture->GetTexture(), m_pRenderTarget->GetRenderTarget());
 
@@ -1181,11 +1138,7 @@ private:
     std::unique_ptr<D3DIndexBuffer>         m_pIndexBuffer;
     std::unique_ptr<D3DTexture>             m_pTexture;
     std::unique_ptr<D3DDepthStencilState>   m_pDepthStencilState;
-#if NO_TRANSFORM
-    // No VS constants
-#else
     std::unique_ptr<D3DVSConstantBuffer>    m_pVSConstantBuffer;
-#endif // NO_TRANSFORM
     std::unique_ptr<D3DPSConstantBuffer>    m_pPSConstantBuffer;
     std::unique_ptr<D3DDefaultTexture>      m_pDefaultTexture;
 };
