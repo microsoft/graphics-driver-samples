@@ -78,7 +78,12 @@ HRESULT Vc4Disasm::ParseWriteAddr(DWORD waddr, bool bRegfile_A)
 HRESULT Vc4Disasm::ParseWrite(VC4_QPU_INSTRUCTION Instruction, bool bAddOp, bool bShowPack)
 {
     bool bRegfile_A = ((bAddOp == true) == (VC4_QPU_IS_WRITESWAP_SET(Instruction) == 0)) ? true : false;
-    ParseWriteAddr(bAddOp ? VC4_QPU_GET_WADDR_ADD(Instruction) : VC4_QPU_GET_WADDR_MUL(Instruction), bRegfile_A);
+    DWORD waddr = bAddOp ? VC4_QPU_GET_WADDR_ADD(Instruction) : VC4_QPU_GET_WADDR_MUL(Instruction);
+    ParseWriteAddr(waddr, bRegfile_A);
+    if (VC4_QPU_WADDR_TMU0_S <= waddr && waddr <= VC4_QPU_WADDR_TMU1_B)
+    {
+        uniformIndex++;
+    }
     if (bShowPack)
     {
         if (bRegfile_A && !VC4_QPU_IS_PM_SET(Instruction))
@@ -96,6 +101,10 @@ HRESULT Vc4Disasm::ParseWrite(VC4_QPU_INSTRUCTION Instruction, bool bAddOp, bool
 HRESULT Vc4Disasm::ParseReadAddr(DWORD raddr, bool bRegfile_A)
 {
     this->xprintf(TEXT("%s"), VC4_QPU_LOOKUP_ADDR_STRING(RADDR, bRegfile_A ? 0 : 1, raddr));
+    if (raddr == VC4_QPU_RADDR_UNIFORM)
+    {
+        this->xprintf(TEXT("[%d]"), this->uniformIndex++);
+    }
     return S_OK;
 }
 
