@@ -1,4 +1,8 @@
 #include "precomp.h"
+
+#include "RosKmdLogging.h"
+#include "RosKmdRapAdapter.tmh"
+
 #include "RosKmdRapAdapter.h"
 #include "RosGpuCommand.h"
 
@@ -269,7 +273,7 @@ RosKmdRapAdapter::ProcessRenderBuffer(
 
             MoveToNextBinnerRenderMemChunk(renderingControlListLength);
         }
-        else 
+        else
 
 #endif // USE_SIMPENROSE
 
@@ -291,7 +295,7 @@ RosKmdRapAdapter::ProcessRenderBuffer(
 
 #if 1
 
-            // TODO[indyz]: Decide the best way to handle the cache 
+            // TODO[indyz]: Decide the best way to handle the cache
             //
             KeInvalidateAllCaches();
 
@@ -412,7 +416,7 @@ RosKmdRapAdapter::SubmitControlList(
     }
 
     //
-    // Completion of DMA buffer is acknowledged with interrupt and 
+    // Completion of DMA buffer is acknowledged with interrupt and
     // subsequent DPC signals m_hwDmaBufCompletionEvent
     //
     // TODO[indyz]: Enable interrupt and handle TDR

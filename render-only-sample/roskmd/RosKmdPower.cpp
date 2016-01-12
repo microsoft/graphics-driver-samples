@@ -1,4 +1,8 @@
 #include "precomp.h"
+
+#include "RosKmdLogging.h"
+#include "RosKmdPower.tmh"
+
 #include "RosKmd.h"
 #include "RosKmdAdapter.h"
 #include "RosKmdAllocation.h"
@@ -86,7 +90,7 @@ RosKmAdapter::InitializePowerComponentInfo()
         UNALIGNED ACPI_METHOD_ARGUMENT* pPowerComponentPackage;
         pPowerComponentPackage = acpiParser.GetPackage();
         NT_ASSERT(pPowerComponentPackage);
-        
+
         RosKmAcpiArgumentParser acpiPowerComponentParser(&acpiReader, pPowerComponentPackage);
         for (ULONG i = 0; i < numPowerCompoment; i++)
         {
@@ -131,7 +135,7 @@ RosKmAdapter::InitializePowerComponentInfo()
             UNALIGNED ACPI_METHOD_ARGUMENT* pPowerStatePackage;
             pPowerStatePackage = acpiComponentParser.GetPackage();
             NT_ASSERT(pPowerStatePackage);
-            
+
             RosKmAcpiArgumentParser acpiPowerStateParser(&acpiReader, pPowerStatePackage);
             for (ULONG j = 0; j < m_PowerComponents[componentIndex].StateCount; j++)
             {
@@ -140,7 +144,7 @@ RosKmAdapter::InitializePowerComponentInfo()
                 NT_ASSERT(pStatePackage);
 
                 RosKmAcpiArgumentParser acpiStateParser(&acpiReader, pStatePackage);
-                
+
                 Status = acpiStateParser.GetValue<ULONGLONG>(&m_PowerComponents[componentIndex].States[j].TransitionLatency);
                 NT_ASSERT(NT_SUCCESS(Status));
 
@@ -150,7 +154,7 @@ RosKmAdapter::InitializePowerComponentInfo()
                 Status = acpiStateParser.GetValue<ULONG>(&m_PowerComponents[componentIndex].States[j].NominalPower);
                 NT_ASSERT(NT_SUCCESS(Status));
             }
-            
+
             //
             // No dependent provider.
             //
@@ -216,12 +220,12 @@ RosKmAdapter::SetPowerComponentFState(
     m_EnginePowerFState[ComponentIndex] = FState;
 
     //
-    // Notify power transition is completed. 
+    // Notify power transition is completed.
     // (Driver can perform this within this call, or scheduler workitem later if not possible to do now).
     //
     m_DxgkInterface.DxgkCbCompleteFStateTransition(
         m_DxgkInterface.DeviceHandle,
         ComponentIndex);
-    
+
     return STATUS_SUCCESS;
 }

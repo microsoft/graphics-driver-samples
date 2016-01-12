@@ -1,5 +1,9 @@
 
 #include "precomp.h"
+
+#include "RosKmdLogging.h"
+#include "RosKmdAdapter.tmh"
+
 #include "RosKmd.h"
 #include "RosKmdAdapter.h"
 #include "RosKmdRapAdapter.h"
@@ -214,9 +218,9 @@ RosKmAdapter::ProcessPagingBuffer(
         {
             NT_ASSERT(pPagingBuffer->Fill.Destination.SegmentId == ROSD_SEGMENT_VIDEO_MEMORY);
             NT_ASSERT(pPagingBuffer->Fill.FillSize % sizeof(ULONG) == 0);
-            
+
             ULONG * const startAddress = reinterpret_cast<ULONG*>(
-                (BYTE *)RosKmdGlobal::s_pVideoMemory + 
+                (BYTE *)RosKmdGlobal::s_pVideoMemory +
                 pPagingBuffer->Fill.Destination.SegmentAddress.QuadPart);
             for (ULONG * ptr = startAddress;
                  ptr != (startAddress + pPagingBuffer->Fill.FillSize / sizeof(ULONG));
@@ -245,7 +249,7 @@ RosKmAdapter::ProcessPagingBuffer(
                 savedMdlFlags = pMdlToRestore->MdlFlags;
 
                 pSource = (PBYTE)MmGetSystemAddressForMdlSafe(pPagingBuffer->Transfer.Source.pMdl, HighPagePriority);
-                
+
                 pKmAddrToUnmap = pSource;
 
                 // Adjust the source address by MdlOffset
@@ -515,7 +519,7 @@ RosKmAdapter::BuildPagingBuffer(
     //
 
     //
-    // If there is insufficient space left in DMA buffer, we should return 
+    // If there is insufficient space left in DMA buffer, we should return
     // STATUS_GRAPHICS_INSUFFICIENT_DMA_BUFFER.
     //
 
@@ -645,7 +649,7 @@ RosKmAdapter::DispatchIoRequest(
     return STATUS_SUCCESS;
 }
 
-NTSTATUS 
+NTSTATUS
 RosKmAdapter::SubmitCommand(
     IN_CONST_PDXGKARG_SUBMITCOMMAND     pSubmitCommand)
 {
@@ -674,7 +678,7 @@ RosKmAdapter::SubmitCommand(
         {
             D3DDDI_PATCHLOCATIONLIST   *pPatchLoc = &pDmaBufInfo->m_DmaBufSelfRef[i];
 
-            *((UINT *)(pDmaBuf + pPatchLoc->PatchOffset)) = 
+            *((UINT *)(pDmaBuf + pPatchLoc->PatchOffset)) =
                 dmaBufPhysicalAddress +
                 m_busAddressOffset +
                 pPatchLoc->AllocationOffset;
@@ -854,7 +858,7 @@ RosKmAdapter::QueryAdapterInfo(
             break;
         }
         ROSADAPTERINFO* pRosAdapterInfo = (ROSADAPTERINFO*)pQueryAdapterInfo->pOutputData;
-        
+
         pRosAdapterInfo->m_version = ROSD_VERSION;
         pRosAdapterInfo->m_wddmVersion = m_WDDMVersion;
 
@@ -1081,7 +1085,7 @@ RosKmAdapter::QueryAdapterInfo(
             DXGK_SEGMENTDESCRIPTOR3 *pSegmentDesc = pSegmentInfo->pSegmentDescriptor;
 
             //
-            // Private data size should be the maximum of UMD and KMD and the same size must 
+            // Private data size should be the maximum of UMD and KMD and the same size must
             // be reported in DxgkDdiCreateContext for paging engine
             //
             pSegmentInfo->PagingBufferPrivateDataSize = sizeof(ROSUMDDMAPRIVATEDATA2);
@@ -1167,7 +1171,7 @@ RosKmAdapter::QueryAdapterInfo(
         ULONG ComponentIndex = *(reinterpret_cast<UINT*>(pQueryAdapterInfo->pInputData));
         DXGK_POWER_RUNTIME_COMPONENT* pPowerComponent = reinterpret_cast<DXGK_POWER_RUNTIME_COMPONENT*>(pQueryAdapterInfo->pOutputData);
 
-        Status = GetPowerComponentInfo(ComponentIndex, pPowerComponent); 
+        Status = GetPowerComponentInfo(ComponentIndex, pPowerComponent);
     }
     break;
 
@@ -1549,10 +1553,10 @@ RosKmAdapter::PatchDmaBuffer(
                 // Patch HW command buffer
 #if VC4
                 UINT    physicalAddress =
-                    RosKmdGlobal::s_videoMemoryPhysicalAddress.LowPart + 
+                    RosKmdGlobal::s_videoMemoryPhysicalAddress.LowPart +
                     allocation->PhysicalAddress.LowPart +
                     patch->AllocationOffset;
-                
+
                 switch (patch->SlotId)
                 {
                 case VC4_SLOT_RT_BINNING_CONFIG:
@@ -1671,7 +1675,7 @@ RosKmAdapter::ValidateDmaBuffer(
 #endif
         }
 
-        if ((0 == pDmaBufState->m_bRenderTargetRef) || 
+        if ((0 == pDmaBufState->m_bRenderTargetRef) ||
             (0 == pDmaBufState->m_bTileAllocMemRef) ||
             (0 == pDmaBufState->m_bTileStateDataRef))
         {
@@ -1724,7 +1728,7 @@ RosKmAdapter::QueueDmaBuffer(
 
 void
 RosKmAdapter::HwDmaBufCompletionDpcRoutine(
-    KDPC   *pDPC, 
+    KDPC   *pDPC,
     PVOID   deferredContext,
     PVOID   systemArgument1,
     PVOID   systemArgument2)

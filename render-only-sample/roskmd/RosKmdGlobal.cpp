@@ -1,12 +1,17 @@
 #include "precomp.h"
+
+#include "RosKmdLogging.h"
+#include "RosKmdGlobal.tmh"
+
 #include "RosKmdGlobal.h"
 #include "RosKmdDevice.h"
 #include "RosKmdAdapter.h"
 #include "RosKmdContext.h"
 #include "RosKmdDdi.h"
 
-#include "ntverp.h"
+#include <ntverp.h>
 
+DRIVER_OBJECT* RosKmdGlobal::s_pDriverObject;
 bool RosKmdGlobal::s_bDoNotInstall = false;
 size_t RosKmdGlobal::s_videoMemorySize = 0;
 void * RosKmdGlobal::s_pVideoMemory = NULL;
@@ -32,6 +37,9 @@ RosKmdGlobal::DdiUnload(
         s_videoMemorySize = 0;
     }
 
+    NT_ASSERT(s_pDriverObject);
+    WPP_CLEANUP(s_pDriverObject);
+    s_pDriverObject = nullptr;
 }
 
 void
@@ -61,6 +69,27 @@ NTSTATUS RosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
     NTSTATUS    Status;
     DRIVER_INITIALIZATION_DATA DriverInitializationData;
 
+    NT_ASSERT(!RosKmdGlobal::s_pDriverObject);
+    RosKmdGlobal::s_pDriverObject = pDriverObject;
+
+    //
+    // Initialize logging
+    //
+    {
+        WPP_INIT_TRACING(pDriverObject, pRegistryPath);
+        RECORDER_CONFIGURE_PARAMS recorderConfigureParams;
+        RECORDER_CONFIGURE_PARAMS_INIT(&recorderConfigureParams);
+        WppRecorderConfigure(&recorderConfigureParams);
+#if DBG
+        WPP_RECORDER_LEVEL_FILTER(ROS_TRACING_DEFAULT) = TRUE;
+#endif // DBG
+    }
+
+    ROS_LOG_INFORMATION(
+        "(pDriverObject=0x%p, pRegistryPath=0x%p)",
+        pDriverObject,
+        pRegistryPath);
+
     // Only break into the debugger on driver entry if debugger is present
     if (KdRefreshDebuggerNotPresent() == FALSE)
     {
@@ -83,7 +112,7 @@ NTSTATUS RosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
 
     PHYSICAL_ADDRESS highestAcceptableAddress;
     highestAcceptableAddress.QuadPart = -1;
-    
+
     PHYSICAL_ADDRESS boundaryAddressMultiple;
     boundaryAddressMultiple.QuadPart = 0;
 
