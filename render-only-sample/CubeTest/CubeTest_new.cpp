@@ -12,8 +12,8 @@
 
 using namespace DirectX;
 
-#define NO_TRANSFORM 1
-#define USE_QUAD 1
+//#define NO_TRANSFORM 1
+//#define USE_QUAD 1
 #define USE_TEX 1
 
 #if USE_TEX
@@ -897,7 +897,7 @@ public:
 #else
         mWorld = DirectX::XMMatrixRotationY(40);
 
-        DirectX::XMVECTOR Eye = DirectX::XMVectorSet(0.0f, 0.7f, -4.0f, 0.0f);
+        DirectX::XMVECTOR Eye = DirectX::XMVectorSet(0.0f, 2.0f, -4.0f, 0.0f);
         DirectX::XMVECTOR At  = DirectX::XMVectorSet(0.0f, 0.0f,  0.0f, 0.0f);
         DirectX::XMVECTOR Up  = DirectX::XMVectorSet(0.0f, 1.0f,  0.0f, 0.0f);
         mView = DirectX::XMMatrixLookAtLH(Eye, At, Up);
@@ -999,13 +999,13 @@ public:
 
         // Create depth stencil buffer
 
-        //m_pDepthStencilBuffer = std::unique_ptr<D3DDepthStencilBuffer>(new D3DDepthStencilBuffer(m_pDevice, kWidth, kHeight));
+        m_pDepthStencilBuffer = std::unique_ptr<D3DDepthStencilBuffer>(new D3DDepthStencilBuffer(m_pDevice, kWidth, kHeight));
 
-        //ID3D11DepthStencilView * pDepthStencilView = m_pDepthStencilBuffer->GetDepthStencilView();
+        ID3D11DepthStencilView * pDepthStencilView = m_pDepthStencilBuffer->GetDepthStencilView();
 
         // Set render target and depth stencil buffer
 
-        m_pDevice->GetContext()->OMSetRenderTargets(1, &pRenderTargetView, NULL); // pDepthStencilView);
+        m_pDevice->GetContext()->OMSetRenderTargets(1, &pRenderTargetView, pDepthStencilView);
 
         // Setup the viewport
 
@@ -1034,7 +1034,7 @@ public:
 
         m_pIndexBuffer = std::unique_ptr<D3DIndexBuffer>(new D3DIndexBuffer(m_pDevice));
 
-        //m_pDepthStencilState = std::unique_ptr<D3DDepthStencilState>(new D3DDepthStencilState(m_pDevice));
+        m_pDepthStencilState = std::unique_ptr<D3DDepthStencilState>(new D3DDepthStencilState(m_pDevice));
 
         // Set vertex buffer
         UINT stride = sizeof(SimpleVertex);
@@ -1054,7 +1054,7 @@ public:
 #endif // USE_QUAD
 
         // Set depth stencil state
-        // m_pDevice->GetContext()->OMSetDepthStencilState(m_pDepthStencilState->GetDepthStencilState(), 0);
+        m_pDevice->GetContext()->OMSetDepthStencilState(m_pDepthStencilState->GetDepthStencilState(), 0);
 
         m_pTexture = std::unique_ptr<D3DTexture>(new D3DTexture(m_pDevice, kWidth, kHeight));
     }
@@ -1065,13 +1065,11 @@ public:
             m_pRenderTarget->GetRenderTargetView(), 
             DirectX::Colors::MidnightBlue);
 
-        /*
         m_pDevice->GetContext()->ClearDepthStencilView(
             m_pDepthStencilBuffer->GetDepthStencilView(),
             D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,
-            0.0f,
+            1.0f,
             0);
-            */
 
         m_pDevice->GetContext()->VSSetShader(m_pVertexShader->GetVertexShader(), nullptr, 0);
 

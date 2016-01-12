@@ -1003,6 +1003,8 @@ HRESULT Vc4Shader::Translate_VS()
     }
 
     this->ShaderStorageAux->CopyFrom(*this->ShaderStorage); // Copy VS to CS.
+    this->ShaderUniformAux->CopyFrom(*this->ShaderUniform); // Copy VS uniform to CS.
+
     this->Emit_ShaderOutput_VS(true);  // VS
     this->Emit_Epilogue(); // VS
 
