@@ -89,8 +89,8 @@ VSOUT ShadeDolphinVertex( const float3 vPosition0     : POSITION0,
                           const float3 vPosition1     : POSITION1,
                           const float3 vPosition2     : POSITION2,
                           const float3 vNormal0       : NORMAL0,
-                          const float3 vNormal1       : NORMAL1,
-                          const float3 vNormal2       : NORMAL2,
+                       // const float3 vNormal1       : NORMAL1,
+                       // const float3 vNormal2       : NORMAL2,
                           const float2 vBaseTexCoords : TEXCOORD0 )
 {
     // Tween the 3 positions (v0,v1,v2) into one position
@@ -103,7 +103,7 @@ VSOUT ShadeDolphinVertex( const float3 vPosition0     : POSITION0,
     float4 vViewPosition = mul( vModelPosition, g_matWorldView );
 
     // Tween the 3 normals (v3,v4,v5) into one normal
-    float3 vModelNormal = vNormal0 * g_vBlendWeights.x + vNormal1 * g_vBlendWeights.y + vNormal2 * g_vBlendWeights.z;
+    float3 vModelNormal = vNormal0 * g_vBlendWeights.x; // + vNormal1 * g_vBlendWeights.y + vNormal2 * g_vBlendWeights.z;
 
     // Do the lighting calculation
     float fLightValue = max( dot( vModelNormal, g_vDolphinLightDir ), g_vZero.x );
