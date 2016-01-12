@@ -647,6 +647,40 @@ public:
 
 #endif
 
+#if 0
+        {
+            DirectX::XMMATRIX mWorld;
+            DirectX::XMMATRIX mView;
+            DirectX::XMMATRIX mProjection;
+
+            mWorld = DirectX::XMMatrixRotationY(15.0f);
+
+            DirectX::XMVECTOR Eye = DirectX::XMVectorSet(0.0f, 0.0f, -2.0f, 0.0f);
+            DirectX::XMVECTOR At = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
+            DirectX::XMVECTOR Up = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+            mView = DirectX::XMMatrixLookAtLH(Eye, At, Up);
+
+            mProjection = DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV2, (FLOAT)kWidth / (FLOAT)kHeight, 0.01f, 100.0f);
+
+            for (uint8_t i = 0; i < ARRAYSIZE(vertices); i++)
+            {
+                DirectX::XMVECTOR v = DirectX::XMVectorSet(vertices[i].x, vertices[i].y, vertices[i].z, vertices[i].w);
+
+                v = DirectX::XMVector4Transform(v, mWorld);
+                v = DirectX::XMVector4Transform(v, mView);
+                v = DirectX::XMVector4Transform(v, mProjection);
+
+                DirectX::XMFLOAT4 f4;
+                DirectX::XMStoreFloat4(&f4, v);
+
+                vertices[i].x = f4.x;
+                vertices[i].y = f4.y;
+                vertices[i].z = 0.0f;
+                vertices[i].w = f4.w;
+            }
+        }
+#endif
+        
         D3D11_BUFFER_DESC bd;
         ZeroMemory(&bd, sizeof(bd));
         bd.Usage = D3D11_USAGE_DEFAULT;
@@ -821,6 +855,43 @@ private:
     D3DPointer<ID3D11DepthStencilState> m_pDepthStencilState;
 };
 
+class D3DRasterState
+{
+public:
+
+    D3DRasterState(std::shared_ptr<D3DDevice> &inDevice)
+    {
+        D3D11_RASTERIZER_DESC rd;
+
+        memset(&rd, 0, sizeof(rd));
+        rd.FillMode = D3D11_FILL_SOLID;
+        rd.CullMode = D3D11_CULL_NONE;
+        rd.DepthClipEnable = TRUE;
+
+        HRESULT hr;
+        ID3D11RasterizerState*  pRasterState;
+
+        hr = inDevice->GetDevice()->CreateRasterizerState(&rd, &pRasterState);
+        if (FAILED(hr))
+        {
+            throw std::exception("Unable to create Depth Stencil State");
+        }
+
+        m_pRasterState = pRasterState;
+    }
+
+    ~D3DRasterState()
+    {
+        // do nothing
+    }
+
+    ID3D11RasterizerState* GetRasterState() { return m_pRasterState; }
+
+private:
+
+    ID3D11RasterizerState*  m_pRasterState;
+};
+
 #if 0
 
 class D3DConstantBuffer
@@ -944,6 +1015,8 @@ public:
 
         ID3D11DepthStencilView * pDepthStencilView = m_pDepthStencilBuffer->GetDepthStencilView();
 
+        m_pRasterState = std::unique_ptr<D3DRasterState>(new D3DRasterState(m_pDevice));
+
         // Set render target and depth stencil buffer
 
         m_pDevice->GetContext()->OMSetRenderTargets(1, &pRenderTargetView, pDepthStencilView);
@@ -996,6 +1069,9 @@ public:
 
         // Set depth stencil state
         m_pDevice->GetContext()->OMSetDepthStencilState(m_pDepthStencilState->GetDepthStencilState(), 0);
+
+        // Set raster state
+        m_pDevice->GetContext()->RSSetState(m_pRasterState->GetRasterState());
 
         m_pTexture = std::unique_ptr<D3DTexture>(new D3DTexture(m_pDevice, kWidth, kHeight));
     }
@@ -1083,6 +1159,7 @@ private:
     std::unique_ptr<D3DIndexBuffer>         m_pIndexBuffer;
     std::unique_ptr<D3DTexture>             m_pTexture;
     std::unique_ptr<D3DDepthStencilState>   m_pDepthStencilState;
+    std::unique_ptr<D3DRasterState>         m_pRasterState;
 #if 0
 
     std::unique_ptr<D3DConstantBuffer>      m_pConstantBuffer;
