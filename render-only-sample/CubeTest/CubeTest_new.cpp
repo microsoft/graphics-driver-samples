@@ -12,6 +12,7 @@
 
 using namespace DirectX;
 
+#define ANIMATION_COUNT 8
 //#define NO_TRANSFORM 1
 //#define USE_QUAD 1
 #define USE_TEX 1
@@ -895,8 +896,8 @@ public:
         mView  = DirectX::XMMatrixIdentity();
         mProjection = DirectX::XMMatrixIdentity();
 #else
-        mWorld = DirectX::XMMatrixRotationY(40);
-
+        mWorld = DirectX::XMMatrixIdentity();
+        
         DirectX::XMVECTOR Eye = DirectX::XMVectorSet(0.0f, 2.0f, -4.0f, 0.0f);
         DirectX::XMVECTOR At  = DirectX::XMVectorSet(0.0f, 0.0f,  0.0f, 0.0f);
         DirectX::XMVECTOR Up  = DirectX::XMVectorSet(0.0f, 1.0f,  0.0f, 0.0f);
@@ -905,21 +906,20 @@ public:
         mProjection = DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV2, (FLOAT)kWidth / (FLOAT)kHeight, 0.01f, 100.0f);
 #endif // NO_TRANSFORM
         
-        VSConstantBuffer data;
-        data.World = DirectX::XMMatrixTranspose(mWorld);
-        data.View = DirectX::XMMatrixTranspose(mView);
-        data.Projection = DirectX::XMMatrixTranspose(mProjection);
+        m_data.World = DirectX::XMMatrixTranspose(mWorld);
+        m_data.View = DirectX::XMMatrixTranspose(mView);
+        m_data.Projection = DirectX::XMMatrixTranspose(mProjection);
 
         D3D11_BUFFER_DESC bd;
         ZeroMemory(&bd, sizeof(bd));
-        bd.Usage = D3D11_USAGE_DEFAULT;
-        bd.ByteWidth = sizeof(data);
+        bd.Usage = D3D11_USAGE_DYNAMIC;
+        bd.ByteWidth = sizeof(m_data);
         bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-        bd.CPUAccessFlags = 0;
+        bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
         D3D11_SUBRESOURCE_DATA initData;
         ZeroMemory(&initData, sizeof(initData));
-        initData.pSysMem = &data;
+        initData.pSysMem = &m_data;
 
         ID3D11Buffer * pConstantBuffer;
         HRESULT hr = inDevice->GetDevice()->CreateBuffer(&bd, &initData, &pConstantBuffer);
@@ -934,6 +934,8 @@ public:
     }
 
     ID3D11Buffer * GetConstantBuffer() { return m_pVSConstantBuffer; }
+
+    VSConstantBuffer m_data;
 
 private:
 
@@ -1057,10 +1059,24 @@ public:
         m_pDevice->GetContext()->OMSetDepthStencilState(m_pDepthStencilState->GetDepthStencilState(), 0);
 
         m_pTexture = std::unique_ptr<D3DTexture>(new D3DTexture(m_pDevice, kWidth, kHeight));
+
+        m_pDevice->GetContext()->VSSetShader(m_pVertexShader->GetVertexShader(), nullptr, 0);
+
+        ID3D11Buffer *pVSConstantBuffer = m_pVSConstantBuffer->GetConstantBuffer();
+        m_pDevice->GetContext()->VSSetConstantBuffers(0, 1, &pVSConstantBuffer);
+
+        m_pDevice->GetContext()->PSSetShader(m_pPixelShader->GetPixelShader(), nullptr, 0);
+
+        ID3D11ShaderResourceView *pShaderResourceViews = m_pDefaultTexture->GetShaderResourceView();
+        m_pDevice->GetContext()->PSSetShaderResources(0, 1, &pShaderResourceViews);
+
+        ID3D11Buffer *pPSConstantBuffer = m_pPSConstantBuffer->GetConstantBuffer();
+        m_pDevice->GetContext()->PSSetConstantBuffers(0, 1, &pPSConstantBuffer);
     }
 
-    void Render()
+    void Render(UINT iFrame, float fAngle)
     {
+        // Clear
         m_pDevice->GetContext()->ClearRenderTargetView(
             m_pRenderTarget->GetRenderTargetView(), 
             DirectX::Colors::MidnightBlue);
@@ -1071,51 +1087,36 @@ public:
             1.0f,
             0);
 
-        m_pDevice->GetContext()->VSSetShader(m_pVertexShader->GetVertexShader(), nullptr, 0);
+        // Change rotation.
+        m_pVSConstantBuffer->m_data.World = XMMatrixTranspose(XMMatrixRotationY(fAngle));
+        //m_pDevice->GetContext()->UpdateSubresource(m_pVSConstantBuffer->GetConstantBuffer(), 0, nullptr, &(m_pVSConstantBuffer->m_data), 0, 0);
+        {
+            ID3D11Resource *pResource;
+            m_pVSConstantBuffer->GetConstantBuffer()->QueryInterface(&pResource);
 
-        ID3D11Buffer *pVSConstantBuffer = m_pVSConstantBuffer->GetConstantBuffer();
-        m_pDevice->GetContext()->VSSetConstantBuffers(0, 1, &pVSConstantBuffer);
+            D3D11_MAPPED_SUBRESOURCE MappedResource;
+            m_pDevice->GetContext()->Map(pResource, 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource);
 
-        m_pDevice->GetContext()->PSSetShader(m_pPixelShader->GetPixelShader(), nullptr, 0);
+            CopyMemory(MappedResource.pData, reinterpret_cast<VOID*>(&m_pVSConstantBuffer->m_data), sizeof(VSConstantBuffer));
+
+            m_pDevice->GetContext()->Unmap(m_pVSConstantBuffer->GetConstantBuffer(), 0);
+            pResource->Release();
+        }
         
-        ID3D11ShaderResourceView *pShaderResourceViews = m_pDefaultTexture->GetShaderResourceView();
-        m_pDevice->GetContext()->PSSetShaderResources(0, 1, &pShaderResourceViews);
-
-        ID3D11Buffer *pPSConstantBuffer = m_pPSConstantBuffer->GetConstantBuffer();
-        m_pDevice->GetContext()->PSSetConstantBuffers(0, 1, &pPSConstantBuffer);
-
-#if 0
-
-        for (UINT i = 0; i < 100; i++)
-        {
-            m_pDevice->GetContext()->Draw(3, 0);
-
-            m_pDevice->GetContext()->Flush();
-
-            m_pDevice->GetContext()->Draw(3, 1);
-        }
-
-#endif
-
-#if 0
-        for (UINT i = 0; i < 100; i++)
-        {
-            m_pDevice->GetContext()->Draw(4, 0);
-
-            m_pDevice->GetContext()->Flush();
-        }
-
-#endif
-
+        // Draw.
 #if USE_QUAD
         m_pDevice->GetContext()->DrawIndexed(4, 0, 0);
 #else
         m_pDevice->GetContext()->DrawIndexed(36, 0, 0);
 #endif // USE_QUAD
 
+        // Save frame.
         m_pDevice->GetContext()->CopyResource(m_pTexture->GetTexture(), m_pRenderTarget->GetRenderTarget());
-
-        m_pTexture->WriteToBmp("c:\\temp\\image.bmp");
+        {
+            char fileName[MAX_PATH];
+            sprintf_s(fileName, MAX_PATH, "c:\\temp\\image_%d.bmp", iFrame);
+            m_pTexture->WriteToBmp(fileName);
+        }
     }
 
     ~D3DEngine()
@@ -1147,7 +1148,12 @@ int main()
     {
         D3DEngine engine;
 
-        engine.Render();
+        float t = 0.0f;
+        for (UINT i = 0; i < ANIMATION_COUNT; i++)
+        {
+            t += (float)XM_PI * 0.125f;
+            engine.Render(i, t);
+        }
 
         printf("Success\n");
     }
