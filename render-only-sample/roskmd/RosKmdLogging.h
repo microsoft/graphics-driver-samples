@@ -7,7 +7,7 @@
 // WPP tracing configuration file. Logs can be dumped from windbg with
 // the following command:
 //
-//   !rcdrkd.rcdrlogdump vc4dod
+//   !rcdrkd.rcdrlogdump roskmd
 //
 
 #ifdef __cplusplus
