@@ -18,6 +18,13 @@ typedef enum _VC4_UNIFORM_TYPE
     VC4_UNIFORM_TYPE_SAMPLER_CONFIG_P2,
     VC4_UNIFORM_TYPE_VIEWPORT_SCALE_X,
     VC4_UNIFORM_TYPE_VIEWPORT_SCALE_Y,
+    VC4_UNIFORM_TYPE_DEPTH_SCALE,
+    VC4_UNIFORM_TYPE_DEPTH_OFFSET,
+    VC4_UNIFORM_TYPE_BLEND_FACTOR_R,
+    VC4_UNIFORM_TYPE_BLEND_FACTOR_B,
+    VC4_UNIFORM_TYPE_BLEND_FACTOR_G,
+    VC4_UNIFORM_TYPE_BLEND_FACTOR_A,
+    VC4_UNIFORM_TYPE_BLEND_SAMPLE_MASK, // 0xRRGGBBAA as 8a.8b.8c.8d.
 } VC4_UNIFORM_TYPE;
 
 struct VC4_UNIFORM_FORMAT
@@ -255,6 +262,8 @@ private:
     void Emit_Prologue_VS();
     void Emit_Prologue_PS();
     void Emit_Epilogue();
+
+    void Emit_Blending_PS();
     void Emit_ShaderOutput_VS(boolean bVS);
 
     void Emit_Mad(CInstruction &Inst);

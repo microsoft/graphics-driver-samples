@@ -9,17 +9,23 @@ void __stdcall InitializeShaderCompilerLibrary()
 }
 
 RosCompiler* RosCompilerCreate(D3D10_SB_TOKENIZED_PROGRAM_TYPE ProgramType,
-                               UINT *pCode,
+                               const UINT *pCode,
+                               const D3D11_1_DDI_BLEND_DESC* pBlendState,
+                               const D3D10_DDI_DEPTH_STENCIL_DESC* pDepthState,
+                               const D3D11_1_DDI_RASTERIZER_DESC* pRasterState,
                                UINT numInputSignatureEntries,
-                               D3D11_1DDIARG_SIGNATURE_ENTRY *pInputSignatureEntries,
+                               const D3D11_1DDIARG_SIGNATURE_ENTRY *pInputSignatureEntries,
                                UINT numOutputSignatureEntries,
-                               D3D11_1DDIARG_SIGNATURE_ENTRY *pOutputSignatureEntries,
+                               const D3D11_1DDIARG_SIGNATURE_ENTRY *pOutputSignatureEntries,
                                UINT numPatchConstantSignatureEntries,
-                               D3D11_1DDIARG_SIGNATURE_ENTRY *pPatchConstantSignatureEntries)
+                               const D3D11_1DDIARG_SIGNATURE_ENTRY *pPatchConstantSignatureEntries)
 {
     RosCompiler *pCompiler = new RosCompiler(
         ProgramType,
         pCode,
+        pBlendState,
+        pDepthState,
+        pRasterState,
         numInputSignatureEntries,
         pInputSignatureEntries,
         numOutputSignatureEntries,
@@ -38,15 +44,21 @@ RosCompiler* RosCompilerCreate(D3D10_SB_TOKENIZED_PROGRAM_TYPE ProgramType,
 }
 
 RosCompiler::RosCompiler(D3D10_SB_TOKENIZED_PROGRAM_TYPE ProgramType,
-                         UINT *pCode,
+                         const UINT *pCode,
+                         const D3D11_1_DDI_BLEND_DESC* pBlendState,
+                         const D3D10_DDI_DEPTH_STENCIL_DESC* pDepthState,
+                         const D3D11_1_DDI_RASTERIZER_DESC* pRasterState,
                          UINT numInputSignatureEntries,
-                         D3D11_1DDIARG_SIGNATURE_ENTRY *pInputSignatureEntries,
+                         const D3D11_1DDIARG_SIGNATURE_ENTRY *pInputSignatureEntries,
                          UINT numOutputSignatureEntries,
-                         D3D11_1DDIARG_SIGNATURE_ENTRY *pOutputSignatureEntries,
+                         const D3D11_1DDIARG_SIGNATURE_ENTRY *pOutputSignatureEntries,
                          UINT numPatchConstantSignatureEntries,
-                         D3D11_1DDIARG_SIGNATURE_ENTRY *pPatchConstantSignatureEntries) :
+                         const D3D11_1DDIARG_SIGNATURE_ENTRY *pPatchConstantSignatureEntries) :
     m_ProgramType(ProgramType),
     m_pCode(pCode),
+    m_pBlendState(pBlendState),
+    m_pDepthState(pDepthState),
+    m_pRasterState(pRasterState),
     m_numInputSignatureEntries(numInputSignatureEntries),
     m_pInputSignatureEntries(pInputSignatureEntries),
     m_numOutputSignatureEntries(numOutputSignatureEntries),

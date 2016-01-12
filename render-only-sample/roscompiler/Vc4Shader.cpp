@@ -265,21 +265,32 @@ void Vc4Shader::Emit_ShaderOutput_VS(boolean bVS)
     }
 }
 
+void Vc4Shader::Emit_Blending_PS()
+{
+    assert(false);
+}
+
 void Vc4Shader::Emit_Epilogue()
 {
     assert(this->uShaderType == D3D10_SB_PIXEL_SHADER ||
            this->uShaderType == D3D10_SB_VERTEX_SHADER);
 
-    // output 'Z'.
     if (D3D10_SB_PIXEL_SHADER == this->uShaderType)
     {
-        if (true) // TODO: check if Z is enabled.
+        // output 'Z'.
+        if (UmdCompiler->GetDepthState()->DepthEnable)
         {
             Vc4Register tlb_z(VC4_QPU_ALU_REG_B, VC4_QPU_WADDR_TLB_Z);
             Vc4Register rb15(VC4_QPU_ALU_REG_B, 15); // reserved for Z
             Vc4Instruction Vc4Inst;
             Vc4Inst.Vc4_m_MOV(tlb_z, rb15);
             Vc4Inst.Emit(CurrentStorage);
+        }
+
+        // output blending instructions.
+        if (UmdCompiler->GetBlendState()->RenderTarget[0].BlendEnable)
+        {
+            this->Emit_Blending_PS();
         }
     }
 

@@ -19,6 +19,10 @@
 
 #include "RosUmdShader.h"
 
+#include "RosUmdBlendState.h"
+#include "RosUmdRasterizerState.h"
+#include "RosUmdDepthStencilState.h"
+
 #ifndef PAGE_SIZE
 #define PAGE_SIZE 4096
 #endif
@@ -26,11 +30,9 @@
 class RosUmdAdapter;
 class RosUmdRenderTargetView;
 class RosUmdDepthStencilView;
-class RosUmdBlendState;
 class RosUmdShader;
 class RosUmdElementLayout;
-class RosUmdDepthStencilState;
-class RosUmdRasterizerState;
+
 class RosUmdSampler;
 class RosUmdShaderResourceView;
 

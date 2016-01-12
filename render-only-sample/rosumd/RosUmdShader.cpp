@@ -85,6 +85,9 @@ RosUmdPipelineShader::Update()
 
     m_pCompiler = RosCompilerCreate(m_ProgramType,
                                     m_pCode,
+                                    m_pDevice->m_blendState->GetDesc(),
+                                    m_pDevice->m_depthStencilState->GetDesc(),
+                                    m_pDevice->m_rasterizerState->GetDesc(),
                                     m_numInputSignatureEntries,
                                     m_pInputSignatureEntries,
                                     m_numOutputSignatureEntries,

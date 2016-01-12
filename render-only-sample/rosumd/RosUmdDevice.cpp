@@ -1880,6 +1880,26 @@ void RosUmdDevice::WriteUniforms(
                 MoveToNextCommand(pScaleY, pCurCommand, curCommandOffset);
             }
             break;
+        case VC4_UNIFORM_TYPE_BLEND_FACTOR_R:
+        case VC4_UNIFORM_TYPE_BLEND_FACTOR_G:
+        case VC4_UNIFORM_TYPE_BLEND_FACTOR_B:
+        case VC4_UNIFORM_TYPE_BLEND_FACTOR_A:
+            {
+                FLOAT * pBlendFactor = (FLOAT *)pCurCommand;
+
+                *pBlendFactor = m_blendFactor[pCurUniformEntry->Type - VC4_UNIFORM_TYPE_BLEND_FACTOR_R];
+                MoveToNextCommand(pBlendFactor, pCurCommand, curCommandOffset);
+            }
+            break;
+        case VC4_UNIFORM_TYPE_BLEND_SAMPLE_MASK:
+            {
+                uint32_t *pSampleMask = (uint32_t *)pCurCommand;
+
+                // TODO: this must be color channel aware depending on RT format.
+                *pSampleMask = 0xFFFFFFFF;
+                MoveToNextCommand(pSampleMask, pCurCommand, curCommandOffset);
+            }
+            break;
         default:
             assert(false);  // Invalid values for pixel/fragment shader
             break;
