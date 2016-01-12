@@ -1163,9 +1163,15 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
 
 #endif
 
-    if (m_depthStencilState->m_desc.DepthEnable)
-    {
+    //
+    // The D3D11 default depth stencil state is DepthEnable of true with
+    // comparison function of less, and VC4's Tile Buffer has Z of 0.0 by
+    // default, without checking depth stencil view this combination would
+    // cull all pixels.
+    //
 
+    if (m_depthStencilState->m_desc.DepthEnable && m_depthStencilView)
+    {
         pVC4ConfigBits->EarlyZEnable = 1;
 
         pVC4ConfigBits->DepthTestFunction = ConvertD3D11DepthComparisonFunc(
