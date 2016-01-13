@@ -16,7 +16,7 @@ public:
     static NTSTATUS DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN UNICODE_STRING* pRegistryPath);
 
     __forceinline static bool IsRenderOnly () { return s_bRenderOnly; }
-    
+
     static const size_t kMaxVideoMemorySize = 128 * 1024 * 1024;
 
     static DRIVER_OBJECT* s_pDriverObject;

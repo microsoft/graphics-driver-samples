@@ -120,10 +120,10 @@ public:
     NTSTATUS DispatchIoRequest(
         IN_ULONG                    VidPnSourceId,
         IN_PVIDEO_REQUEST_PACKET    VideoRequestPacket);
-        
+
     virtual BOOLEAN InterruptRoutine(
         IN_ULONG        MessageNumber) = NULL;
-        
+
     NTSTATUS Patch(
         IN_CONST_PDXGKARG_PATCH     pPatch);
 
@@ -275,6 +275,74 @@ public:
 
     void ResetDevice(void);
 
+    //
+    // Display-only DDIs
+    //
+
+    _Check_return_
+    _Function_class_DXGK_(DXGKDDI_ISSUPPORTEDVIDPN)
+    _IRQL_requires_(PASSIVE_LEVEL)
+    NTSTATUS IsSupportedVidPn (
+        INOUT_PDXGKARG_ISSUPPORTEDVIDPN pIsSupportedVidPn
+        );
+
+    _Check_return_
+    _Function_class_DXGK_(DXGKDDI_RECOMMENDFUNCTIONALVIDPN)
+    _IRQL_requires_(PASSIVE_LEVEL)
+    NTSTATUS RecommendFunctionalVidPn (
+        IN_CONST_PDXGKARG_RECOMMENDFUNCTIONALVIDPN_CONST pRecommendFunctionalVidPn
+        );
+
+    _Check_return_
+    _Function_class_DXGK_(DXGKDDI_ENUMVIDPNCOFUNCMODALITY)
+    _IRQL_requires_(PASSIVE_LEVEL)
+    NTSTATUS EnumVidPnCofuncModality (
+        IN_CONST_PDXGKARG_ENUMVIDPNCOFUNCMODALITY_CONST pEnumCofuncModality
+        );
+
+    _Check_return_
+    _Function_class_DXGK_(DXGKDDI_SETVIDPNSOURCEVISIBILITY)
+    _IRQL_requires_(PASSIVE_LEVEL)
+    NTSTATUS SetVidPnSourceVisibility (
+        IN_CONST_PDXGKARG_SETVIDPNSOURCEVISIBILITY pSetVidPnSourceVisibility
+        );
+
+    _Check_return_
+    _Function_class_DXGK_(DXGKDDI_COMMITVIDPN)
+    _IRQL_requires_(PASSIVE_LEVEL)
+    NTSTATUS CommitVidPn (
+        IN_CONST_PDXGKARG_COMMITVIDPN_CONST pCommitVidPn
+        );
+
+    _Check_return_
+    _Function_class_DXGK_(DXGKDDI_UPDATEACTIVEVIDPNPRESENTPATH)
+    _IRQL_requires_(PASSIVE_LEVEL)
+    NTSTATUS UpdateActiveVidPnPresentPath (
+        IN_CONST_PDXGKARG_UPDATEACTIVEVIDPNPRESENTPATH_CONST pUpdateActiveVidPnPresentPath
+        );
+
+    _Check_return_
+    _Function_class_DXGK_(DXGKDDI_RECOMMENDMONITORMODES)
+    _IRQL_requires_(PASSIVE_LEVEL)
+    NTSTATUS RecommendMonitorModes (
+        IN_CONST_PDXGKARG_RECOMMENDMONITORMODES_CONST pRecommendMonitorModes
+        );
+
+    _Check_return_
+    _Function_class_DXGK_(DXGKDDI_QUERYVIDPNHWCAPABILITY)
+    _IRQL_requires_(PASSIVE_LEVEL)
+    NTSTATUS QueryVidPnHWCapability (
+        INOUT_PDXGKARG_QUERYVIDPNHWCAPABILITY io_pVidPnHWCaps
+        );
+
+    _Check_return_
+    _Function_class_DXGK_(DXGKDDI_STOP_DEVICE_AND_RELEASE_POST_DISPLAY_OWNERSHIP)
+    _IRQL_requires_DXGK_(PASSIVE_LEVEL)
+    NTSTATUS StopDeviceAndReleasePostDisplayOwnership (
+        _In_ D3DDDI_VIDEO_PRESENT_TARGET_ID TargetId,
+        _Out_ PDXGK_DISPLAY_INFORMATION DisplayInfo
+        );
+
 protected:
 
     RosKmAdapter(IN_CONST_PDEVICE_OBJECT PhysicalDeviceObject, OUT_PPVOID MiniportDeviceContext);
@@ -377,7 +445,7 @@ protected:
 protected:
 
     RosKmAdapterFlags           m_flags;
-    
+
     //
     // Indexes of hardware resources expected by the render subsystem.
     // Hardware resources for the display subsystem follow those for the renderer.
@@ -427,7 +495,7 @@ protected:
 
     BYTE                        m_deviceId[MAX_DEVICE_ID_LENGTH];
     ULONG                       m_deviceIdLength;
-    
+
     VC4_DISPLAY                 m_display;
 
 #if VC4
@@ -464,7 +532,7 @@ public:
     UINT                        m_NumPowerComponents;
     DXGK_POWER_RUNTIME_COMPONENT m_PowerComponents[C_ROSD_GPU_ENGINE_COUNT];
     UINT                         m_EnginePowerFState[C_ROSD_GPU_ENGINE_COUNT];
-    
+
     UINT                        m_NumNodes;
     DXGK_WDDMVERSION            m_WDDMVersion;
 
@@ -472,8 +540,8 @@ public:
 
     NTSTATUS
         InitializePowerComponentInfo();
-        
-    NTSTATUS 
+
+    NTSTATUS
         GetNumPowerComponents();
 
     NTSTATUS

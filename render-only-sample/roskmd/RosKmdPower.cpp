@@ -23,13 +23,13 @@ RosKmAdapter::SetPowerState(
     {
         m_AdapterPowerDState = DevicePowerState;
     }
-    
+
     if (RosKmdGlobal::IsRenderOnly())
     {
         ROS_LOG_WARNING("SetPowerState() is not implemented by render side.");
         return STATUS_SUCCESS;
     }
-    
+
     return m_display.SetPowerState(DeviceUid, DevicePowerState, ActionType);
 }
 

@@ -41,10 +41,10 @@ Revision History:
 
 #define GPIOHPD_INIT_SEGMENT_END \
     __pragma(code_seg(pop))
-    
+
 #define GPIOHPD_ASSERT_MAX_IRQL(Irql) NT_ASSERT(KeGetCurrentIrql() <= (Irql))
 #define GPIOHPD_ASSERT_LOW_IRQL() GPIOHPD_ASSERT_MAX_IRQL(APC_LEVEL)
-    
+
 enum : ULONG { GPIOHPD_POOL_TAG = '_DPH' };
 
 //
@@ -108,13 +108,13 @@ private: // NONPAGED
 
     GPIOHPD_DEVICE (const GPIOHPD_DEVICE&) = delete;
     GPIOHPD_DEVICE& operator= (const GPIOHPD_DEVICE&) = delete;
-    
+
     __forceinline bool Connected ( )
     {
         // LOW = connected, HIGH = disconnected
         return !(InterlockedOr(&this->gpioPinPolarity, 0) & 1);
     }
-    
+
     __forceinline bool NotificationEnabled ( )
     {
         return !!InterlockedOr(&this->notificationEnabled, 0);
@@ -131,28 +131,28 @@ public: // PAGED
 
     _IRQL_requires_max_(PASSIVE_LEVEL)
     GPIOHPD_DEVICE ();
-    
+
     _IRQL_requires_max_(PASSIVE_LEVEL)
     void EnableNotification (
         const GPIOHPD_REGISTER_NOTIFICATION_INPUT& RegistrationInfo
         );
-    
+
     _IRQL_requires_max_(PASSIVE_LEVEL)
     void DisableNotification ();
 
     static EVT_WDF_IO_QUEUE_IO_INTERNAL_DEVICE_CONTROL EvtIoInternalDeviceControl;
     static EVT_WDF_FILE_CLOSE EvtFileClose;
-    
+
     static EVT_WDF_DEVICE_D0_ENTRY EvtDeviceD0Entry;
     static EVT_WDF_DEVICE_D0_EXIT EvtDeviceD0Exit;
     static EVT_WDF_DEVICE_PREPARE_HARDWARE EvtDevicePrepareHardware;
     static EVT_WDF_DEVICE_RELEASE_HARDWARE EvtDeviceReleaseHardware;
-    
+
     static EVT_WDF_DRIVER_DEVICE_ADD EvtDriverDeviceAdd;
     static EVT_WDF_DRIVER_UNLOAD EvtDriverUnload;
 
 private: // PAGED
-    
+
 };
 
 WDF_DECLARE_CONTEXT_TYPE_WITH_NAME(

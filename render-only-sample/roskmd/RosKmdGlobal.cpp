@@ -145,7 +145,7 @@ NTSTATUS RosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
     }
 
     s_videoMemoryPhysicalAddress = MmGetPhysicalAddress(s_pVideoMemory);
-    
+
     //
     // Query the driver registry key to see whether we're render only
     //
@@ -157,7 +157,7 @@ NTSTATUS RosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
             OBJ_KERNEL_HANDLE,
             nullptr,                // RootDirectory
             nullptr);               // SecurityDescriptor
-        
+
         HANDLE keyHandle;
         Status = ZwOpenKey(&keyHandle, GENERIC_READ, &attributes);
         if (!NT_SUCCESS(Status))
@@ -176,9 +176,9 @@ NTSTATUS RosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
             UNREFERENCED_PARAMETER(tempStatus);
             NT_ASSERT(NT_SUCCESS(Status));
         });
-        
+
         DECLARE_CONST_UNICODE_STRING(renderOnlyValueName, L"RenderOnly");
-        
+
         #pragma warning(disable:4201)   // nameless struct/union
         union {
             KEY_VALUE_PARTIAL_INFORMATION PartialInfo;
@@ -190,7 +190,7 @@ NTSTATUS RosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
             } DUMMYSTRUCTNAME;
         } valueInfo;
         #pragma warning(default:4201) // nameless struct/union
-        
+
         ULONG resultLength;
         Status = ZwQueryValueKey(
                 keyHandle,
@@ -224,11 +224,11 @@ NTSTATUS RosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
             ROS_LOG_ASSERTION(
                 "Unexpected error occurred querying RenderOnly registry key. (Status=%!STATUS!)",
                 Status);
-            
+
             // an unexpected type in the registry could cause us to get here,
             // so don't stop the show.
         }
-    }
+    } // RenderOnly
 
     //
     // Fill in the DriverInitializationData structure and call DlInitialize()
@@ -321,15 +321,23 @@ NTSTATUS RosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
 
     DriverInitializationData.DxgkDdiCalibrateGpuClock = RosKmdDdi::DdiCalibrateGpuClock;
     DriverInitializationData.DxgkDdiSetStablePowerState = RosKmdDdi::DdiSetStablePowerState;
-    
-    
+
+
     //
     // Register VidPn and display DDIs
     //
     if (!IsRenderOnly())
     {
-        // TODO[jordanrh]: fill in VidPn DDIs and stuff
-        
+        DriverInitializationData.DxgkDdiIsSupportedVidPn = RosKmdDisplayDdi::DdiIsSupportedVidPn;
+        DriverInitializationData.DxgkDdiRecommendFunctionalVidPn = RosKmdDisplayDdi::DdiRecommendFunctionalVidPn;
+        DriverInitializationData.DxgkDdiEnumVidPnCofuncModality = RosKmdDisplayDdi::DdiEnumVidPnCofuncModality;
+        DriverInitializationData.DxgkDdiSetVidPnSourceVisibility = RosKmdDisplayDdi::DdiSetVidPnSourceVisibility;
+        DriverInitializationData.DxgkDdiCommitVidPn = RosKmdDisplayDdi::DdiCommitVidPn;
+        DriverInitializationData.DxgkDdiUpdateActiveVidPnPresentPath = RosKmdDisplayDdi::DdiUpdateActiveVidPnPresentPath;
+
+        DriverInitializationData.DxgkDdiRecommendMonitorModes = RosKmdDisplayDdi::DdiRecommendMonitorModes;
+        DriverInitializationData.DxgkDdiQueryVidPnHWCapability = RosKmdDisplayDdi::DdiQueryVidPnHWCapability;
+        DriverInitializationData.DxgkDdiStopDeviceAndReleasePostDisplayOwnership = RosKmdDisplayDdi::DdiStopDeviceAndReleasePostDisplayOwnership;
     }
 
     Status = DxgkInitialize(pDriverObject, pRegistryPath, &DriverInitializationData);

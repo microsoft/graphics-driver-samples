@@ -628,7 +628,7 @@ union VC4HVS_DLIST_PITCH_WORD_0 {
         ULONG sink_pix : 5;
     } DUMMYSTRUCTNAME;
 };
-    
+
 #include <pshpack4.h> //======================================================
 
 struct VC4HVS_REGISTERS {

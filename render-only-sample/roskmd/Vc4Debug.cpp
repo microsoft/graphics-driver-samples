@@ -454,7 +454,7 @@ void VC4_DEBUG::DumpHvsRegisters (VC4HVS_REGISTERS* RegistersPtr)
 {
     PAGED_CODE();
     VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-    
+
     // Read the registers into a local copy and use the debugger
     // to interpret the bitfields
     struct {
@@ -487,7 +487,7 @@ void VC4_DEBUG::DumpHvsRegisters (VC4HVS_REGISTERS* RegistersPtr)
         VC4HVS_DISPALPHA2 DISPALPHA2;
         VC4HVS_GAMADDR GAMADDR;
     } registers;
-    
+
     registers.DISPCTRL.AsUlong = READ_REGISTER_NOFENCE_ULONG(&RegistersPtr->DISPCTRL);
     registers.DISPSTAT.AsUlong = READ_REGISTER_NOFENCE_ULONG(&RegistersPtr->DISPSTAT);
     registers.DISPID = READ_REGISTER_NOFENCE_ULONG(&RegistersPtr->DISPID);
@@ -516,7 +516,7 @@ void VC4_DEBUG::DumpHvsRegisters (VC4HVS_REGISTERS* RegistersPtr)
     registers.DISPBASE2.AsUlong = READ_REGISTER_NOFENCE_ULONG(&RegistersPtr->DISPBASE2);
     registers.DISPALPHA2.AsUlong = READ_REGISTER_NOFENCE_ULONG(&RegistersPtr->DISPALPHA2);
     registers.GAMADDR.AsUlong = READ_REGISTER_NOFENCE_ULONG(&RegistersPtr->GAMADDR);
-    
+
     // Read context memory into local variable
     ULONG* contextMem = new (PagedPool, VC4_ALLOC_TAG::TEMP) ULONG[0x1000];
     for (ULONG i = 0; i < ARRAYSIZE(RegistersPtr->DLISTMEM); ++i) {
@@ -526,7 +526,7 @@ void VC4_DEBUG::DumpHvsRegisters (VC4HVS_REGISTERS* RegistersPtr)
         PAGED_CODE();
         delete[] contextMem;
     });
-    
+
     auto entryPtr = reinterpret_cast<const VC4HVS_DLIST_ENTRY_UNITY*>(
         &contextMem[registers.DISPLACT1.LACT]);
     UNREFERENCED_PARAMETER(entryPtr);
@@ -537,7 +537,7 @@ void VC4_DEBUG::DumpPixelValveRegisters (VC4PIXELVALVE_REGISTERS* RegistersPtr)
 {
     PAGED_CODE();
     VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-    
+
     // Read the registers into a local copy and use the debugger
     // to interpret the bitfields
     struct {
@@ -555,7 +555,7 @@ void VC4_DEBUG::DumpPixelValveRegisters (VC4PIXELVALVE_REGISTERS* RegistersPtr)
         ULONG Status;
         ULONG HactAct;
     } registers;
-    
+
     registers.Control.AsUlong = READ_REGISTER_NOFENCE_ULONG(&RegistersPtr->Control);
     registers.VControl.AsUlong = READ_REGISTER_NOFENCE_ULONG(&RegistersPtr->VControl);
     registers.VSyncD = READ_REGISTER_NOFENCE_ULONG(&RegistersPtr->VSyncD);

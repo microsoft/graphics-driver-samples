@@ -22,7 +22,7 @@
 //
 
 #pragma warning(disable:4201)   // nameless struct/union
-    
+
 #include <pshpack4.h> //======================================================
 
 enum VC4PIXELVALVE_CONTROL_CLOCK_SELECT : ULONG {
@@ -59,7 +59,7 @@ union VC4PIXELVALVE_CONTROL {
 static_assert(
     sizeof(VC4PIXELVALVE_CONTROL) == sizeof(ULONG),
     "Sanity check on size of VC4PIXELVALVE_CONTROL");
-    
+
 union VC4PIXELVALVE_VCONTROL {
     ULONG AsUlong;
     struct {
@@ -90,7 +90,7 @@ union VC4PIXELVALVE_HORZA {
 static_assert(
     sizeof(VC4PIXELVALVE_HORZA) == sizeof(ULONG),
     "Sanity check on size of VC4PIXELVALVE_HORZA");
-    
+
 union VC4PIXELVALVE_HORZB {
     ULONG AsUlong;
     struct {
@@ -155,7 +155,7 @@ union VC4PIXELVALVE_INTERRUPT {
 static_assert(
     sizeof(VC4PIXELVALVE_VERTB) == sizeof(ULONG),
     "Sanity check on size of VC4PIXELVALVE_VERTB");
-    
+
 struct VC4PIXELVALVE_REGISTERS {
     ULONG Control;
     ULONG VControl;

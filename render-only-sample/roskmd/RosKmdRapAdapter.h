@@ -24,7 +24,7 @@ protected:
         OUT_PULONG              NumberOfVideoPresentSources,
         OUT_PULONG              NumberOfChildren
         ) override;
-        
+
     virtual NTSTATUS Stop () override;
 
     virtual BOOLEAN InterruptRoutine(

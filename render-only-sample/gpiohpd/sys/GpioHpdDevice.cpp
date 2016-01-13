@@ -37,7 +37,7 @@ BOOLEAN GPIOHPD_DEVICE::HotPlugDetectIsr (
     auto thisPtr = static_cast<GPIOHPD_DEVICE*>(ServiceContextPtr);
     InterlockedIncrement(&thisPtr->gpioPinPolarity);
     KeInsertQueueDpc(&thisPtr->dpcObject, nullptr, nullptr);
-    
+
     return TRUE;
 }
 
@@ -50,16 +50,16 @@ VOID GPIOHPD_DEVICE::HotPlugDetectDpc (
     )
 {
     NT_ASSERT(KeGetCurrentIrql() == DISPATCH_LEVEL);
-    
+
     auto thisPtr = static_cast<GPIOHPD_DEVICE*>(ContextPtr);
-    
-    GPIOHPD_REGISTER_NOTIFICATION_INPUT registrationInfo = 
+
+    GPIOHPD_REGISTER_NOTIFICATION_INPUT registrationInfo =
         thisPtr->registrationInfo;
-    
+
     if (!thisPtr->NotificationEnabled()) return;
-    
+
     NT_ASSERT(registrationInfo.EvtHotplugNotificationFunc);
-    
+
     BOOLEAN connected = thisPtr->Connected();
     if (connected == thisPtr->lastNotificationValue) {
         GPIOHPD_LOG_TRACE(
@@ -68,12 +68,12 @@ VOID GPIOHPD_DEVICE::HotPlugDetectDpc (
         return;
     }
     thisPtr->lastNotificationValue = connected;
-    
+
     GPIOHPD_LOG_TRACE(
         "Firing notification! (EvtHotplugNotificationFunc=%p, connected=%d)",
         registrationInfo.EvtHotplugNotificationFunc,
         connected);
-    
+
     registrationInfo.EvtHotplugNotificationFunc(
         registrationInfo.ContextPtr,
         connected);
@@ -93,7 +93,7 @@ GPIOHPD_DEVICE::GPIOHPD_DEVICE () :
 {
     PAGED_CODE();
     GPIOHPD_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-    
+
     KeInitializeDpc(&this->dpcObject, HotPlugDetectDpc, this);
 }
 
@@ -104,10 +104,10 @@ void GPIOHPD_DEVICE::EnableNotification (
 {
     PAGED_CODE();
     GPIOHPD_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-    
+
     NT_ASSERT(RegistrationInfo.EvtHotplugNotificationFunc);
     NT_ASSERT(!this->registrationInfo.EvtHotplugNotificationFunc);
-    
+
     this->registrationInfo = RegistrationInfo;
     LONG alreadyEnabled = InterlockedOr(&this->notificationEnabled, 1);
     UNREFERENCED_PARAMETER(alreadyEnabled);
@@ -119,13 +119,13 @@ void GPIOHPD_DEVICE::DisableNotification ()
 {
     PAGED_CODE();
     GPIOHPD_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-    
+
     NT_ASSERT(this->registrationInfo.EvtHotplugNotificationFunc);
-    
+
     LONG enabled = InterlockedAnd(&this->notificationEnabled, 0);
     UNREFERENCED_PARAMETER(enabled);
     NT_ASSERT(enabled);
-    
+
     this->registrationInfo = GPIOHPD_REGISTER_NOTIFICATION_INPUT();
 }
 
@@ -140,11 +140,11 @@ VOID GPIOHPD_DEVICE::EvtIoInternalDeviceControl (
 {
     PAGED_CODE();
     GPIOHPD_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-    
+
     NTSTATUS status;
     GPIOHPD_DEVICE* thisPtr = getGpioHpdDeviceFromWdfObject(
             WdfIoQueueGetDevice(WdfQueue));
-    
+
     switch (IoControlCode) {
     case IOCTL_GPIOHPD_REGISTER_NOTIFICATION:
     {
@@ -162,7 +162,7 @@ VOID GPIOHPD_DEVICE::EvtIoInternalDeviceControl (
             WdfRequestComplete(WdfRequest, status);
             return;
         }
-        
+
         if (!inputBufferPtr->EvtHotplugNotificationFunc) {
             GPIOHPD_LOG_ERROR(
                 "EvtHotplugNotificationFunc cannot be null. (WdfRequest=%p)",
@@ -170,7 +170,7 @@ VOID GPIOHPD_DEVICE::EvtIoInternalDeviceControl (
             WdfRequestComplete(WdfRequest, STATUS_INVALID_PARAMETER);
             return;
         }
-        
+
         GPIOHPD_REGISTER_NOTIFICATION_OUTPUT* outputBufferPtr;
         status = WdfRequestRetrieveOutputBuffer(
                 WdfRequest,
@@ -185,7 +185,7 @@ VOID GPIOHPD_DEVICE::EvtIoInternalDeviceControl (
             WdfRequestComplete(WdfRequest, status);
             return;
         }
-        
+
         if (thisPtr->NotificationEnabled()) {
             GPIOHPD_LOG_ERROR(
                 "Notification already registered! Only one client at a time is allowed. (thisPtr->registrationInfo.EvtHotplugNotificationFunc=%p)",
@@ -193,24 +193,24 @@ VOID GPIOHPD_DEVICE::EvtIoInternalDeviceControl (
             WdfRequestComplete(WdfRequest, STATUS_SHARING_VIOLATION);
             return;
         }
-        
+
         GPIOHPD_LOG_INFORMATION(
             "Enabling notification. (EvtHotplugNotificationFunc=%p)",
             inputBufferPtr->EvtHotplugNotificationFunc);
-        
+
         // Read current connected state. Cannot write into output buffer
         // until we are done with input buffer
         BOOLEAN connected = thisPtr->Connected();
         thisPtr->lastNotificationValue = connected;
-        
+
         // Enable notification delivery
         thisPtr->EnableNotification(*inputBufferPtr);
-    
+
         // Fire an initial notification to account for an interrupt that may
         // have occurred between when we read the value and when the ISR
         // was enabled
         KeInsertQueueDpc(&thisPtr->dpcObject, nullptr, nullptr);
-    
+
         *outputBufferPtr = GPIOHPD_REGISTER_NOTIFICATION_OUTPUT();
         outputBufferPtr->Connected = connected;
         WdfRequestCompleteWithInformation(
@@ -221,7 +221,7 @@ VOID GPIOHPD_DEVICE::EvtIoInternalDeviceControl (
         return;
     } // case IOCTL_GPIOHPD_REGISTER_NOTIFICATION
     } // switch (...IoControlCode)
-    
+
     GPIOHPD_LOG_WARNING(
         "Unrecognized control code. (IoControlCode=0x%x, WdfRequest=%p)",
         IoControlCode,
@@ -234,15 +234,15 @@ VOID GPIOHPD_DEVICE::EvtFileClose (WDFFILEOBJECT WdfFileObject)
 {
     PAGED_CODE();
     GPIOHPD_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-    
+
     GPIOHPD_DEVICE* thisPtr = getGpioHpdDeviceFromWdfObject(
             WdfFileObjectGetDevice(WdfFileObject));
-            
+
     GPIOHPD_LOG_TRACE(
         "Disabling notification. (WdfFileObject=%p, EvtHotplugNotificationFunc=%p)",
         WdfFileObject,
         thisPtr->registrationInfo.EvtHotplugNotificationFunc);
-        
+
     thisPtr->DisableNotification();
 }
 
@@ -275,11 +275,11 @@ NTSTATUS GPIOHPD_DEVICE::EvtDevicePrepareHardware (
     )
 {
     PAGED_CODE();
-    
+
     NTSTATUS status;
 
     const CM_PARTIAL_RESOURCE_DESCRIPTOR* interruptResourcePtr = nullptr;
-    {    
+    {
         ULONG interruptResourceCount = 0;
         // Look for an interrupt resource and a GPIO IO connection resource
         const ULONG resourceCount = WdfCmResourceListGetCount(ResourcesTranslated);
@@ -313,14 +313,14 @@ NTSTATUS GPIOHPD_DEVICE::EvtDevicePrepareHardware (
             return STATUS_DEVICE_CONFIGURATION_ERROR;
         }
     }
-    
+
     GPIOHPD_DEVICE* thisPtr = getGpioHpdDeviceFromWdfObject(WdfDevice);
 
     // Connect Hot Plug Detect (HPD) GPIO Interrupt
     {
         auto params = IO_CONNECT_INTERRUPT_PARAMETERS();
         params.Version = CONNECT_FULLY_SPECIFIED;
-        params.FullySpecified.PhysicalDeviceObject = 
+        params.FullySpecified.PhysicalDeviceObject =
             WdfDeviceWdmGetPhysicalDevice(WdfDevice);
         params.FullySpecified.InterruptObject = &thisPtr->kinterruptPtr;
         params.FullySpecified.ServiceRoutine = HotPlugDetectIsr;
@@ -339,7 +339,7 @@ NTSTATUS GPIOHPD_DEVICE::EvtDevicePrepareHardware (
             return STATUS_DEVICE_CONFIGURATION_ERROR;
         }
         params.FullySpecified.InterruptMode = Latched;
-        
+
         params.FullySpecified.ProcessorEnableMask = interruptResourcePtr->u.Interrupt.Affinity;
         params.FullySpecified.Group = 0;
 
@@ -351,7 +351,7 @@ NTSTATUS GPIOHPD_DEVICE::EvtDevicePrepareHardware (
             return status;
         }
     }
-    
+
     NT_ASSERT(status == STATUS_SUCCESS);
     return status;
 }
@@ -365,7 +365,7 @@ NTSTATUS GPIOHPD_DEVICE::EvtDeviceReleaseHardware (
     PAGED_CODE();
 
     GPIOHPD_DEVICE* thisPtr = getGpioHpdDeviceFromWdfObject(WdfDevice);
-    
+
     // disconnect interrupt
     if (thisPtr->kinterruptPtr) {
         auto params = IO_DISCONNECT_INTERRUPT_PARAMETERS();
@@ -374,9 +374,9 @@ NTSTATUS GPIOHPD_DEVICE::EvtDeviceReleaseHardware (
         IoDisconnectInterruptEx(&params);
         thisPtr->kinterruptPtr = nullptr;
     }
-    
+
     // Close remote IO target
-    
+
     return STATUS_SUCCESS;
 }
 
@@ -404,7 +404,7 @@ NTSTATUS GPIOHPD_DEVICE::EvtDriverDeviceAdd (
 
         WdfDeviceInitSetPnpPowerEventCallbacks(DeviceInitPtr, &pnpCallbacks);
     }
-    
+
     //
     // File object configuration
     //
@@ -413,20 +413,20 @@ NTSTATUS GPIOHPD_DEVICE::EvtDriverDeviceAdd (
         WDF_OBJECT_ATTRIBUTES_INIT(&wdfObjectAttributes);
         wdfObjectAttributes.SynchronizationScope = WdfSynchronizationScopeNone;
         wdfObjectAttributes.ExecutionLevel = WdfExecutionLevelPassive;
-        
+
         WDF_FILEOBJECT_CONFIG config;
         WDF_FILEOBJECT_CONFIG_INIT(
             &config,
             nullptr,                // EvtDeviceFileCreate
             EvtFileClose,           // EvtDeviceFileClose
             nullptr);               // EvtDeviceFileCleanup
-            
+
         WdfDeviceInitSetFileObjectConfig(
             DeviceInitPtr,
             &config,
             &wdfObjectAttributes);
     }
-    
+
     //
     // Assign a device name
     //
@@ -440,10 +440,10 @@ NTSTATUS GPIOHPD_DEVICE::EvtDriverDeviceAdd (
             return status;
         }
     }
-    
+
     // Only allow a single handle open at a time
     WdfDeviceInitSetExclusive(DeviceInitPtr, TRUE);
-        
+
     //
     // Create the device.
     //
@@ -471,7 +471,7 @@ NTSTATUS GPIOHPD_DEVICE::EvtDriverDeviceAdd (
         thisPtr = new (contextMemory) GPIOHPD_DEVICE();
         NT_ASSERT(thisPtr);
     }
-    
+
     //
     // Create the default queue
     //
@@ -480,14 +480,14 @@ NTSTATUS GPIOHPD_DEVICE::EvtDriverDeviceAdd (
         WDF_OBJECT_ATTRIBUTES_INIT(&wdfObjectAttributes);
         wdfObjectAttributes.SynchronizationScope = WdfSynchronizationScopeNone;
         wdfObjectAttributes.ExecutionLevel = WdfExecutionLevelPassive;
-        
+
         WDF_IO_QUEUE_CONFIG config;
         WDF_IO_QUEUE_CONFIG_INIT_DEFAULT_QUEUE(
             &config,
             WdfIoQueueDispatchSequential);
-            
+
         config.EvtIoInternalDeviceControl = EvtIoInternalDeviceControl;
-        
+
         WDFQUEUE wdfQueue;
         status = WdfIoQueueCreate(
                 wdfDevice,

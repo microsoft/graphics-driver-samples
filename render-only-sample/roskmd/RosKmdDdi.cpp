@@ -10,6 +10,9 @@
 #include "RosKmdDdi.h"
 #include "RosKmdContext.h"
 #include "RosKmdResource.h"
+#include "Vc4Common.h"
+
+
 
 // TODO(bhouse) RosKmdPnpDispatch appears to be unused
 NTSTATUS
@@ -649,3 +652,130 @@ RosKmdDdi::DdiResetDevice(
     return pRosKmdAdapter->ResetDevice();
 }
 
+// TODO[jordanh] put PASSIVE_LEVEL DDIs in the paged section
+VC4_PAGED_SEGMENT_BEGIN; //===================================================
+
+//
+// RosKmdDisplayDdi
+//
+
+_Use_decl_annotations_
+NTSTATUS RosKmdDisplayDdi::DdiIsSupportedVidPn (
+    VOID* const MiniportDeviceContextPtr,
+    DXGKARG_ISSUPPORTEDVIDPN* IsSupportedVidPnPtr
+    )
+{
+    PAGED_CODE();
+    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    return RosKmAdapter::Cast(MiniportDeviceContextPtr)->IsSupportedVidPn(
+            IsSupportedVidPnPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmdDisplayDdi::DdiRecommendFunctionalVidPn (
+    VOID* const MiniportDeviceContextPtr,
+    const DXGKARG_RECOMMENDFUNCTIONALVIDPN* const RecommendFunctionalVidPnPtr
+    )
+{
+    PAGED_CODE();
+    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    return RosKmAdapter::Cast(MiniportDeviceContextPtr)->RecommendFunctionalVidPn(
+            RecommendFunctionalVidPnPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmdDisplayDdi::DdiEnumVidPnCofuncModality (
+    VOID* const MiniportDeviceContextPtr,
+    const DXGKARG_ENUMVIDPNCOFUNCMODALITY* const EnumCofuncModalityPtr
+    )
+{
+    PAGED_CODE();
+    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    return RosKmAdapter::Cast(MiniportDeviceContextPtr)->EnumVidPnCofuncModality(
+            EnumCofuncModalityPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmdDisplayDdi::DdiSetVidPnSourceVisibility (
+    VOID* const MiniportDeviceContextPtr,
+    const DXGKARG_SETVIDPNSOURCEVISIBILITY* SetVidPnSourceVisibilityPtr
+    )
+{
+    PAGED_CODE();
+    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    return RosKmAdapter::Cast(MiniportDeviceContextPtr)->SetVidPnSourceVisibility(
+            SetVidPnSourceVisibilityPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmdDisplayDdi::DdiCommitVidPn (
+    VOID* const MiniportDeviceContextPtr,
+    const DXGKARG_COMMITVIDPN* const CommitVidPnPtr
+    )
+{
+    PAGED_CODE();
+    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    return RosKmAdapter::Cast(MiniportDeviceContextPtr)->CommitVidPn(
+            CommitVidPnPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmdDisplayDdi::DdiUpdateActiveVidPnPresentPath (
+    VOID* const MiniportDeviceContextPtr,
+    const DXGKARG_UPDATEACTIVEVIDPNPRESENTPATH* const UpdateActiveVidPnPresentPathPtr
+    )
+{
+    PAGED_CODE();
+    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    return RosKmAdapter::Cast(MiniportDeviceContextPtr)->UpdateActiveVidPnPresentPath(
+            UpdateActiveVidPnPresentPathPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmdDisplayDdi::DdiRecommendMonitorModes (
+    VOID* const MiniportDeviceContextPtr,
+    const DXGKARG_RECOMMENDMONITORMODES* const RecommendMonitorModesPtr
+    )
+{
+    PAGED_CODE();
+    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    return RosKmAdapter::Cast(MiniportDeviceContextPtr)->RecommendMonitorModes(
+            RecommendMonitorModesPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmdDisplayDdi::DdiQueryVidPnHWCapability (
+    VOID* const MiniportDeviceContextPtr,
+    DXGKARG_QUERYVIDPNHWCAPABILITY* VidPnHWCapsPtr
+    )
+{
+    PAGED_CODE();
+    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    return RosKmAdapter::Cast(MiniportDeviceContextPtr)->QueryVidPnHWCapability(
+            VidPnHWCapsPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmdDisplayDdi::DdiStopDeviceAndReleasePostDisplayOwnership (
+    VOID* const MiniportDeviceContextPtr,
+    D3DDDI_VIDEO_PRESENT_TARGET_ID TargetId,
+    DXGK_DISPLAY_INFORMATION* DisplayInfoPtr
+    )
+{
+    PAGED_CODE();
+    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    return RosKmAdapter::Cast(MiniportDeviceContextPtr)->StopDeviceAndReleasePostDisplayOwnership(
+            TargetId,
+            DisplayInfoPtr);
+}
+
+VC4_PAGED_SEGMENT_END; //=====================================================

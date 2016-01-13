@@ -57,9 +57,9 @@ typedef struct _GPIOHPD_REGISTER_NOTIFICATION_INPUT {
     // event occurs.
     //
     PFN_GPIOHPD_HOTPLUG_NOTIFICATION EvtHotplugNotificationFunc;
-    
+
     //
-    // Context pointer which the HPD driver supplies in the ContextPtr 
+    // Context pointer which the HPD driver supplies in the ContextPtr
     // parameter of the EVT_GPIOHPD_HOTPLUG_NOTIFICATION callback.
     //
     PVOID ContextPtr;

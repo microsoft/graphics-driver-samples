@@ -267,3 +267,28 @@ public:
 
 };
 
+//
+// DDIs that don't have to be registered in render only mode.
+//
+class RosKmdDisplayDdi
+{
+public:  // NONPAGED
+private: // NONPAGED
+public: // PAGED
+
+    static DXGKDDI_ISSUPPORTEDVIDPN DdiIsSupportedVidPn;
+    static DXGKDDI_RECOMMENDFUNCTIONALVIDPN DdiRecommendFunctionalVidPn;
+    static DXGKDDI_ENUMVIDPNCOFUNCMODALITY DdiEnumVidPnCofuncModality;
+    static DXGKDDI_SETVIDPNSOURCEVISIBILITY DdiSetVidPnSourceVisibility;
+    static DXGKDDI_COMMITVIDPN DdiCommitVidPn;
+    static DXGKDDI_UPDATEACTIVEVIDPNPRESENTPATH DdiUpdateActiveVidPnPresentPath;
+
+    static DXGKDDI_RECOMMENDMONITORMODES DdiRecommendMonitorModes;
+    static DXGKDDI_QUERYVIDPNHWCAPABILITY DdiQueryVidPnHWCapability;
+    static DXGKDDI_STOP_DEVICE_AND_RELEASE_POST_DISPLAY_OWNERSHIP
+        DdiStopDeviceAndReleasePostDisplayOwnership;
+
+private: // PAGED
+
+};
+

@@ -60,13 +60,13 @@ public: // PAGED
 
     _IRQL_requires_max_(PASSIVE_LEVEL)
     void DumpVidPn (D3DKMDT_HVIDPN VidPnHandle);
-    
+
     _IRQL_requires_max_(PASSIVE_LEVEL)
     void DumpHvsRegisters (VC4HVS_REGISTERS* RegistersPtr);
 
     _IRQL_requires_max_(PASSIVE_LEVEL)
     void DumpPixelValveRegisters (VC4PIXELVALVE_REGISTERS* RegistersPtr);
-    
+
 private: // PAGED
 
 };

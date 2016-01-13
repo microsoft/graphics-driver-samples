@@ -362,7 +362,7 @@ RosKmAdapter::Start(
 {
     m_DxgkStartInfo = *DxgkStartInfo;
     m_DxgkInterface = *DxgkInterface;
-    
+
     //
     // Render only device has no VidPn source and target
     // Subclass should overwrite these values if it is not render-only.
@@ -418,7 +418,7 @@ RosKmAdapter::Start(
     {
         return status;
     }
-    
+
     status = m_DxgkInterface.DxgkCbGetDeviceInformation(
         m_DxgkInterface.DeviceHandle,
         &m_deviceInfo);
@@ -656,10 +656,10 @@ RosKmAdapter::DispatchIoRequest(
     {
         ROS_LOG_WARNING(
             "Unsupported IO Control Code. (VideoRequestPacketPtr->IoControlCode = 0x%lx)",
-            VideoRequestPacket->IoControlCode);    
-        return STATUS_NOT_SUPPORTED;        
+            VideoRequestPacket->IoControlCode);
+        return STATUS_NOT_SUPPORTED;
     }
-    
+
     return m_display.DispatchIoRequest(VidPnSourceId, VideoRequestPacket);
 }
 
@@ -1187,7 +1187,7 @@ RosKmAdapter::QueryAdapterInfo(
                 sizeof(UINT));
             return STATUS_INVALID_PARAMETER;
         }
-        
+
         if (pQueryAdapterInfo->OutputDataSize < sizeof(DXGK_POWER_RUNTIME_COMPONENT))
         {
             ROS_LOG_ASSERTION(
@@ -1231,7 +1231,7 @@ RosKmAdapter::QueryAdapterInfo(
         // NT_ASSERT(FALSE);
         break;
     }
-    
+
     if (RosKmdGlobal::IsRenderOnly())
         return STATUS_SUCCESS;
 
@@ -1475,7 +1475,7 @@ RosKmAdapter::SetPointerPosition(
             return STATUS_SUCCESS;
         }
     }
-    
+
     return m_display.SetPointerPosition(pSetPointerPosition);
 }
 
@@ -1489,10 +1489,10 @@ RosKmAdapter::SetPointerShape(
         {
             return STATUS_INVALID_PARAMETER;
         }
-        
+
         return STATUS_NOT_IMPLEMENTED;
     }
-    
+
     return m_display.SetPointerShape(pSetPointerShape);
 }
 
@@ -1805,3 +1805,118 @@ RosKmAdapter::HwDmaBufCompletionDpcRoutine(
     KeSetEvent(&pRosKmAdapter->m_hwDmaBufCompletionEvent, 0, FALSE);
 }
 
+VC4_PAGED_SEGMENT_BEGIN; //===================================================
+
+_Use_decl_annotations_
+NTSTATUS RosKmAdapter::IsSupportedVidPn (
+    DXGKARG_ISSUPPORTEDVIDPN* IsSupportedVidPnPtr
+    )
+{
+    PAGED_CODE();
+    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
+    return m_display.IsSupportedVidPn(IsSupportedVidPnPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmAdapter::RecommendFunctionalVidPn (
+    const DXGKARG_RECOMMENDFUNCTIONALVIDPN* const RecommendFunctionalVidPnPtr
+    )
+{
+    PAGED_CODE();
+    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
+    return m_display.RecommendFunctionalVidPn(RecommendFunctionalVidPnPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmAdapter::EnumVidPnCofuncModality (
+    const DXGKARG_ENUMVIDPNCOFUNCMODALITY* const EnumCofuncModalityPtr
+    )
+{
+    PAGED_CODE();
+    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
+    return m_display.EnumVidPnCofuncModality(EnumCofuncModalityPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmAdapter::SetVidPnSourceVisibility (
+    const DXGKARG_SETVIDPNSOURCEVISIBILITY* SetVidPnSourceVisibilityPtr
+    )
+{
+    PAGED_CODE();
+    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
+    return m_display.SetVidPnSourceVisibility(SetVidPnSourceVisibilityPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmAdapter::CommitVidPn (
+    const DXGKARG_COMMITVIDPN* const CommitVidPnPtr
+    )
+{
+    PAGED_CODE();
+    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
+    return m_display.CommitVidPn(CommitVidPnPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmAdapter::UpdateActiveVidPnPresentPath (
+    const DXGKARG_UPDATEACTIVEVIDPNPRESENTPATH* const UpdateActiveVidPnPresentPathPtr
+    )
+{
+    PAGED_CODE();
+    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
+    return m_display.UpdateActiveVidPnPresentPath(UpdateActiveVidPnPresentPathPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmAdapter::RecommendMonitorModes (
+    const DXGKARG_RECOMMENDMONITORMODES* const RecommendMonitorModesPtr
+    )
+{
+    PAGED_CODE();
+    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
+    return m_display.RecommendMonitorModes(RecommendMonitorModesPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmAdapter::QueryVidPnHWCapability (
+    DXGKARG_QUERYVIDPNHWCAPABILITY* VidPnHWCapsPtr
+    )
+{
+    PAGED_CODE();
+    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
+    return m_display.QueryVidPnHWCapability(VidPnHWCapsPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmAdapter::StopDeviceAndReleasePostDisplayOwnership (
+    D3DDDI_VIDEO_PRESENT_TARGET_ID TargetId,
+    DXGK_DISPLAY_INFORMATION* DisplayInfoPtr
+    )
+{
+    PAGED_CODE();
+    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
+    return m_display.StopDeviceAndReleasePostDisplayOwnership(
+            TargetId,
+            DisplayInfoPtr);
+}
+
+
+VC4_PAGED_SEGMENT_END; //=====================================================

@@ -94,14 +94,14 @@ RosKmdRapAdapter::Start(
         UNREFERENCED_PARAMETER(unmapStatus);
         NT_ASSERT(NT_SUCCESS(unmapStatus));
     }, true);   // DoNot by default
-    
+
     FILE_OBJECT* rpiqFileObjectPtr;
     auto closeRpiq = VC4_FINALLY::DoUnless([&]
     {
         PAGED_CODE();
         ObDereferenceObjectWithTag(rpiqFileObjectPtr, VC4_ALLOC_TAG::DEVICE);
     }, true);   // DoNot by default
-    
+
     auto powerDownVc4 = VC4_FINALLY::DoUnless([&]
     {
         PAGED_CODE();
@@ -109,7 +109,7 @@ RosKmdRapAdapter::Start(
         UNREFERENCED_PARAMETER(tempStatus);
         NT_ASSERT(NT_SUCCESS(tempStatus));
     }, true);   // DoNot by default
-    
+
     if (m_flags.m_isVC4)
     {
         void* voidPtr;
@@ -134,7 +134,7 @@ RosKmdRapAdapter::Start(
 
         // TODO[jordanrh]: get device path from rpiq.h
         DECLARE_CONST_UNICODE_STRING(rpiqDeviceName, L"\\DosDevices\\RPIQ");
-        
+
         status = Vc4OpenDevice(
                 const_cast<UNICODE_STRING*>(&rpiqDeviceName),
                 FILE_ALL_ACCESS,
@@ -223,7 +223,7 @@ RosKmdRapAdapter::Start(
         PAGED_CODE();
         m_bReadyToHandleInterrupt = FALSE;
         WRITE_REGISTER_ULONG(reinterpret_cast<volatile ULONG*>(&m_pVC4RegFile->V3D_INTENA), 0);
-    }, true); 
+    }, true);
 
     if (g_bUseInterrupt)
     {
@@ -241,14 +241,14 @@ RosKmdRapAdapter::Start(
         m_bReadyToHandleInterrupt = TRUE;
         disableInterrupt.DoNot(false);
     }
-    
+
     // Initialize display subsystem
     auto stopDisplay = VC4_FINALLY::DoUnless([&]
     {
         PAGED_CODE();
         m_display.StopDevice();
     }, true);   // cleanup action disabled by default
-    
+
     if (!RosKmdGlobal::IsRenderOnly())
     {
         // initialize display components
@@ -273,19 +273,19 @@ RosKmdRapAdapter::Start(
         *NumberOfVideoPresentSources = 0;
         *NumberOfChildren = 0;
     }
-    
+
     stopKmAdapter.DoNot();
-    
+
     unmapVc4Registers.DoNot();
     m_pVC4RegFile = vc4RegistersPtr;
-    
+
     closeRpiq.DoNot();
     m_pRpiqDevice = rpiqFileObjectPtr;
-    
+
     powerDownVc4.DoNot();
     disableInterrupt.DoNot();
     stopDisplay.DoNot();
-    
+
     return STATUS_SUCCESS;
 }
 
@@ -293,12 +293,12 @@ NTSTATUS RosKmdRapAdapter::Stop ()
 {
     NTSTATUS status;
     UNREFERENCED_PARAMETER(status);
-    
+
     if (!RosKmdGlobal::IsRenderOnly())
     {
         m_display.StopDevice();
     }
-    
+
     // disable interrupts
     if (g_bUseInterrupt)
     {
@@ -309,18 +309,18 @@ NTSTATUS RosKmdRapAdapter::Stop ()
     {
         NT_ASSERT(!m_bReadyToHandleInterrupt);
     }
-    
+
     if (m_flags.m_isVC4)
     {
         // power down VC4
         status = SetVC4Power(false);
         NT_ASSERT(NT_SUCCESS(status));
-        
+
         // close RPIQ file handle
         NT_ASSERT(m_pRpiqDevice);
         ObDereferenceObjectWithTag(m_pRpiqDevice, VC4_ALLOC_TAG::DEVICE);
         m_pRpiqDevice = nullptr;
-        
+
         // unmap memory
         NT_ASSERT(m_pVC4RegFile);
         status = m_DxgkInterface.DxgkCbUnmapMemory(
@@ -334,7 +334,7 @@ NTSTATUS RosKmdRapAdapter::Stop ()
         NT_ASSERT(!m_pRpiqDevice);
         NT_ASSERT(!m_pVC4RegFile);
     }
-    
+
     return RosKmAdapter::Stop();
 }
 
@@ -794,7 +794,7 @@ RosKmdRapAdapter::SetVC4Power(
 {
     MAILBOX_SET_POWER_VC4 setPowerVC4;
     INIT_MAILBOX_SET_POWER_VC4(&setPowerVC4, bOn);
-    
+
     ULONG information;
     NTSTATUS status = Vc4SendIoctlSynchronously(
             m_pRpiqDevice,

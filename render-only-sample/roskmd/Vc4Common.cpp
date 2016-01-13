@@ -78,7 +78,7 @@ NTSTATUS Vc4OpenDevice (
             fileHandle);
         return status;
     } // if
-    
+
     NT_ASSERT(*FileObjectPPtr);
     NT_ASSERT(status == STATUS_SUCCESS);
     return status;
@@ -94,7 +94,7 @@ NTSTATUS Vc4SendWriteSynchronously (
 {
     PAGED_CODE();
     VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-    
+
     KEVENT event;
     KeInitializeEvent(&event, NotificationEvent, FALSE);
 
@@ -133,7 +133,7 @@ NTSTATUS Vc4SendWriteSynchronously (
 
         status = iosb.Status;
     }
-    
+
     *InformationPtr = iosb.Information;
     return status;
 }
@@ -152,7 +152,7 @@ NTSTATUS Vc4SendIoctlSynchronously (
 {
     PAGED_CODE();
     VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-    
+
     KEVENT event;
     KeInitializeEvent(&event, NotificationEvent, FALSE);
 
@@ -192,7 +192,7 @@ NTSTATUS Vc4SendIoctlSynchronously (
 
         status = iosb.Status;
     }
-    
+
     *InformationPtr = iosb.Information;
     return status;
 }
