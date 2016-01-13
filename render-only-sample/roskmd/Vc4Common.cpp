@@ -18,7 +18,8 @@ NTSTATUS Vc4OpenDevice (
     UNICODE_STRING* FileNamePtr,
     ACCESS_MASK DesiredAccess,
     ULONG ShareAccess,
-    FILE_OBJECT** FileObjectPPtr
+    FILE_OBJECT** FileObjectPPtr,
+    VC4_ALLOC_TAG AllocTag
     )
 {
     PAGED_CODE();
@@ -67,7 +68,7 @@ NTSTATUS Vc4OpenDevice (
             DesiredAccess,
             *IoFileObjectType,
             KernelMode,
-            VC4_ALLOC_TAG::DEVICE,
+            AllocTag,
             reinterpret_cast<PVOID*>(FileObjectPPtr),
             nullptr);   // HandleInformation
     if (!NT_SUCCESS(status)) {

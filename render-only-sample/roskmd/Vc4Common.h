@@ -200,7 +200,8 @@ NTSTATUS Vc4OpenDevice (
     _In_ UNICODE_STRING* FileNamePtr,
     ACCESS_MASK DesiredAccess,
     ULONG ShareAccess,
-    _Out_ FILE_OBJECT** FileObjectPPtr
+    _Out_ FILE_OBJECT** FileObjectPPtr,
+    VC4_ALLOC_TAG AllocTag = VC4_ALLOC_TAG::DEVICE
     );
 
 _IRQL_requires_max_(PASSIVE_LEVEL)

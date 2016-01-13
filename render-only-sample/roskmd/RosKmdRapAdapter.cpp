@@ -85,8 +85,34 @@ RosKmdRapAdapter::Start(
 
 #if VC4
 
+    VC4_REGISTER_FILE* vc4RegistersPtr;
+    auto unmapVc4Registers = VC4_FINALLY::DoUnless([&] {
+        PAGED_CODE();
+        NTSTATUS unmapStatus = m_DxgkInterface.DxgkCbUnmapMemory(
+                m_DxgkInterface.DeviceHandle,
+                vc4RegistersPtr);
+        UNREFERENCED_PARAMETER(unmapStatus);
+        NT_ASSERT(NT_SUCCESS(unmapStatus));
+    }, true);   // DoNot by default
+    
+    FILE_OBJECT* rpiqFileObjectPtr;
+    auto closeRpiq = VC4_FINALLY::DoUnless([&]
+    {
+        PAGED_CODE();
+        ObDereferenceObjectWithTag(rpiqFileObjectPtr, VC4_ALLOC_TAG::DEVICE);
+    }, true);   // DoNot by default
+    
+    auto powerDownVc4 = VC4_FINALLY::DoUnless([&]
+    {
+        PAGED_CODE();
+        NTSTATUS tempStatus = SetVC4Power(false);
+        UNREFERENCED_PARAMETER(tempStatus);
+        NT_ASSERT(NT_SUCCESS(tempStatus));
+    }, true);   // DoNot by default
+    
     if (m_flags.m_isVC4)
     {
+        void* voidPtr;
         status = m_DxgkInterface.DxgkCbMapMemory(
             m_DxgkInterface.DeviceHandle,
             pResource->u.Memory.Start,
@@ -94,37 +120,46 @@ RosKmdRapAdapter::Start(
             FALSE,
             FALSE,
             MmNonCached,
-            (PVOID *)&m_pVC4RegFile);
-
-        if (status != STATUS_SUCCESS)
+            &voidPtr);
+        if (!NT_SUCCESS(status))
         {
+            ROS_LOG_ERROR(
+                "Failed to map memory for VC4 renderer registers. (status=%!STATUS!, pResource=0x%p)",
+                status,
+                pResource);
             return status;
         }
+        vc4RegistersPtr = static_cast<VC4_REGISTER_FILE*>(voidPtr);
+        unmapVc4Registers.DoNot(false); // arm the cleanup action
 
-        PFILE_OBJECT    fileObj;
-
+        // TODO[jordanrh]: get device path from rpiq.h
         DECLARE_CONST_UNICODE_STRING(rpiqDeviceName, L"\\DosDevices\\RPIQ");
-
-        status = IoGetDeviceObjectPointer(
-            (PUNICODE_STRING)&rpiqDeviceName,
-            FILE_ALL_ACCESS,
-            &fileObj,
-            &m_pRpiqDevice);
-
-        if (status != STATUS_SUCCESS)
+        
+        status = Vc4OpenDevice(
+                const_cast<UNICODE_STRING*>(&rpiqDeviceName),
+                FILE_ALL_ACCESS,
+                FILE_SHARE_READ | FILE_SHARE_WRITE,
+                &rpiqFileObjectPtr,
+                VC4_ALLOC_TAG::DEVICE);
+        if (!NT_SUCCESS(status))
         {
+            ROS_LOG_ERROR(
+                "Failed to open handle to rpiq device. (status=%!STATUS!, rpiqDeviceName=%wZ)",
+                status,
+                &rpiqDeviceName);
             return status;
         }
-
-        ObReferenceObject(m_pRpiqDevice);
-        ObDereferenceObject(fileObj);
+        closeRpiq.DoNot(false);
 
         status = SetVC4Power(true);
-
-        if (status != STATUS_SUCCESS)
+        if (!NT_SUCCESS(status))
         {
+            ROS_LOG_ERROR(
+                "Failed to power on VC4. (status=%!STATUS!)",
+                status);
             return status;
         }
+        powerDownVc4.DoNot(false);
 
         //
         // Highest 2 bits of VC4 GPU address controls path through cache
@@ -151,7 +186,7 @@ RosKmdRapAdapter::Start(
 
         m_pVC4RegFile->V3D_PCTRE = ((1 << V3D_NUM_PERF_COUNTERS) - 1);
 
-#endif
+#endif // DBG
     }
 
 #if USE_SIMPENROSE
@@ -162,7 +197,7 @@ RosKmdRapAdapter::Start(
         simpenrose_set_mem_base(RosKmdGlobal::s_videoMemoryPhysicalAddress.LowPart + m_busAddressOffset);
     }
 
-#endif
+#endif // USE_SIMPENROSE
 
     m_localVidMemSegmentSize = ((UINT)RosKmdGlobal::s_videoMemorySize) -
         (VC4_RENDERING_CTRL_LIST_POOL_SIZE +
@@ -182,7 +217,13 @@ RosKmdRapAdapter::Start(
     m_tileAllocationMemoryPhysicalAddress = m_tileAllocPoolPhysicalAddress;
     m_tileStateDataArrayPhysicalAddress = m_tileStatePoolPhysicalAddress;
 
-#endif
+#endif // VC4
+
+    auto disableInterrupt = VC4_FINALLY::DoUnless([&] {
+        PAGED_CODE();
+        m_bReadyToHandleInterrupt = FALSE;
+        WRITE_REGISTER_ULONG(reinterpret_cast<volatile ULONG*>(&m_pVC4RegFile->V3D_INTENA), 0);
+    }, true); 
 
     if (g_bUseInterrupt)
     {
@@ -194,15 +235,108 @@ RosKmdRapAdapter::Start(
 
         regIntEna.EI_FRDONE = 1;
 
+        // TODO[jordanrh]: register operations should use READ/WRITE_REGISTER_ULONG
         m_pVC4RegFile->V3D_INTENA = regIntEna.Value;
 
         m_bReadyToHandleInterrupt = TRUE;
+        disableInterrupt.DoNot(false);
     }
-
+    
+    // Initialize display subsystem
+    auto stopDisplay = VC4_FINALLY::DoUnless([&]
+    {
+        PAGED_CODE();
+        m_display.StopDevice();
+    }, true);   // cleanup action disabled by default
+    
+    if (!m_flags.m_renderOnly)
+    {
+        // initialize display components
+        status = m_display.StartDevice(
+                _RENDERER_CM_RESOURCE_COUNT,    // FirstResourceIndex
+                NumberOfVideoPresentSources,
+                NumberOfChildren);
+        if (!NT_SUCCESS(status))
+        {
+            ROS_LOG_ERROR(
+                "Failed to initialize display components. (status=%!STATUS!)",
+                status);
+            return status;
+        }
+        stopDisplay.DoNot(false);   // arm the cleanup action
+    }
+    else
+    {
+        //
+        // Render only device has no VidPn source and target
+        //
+        *NumberOfVideoPresentSources = 0;
+        *NumberOfChildren = 0;
+    }
+    
     stopKmAdapter.DoNot();
+    
+    unmapVc4Registers.DoNot();
+    m_pVC4RegFile = vc4RegistersPtr;
+    
+    closeRpiq.DoNot();
+    m_pRpiqDevice = rpiqFileObjectPtr;
+    
+    powerDownVc4.DoNot();
+    disableInterrupt.DoNot();
+    stopDisplay.DoNot();
+    
     return STATUS_SUCCESS;
 }
 
+NTSTATUS RosKmdRapAdapter::Stop ()
+{
+    NTSTATUS status;
+    UNREFERENCED_PARAMETER(status);
+    
+    if (!m_flags.m_renderOnly)
+    {
+        m_display.StopDevice();
+    }
+    
+    // disable interrupts
+    if (g_bUseInterrupt)
+    {
+        NT_ASSERT(m_bReadyToHandleInterrupt);
+        WRITE_REGISTER_ULONG(reinterpret_cast<volatile ULONG*>(&m_pVC4RegFile->V3D_INTENA), 0);
+    }
+    else
+    {
+        NT_ASSERT(!m_bReadyToHandleInterrupt);
+    }
+    
+    if (m_flags.m_isVC4)
+    {
+        // power down VC4
+        status = SetVC4Power(false);
+        NT_ASSERT(NT_SUCCESS(status));
+        
+        // close RPIQ file handle
+        NT_ASSERT(m_pRpiqDevice);
+        ObDereferenceObjectWithTag(m_pRpiqDevice, VC4_ALLOC_TAG::DEVICE);
+        m_pRpiqDevice = nullptr;
+        
+        // unmap memory
+        NT_ASSERT(m_pVC4RegFile);
+        status = m_DxgkInterface.DxgkCbUnmapMemory(
+                m_DxgkInterface.DeviceHandle,
+                m_pVC4RegFile);
+        NT_ASSERT(NT_SUCCESS(status));
+        m_pVC4RegFile = nullptr;
+    }
+    else
+    {
+        NT_ASSERT(!m_pRpiqDevice);
+        NT_ASSERT(!m_pVC4RegFile);
+    }
+    
+    return RosKmAdapter::Stop();
+}
 
 void
 RosKmdRapAdapter::ProcessRenderBuffer(
@@ -658,43 +792,28 @@ NTSTATUS
 RosKmdRapAdapter::SetVC4Power(
         bool    bOn)
 {
-    PIRP pIrp = NULL;
-    KEVENT ioCompleted;
-    IO_STATUS_BLOCK statusBlock;
     MAILBOX_SET_POWER_VC4 setPowerVC4;
-
-    KeInitializeEvent(&ioCompleted, NotificationEvent, FALSE);
-
     INIT_MAILBOX_SET_POWER_VC4(&setPowerVC4, bOn);
-
-    pIrp = IoBuildDeviceIoControlRequest(
-        IOCTL_MAILBOX_PROPERTY,
-        m_pRpiqDevice,
-        &setPowerVC4,
-        sizeof(setPowerVC4),
-        &setPowerVC4,
-        sizeof(setPowerVC4),
-        false,
-        &ioCompleted,
-        &statusBlock);
-    if (NULL == pIrp)
+    
+    ULONG information;
+    NTSTATUS status = Vc4SendIoctlSynchronously(
+            m_pRpiqDevice,
+            IOCTL_MAILBOX_PROPERTY,
+            &setPowerVC4,
+            sizeof(setPowerVC4),
+            &setPowerVC4,
+            sizeof(setPowerVC4),
+            TRUE,
+            &information);
+    if (!NT_SUCCESS(status) || (information != sizeof(setPowerVC4)))
     {
-        return STATUS_NO_MEMORY;
-    }
-
-    NTSTATUS status;
-
-    status = IoCallDriver(m_pRpiqDevice, pIrp);
-
-    if (status == STATUS_PENDING)
-    {
-        KeWaitForSingleObject(&ioCompleted, Executive, KernelMode, FALSE, NULL);
-        status = statusBlock.Status;
-    }
-
-    if (STATUS_SUCCESS != status)
-    {
-        return status;
+        ROS_LOG_ERROR(
+            "Failed to send IOCTL_MAILBOX_PROPERTY to rpiq. (status=%!STATUS!, information=%d, sizeof(setPowerVC4)=%d, m_pRpiqDevice=0x%p)",
+            status,
+            information,
+            sizeof(setPowerVC4),
+            m_pRpiqDevice);
+        return NT_SUCCESS(status) ? STATUS_UNSUCCESSFUL : status;
     }
 
     if (setPowerVC4.Header.RequestResponse == RESPONSE_SUCCESS)
@@ -703,7 +822,7 @@ RosKmdRapAdapter::SetVC4Power(
     }
     else
     {
-        return STATUS_INVALID_PARAMETER;
+        return STATUS_UNSUCCESSFUL;
     }
 }
 

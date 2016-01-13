@@ -22,7 +22,10 @@ protected:
         IN_PDXGK_START_INFO     DxgkStartInfo,
         IN_PDXGKRNL_INTERFACE   DxgkInterface,
         OUT_PULONG              NumberOfVideoPresentSources,
-        OUT_PULONG              NumberOfChildren);
+        OUT_PULONG              NumberOfChildren
+        ) override;
+        
+    virtual NTSTATUS Stop () override;
 
     virtual BOOLEAN InterruptRoutine(
         IN_ULONG        MessageNumber);

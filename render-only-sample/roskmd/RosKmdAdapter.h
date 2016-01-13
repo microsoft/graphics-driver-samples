@@ -322,13 +322,19 @@ protected:
 
     friend class RosKmdDdi;
 
+    //
+    // If Start() succeeds, then Stop() must be called to clean up. For example,
+    // if a subclass first calls Start() and then does controller-specific
+    // stuff that fails, it needs to call Stop() before returning failure
+    // to the framework.
+    //
     virtual NTSTATUS Start(
         IN_PDXGK_START_INFO     DxgkStartInfo,
         IN_PDXGKRNL_INTERFACE   DxgkInterface,
         OUT_PULONG              NumberOfVideoPresentSources,
         OUT_PULONG              NumberOfChildren);
 
-    NTSTATUS Stop();
+    virtual NTSTATUS Stop();
 
     NTSTATUS BuildPagingBuffer(
         IN_PDXGKARG_BUILDPAGINGBUFFER   pArgs);
@@ -440,7 +446,7 @@ protected:
     UINT                        m_tileStatePoolPhysicalAddress;
 
     // Firmware device RPIQ
-    PDEVICE_OBJECT              m_pRpiqDevice;
+    PFILE_OBJECT              m_pRpiqDevice;
 
 #if GPU_CACHE_WORKAROUND
 
