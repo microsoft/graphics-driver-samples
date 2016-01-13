@@ -1049,8 +1049,11 @@ NTSTATUS VC4_DISPLAY::SetPowerState (
     return STATUS_SUCCESS;
 }
 
+//
+// TODO[jordanrh]: modify to simply veto request
+//
 _Use_decl_annotations_
-NTSTATUS VC4_DISPLAY::QueryAdapterInfo (
+NTSTATUS VC4_DISPLAY::VetoQueryAdapterInfo (
     const DXGKARG_QUERYADAPTERINFO* QueryAdapterInfoPtr
     )
 {

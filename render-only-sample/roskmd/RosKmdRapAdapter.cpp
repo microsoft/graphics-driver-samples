@@ -249,7 +249,7 @@ RosKmdRapAdapter::Start(
         m_display.StopDevice();
     }, true);   // cleanup action disabled by default
     
-    if (!m_flags.m_renderOnly)
+    if (!RosKmdGlobal::IsRenderOnly())
     {
         // initialize display components
         status = m_display.StartDevice(
@@ -294,7 +294,7 @@ NTSTATUS RosKmdRapAdapter::Stop ()
     NTSTATUS status;
     UNREFERENCED_PARAMETER(status);
     
-    if (!m_flags.m_renderOnly)
+    if (!RosKmdGlobal::IsRenderOnly())
     {
         m_display.StopDevice();
     }

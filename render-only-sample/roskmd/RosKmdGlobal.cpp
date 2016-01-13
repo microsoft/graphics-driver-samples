@@ -3,6 +3,7 @@
 #include "RosKmdLogging.h"
 #include "RosKmdGlobal.tmh"
 
+#include "Vc4Common.h"
 #include "RosKmdGlobal.h"
 #include "RosKmdDevice.h"
 #include "RosKmdAdapter.h"
@@ -16,6 +17,7 @@ bool RosKmdGlobal::s_bDoNotInstall = false;
 size_t RosKmdGlobal::s_videoMemorySize = 0;
 void * RosKmdGlobal::s_pVideoMemory = NULL;
 PHYSICAL_ADDRESS RosKmdGlobal::s_videoMemoryPhysicalAddress;
+bool RosKmdGlobal::s_bRenderOnly;
 
 #if USE_SIMPENROSE
 
@@ -143,6 +145,90 @@ NTSTATUS RosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
     }
 
     s_videoMemoryPhysicalAddress = MmGetPhysicalAddress(s_pVideoMemory);
+    
+    //
+    // Query the driver registry key to see whether we're render only
+    //
+    {
+        OBJECT_ATTRIBUTES attributes;
+        InitializeObjectAttributes(
+            &attributes,
+            pRegistryPath,
+            OBJ_KERNEL_HANDLE,
+            nullptr,                // RootDirectory
+            nullptr);               // SecurityDescriptor
+        
+        HANDLE keyHandle;
+        Status = ZwOpenKey(&keyHandle, GENERIC_READ, &attributes);
+        if (!NT_SUCCESS(Status))
+        {
+            ROS_LOG_ERROR(
+                "Failed to open driver registry key. (Status=%!STATUS!, pRegistryPath=%wZ, pDriverObject=0x%p)",
+                Status,
+                pRegistryPath,
+                pDriverObject);
+            return Status;
+        }
+        auto closeRegKey = VC4_FINALLY::Do([&]
+        {
+            PAGED_CODE();
+            NTSTATUS tempStatus = ZwClose(keyHandle);
+            UNREFERENCED_PARAMETER(tempStatus);
+            NT_ASSERT(NT_SUCCESS(Status));
+        });
+        
+        DECLARE_CONST_UNICODE_STRING(renderOnlyValueName, L"RenderOnly");
+        
+        #pragma warning(disable:4201)   // nameless struct/union
+        union {
+            KEY_VALUE_PARTIAL_INFORMATION PartialInfo;
+            struct {
+                ULONG TitleIndex;
+                ULONG Type;
+                ULONG DataLength;
+                ULONG Data;
+            } DUMMYSTRUCTNAME;
+        } valueInfo;
+        #pragma warning(default:4201) // nameless struct/union
+        
+        ULONG resultLength;
+        Status = ZwQueryValueKey(
+                keyHandle,
+                const_cast<UNICODE_STRING*>(&renderOnlyValueName),
+                KeyValuePartialInformation,
+                &valueInfo.PartialInfo,
+                sizeof(valueInfo),
+                &resultLength);
+
+        if (NT_SUCCESS(Status))
+        {
+            if (valueInfo.Type == REG_DWORD)
+            {
+                NT_ASSERT(valueInfo.DataLength == sizeof(valueInfo.Data));
+                if (valueInfo.Data != 0)
+                {
+                    ROS_LOG_INFORMATION("Configuring driver as render-only.");
+                    s_bRenderOnly = true;
+                }
+            }
+            else
+            {
+                ROS_LOG_WARNING(
+                    "RenderOnly registry value was found, but is not a REG_DWORD. (valueInfo.Type=%d, valueInfo.DataLength=%d)",
+                    valueInfo.Type,
+                    valueInfo.DataLength);
+            }
+        }
+        else if (Status != STATUS_OBJECT_NAME_NOT_FOUND)
+        {
+            ROS_LOG_ASSERTION(
+                "Unexpected error occurred querying RenderOnly registry key. (Status=%!STATUS!)",
+                Status);
+            
+            // an unexpected type in the registry could cause us to get here,
+            // so don't stop the show.
+        }
+    }
 
     //
     // Fill in the DriverInitializationData structure and call DlInitialize()
@@ -235,6 +321,16 @@ NTSTATUS RosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
 
     DriverInitializationData.DxgkDdiCalibrateGpuClock = RosKmdDdi::DdiCalibrateGpuClock;
     DriverInitializationData.DxgkDdiSetStablePowerState = RosKmdDdi::DdiSetStablePowerState;
+    
+    
+    //
+    // Register VidPn and display DDIs
+    //
+    if (!IsRenderOnly())
+    {
+        // TODO[jordanrh]: fill in VidPn DDIs and stuff
+        
+    }
 
     Status = DxgkInitialize(pDriverObject, pRegistryPath, &DriverInitializationData);
 

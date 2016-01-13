@@ -652,11 +652,15 @@ RosKmAdapter::DispatchIoRequest(
     IN_ULONG                    VidPnSourceId,
     IN_PVIDEO_REQUEST_PACKET    VideoRequestPacket)
 {
-    VidPnSourceId;
-    VideoRequestPacket;
-
-    NT_ASSERT(FALSE);
-    return STATUS_SUCCESS;
+    if (RosKmdGlobal::IsRenderOnly())
+    {
+        ROS_LOG_WARNING(
+            "Unsupported IO Control Code. (VideoRequestPacketPtr->IoControlCode = 0x%lx)",
+            VideoRequestPacket->IoControlCode);    
+        return STATUS_NOT_SUPPORTED;        
+    }
+    
+    return m_display.DispatchIoRequest(VidPnSourceId, VideoRequestPacket);
 }
 
 NTSTATUS
@@ -854,9 +858,8 @@ NTSTATUS
 RosKmAdapter::QueryAdapterInfo(
     IN_CONST_PDXGKARG_QUERYADAPTERINFO      pQueryAdapterInfo)
 {
-    NTSTATUS        Status = STATUS_INVALID_PARAMETER;
-
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "RosKmdQueryAdapterInfo Type=%d\n",
+    ROS_LOG_TRACE(
+        "QueryAdapterInfo was called. (Type=%d)",
         pQueryAdapterInfo->Type);
 
     switch (pQueryAdapterInfo->Type)
@@ -865,8 +868,11 @@ RosKmAdapter::QueryAdapterInfo(
     {
         if (pQueryAdapterInfo->OutputDataSize < sizeof(ROSADAPTERINFO))
         {
-            Status = STATUS_INVALID_PARAMETER;
-            break;
+            ROS_LOG_ERROR(
+                "Output buffer is too small. (pQueryAdapterInfo->OutputDataSize=%d, sizeof(ROSADAPTERINFO)=%d)",
+                pQueryAdapterInfo->OutputDataSize,
+                sizeof(ROSADAPTERINFO));
+            return STATUS_BUFFER_TOO_SMALL;
         }
         ROSADAPTERINFO* pRosAdapterInfo = (ROSADAPTERINFO*)pQueryAdapterInfo->pOutputData;
 
@@ -880,8 +886,6 @@ RosKmAdapter::QueryAdapterInfo(
             pRosAdapterInfo->m_deviceId,
             m_deviceId,
             m_deviceIdLength);
-
-        Status = STATUS_SUCCESS;
     }
     break;
 
@@ -889,8 +893,11 @@ RosKmAdapter::QueryAdapterInfo(
     {
         if (pQueryAdapterInfo->OutputDataSize < sizeof(DXGK_DRIVERCAPS))
         {
-            Status = STATUS_INVALID_PARAMETER;
-            break;
+            ROS_LOG_ASSERTION(
+                "Output buffer is too small. (pQueryAdapterInfo->OutputDataSize=%d, sizeof(DXGK_DRIVERCAPS)=%d)",
+                pQueryAdapterInfo->OutputDataSize,
+                sizeof(DXGK_DRIVERCAPS));
+            return STATUS_BUFFER_TOO_SMALL;
         }
 
         DXGK_DRIVERCAPS    *pDriverCaps = (DXGK_DRIVERCAPS *)pQueryAdapterInfo->pOutputData;
@@ -1070,8 +1077,6 @@ RosKmAdapter::QueryAdapterInfo(
         // TODO[bhouse] MaxOverlayPlanes
         //
 
-
-        Status = STATUS_SUCCESS;
     }
     break;
 
@@ -1079,13 +1084,14 @@ RosKmAdapter::QueryAdapterInfo(
     {
         if (pQueryAdapterInfo->OutputDataSize < sizeof(DXGK_QUERYSEGMENTOUT3))
         {
-            Status = STATUS_INVALID_PARAMETER;
-            break;
+            ROS_LOG_ASSERTION(
+                "Output buffer is too small. (pQueryAdapterInfo->OutputDataSize=%d, sizeof(DXGK_QUERYSEGMENTOUT3)=%d)",
+                pQueryAdapterInfo->OutputDataSize,
+                sizeof(DXGK_QUERYSEGMENTOUT3));
+            return STATUS_BUFFER_TOO_SMALL;
         }
 
         DXGK_QUERYSEGMENTOUT3   *pSegmentInfo = (DXGK_QUERYSEGMENTOUT3*)pQueryAdapterInfo->pOutputData;
-
-        Status = STATUS_SUCCESS;
 
         if (!pSegmentInfo[0].pSegmentDescriptor)
         {
@@ -1157,32 +1163,53 @@ RosKmAdapter::QueryAdapterInfo(
     {
         if (pQueryAdapterInfo->OutputDataSize != sizeof(UINT))
         {
-            Status = STATUS_INVALID_PARAMETER;
-            break;
+            ROS_LOG_ASSERTION(
+                "Output buffer is too small. (pQueryAdapterInfo->OutputDataSize=%d, sizeof(UINT)=%d)",
+                pQueryAdapterInfo->OutputDataSize,
+                sizeof(UINT));
+            return STATUS_BUFFER_TOO_SMALL;
         }
 
         //
         // Support only one 3D engine(s).
         //
         *(reinterpret_cast<UINT*>(pQueryAdapterInfo->pOutputData)) = GetNumPowerComponents();
-
-        Status = STATUS_SUCCESS;
     }
     break;
 
     case DXGKQAITYPE_POWERCOMPONENTINFO:
     {
-        if (pQueryAdapterInfo->InputDataSize != sizeof(UINT) ||
-            pQueryAdapterInfo->OutputDataSize < sizeof(DXGK_POWER_RUNTIME_COMPONENT))
+        if (pQueryAdapterInfo->InputDataSize != sizeof(UINT))
         {
-            Status = STATUS_INVALID_PARAMETER;
-            break;
+            ROS_LOG_ASSERTION(
+                "Input buffer is not of the expected size. (pQueryAdapterInfo->InputDataSize=%d, sizeof(UINT)=%d)",
+                pQueryAdapterInfo->InputDataSize,
+                sizeof(UINT));
+            return STATUS_INVALID_PARAMETER;
+        }
+        
+        if (pQueryAdapterInfo->OutputDataSize < sizeof(DXGK_POWER_RUNTIME_COMPONENT))
+        {
+            ROS_LOG_ASSERTION(
+                "Output buffer is too small. (pQueryAdapterInfo->OutputDataSize=%d, sizeof(DXGK_POWER_RUNTIME_COMPONENT)=%d)",
+                pQueryAdapterInfo->OutputDataSize,
+                sizeof(DXGK_POWER_RUNTIME_COMPONENT));
+            return STATUS_BUFFER_TOO_SMALL;
         }
 
         ULONG ComponentIndex = *(reinterpret_cast<UINT*>(pQueryAdapterInfo->pInputData));
         DXGK_POWER_RUNTIME_COMPONENT* pPowerComponent = reinterpret_cast<DXGK_POWER_RUNTIME_COMPONENT*>(pQueryAdapterInfo->pOutputData);
 
-        Status = GetPowerComponentInfo(ComponentIndex, pPowerComponent);
+        NTSTATUS status = GetPowerComponentInfo(ComponentIndex, pPowerComponent);
+        if (!NT_SUCCESS(status))
+        {
+            ROS_LOG_ERROR(
+                "GetPowerComponentInfo(...) failed. (status=%!STATUS!, ComponentIndex=%d, pPowerComponent=0x%p)",
+                status,
+                ComponentIndex,
+                pPowerComponent);
+            return status;
+        }
     }
     break;
 
@@ -1197,7 +1224,6 @@ RosKmAdapter::QueryAdapterInfo(
             pHistoryBufferPrecision->PrecisionBits = 64;
         }
 
-        Status = STATUS_SUCCESS;
     }
     break;
 
@@ -1205,8 +1231,15 @@ RosKmAdapter::QueryAdapterInfo(
         // NT_ASSERT(FALSE);
         break;
     }
+    
+    if (RosKmdGlobal::IsRenderOnly())
+        return STATUS_SUCCESS;
 
-    return Status;
+    // Display subsystem should not modify request, but it does get a chance to
+    // inspect our response and possibly veto it. This is mainly for debugging.
+    NTSTATUS status = m_display.VetoQueryAdapterInfo(pQueryAdapterInfo);
+    NT_ASSERT(NT_SUCCESS(status));
+    return status;
 }
 
 NTSTATUS
@@ -1431,27 +1464,36 @@ NTSTATUS
 RosKmAdapter::SetPointerPosition(
     IN_CONST_PDXGKARG_SETPOINTERPOSITION    pSetPointerPosition)
 {
-    if (pSetPointerPosition->Flags.Visible)
+    if (RosKmdGlobal::IsRenderOnly())
     {
-        return STATUS_NOT_IMPLEMENTED;
+        if (pSetPointerPosition->Flags.Visible)
+        {
+            return STATUS_NOT_IMPLEMENTED;
+        }
+        else
+        {
+            return STATUS_SUCCESS;
+        }
     }
-    else
-    {
-        return STATUS_SUCCESS;
-    }
-
+    
+    return m_display.SetPointerPosition(pSetPointerPosition);
 }
 
 NTSTATUS
 RosKmAdapter::SetPointerShape(
     IN_CONST_PDXGKARG_SETPOINTERSHAPE   pSetPointerShape)
 {
-    if (!pSetPointerShape->Flags.Value)
+    if (RosKmdGlobal::IsRenderOnly())
     {
-        return STATUS_INVALID_PARAMETER;
+        if (!pSetPointerShape->Flags.Value)
+        {
+            return STATUS_INVALID_PARAMETER;
+        }
+        
+        return STATUS_NOT_IMPLEMENTED;
     }
-
-    return STATUS_NOT_IMPLEMENTED;
+    
+    return m_display.SetPointerShape(pSetPointerShape);
 }
 
 NTSTATUS
@@ -1474,10 +1516,13 @@ RosKmAdapter::QueryChildRelations(
     INOUT_PDXGK_CHILD_DESCRIPTOR    ChildRelations,
     IN_ULONG                        ChildRelationsSize)
 {
-    ChildRelations;
-    ChildRelationsSize;
+    if (RosKmdGlobal::IsRenderOnly())
+    {
+        ROS_LOG_ASSERTION("QueryChildRelations() is not supported by render-only driver.");
+        return STATUS_NOT_IMPLEMENTED;
+    }
 
-    return STATUS_INVALID_PARAMETER;
+    return m_display.QueryChildRelations(ChildRelations, ChildRelationsSize);
 }
 
 NTSTATUS
@@ -1485,10 +1530,13 @@ RosKmAdapter::QueryChildStatus(
     IN_PDXGK_CHILD_STATUS   ChildStatus,
     IN_BOOLEAN              NonDestructiveOnly)
 {
-    ChildStatus;
-    NonDestructiveOnly;
+    if (RosKmdGlobal::IsRenderOnly())
+    {
+        ROS_LOG_ASSERTION("QueryChildStatus() is not supported by render-only driver.");
+        return STATUS_NOT_IMPLEMENTED;
+    }
 
-    return STATUS_INVALID_PARAMETER;
+    return m_display.QueryChildStatus(ChildStatus, NonDestructiveOnly);
 }
 
 NTSTATUS
@@ -1496,10 +1544,13 @@ RosKmAdapter::QueryDeviceDescriptor(
     IN_ULONG                        ChildUid,
     INOUT_PDXGK_DEVICE_DESCRIPTOR   pDeviceDescriptor)
 {
-    ChildUid;
-    pDeviceDescriptor;
+    if (RosKmdGlobal::IsRenderOnly())
+    {
+        ROS_LOG_ASSERTION("QueryChildStatus() is not supported by render-only driver.");
+        return STATUS_NOT_IMPLEMENTED;
+    }
 
-    return STATUS_INVALID_PARAMETER;
+    return m_display.QueryDeviceDescriptor(ChildUid, pDeviceDescriptor);
 }
 
 NTSTATUS

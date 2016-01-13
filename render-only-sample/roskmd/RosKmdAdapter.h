@@ -97,7 +97,6 @@ typedef union _RosKmAdapterFlags
     struct
     {
         UINT    m_isVC4      : 1;
-        UINT    m_renderOnly : 1;
     };
 
     UINT        m_value;

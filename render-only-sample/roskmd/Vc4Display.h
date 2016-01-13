@@ -190,8 +190,14 @@ public: // PAGED
         IN_POWER_ACTION ActionType
         );
 
+    //
+    // Until this function can be properly partitioned between render and
+    // display subsystems, all functionality shall be implemented in the 
+    // top-level component, and the display component only gets to vote
+    // yes or no whether it's OK with the top-level component's response.
+    //
     _IRQL_requires_(PASSIVE_LEVEL)
-    NTSTATUS QueryAdapterInfo (
+    NTSTATUS VetoQueryAdapterInfo (
         IN_CONST_PDXGKARG_QUERYADAPTERINFO QueryAdapterInfoPtr
         );
         
