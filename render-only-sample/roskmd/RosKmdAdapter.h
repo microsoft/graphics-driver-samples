@@ -11,6 +11,9 @@
 
 #include "RosKmdAllocation.h"
 #include "RosKmdGlobal.h"
+#include "Vc4Display.h"
+
+#pragma warning(disable:4201)   // nameless struct/union
 
 typedef struct __ROSKMERRORCONDITION
 {
@@ -99,6 +102,8 @@ typedef union _RosKmAdapterFlags
 
     UINT        m_value;
 } RosKmAdapterFlags;
+
+#pragma warning(default:4201) // nameless struct/union
 
 class RosKmdDdi;
 
@@ -283,7 +288,7 @@ public:
 
     static RosKmAdapter * Cast(void * ptr)
     {
-        RosKmAdapter * rosKmAdapter = reinterpret_cast<RosKmAdapter *>(ptr);
+        RosKmAdapter * rosKmAdapter = static_cast<RosKmAdapter *>(ptr);
 
         NT_ASSERT(rosKmAdapter->m_magic == RosKmAdapter::kMagic);
 
@@ -367,6 +372,16 @@ protected:
 protected:
 
     RosKmAdapterFlags           m_flags;
+    
+    //
+    // Indexes of hardware resources expected by the render subsystem.
+    // Hardware resources for the display subsystem follow those for the renderer.
+    //
+    enum _RENDERER_CM_RESOURCE_INDEX : ULONG {
+        _RENDERER_CM_RESOURCE_INDEX_MEMORY,
+        _RENDERER_CM_RESOURCE_INDEX_INTERRUPT,
+        _RENDERER_CM_RESOURCE_COUNT,
+    };
 
 private:
 

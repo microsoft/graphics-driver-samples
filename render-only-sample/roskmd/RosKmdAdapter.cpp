@@ -18,6 +18,7 @@
 #include "Vc4Hw.h"
 #include "Vc4Ddi.h"
 #include "Vc4Mailbox.h"
+#include "Vc4Common.h"
 
 void * RosKmAdapter::operator new(size_t size)
 {
@@ -368,6 +369,18 @@ RosKmAdapter::Start(
     m_WDDMVersion = DXGKDDI_WDDMv1_3;
 
     m_NumNodes = C_ROSD_GPU_ENGINE_COUNT;
+        
+    NTSTATUS status = m_DxgkInterface.DxgkCbGetDeviceInformation(
+            m_DxgkInterface.DeviceHandle,
+            &m_deviceInfo);
+    if (!NT_SUCCESS(status))
+    {
+        ROS_LOG_ERROR(
+            "DxgkCbGetDeviceInformation(...) failed. (status=%!STATUS!, m_DxgkInterface.DeviceHandle=0x%p)",
+            status,
+            m_DxgkInterface.DeviceHandle);
+        return status;
+    }
 
     //
     // Initialize worker
@@ -382,7 +395,7 @@ RosKmAdapter::Start(
 
     InitializeObjectAttributes(&ObjectAttributes, NULL, OBJ_KERNEL_HANDLE, NULL, NULL);
 
-    NTSTATUS status = PsCreateSystemThread(
+    status = PsCreateSystemThread(
         &hWorkerThread,
         THREAD_ALL_ACCESS,
         &ObjectAttributes,
@@ -410,11 +423,6 @@ RosKmAdapter::Start(
     {
         return status;
     }
-
-    status = m_DxgkInterface.DxgkCbGetDeviceInformation(
-        m_DxgkInterface.DeviceHandle,
-        &m_deviceInfo);
-    NT_ASSERT(status == STATUS_SUCCESS);
 
     //
     // Query APCI device ID
@@ -469,12 +477,51 @@ RosKmAdapter::Start(
     KeInitializeEvent(&m_hwDmaBufCompletionEvent, SynchronizationEvent, FALSE);
     KeInitializeDpc(&m_hwDmaBufCompletionDpc, HwDmaBufCompletionDpcRoutine, this);
 
+    // Initialize display subsystem
+    auto stopDisplay = VC4_FINALLY::DoUnless([&]
+    {
+        PAGED_CODE();
+        m_display.StopDevice();
+    }, true);   // cleanup action disabled by default
+    if (!m_flags.m_renderOnly)
+    {
+        // initialize display components
+        status = m_display.StartDevice(
+                _RENDERER_CM_RESOURCE_COUNT,    // FirstResourceIndex
+                NumberOfVideoPresentSources,
+                NumberOfChildren);
+        if (!NT_SUCCESS(status))
+        {
+            ROS_LOG_ERROR(
+                "Failed to initialize display components. (status=%!STATUS!)",
+                status);
+            return status;
+        }
+        stopDisplay.DoNot(false);   // arm the cleanup action
+    }
+    else
+    {
+        //
+        // Render only device has no VidPn source and target
+        //
+        *NumberOfVideoPresentSources = 0;
+        *NumberOfChildren = 0;
+    }
+    
+    stopDisplay.DoNot();
+    
+    NT_ASSERT(status == STATUS_SUCCESS);
     return STATUS_SUCCESS;
 }
 
 NTSTATUS
 RosKmAdapter::Stop()
 {
+    if (!m_flags.m_renderOnly)
+    {
+        m_display.StopDevice();
+    }
+    
     m_workerExit = true;
 
     KeSetEvent(&m_workerThreadEvent, 0, FALSE);

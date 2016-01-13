@@ -15,19 +15,11 @@
 //        buffer to the HDMI port. Can do scaling, overlays, rotation, and
 //        color space conversion. We cannot register for HVS interrupts
 //        because they are handled by the VPU firmware.
-//      - PixelValve - sits between the HVS and the HDMI controller, regulates
-//        the flow of pixel data from the HVS to the HDMI controller. Generates
-//        interrupts at various points in the scanout process:
-//           - HSyncStart
-//           - HbpStart (horizontal back porch)
-//           - HActStart (horizontal active)
-//           - HfpStart (horizontal front porch)
-//           - VSyncStart
-//           - VbpStart (vertical back porch)
-//           - VActStart (vertical active)
-//           - VfpStart (vertical front porch) - this interrupt is used to know
-//             when the current frame buffer is no longer needed
-//           - VfpEnd
+//      - PixelValve - sits between the HVS and the HDMI controller and regulates
+//        the flow of pixels from the HVS to the HDMI controller. Generates
+//        interrupts at various points in the scanout process, including the
+//        VfpStart (Vertical Front Porch) interrupt, which is used to know
+//        when the current frame buffer is no longer needed
 //      - HDMI - receives output from the pixelvalve, participates in mode
 //        setting
 //      - Hot plug detection (HPD) - a GPIO pin is used to detect when the HDMI
@@ -38,8 +30,7 @@
 //        EDID which contains the list of supported modes. The I2C controller
 //        is the same IP as the other BCM2836 I2C controllers, so we leverage
 //        bcmi2c to drive the I2C controller, and we interact with it through
-//        an SPB connection. 
-//      - 
+//        an SPB connection.
 //    
 //
 // Author:
@@ -51,8 +42,9 @@
 //    Kernel mode only.
 //
 
-#include "Vc4Hvs.hpp"
-#include "Vc4PixelValve.hpp"
+#include "Vc4Hvs.h"
+#include "Vc4PixelValve.h"
+#include "Vc4Debug.h"
 
 class VC4_DISPLAY {
 public: // NONPAGED
@@ -84,7 +76,7 @@ public: // NONPAGED
     _IRQL_requires_(DISPATCH_LEVEL)
     void DpcRoutine ();
     
-    static EVT_VC4HPD_HOTPLUG_NOTIFICATION EvtHotplugNotification;
+    static EVT_GPIOHPD_HOTPLUG_NOTIFICATION EvtHotplugNotification;
 
 private: // NONPAGED
 
@@ -104,9 +96,9 @@ private: // NONPAGED
     // store references to objects that are common between all display
     // components to avoid wasting memory
     const DEVICE_OBJECT* const physicalDeviceObjectPtr;
-    DXGKRNL_INTERFACE& dxgkInterface;
-    DXGK_START_INFO& dxgkStartInfo;
-    DXGK_DEVICE_INFO& dxgkDeviceInfo;
+    const DXGKRNL_INTERFACE& dxgkInterface;
+    const DXGK_START_INFO& dxgkStartInfo;
+    const DXGK_DEVICE_INFO& dxgkDeviceInfo;
     
     VC4_DEBUG dbgHelper;
     DXGK_DISPLAY_INFORMATION dxgkDisplayInfo;
@@ -152,13 +144,14 @@ public: // PAGED
     _IRQL_requires_(PASSIVE_LEVEL)
     VC4_DISPLAY (
         const DEVICE_OBJECT* PhysicalDeviceObjectPtr,
-        DXGKRNL_INTERFACE& DxgkInterface,
-        DXGK_START_INFO& DxgkStartInfo,
-        DXGK_DEVICE_INFO& DxgkDeviceInfo
+        const DXGKRNL_INTERFACE& DxgkInterface,
+        const DXGK_START_INFO& DxgkStartInfo,
+        const DXGK_DEVICE_INFO& DxgkDeviceInfo
         );
     
     _IRQL_requires_(PASSIVE_LEVEL)
     NTSTATUS StartDevice (
+        ULONG FirstResourceIndex,
         _Out_ ULONG* NumberOfVideoPresentSourcesPtr,
         _Out_ ULONG* NumberOfChildrenPtr
         );
@@ -180,7 +173,7 @@ public: // PAGED
     
     _IRQL_requires_(PASSIVE_LEVEL)
     NTSTATUS QueryChildStatus (
-        INOUT_PDXGK_CHILD_STATUS DXGK_CHILD_STATUS* ChildStatusPtr,
+        INOUT_PDXGK_CHILD_STATUS ChildStatusPtr,
         IN_BOOLEAN NonDestructiveOnly
         );
         
@@ -222,7 +215,7 @@ public: // PAGED
         
     _Check_return_
     _IRQL_requires_(PASSIVE_LEVEL)
-    NTSTATUS DXGKDDI_RECOMMENDFUNCTIONALVIDPN RecommendFunctionalVidPn (
+    NTSTATUS RecommendFunctionalVidPn (
         IN_CONST_PDXGKARG_RECOMMENDFUNCTIONALVIDPN_CONST RecommendFunctionalVidPnPtr
         );
         
@@ -234,7 +227,7 @@ public: // PAGED
         
     _Check_return_
     _IRQL_requires_(PASSIVE_LEVEL)
-    NTSTATUS DXGKDDI_SETVIDPNSOURCEVISIBILITY SetVidPnSourceVisibility (
+    NTSTATUS SetVidPnSourceVisibility (
         IN_CONST_PDXGKARG_SETVIDPNSOURCEVISIBILITY SetVidPnSourceVisibilityPtr
         );
         
