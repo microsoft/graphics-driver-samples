@@ -93,7 +93,8 @@ typedef union _RosKmAdapterFlags
 {
     struct
     {
-        UINT    m_isVC4     : 1;
+        UINT    m_isVC4      : 1;
+        UINT    m_renderOnly : 1;
     };
 
     UINT        m_value;
@@ -406,6 +407,8 @@ protected:
 
     BYTE                        m_deviceId[MAX_DEVICE_ID_LENGTH];
     ULONG                       m_deviceIdLength;
+    
+    VC4_DISPLAY                 m_display;
 
 #if VC4
 

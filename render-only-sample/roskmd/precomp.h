@@ -7,6 +7,8 @@
 #include <ntintsafe.h>
 #include <ntstrsafe.h>
 
+#define ENABLE_DXGK_SAL
+
 extern "C" {
 #include <dispmprt.h>
 }; // extern "C"

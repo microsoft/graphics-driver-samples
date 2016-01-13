@@ -23,6 +23,11 @@ RosKmdSoftAdapter::Start(
     OUT_PULONG              NumberOfVideoPresentSources,
     OUT_PULONG              NumberOfChildren)
 {
+    // TODO: soft render adapter should also support hardware presentation.
+    // For now, make use render only
+    *NumberOfVideoPresentSources = 0;
+    *NumberOfChildren = 0;
+    
     return RosKmAdapter::Start(DxgkStartInfo, DxgkInterface, NumberOfVideoPresentSources, NumberOfChildren);
 }
 

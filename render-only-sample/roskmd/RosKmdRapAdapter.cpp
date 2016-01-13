@@ -181,9 +181,39 @@ RosKmdRapAdapter::Start(
 
         m_bReadyToHandleInterrupt = TRUE;
     }
+    
+    // XXX: since hardware present happens in both soft and hard render mode,
+    // display subsystem initialization needs to happen in RosKmdSoftAdapter too
+    
+    
+    if (m_flags.renderOnly)
+    {
+        //
+        // Render only device has no VidPn source and target
+        //
+        *NumberOfVideoPresentSources = 0;
+        *NumberOfChildren = 0;
+    }
+    else
+    {
+        // initialize display components
+        status = m_display.StartDevice(
+                NumberOfVideoPresentSources,
+                NumberOfChildren);
+        if (!NT_SUCCESS(status)) {
+            ROS_LOG_ERROR(
+                "Failed to initialize display components. (status=%!STATUS!)",
+                status);
+            return status;
+        }
+        
+        // if this function does not return success, then the display
+        // subsystem needs to be unstarted by calling m_display.StopDevice();
+    }
+    
+    // commit render components
 
     return STATUS_SUCCESS;
-
 }
 
 

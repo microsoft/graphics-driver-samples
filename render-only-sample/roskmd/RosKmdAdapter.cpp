@@ -29,7 +29,8 @@ void RosKmAdapter::operator delete(void * ptr)
     ExFreePool(ptr);
 }
 
-RosKmAdapter::RosKmAdapter(IN_CONST_PDEVICE_OBJECT PhysicalDeviceObject, OUT_PPVOID MiniportDeviceContext)
+RosKmAdapter::RosKmAdapter(IN_CONST_PDEVICE_OBJECT PhysicalDeviceObject, OUT_PPVOID MiniportDeviceContext) :
+    m_display(PhysicalDeviceObject, m_DxgkInterface, m_DxgkStartInfo, m_deviceInfo)
 {
     m_magic = kMagic;
     m_pPhysicalDevice = PhysicalDeviceObject;
@@ -360,12 +361,6 @@ RosKmAdapter::Start(
 {
     m_DxgkStartInfo = *DxgkStartInfo;
     m_DxgkInterface = *DxgkInterface;
-
-    //
-    // Render only device has no VidPn source and target
-    //
-    *NumberOfVideoPresentSources = 0;
-    *NumberOfChildren = 0;
 
     //
     // Sample for 1.3 model currently
