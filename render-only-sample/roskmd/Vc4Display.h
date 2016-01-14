@@ -70,6 +70,14 @@ public: // NONPAGED
         );
 
     _Check_return_
+    _Function_class_DXGK_(DXGKDDI_SETVIDPNSOURCEADDRESS)
+    _IRQL_requires_min_(PASSIVE_LEVEL)
+    _IRQL_requires_max_(PROFILE_LEVEL  - 1)
+    NTSTATUS SetVidPnSourceAddress (
+        IN_CONST_PDXGKARG_SETVIDPNSOURCEADDRESS SetVidPnSourceAddressPtr
+        );
+
+    _Check_return_
     _IRQL_requires_(HIGH_LEVEL)
     BOOLEAN InterruptRoutine (IN_ULONG MessageNumber);
 
@@ -188,17 +196,6 @@ public: // PAGED
         IN_ULONG DeviceUid,
         IN_DEVICE_POWER_STATE DevicePowerState,
         IN_POWER_ACTION ActionType
-        );
-
-    //
-    // Until this function can be properly partitioned between render and
-    // display subsystems, all functionality shall be implemented in the
-    // top-level component, and the display component only gets to vote
-    // yes or no whether it's OK with the top-level component's response.
-    //
-    _IRQL_requires_(PASSIVE_LEVEL)
-    NTSTATUS VetoQueryAdapterInfo (
-        IN_CONST_PDXGKARG_QUERYADAPTERINFO QueryAdapterInfoPtr
         );
 
     _Check_return_

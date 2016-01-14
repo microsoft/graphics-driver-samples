@@ -331,6 +331,7 @@ NTSTATUS RosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
         DriverInitializationData.DxgkDdiIsSupportedVidPn = RosKmdDisplayDdi::DdiIsSupportedVidPn;
         DriverInitializationData.DxgkDdiRecommendFunctionalVidPn = RosKmdDisplayDdi::DdiRecommendFunctionalVidPn;
         DriverInitializationData.DxgkDdiEnumVidPnCofuncModality = RosKmdDisplayDdi::DdiEnumVidPnCofuncModality;
+        DriverInitializationData.DxgkDdiSetVidPnSourceAddress = RosKmdDisplayDdi::DdiSetVidPnSourceAddress;
         DriverInitializationData.DxgkDdiSetVidPnSourceVisibility = RosKmdDisplayDdi::DdiSetVidPnSourceVisibility;
         DriverInitializationData.DxgkDdiCommitVidPn = RosKmdDisplayDdi::DdiCommitVidPn;
         DriverInitializationData.DxgkDdiUpdateActiveVidPnPresentPath = RosKmdDisplayDdi::DdiUpdateActiveVidPnPresentPath;

@@ -963,19 +963,49 @@ RosKmAdapter::QueryAdapterInfo(
         pDriverCaps->PresentationCaps.MaxTextureHeightShift = 3;
 
         //
-        // TODO[bhouse] MaxQueueFlipOnVSync
-        //
-
-        //
-        // TODO[bhouse] FlipCaps
-        //
-
-        //
         // Use SW flip queue for flip with interval of 1 or more
+        //   - we must NOT generate a DMA buffer in DxgkDdiPresent. That is,
+        //     we must set the DXGKARG_PRESENT.pDmaBuffer output parameter
+        //     to NULL.
+        //   - DxgkDdiSetVidPnSourceAddress will be called at DIRQL
         //
-#if 1
-        pDriverCaps->FlipCaps.FlipOnVSyncMmIo = 1;
-#endif
+        pDriverCaps->FlipCaps.FlipOnVSyncMmIo = TRUE;
+        
+        // TODO[jordanrh] Do these need to be inside an IsRenderOnly check?
+        if (!RosKmdGlobal::IsRenderOnly())
+        {
+            //
+            // The hardware can store at most one pending flip operation.
+            //
+            pDriverCaps->MaxQueuedFlipOnVSync = 1;
+
+            //
+            // FlipOnVSyncWithNoWait - we don't have to wait for the next VSync
+            // to program in the new source address. We can program in the new
+            // source address and return immediately, and it will take
+            // effect at the next vsync.
+            //
+            pDriverCaps->FlipCaps.FlipOnVSyncWithNoWait = TRUE;
+        
+            //
+            // We do not support the scheduling of a flip command to take effect
+            // after two, three, or four vertical syncs.
+            //
+            pDriverCaps->FlipCaps.FlipInterval = FALSE;
+            
+            //
+            // The address we program into hardware does not take effect until
+            // the next vsync.
+            //
+            pDriverCaps->FlipCaps.FlipImmediateMmIo = FALSE;
+            
+            //
+            // WDDM 1.3 and later drivers must set this to TRUE.
+            // In an independent flip, the DWM user-mode present call is skipped
+            // and DxgkDdiPresent and DxgkDdiSetVidPnSourceAddress are called.
+            //
+            pDriverCaps->FlipCaps.FlipIndependent = TRUE;
+        }
 
         //
         // TODO[bhouse] SchedulingCaps
@@ -1035,12 +1065,14 @@ RosKmAdapter::QueryAdapterInfo(
 #endif
 
         //
-        // TODO[bhouse] SupportNonVGA
-        //
+        // Must support DxgkDdiStopDeviceAndReleasePostDisplayOwnership
+        // 
+        pDriverCaps->SupportNonVGA = TRUE;
 
         //
-        // TODO[bhouse] SupportSmoothRotation
+        // Must support updating path rotation in DxgkDdiUpdateActiveVidPnPresentPath
         //
+        pDriverCaps->SupportSmoothRotation = TRUE;
 
         //
         // TODO[bhouse] SupportPerEngineTDR
@@ -1050,11 +1082,13 @@ RosKmAdapter::QueryAdapterInfo(
 #endif
 
         //
-        // TODO[bhouse] SupportDirectFlip
+        // SupportDirectFlip
+        //   - must not allow video memory to be flipped to an incompatible
+        //     allocation in DxgkDdiSetVidPnSourceAddress
+        //   - the user mode driver must validate Direct Flip resources before
+        //     the DWM uses them
         //
-#if 1
         pDriverCaps->SupportDirectFlip = 1;
-#endif
 
         //
         // TODO[bhouse] SupportMultiPlaneOverlay
@@ -1228,18 +1262,14 @@ RosKmAdapter::QueryAdapterInfo(
     break;
 
     default:
-        // NT_ASSERT(FALSE);
-        break;
+        ROS_LOG_ASSERTION(
+            "Unsupported query type. (pQueryAdapterInfo->Type=%d, pQueryAdapterInfo=0x%p)",
+            pQueryAdapterInfo->Type,
+            pQueryAdapterInfo);
+        return STATUS_NOT_SUPPORTED;
     }
 
-    if (RosKmdGlobal::IsRenderOnly())
-        return STATUS_SUCCESS;
-
-    // Display subsystem should not modify request, but it does get a chance to
-    // inspect our response and possibly veto it. This is mainly for debugging.
-    NTSTATUS status = m_display.VetoQueryAdapterInfo(pQueryAdapterInfo);
-    NT_ASSERT(NT_SUCCESS(status));
-    return status;
+    return STATUS_SUCCESS;
 }
 
 NTSTATUS
@@ -1805,6 +1835,18 @@ RosKmAdapter::HwDmaBufCompletionDpcRoutine(
     KeSetEvent(&pRosKmAdapter->m_hwDmaBufCompletionEvent, 0, FALSE);
 }
 
+VC4_NONPAGED_SEGMENT_BEGIN; //================================================
+
+_Use_decl_annotations_
+NTSTATUS RosKmAdapter::SetVidPnSourceAddress (
+    const DXGKARG_SETVIDPNSOURCEADDRESS* SetVidPnSourceAddressPtr
+    )
+{
+    NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
+    return m_display.SetVidPnSourceAddress(SetVidPnSourceAddressPtr);
+}
+
+VC4_NONPAGED_SEGMENT_END; //==================================================
 VC4_PAGED_SEGMENT_BEGIN; //===================================================
 
 _Use_decl_annotations_

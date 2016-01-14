@@ -79,14 +79,23 @@ void VC4_DISPLAY::SystemDisplayWrite (
 }
 
 _Use_decl_annotations_
+NTSTATUS VC4_DISPLAY::SetVidPnSourceAddress (
+    const DXGKARG_SETVIDPNSOURCEADDRESS* /*SetVidPnSourceAddressPtr*/
+    )
+{
+    ROS_LOG_ASSERTION("Not implemented");
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+_Use_decl_annotations_
 BOOLEAN VC4_DISPLAY::InterruptRoutine (
     ULONG /*MessageNumber*/
     )
-{   
+{
     // Get PixelValve status register
-    VC4PIXELVALVE_INTERRUPT intStat = 
+    VC4PIXELVALVE_INTERRUPT intStat =
         {READ_REGISTER_NOFENCE_ULONG(&this->pvRegistersPtr->IntStat)};
-    
+
     enum : ULONG { VC4PIXELVALVE_INTERRUPT_MASK = 0x3ff };
     if (!(intStat.AsUlong & VC4PIXELVALVE_INTERRUPT_MASK)) {
         ROS_LOG_ASSERTION(
@@ -101,17 +110,17 @@ BOOLEAN VC4_DISPLAY::InterruptRoutine (
         FRAME_BUFFER_ID pendingFrameBufferId = InterlockedAnd(
                 &this->pendingActiveFrameBufferId,
                 0);
-        if (pendingFrameBufferId) {            
-            FRAME_BUFFER_ID oldActiveFrameBufferId = 
+        if (pendingFrameBufferId) {
+            FRAME_BUFFER_ID oldActiveFrameBufferId =
                 this->activeFrameBufferId;
             this->activeFrameBufferId = pendingFrameBufferId;
-            
+
             // Return the old active frame buffer to the free list
             FRAME_BUFFER_ID localBackBufferId = InterlockedCompareExchange(
                     &this->backBufferId,
                     oldActiveFrameBufferId,
                     0);
-                    
+
             if (localBackBufferId) {
                 // The back buffer slot should be available!
                 ROS_LOG_ASSERTION(
@@ -120,12 +129,12 @@ BOOLEAN VC4_DISPLAY::InterruptRoutine (
                     oldActiveFrameBufferId,
                     pendingFrameBufferId);
             }
-            
+
             ROS_LOG_TRACE(
                 "Reporting display progress as complete. (oldActiveFrameBufferId=%d, pendingFrameBufferId=%d)",
                 oldActiveFrameBufferId,
                 pendingFrameBufferId);
-            
+
             // Disable the VfpStart interrupt. This ensures that the vsync
             // interrupt only gets fired when a new frame is displayed
             this->pixelValveIntEn.VfpStart = FALSE;
@@ -139,33 +148,33 @@ BOOLEAN VC4_DISPLAY::InterruptRoutine (
                 this->backBufferId);
         }
     }
-    
+
     // Write new interrupt enable/disable mask
     WRITE_REGISTER_NOFENCE_ULONG(
         &this->pvRegistersPtr->IntEn,
         this->pixelValveIntEn.AsUlong);
-        
+
     // Acknowledge interrupts
     WRITE_REGISTER_NOFENCE_ULONG(
         &this->pvRegistersPtr->IntStat,
         intStat.AsUlong);
-    
+
     if (notifyPresentComplete) {
         // Notify framework that previous active buffer is now safe
         // to use again
         DXGKARGCB_NOTIFY_INTERRUPT_DATA args = {};
         args.InterruptType = DXGK_INTERRUPT_DISPLAYONLY_PRESENT_PROGRESS;
         args.DisplayOnlyPresentProgress.VidPnSourceId = 0;
-        args.DisplayOnlyPresentProgress.ProgressId = 
+        args.DisplayOnlyPresentProgress.ProgressId =
             DXGK_PRESENT_DISPLAYONLY_PROGRESS_ID_COMPLETE;
-            
+
         this->dxgkInterface.DxgkCbNotifyInterrupt(
             this->dxgkInterface.DeviceHandle,
             &args);
     }
-                
+
     this->dxgkInterface.DxgkCbQueueDpc(this->dxgkInterface.DeviceHandle);
-    
+
     return TRUE;
 }
 
@@ -179,24 +188,24 @@ _Use_decl_annotations_
 VOID VC4_DISPLAY::EvtHotplugNotification (PVOID ContextPtr, BOOLEAN Connected)
 {
     NT_ASSERT(KeGetCurrentIrql() == DISPATCH_LEVEL);
-    
+
     ROS_LOG_INFORMATION(
         "Received hotplug notification. (Connected=%d)",
         Connected);
-    
+
     auto thisPtr = static_cast<VC4_DISPLAY*>(ContextPtr);
-    
+
     thisPtr->hdmiConnected = Connected;
-    
+
     auto childStatus = DXGK_CHILD_STATUS();
     childStatus.Type = StatusConnection;
     childStatus.ChildUid = 0;
     childStatus.HotPlug.Connected = Connected;
-    
+
     NTSTATUS status = thisPtr->dxgkInterface.DxgkCbIndicateChildStatus(
             thisPtr->dxgkInterface.DeviceHandle,
             &childStatus);
-    
+
     if (!NT_SUCCESS(status)) {
         ROS_LOG_ASSERTION(
             "DxgkCbIndicateChildStatus(...) failed! (status=%!STATUS!, Connected=%d)",
@@ -219,7 +228,7 @@ VC4_DISPLAY::VC4_DISPLAY (
     dxgkInterface(DxgkInterface),
     dxgkStartInfo(DxgkStartInfo),
     dxgkDeviceInfo(DxgkDeviceInfo),
-    
+
     dbgHelper(this->dxgkInterface),
     dxgkDisplayInfo(),
     dxgkVideoSignalInfo(),
@@ -228,7 +237,7 @@ VC4_DISPLAY::VC4_DISPLAY (
     hpdFileObjectPtr(),
     hdmiConnected(),
     i2cFileObjectPtrs(),
-    
+
     hvsRegistersPtr(),
     pvRegistersPtr(),
     pixelValveIntEn(),
@@ -246,7 +255,7 @@ VC4_DISPLAY::VC4_DISPLAY (
 {
     PAGED_CODE();
     VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-    
+
     ROS_LOG_TRACE(
         L"Successfully constructed display subsystem. (this=0x%p, PhysicalDeviceObjectPtr=0x%p)",
         this,
@@ -262,13 +271,13 @@ NTSTATUS VC4_DISPLAY::StartDevice (
 {
     PAGED_CODE();
     VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-    
+
     NTSTATUS status;
 
     // Precondition: the caller is responsible to set up common device information
     NT_ASSERT(this->dxgkInterface.DeviceHandle);
     NT_ASSERT(this->dxgkDeviceInfo.PhysicalDeviceObject == this->physicalDeviceObjectPtr);
-    
+
     // Open handle to HPD driver and register notification
     FILE_OBJECT* localHpdFileObjectPtr;
     {
@@ -291,7 +300,7 @@ NTSTATUS VC4_DISPLAY::StartDevice (
         PAGED_CODE();
         ObDereferenceObjectWithTag(localHpdFileObjectPtr, VC4_ALLOC_TAG::DEVICE);
     });
-    
+
     // Register for hotplug notification
     {
         auto inputBuffer = GPIOHPD_REGISTER_NOTIFICATION_INPUT();
@@ -307,7 +316,7 @@ NTSTATUS VC4_DISPLAY::StartDevice (
                 &outputBuffer,
                 sizeof(outputBuffer),
                 TRUE,                       // InternalDeviceIoControl
-                &information);            
+                &information);
         if (!NT_SUCCESS(status)) {
             ROS_LOG_ERROR(
                 "Vc4SendIoctlSynchronously(...IOCTL_GPIOHPD_REGISTER_NOTIFICATION...) failed. (status=%!STATUS!, localHpdFileObjectPtr=%p)",
@@ -322,7 +331,7 @@ NTSTATUS VC4_DISPLAY::StartDevice (
     const CM_PARTIAL_RESOURCE_DESCRIPTOR* hvsMemoryResourcePtr = nullptr;
     const CM_PARTIAL_RESOURCE_DESCRIPTOR* pvMemoryResourcePtr = nullptr;
     const CM_PARTIAL_RESOURCE_DESCRIPTOR* pvInterruptResourcePtr = nullptr;
-    const CM_PARTIAL_RESOURCE_DESCRIPTOR* 
+    const CM_PARTIAL_RESOURCE_DESCRIPTOR*
         i2cResourcePtrs[ARRAYSIZE(this->i2cFileObjectPtrs)] = {0};
     {
         const CM_RESOURCE_LIST* resourceListPtr =
@@ -393,7 +402,7 @@ NTSTATUS VC4_DISPLAY::StartDevice (
             } // switch
         }
 
-        if (!hvsMemoryResourcePtr || 
+        if (!hvsMemoryResourcePtr ||
             !pvMemoryResourcePtr ||
             !pvInterruptResourcePtr ||
             (i2cResourceCount < ARRAYSIZE(i2cResourcePtrs))) {
@@ -485,7 +494,7 @@ NTSTATUS VC4_DISPLAY::StartDevice (
         UNREFERENCED_PARAMETER(unmapStatus);
         NT_ASSERT(NT_SUCCESS(unmapStatus));
     });
-    
+
     // Open I2C connections
     auto dereferenceI2cFileObjects = VC4_FINALLY::DoUnless([&] {
         PAGED_CODE();
@@ -499,7 +508,7 @@ NTSTATUS VC4_DISPLAY::StartDevice (
         static_assert(
             ARRAYSIZE(i2cResourcePtrs) == ARRAYSIZE(this->i2cFileObjectPtrs),
             "Sanity check on size of I2C channel array");
-        
+
         DECLARE_UNICODE_STRING_SIZE(deviceName, RESOURCE_HUB_PATH_CHARS);
 
         status = RESOURCE_HUB_CREATE_PATH_FROM_ID(
@@ -530,9 +539,9 @@ NTSTATUS VC4_DISPLAY::StartDevice (
 
     // Ensure HVS register block is enabled
     {
-        VC4HVS_DISPCTRL dispCtrl = 
+        VC4HVS_DISPCTRL dispCtrl =
             {READ_REGISTER_NOFENCE_ULONG(&_hvsRegistersPtr->DISPCTRL)};
-            
+
         if (!dispCtrl.ENABLE) {
             ROS_LOG_ERROR("The HVS is not enabled");
             return STATUS_DEVICE_HARDWARE_ERROR;
@@ -585,7 +594,7 @@ NTSTATUS VC4_DISPLAY::StartDevice (
                 _pvRegistersPtr);
             return STATUS_DEVICE_HARDWARE_ERROR;
         }
-        
+
 #ifdef DBG
         this->dbgHelper.DumpPixelValveRegisters(_pvRegistersPtr);
 #endif
@@ -721,14 +730,14 @@ NTSTATUS VC4_DISPLAY::StartDevice (
             &_hvsRegistersPtr->DLISTMEM[dispList1.HEADE]);
         this->displayListControlWord0 = displayListCopy.ControlWord0;
     }
-    
+
     // All resources have been acquired. Save them in the device context
-    
+
     dereferenceHpdFileObject.DoNot();
     this->hpdFileObjectPtr = localHpdFileObjectPtr;
-    
+
     dereferenceI2cFileObjects.DoNot();
-    
+
     unmapHvsRegisters.DoNot();
     this->hvsRegistersPtr = _hvsRegistersPtr;
 
@@ -782,14 +791,14 @@ void VC4_DISPLAY::StopDevice ()
     NT_ASSERT(this->hpdFileObjectPtr);
     ObDereferenceObjectWithTag(this->hpdFileObjectPtr, VC4_ALLOC_TAG::DEVICE);
     this->hpdFileObjectPtr = nullptr;
-    
+
     // Close I2C handles
     for (auto& fileObjectPtr : this->i2cFileObjectPtrs) {
         NT_ASSERT(fileObjectPtr);
         ObDereferenceObjectWithTag(fileObjectPtr, VC4_ALLOC_TAG::DEVICE);
         fileObjectPtr = nullptr;
     }
-    
+
     // Disable interrupts
     WRITE_REGISTER_NOFENCE_ULONG(&this->pvRegistersPtr->IntEn, 0);
 
@@ -937,13 +946,13 @@ NTSTATUS VC4_DISPLAY::QueryDeviceDescriptor (
         "Querying EDID from monitor over DDC I2C channel. (DescriptorOffset=%d, DescriptorLength=%d)",
         DeviceDescriptorPtr->DescriptorOffset,
         DeviceDescriptorPtr->DescriptorLength);
-    
+
     if (!this->hdmiConnected) {
         ROS_LOG_WARNING("The HDMI connector is disconnected.");
     }
-    
+
     NTSTATUS status;
-    
+
     // Write segment register
     // XXX only do this if segmentNumber is nonzero
     {
@@ -955,7 +964,7 @@ NTSTATUS VC4_DISPLAY::QueryDeviceDescriptor (
                 segmentNumber);
             return STATUS_INVALID_PARAMETER;
         }
-        
+
         BYTE writeBuf[] = { static_cast<BYTE>(segmentNumber) };
         ULONG information;
         status = Vc4SendWriteSynchronously (
@@ -971,7 +980,7 @@ NTSTATUS VC4_DISPLAY::QueryDeviceDescriptor (
                 segmentNumber);
         }
     }
-    
+
     SPB_TRANSFER_LIST_AND_ENTRIES(2) inputBuffer;
     SPB_TRANSFER_LIST_INIT(&inputBuffer.List, 2);
 
@@ -1001,7 +1010,7 @@ NTSTATUS VC4_DISPLAY::QueryDeviceDescriptor (
             0,
             FALSE,                      // InternalDeviceIoControl
             &bytesTransferred);
-            
+
     if (!NT_SUCCESS(status)) {
         ROS_LOG_ERROR(
             "Failed to query EDID from monitor. (status=%!STATUS!, DescriptorOffset=%d, DescriptorLength=%d)",
@@ -1010,7 +1019,7 @@ NTSTATUS VC4_DISPLAY::QueryDeviceDescriptor (
             DeviceDescriptorPtr->DescriptorLength);
         return Vc4SanitizeNtstatus(status);
     }
-    
+
     if (bytesTransferred != (1 + DeviceDescriptorPtr->DescriptorLength)) {
         ROS_LOG_ERROR(
             "An unexpected number of bytes was transferred. (bytesTransferred=%d, expected=%d)",
@@ -1047,139 +1056,6 @@ NTSTATUS VC4_DISPLAY::SetPowerState (
         ActionType);
 
     return STATUS_SUCCESS;
-}
-
-//
-// TODO[jordanrh]: modify to simply veto request
-//
-_Use_decl_annotations_
-NTSTATUS VC4_DISPLAY::VetoQueryAdapterInfo (
-    const DXGKARG_QUERYADAPTERINFO* QueryAdapterInfoPtr
-    )
-{
-    PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-
-    switch (QueryAdapterInfoPtr->Type) {
-    case DXGKQAITYPE_DRIVERCAPS: // DXGK_DRIVERCAPS
-        DXGK_DRIVERCAPS* driverCapsPtr;
-        if (QueryAdapterInfoPtr->OutputDataSize < sizeof(*driverCapsPtr)) {
-            ROS_LOG_ASSERTION(
-                "Output buffer is not large enough to hold DXGK_DRIVERCAPS. (QueryAdapterInfoPtr->OutputDataSize = %d, sizeof(DXGK_DRIVERCAPS) = %d)",
-                QueryAdapterInfoPtr->OutputDataSize,
-                sizeof(DXGK_DRIVERCAPS));
-            return STATUS_BUFFER_TOO_SMALL;
-        }
-        driverCapsPtr = reinterpret_cast<DXGK_DRIVERCAPS*>(
-                QueryAdapterInfoPtr->pOutputData);
-        *driverCapsPtr = DXGK_DRIVERCAPS();
-
-        // Explicitly spell out each capability for reference
-        driverCapsPtr->HighestAcceptableAddress = PHYSICAL_ADDRESS{ULONG(-1)};
-        driverCapsPtr->MaxAllocationListSlotId = 0;
-        driverCapsPtr->ApertureSegmentCommitLimit = 0;
-        driverCapsPtr->MaxPointerWidth = 0;
-        driverCapsPtr->MaxPointerHeight = 0;
-
-        // Pointer capabilities
-        driverCapsPtr->PointerCaps.Monochrome = FALSE;
-        driverCapsPtr->PointerCaps.Color = FALSE;
-        driverCapsPtr->PointerCaps.MaskedColor = FALSE;
-
-        driverCapsPtr->InterruptMessageNumber = 0;
-        driverCapsPtr->NumberOfSwizzlingRanges = 0;
-        driverCapsPtr->MaxOverlays = 0;
-        driverCapsPtr->GammaRampCaps.Gamma_Rgb256x3x16 = FALSE;
-
-        // Presentation capabilities
-        driverCapsPtr->PresentationCaps.NoScreenToScreenBlt = FALSE;
-        driverCapsPtr->PresentationCaps.NoOverlapScreenBlt = FALSE;
-        driverCapsPtr->PresentationCaps.SupportKernelModeCommandBuffer = FALSE;
-        driverCapsPtr->PresentationCaps.NoSameBitmapAlphaBlend = FALSE;
-        driverCapsPtr->PresentationCaps.NoSameBitmapStretchBlt = FALSE;
-        driverCapsPtr->PresentationCaps.NoSameBitmapTransparentBlt = FALSE;
-        driverCapsPtr->PresentationCaps.NoSameBitmapOverlappedAlphaBlend = FALSE;
-        driverCapsPtr->PresentationCaps.NoSameBitmapOverlappedStretchBlt = FALSE;
-        driverCapsPtr->PresentationCaps.DriverSupportsCddDwmInterop = FALSE;
-        driverCapsPtr->PresentationCaps.AlignmentShift = 0;
-        driverCapsPtr->PresentationCaps.MaxTextureWidthShift = 0;
-        driverCapsPtr->PresentationCaps.MaxTextureHeightShift = 0;
-        driverCapsPtr->PresentationCaps.SupportAllBltRops = FALSE;
-        driverCapsPtr->PresentationCaps.SupportMirrorStretchBlt = FALSE;
-        driverCapsPtr->PresentationCaps.SupportMonoStretchBltModes = FALSE;
-        driverCapsPtr->PresentationCaps.StagingRectStartPitchAligned = FALSE;
-        driverCapsPtr->PresentationCaps.NoSameBitmapBitBlt = FALSE;
-        driverCapsPtr->PresentationCaps.NoSameBitmapOverlappedBitBlt = FALSE;
-        driverCapsPtr->PresentationCaps.NoTempSurfaceForClearTypeBlend = FALSE;
-        driverCapsPtr->PresentationCaps.SupportSoftwareDeviceBitmaps = FALSE;
-        driverCapsPtr->PresentationCaps.NoCacheCoherentApertureMemory = FALSE;
-        driverCapsPtr->PresentationCaps.SupportLinearHeap = FALSE;
-
-        driverCapsPtr->MaxQueuedFlipOnVSync = 0;
-
-        // Flipping capabilities
-        driverCapsPtr->FlipCaps.FlipOnVSyncWithNoWait = FALSE;
-        driverCapsPtr->FlipCaps.FlipOnVSyncMmIo = FALSE;
-        driverCapsPtr->FlipCaps.FlipInterval = FALSE;
-        driverCapsPtr->FlipCaps.FlipImmediateMmIo = FALSE;
-        driverCapsPtr->FlipCaps.FlipIndependent = FALSE;
-
-        // Scheduling capabilities
-        driverCapsPtr->SchedulingCaps.MultiEngineAware = FALSE;
-        driverCapsPtr->SchedulingCaps.VSyncPowerSaveAware = FALSE;
-        driverCapsPtr->SchedulingCaps.PreemptionAware = FALSE;
-        driverCapsPtr->SchedulingCaps.NoDmaPatching = FALSE;
-        driverCapsPtr->SchedulingCaps.CancelCommandAware = FALSE;
-        driverCapsPtr->SchedulingCaps.No64BitAtomics = FALSE;
-
-        // Memory management capabilities
-        driverCapsPtr->MemoryManagementCaps.OutOfOrderLock = FALSE;
-        driverCapsPtr->MemoryManagementCaps.DedicatedPagingEngine = FALSE;
-        driverCapsPtr->MemoryManagementCaps.PagingEngineCanSwizzle = FALSE;
-        driverCapsPtr->MemoryManagementCaps.SectionBackedPrimary = FALSE;
-        driverCapsPtr->MemoryManagementCaps.CrossAdapterResource = FALSE;
-        driverCapsPtr->MemoryManagementCaps.VirtualAddressingSupported = FALSE;
-        driverCapsPtr->MemoryManagementCaps.GpuMmuSupported = FALSE;
-        driverCapsPtr->MemoryManagementCaps.IoMmuSupported = FALSE;
-        driverCapsPtr->MemoryManagementCaps.ReplicateGdiContent = FALSE;
-
-        driverCapsPtr->GpuEngineTopology.NbAsymetricProcessingNodes = 0;
-
-        // If we use 1.3 or higher, we must support FlipCaps.FlipIndependent
-        driverCapsPtr->WDDMVersion = DXGKDDI_WDDMv1_2;
-
-        // GPU preemption capabilities
-        driverCapsPtr->PreemptionCaps.GraphicsPreemptionGranularity = D3DKMDT_GRAPHICS_PREEMPTION_NONE;
-        driverCapsPtr->PreemptionCaps.ComputePreemptionGranularity = D3DKMDT_COMPUTE_PREEMPTION_NONE;
-
-        // must support DxgkDdiStopDeviceAndReleasePostDisplayOwnership
-        driverCapsPtr->SupportNonVGA = TRUE;
-
-        // must support updating path rotation in DxgkDdiUpdateActiveVidPnPresentPath
-        driverCapsPtr->SupportSmoothRotation = TRUE;
-
-        driverCapsPtr->SupportPerEngineTDR = FALSE;
-        driverCapsPtr->SupportDirectFlip = FALSE;
-        driverCapsPtr->SupportMultiPlaneOverlay = FALSE;
-        driverCapsPtr->SupportRuntimePowerManagement = FALSE;
-        driverCapsPtr->SupportSurpriseRemovalInHibernation = FALSE;
-        driverCapsPtr->HybridDiscrete = FALSE;
-        driverCapsPtr->MaxOverlayPlanes = 0;
-
-        return STATUS_SUCCESS;
-    case DXGKQAITYPE_UMDRIVERPRIVATE:
-    case DXGKQAITYPE_QUERYSEGMENT:
-    case DXGKQAITYPE_QUERYSEGMENT3:
-    case DXGKQAITYPE_NUMPOWERCOMPONENTS:
-    case DXGKQAITYPE_POWERCOMPONENTINFO:
-    case DXGKQAITYPE_HISTORYBUFFERPRECISION:
-    case DXGKQAITYPE_GPUMMUCAPS:
-    default:
-        ROS_LOG_WARNING(
-            "Recevied QueryAdapterInfo query for unsupported type. (QueryAdapterInfoPtr->Type = %d)",
-            QueryAdapterInfoPtr->Type);
-        return STATUS_NOT_SUPPORTED;
-    }
 }
 
 //
@@ -1930,14 +1806,14 @@ NTSTATUS VC4_DISPLAY::PresentDisplayOnly (
     NT_ASSERT(PresentDisplayOnlyPtr->BytesPerPixel == 4);
     NT_ASSERT(ULONG(PresentDisplayOnlyPtr->Pitch) == this->dxgkDisplayInfo.Pitch);
     NT_ASSERT(!PresentDisplayOnlyPtr->Flags.Rotate);
-    
+
     // Get a buffer from the free buffer list
     FRAME_BUFFER_ID localBackBufferId = InterlockedAnd(&this->backBufferId, 0);
     NT_ASSERT(localBackBufferId);
-    
+
     _FRAME_BUFFER_DESCRIPTOR* backBufferDescriptorPtr =
         this->getFrameBufferDescriptorFromId(localBackBufferId);
-    
+
     // Copy source pixels to back buffer
     __try {
         // must copy entire frame each time
@@ -1949,12 +1825,12 @@ NTSTATUS VC4_DISPLAY::PresentDisplayOnly (
         ROS_LOG_ERROR("An exception occurred while accessing the user buffer.");
         return STATUS_UNSUCCESSFUL;
     }
-    
+
     // Update the source address in the display list
     WRITE_REGISTER_NOFENCE_ULONG(
         &this->displayListPtr->PointerWord0,
         backBufferDescriptorPtr->PhysicalAddress);
-    
+
     // Save the back buffer as the new pending active buffer
     FRAME_BUFFER_ID oldPendingActive = InterlockedExchange(
             &this->pendingActiveFrameBufferId,
@@ -1967,13 +1843,13 @@ NTSTATUS VC4_DISPLAY::PresentDisplayOnly (
             this->activeFrameBufferId);
         return STATUS_UNSUCCESSFUL;
     }
-    
+
     // Enable the VFP interrupt
     this->pixelValveIntEn.VfpStart = TRUE;
     WRITE_REGISTER_NOFENCE_ULONG(
         &this->pvRegistersPtr->IntEn,
         this->pixelValveIntEn.AsUlong);
-    
+
     return STATUS_PENDING;
 }
 

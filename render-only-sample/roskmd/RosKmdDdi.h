@@ -273,6 +273,9 @@ public:
 class RosKmdDisplayDdi
 {
 public:  // NONPAGED
+
+    static DXGKDDI_SETVIDPNSOURCEADDRESS DdiSetVidPnSourceAddress;
+
 private: // NONPAGED
 public: // PAGED
 

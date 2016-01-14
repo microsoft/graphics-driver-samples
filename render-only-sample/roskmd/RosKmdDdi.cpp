@@ -652,8 +652,21 @@ RosKmdDdi::DdiResetDevice(
     return pRosKmdAdapter->ResetDevice();
 }
 
-// TODO[jordanh] put PASSIVE_LEVEL DDIs in the paged section
+VC4_NONPAGED_SEGMENT_BEGIN; //================================================
+
+_Use_decl_annotations_
+NTSTATUS RosKmdDisplayDdi::DdiSetVidPnSourceAddress (
+    HANDLE const hAdapter,
+    const DXGKARG_SETVIDPNSOURCEADDRESS* SetVidPnSourceAddressPtr
+    )
+{
+    return RosKmAdapter::Cast(hAdapter)->SetVidPnSourceAddress(
+            SetVidPnSourceAddressPtr);
+}
+
+VC4_NONPAGED_SEGMENT_END; //==================================================
 VC4_PAGED_SEGMENT_BEGIN; //===================================================
+// TODO[jordanh] put PASSIVE_LEVEL DDIs in the paged section
 
 //
 // RosKmdDisplayDdi
