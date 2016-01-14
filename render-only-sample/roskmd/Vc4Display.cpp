@@ -98,9 +98,6 @@ BOOLEAN VC4_DISPLAY::InterruptRoutine (
 
     enum : ULONG { VC4PIXELVALVE_INTERRUPT_MASK = 0x3ff };
     if (!(intStat.AsUlong & VC4PIXELVALVE_INTERRUPT_MASK)) {
-        ROS_LOG_ASSERTION(
-            "Received interrupt but interrupt bits are not set! (intStat=0x%x)",
-            intStat.AsUlong);
         return FALSE;
     }
 
@@ -176,12 +173,6 @@ BOOLEAN VC4_DISPLAY::InterruptRoutine (
     this->dxgkInterface.DxgkCbQueueDpc(this->dxgkInterface.DeviceHandle);
 
     return TRUE;
-}
-
-_Use_decl_annotations_
-void VC4_DISPLAY::DpcRoutine ()
-{
-    this->dxgkInterface.DxgkCbNotifyDpc(this->dxgkInterface.DeviceHandle);
 }
 
 _Use_decl_annotations_

@@ -27,6 +27,8 @@ protected:
 
     virtual NTSTATUS Stop () override;
 
+    _Check_return_
+    _IRQL_requires_(HIGH_LEVEL)
     virtual BOOLEAN InterruptRoutine(
         IN_ULONG        MessageNumber);
 
@@ -70,5 +72,11 @@ private:
 
 #endif
     }
-
+    
+private: // NONPAGED
+    
+    _Check_return_
+    _IRQL_requires_(HIGH_LEVEL)
+    BOOLEAN RendererInterruptRoutine (IN_ULONG MessageNumber);
+    
 };

@@ -81,9 +81,6 @@ public: // NONPAGED
     _IRQL_requires_(HIGH_LEVEL)
     BOOLEAN InterruptRoutine (IN_ULONG MessageNumber);
 
-    _IRQL_requires_(DISPATCH_LEVEL)
-    void DpcRoutine ();
-
     static EVT_GPIOHPD_HOTPLUG_NOTIFICATION EvtHotplugNotification;
 
 private: // NONPAGED

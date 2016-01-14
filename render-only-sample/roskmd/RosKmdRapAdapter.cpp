@@ -826,12 +826,23 @@ RosKmdRapAdapter::SetVC4Power(
     }
 }
 
-BOOLEAN
-RosKmdRapAdapter::InterruptRoutine(
-    IN_ULONG        MessageNumber)
-{
-    MessageNumber;
+VC4_NONPAGED_SEGMENT_BEGIN; //================================================
 
+_Use_decl_annotations_
+BOOLEAN RosKmdRapAdapter::InterruptRoutine(ULONG MessageNumber)
+{
+    if (this->RendererInterruptRoutine(MessageNumber))
+        return TRUE;
+    
+    if (RosKmdGlobal::IsRenderOnly())
+        return FALSE;
+    
+    return m_display.InterruptRoutine(MessageNumber);
+}
+
+_Use_decl_annotations_
+BOOLEAN RosKmdRapAdapter::RendererInterruptRoutine (ULONG /*MessageNumber*/)
+{
     if (!m_bReadyToHandleInterrupt)
     {
         return FALSE;
@@ -858,4 +869,6 @@ RosKmdRapAdapter::InterruptRoutine(
 
     return FALSE;
 }
+
+VC4_NONPAGED_SEGMENT_END; //==================================================
 
