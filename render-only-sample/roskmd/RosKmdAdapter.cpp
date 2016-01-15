@@ -777,11 +777,12 @@ RosKmAdapter::CreateAllocation(
     pAllocationInfo->EvictionSegmentSet = 0; // don't use apperture for eviction
 
     pAllocationInfo->Flags.Value = 0;
-    // Always mark allocation as CPU visible
-    pAllocationInfo->Flags.CpuVisible = 1;
-    // TODO[indyz]: Look into if Cached should be used
-    pAllocationInfo->Flags.Cached = 1;
-
+    // Allocation cannot be cpu visible as shared resource cannot be cpu visible.
+    // The primary surface is expected to be shared  between DWM and application.
+    // TODO[douglasc]: Attempt to distinguished allocation type sepcify attributes accordingly
+    pAllocationInfo->Flags.CpuVisible = 0;
+    pAllocationInfo->Flags.Cached = 0;
+    
     pAllocationInfo->HintedBank.Value = 0;
     pAllocationInfo->MaximumRenamingListLength = 0;
     pAllocationInfo->pAllocationUsageHint = NULL;
