@@ -277,6 +277,7 @@ RosKmdRapAdapter::Start(
     disableInterrupt.DoNot();
     stopDisplay.DoNot();
 
+    ROS_LOG_TRACE("RosKmdRapAdapter successfully started.");
     return STATUS_SUCCESS;
 }
 
@@ -284,6 +285,8 @@ NTSTATUS RosKmdRapAdapter::Stop ()
 {
     NTSTATUS status;
     UNREFERENCED_PARAMETER(status);
+    
+    ROS_LOG_TRACE("Stopping RosKmdRapAdapter");
 
     if (!RosKmdGlobal::IsRenderOnly())
     {
@@ -333,6 +336,8 @@ void
 RosKmdRapAdapter::ProcessRenderBuffer(
     ROSDMABUFSUBMISSION * pDmaBufSubmission)
 {
+    ROS_LOG_TRACE("Processing render buffer");
+    
     ROSDMABUFINFO * pDmaBufInfo = pDmaBufSubmission->m_pDmaBufInfo;
 
     if (pDmaBufInfo->m_DmaBufState.m_bSwCommandBuffer)

@@ -113,8 +113,9 @@ NTSTATUS
 RosKmAdapter::QueryEngineStatus(
     DXGKARG_QUERYENGINESTATUS  *pQueryEngineStatus)
 {
+    ROS_LOG_TRACE("QueryEngineStatus was called.");
+    
     pQueryEngineStatus->EngineStatus.Responsive = 1;
-
     return STATUS_SUCCESS;
 }
 
@@ -497,6 +498,7 @@ RosKmAdapter::Start(
     KeInitializeEvent(&m_hwDmaBufCompletionEvent, SynchronizationEvent, FALSE);
     KeInitializeDpc(&m_hwDmaBufCompletionDpc, HwDmaBufCompletionDpcRoutine, this);
 
+    ROS_LOG_TRACE("Adapter was successfully started.");
     return STATUS_SUCCESS;
 }
 
@@ -519,6 +521,7 @@ RosKmAdapter::Stop()
 
     ObDereferenceObject(m_pWorkerThread);
 
+    ROS_LOG_TRACE("Adapter was successfully stopped.");
     return STATUS_SUCCESS;
 }
 
@@ -593,8 +596,9 @@ RosKmAdapter::BuildPagingBuffer(
         RosKmdAllocation * pRosKmdAllocation = (RosKmdAllocation *)pArgs->Fill.hAllocation;
         pRosKmdAllocation;
 
-        DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "Filling at %lx with %lx size %lx\n",
-            pArgs->Fill.Destination.SegmentAddress,
+        ROS_LOG_TRACE(
+            "Filling DMA buffer. (Destination.SegmentAddress=0x%I64x, FillPattern=0x%lx, FillSize=%d)",
+            pArgs->Fill.Destination.SegmentAddress.QuadPart,
             pArgs->Fill.FillPattern,
             pArgs->Fill.FillSize);
 
@@ -1355,102 +1359,91 @@ RosKmAdapter::GetNodeMetadata(
 
 NTSTATUS
 RosKmAdapter::SubmitCommandVirtual(
-    IN_CONST_PDXGKARG_SUBMITCOMMANDVIRTUAL  pSubmitCommandVirtual)
+    IN_CONST_PDXGKARG_SUBMITCOMMANDVIRTUAL  /*pSubmitCommandVirtual*/)
 {
-    pSubmitCommandVirtual;
-
-    NTSTATUS        Status = STATUS_SUCCESS;
-
-    return Status;
+    ROS_LOG_ASSERTION("Not implemented");
+    return STATUS_NOT_IMPLEMENTED;
 }
 
 NTSTATUS
 RosKmAdapter::PreemptCommand(
-    IN_CONST_PDXGKARG_PREEMPTCOMMAND    pPreemptCommand)
+    IN_CONST_PDXGKARG_PREEMPTCOMMAND    /*pPreemptCommand*/)
 {
-    pPreemptCommand;
-
-    NTSTATUS        Status = STATUS_SUCCESS;
-
-    return Status;
+    ROS_LOG_ASSERTION("Not implemented");
+    return STATUS_NOT_IMPLEMENTED;
 }
 
 NTSTATUS
 RosKmAdapter::RestartFromTimeout(void)
 {
-    return STATUS_SUCCESS;
+    ROS_LOG_ASSERTION("Not implemented");
+    return STATUS_NOT_IMPLEMENTED;
 }
 
 NTSTATUS
 RosKmAdapter::CancelCommand(
-    IN_CONST_PDXGKARG_CANCELCOMMAND pCancelCommand)
+    IN_CONST_PDXGKARG_CANCELCOMMAND /*pCancelCommand*/)
 {
-    pCancelCommand;
-
-    return STATUS_SUCCESS;
+    ROS_LOG_ASSERTION("Not implemented");
+    return STATUS_NOT_IMPLEMENTED;
 }
 
 NTSTATUS
 RosKmAdapter::QueryCurrentFence(
-    INOUT_PDXGKARG_QUERYCURRENTFENCE   pCurrentFence)
+    INOUT_PDXGKARG_QUERYCURRENTFENCE   /*pCurrentFence*/)
 {
-    pCurrentFence;
-
-    return STATUS_SUCCESS;
+    ROS_LOG_ASSERTION("Not implemented");
+    return STATUS_NOT_IMPLEMENTED;
 }
 
 NTSTATUS
 RosKmAdapter::ResetEngine(
-    INOUT_PDXGKARG_RESETENGINE  pResetEngine)
+    INOUT_PDXGKARG_RESETENGINE  /*pResetEngine*/)
 {
-    pResetEngine;
-
-    return STATUS_SUCCESS;
+    ROS_LOG_ASSERTION("Not implemented");
+    return STATUS_NOT_IMPLEMENTED;
 }
 
 NTSTATUS
 RosKmAdapter::QueryDependentEngineGroup(
-    INOUT_DXGKARG_QUERYDEPENDENTENGINEGROUP     pQueryDependentEngineGroup)
+    INOUT_DXGKARG_QUERYDEPENDENTENGINEGROUP     /*pQueryDependentEngineGroup*/)
 {
-    pQueryDependentEngineGroup;
-
-    return STATUS_SUCCESS;
+    ROS_LOG_ASSERTION("Not implemented");
+    return STATUS_NOT_IMPLEMENTED;
 }
 
 NTSTATUS
 RosKmAdapter::ControlInterrupt(
-    IN_CONST_DXGK_INTERRUPT_TYPE    InterruptType,
-    IN_BOOLEAN                      EnableInterrupt)
+    IN_CONST_DXGK_INTERRUPT_TYPE    /*InterruptType*/,
+    IN_BOOLEAN                      /*EnableInterrupt*/)
 {
-    InterruptType;
-    EnableInterrupt;
-
-    return STATUS_SUCCESS;
+    ROS_LOG_ASSERTION("Not implemented");
+    return STATUS_NOT_IMPLEMENTED;
 }
 
 NTSTATUS
 RosKmAdapter::CollectDbgInfo(
-    IN_CONST_PDXGKARG_COLLECTDBGINFO        pCollectDbgInfo)
+    IN_CONST_PDXGKARG_COLLECTDBGINFO        /*pCollectDbgInfo*/)
 {
-    pCollectDbgInfo;
-
-    return STATUS_SUCCESS;
+    ROS_LOG_ASSERTION("Not implemented");
+    return STATUS_NOT_IMPLEMENTED;
 }
 
 NTSTATUS
 RosKmAdapter::CreateProcess(
-    IN DXGKARG_CREATEPROCESS* pArgs)
+    IN DXGKARG_CREATEPROCESS* /*pArgs*/)
 {
-    pArgs->hKmdProcess = 0;
-    return STATUS_SUCCESS;
+    // pArgs->hKmdProcess = 0;
+    ROS_LOG_ASSERTION("Not implemented");
+    return STATUS_NOT_IMPLEMENTED;
 }
 
 NTSTATUS
 RosKmAdapter::DestroyProcess(
-    IN HANDLE KmdProcessHandle)
+    IN HANDLE /*KmdProcessHandle*/)
 {
-    UNREFERENCED_PARAMETER(KmdProcessHandle);
-    return STATUS_SUCCESS;
+    ROS_LOG_ASSERTION("Not implemented");
+    return STATUS_NOT_IMPLEMENTED;
 }
 
 void
@@ -1458,20 +1451,18 @@ RosKmAdapter::SetStablePowerState(
     IN_CONST_PDXGKARG_SETSTABLEPOWERSTATE  pArgs)
 {
     UNREFERENCED_PARAMETER(pArgs);
+    ROS_LOG_ASSERTION("Not implemented");
 }
 
 NTSTATUS
 RosKmAdapter::CalibrateGpuClock(
-    IN UINT32                                   NodeOrdinal,
-    IN UINT32                                   EngineOrdinal,
-    OUT_PDXGKARG_CALIBRATEGPUCLOCK              pClockCalibration
+    IN UINT32                                   /*NodeOrdinal*/,
+    IN UINT32                                   /*EngineOrdinal*/,
+    OUT_PDXGKARG_CALIBRATEGPUCLOCK              /*pClockCalibration*/
     )
 {
-    NodeOrdinal;
-    EngineOrdinal;
-    pClockCalibration;
-
-    return STATUS_SUCCESS;
+    ROS_LOG_ASSERTION("Not implemented");
+    return STATUS_NOT_IMPLEMENTED;
 }
 
 NTSTATUS
@@ -1502,16 +1493,16 @@ RosKmAdapter::Escape(
         break;
     }
 
-    return Status;
+    ROS_LOG_ASSERTION("Not implemented");
+    return STATUS_NOT_IMPLEMENTED;
 }
 
 NTSTATUS
 RosKmAdapter::ResetFromTimeout(void)
 {
-    return STATUS_SUCCESS;
+    ROS_LOG_ASSERTION("Not implemented");
+    return STATUS_NOT_IMPLEMENTED;
 }
-
-
 
 NTSTATUS
 RosKmAdapter::QueryChildRelations(
@@ -1575,6 +1566,7 @@ void
 RosKmAdapter::ResetDevice(void)
 {
     // Do nothing
+    ROS_LOG_ASSERTION("Not implemented");
 }
 
 void

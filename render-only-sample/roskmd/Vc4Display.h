@@ -121,28 +121,11 @@ private: // NONPAGED
 
     SIZE_T frameBufferLength;
     VOID* biosFrameBufferPtr;       // must be freed with MmUnmapIoSpace
-    VOID* systemFrameBuffers[1];    // must be freed with MmFreeContiguousMemory
-
-    struct _FRAME_BUFFER_DESCRIPTOR {
-        VOID* BufferPtr;
-        ULONG PhysicalAddress;
-    } frameBuffers[2];
-
-    FRAME_BUFFER_ID activeFrameBufferId;                // written only by the ISR
-    volatile FRAME_BUFFER_ID pendingActiveFrameBufferId;   // access must be Interlocked - get from ISR, put from Present
-    volatile FRAME_BUFFER_ID backBufferId;              // access must be Interlocked - put from ISR, get from Present
 
     VC4HVS_DLIST_ENTRY_UNITY* displayListPtr;
     VC4HVS_DLIST_CONTROL_WORD_0 displayListControlWord0;
 
-    __forceinline _FRAME_BUFFER_DESCRIPTOR* getFrameBufferDescriptorFromId (
-        FRAME_BUFFER_ID FrameBufferId
-        )
-    {
-        // Id's are 1-based indexes so that 0 can be the "null" value
-        NT_ASSERT(FrameBufferId);
-        return &this->frameBuffers[FrameBufferId - 1];
-    }
+    PHYSICAL_ADDRESS currentVidPnSourceAddress;
 
 public: // PAGED
 
@@ -253,12 +236,6 @@ public: // PAGED
     _IRQL_requires_(PASSIVE_LEVEL)
     NTSTATUS QueryVidPnHWCapability (
         INOUT_PDXGKARG_QUERYVIDPNHWCAPABILITY VidPnHWCapsPtr
-        );
-
-    _Check_return_
-    _IRQL_requires_(PASSIVE_LEVEL)
-    NTSTATUS PresentDisplayOnly (
-        IN_CONST_PDXGKARG_PRESENT_DISPLAYONLY PresentDisplayOnlyPtr
         );
 
     _Check_return_

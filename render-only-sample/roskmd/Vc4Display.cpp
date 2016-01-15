@@ -80,11 +80,48 @@ void VC4_DISPLAY::SystemDisplayWrite (
 
 _Use_decl_annotations_
 NTSTATUS VC4_DISPLAY::SetVidPnSourceAddress (
-    const DXGKARG_SETVIDPNSOURCEADDRESS* /*SetVidPnSourceAddressPtr*/
+    const DXGKARG_SETVIDPNSOURCEADDRESS* Args
     )
 {
-    ROS_LOG_ASSERTION("Not implemented");
-    return STATUS_NOT_IMPLEMENTED;
+    NT_ASSERT(Args->VidPnSourceId == 0);
+    
+    if (Args->Flags.ModeChange) {
+        NT_ASSERT(Args->ContextCount == 0);
+        
+        ROS_LOG_WARNING("Mode change was requested. Not sure what to do.");
+        return STATUS_SUCCESS;
+    }
+    
+    NT_ASSERT(Args->ContextCount > 0);
+    
+    // We indicated we do not support immediate flip by setting 
+    // pDriverCaps->FlipCaps.FlipImmediateMmIo to FALSE.
+    // TODO[jordanrh]: store the capabilities somewhere so we can ASSERT them
+    // whenever we make an assumption based on them
+    NT_ASSERT(!Args->Flags.FlipImmediate);
+    NT_ASSERT(Args->Flags.FlipOnNextVSync);
+    
+    if (Args->Flags.SharedPrimaryTransition) {
+        ROS_LOG_ASSERTION("What do we do here?");
+    }
+    
+    if (Args->Flags.IndependentFlipExclusive) {
+        ROS_LOG_ASSERTION("What do we do here?");
+    }
+    
+    ULONG physicAddress = Vc4PhysicalAddressFromVirtual(
+        reinterpret_cast<void*>(Args->PrimaryAddress.LowPart));
+    
+    // PrimaryAddress is actually a virtual address
+    // Update the source address in the display list
+    WRITE_REGISTER_NOFENCE_ULONG(
+        &this->displayListPtr->PointerWord0,
+        physicAddress);
+        
+    this->currentVidPnSourceAddress = Args->PrimaryAddress;
+    
+    ROS_LOG_TRACE("Successfully programmed VidPn source address");
+    return STATUS_SUCCESS;
 }
 
 _Use_decl_annotations_
@@ -101,76 +138,35 @@ BOOLEAN VC4_DISPLAY::InterruptRoutine (
         return FALSE;
     }
     
-    ROS_LOG_ASSERTION("VC4 interrupt routine should not get called yet.");
+    // XXX implement ControlInterrupt
+    // Write new interrupt enable/disable mask
+        // WRITE_REGISTER_NOFENCE_ULONG(
+            // &this->pvRegistersPtr->IntEn,
+            // this->pixelValveIntEn.AsUlong);
 
     // VSync interrupt
-    bool notifyPresentComplete = false;
     if (intStat.VfpStart) {
-        FRAME_BUFFER_ID pendingFrameBufferId = InterlockedAnd(
-                &this->pendingActiveFrameBufferId,
-                0);
-        if (pendingFrameBufferId) {
-            FRAME_BUFFER_ID oldActiveFrameBufferId =
-                this->activeFrameBufferId;
-            this->activeFrameBufferId = pendingFrameBufferId;
-
-            // Return the old active frame buffer to the free list
-            FRAME_BUFFER_ID localBackBufferId = InterlockedCompareExchange(
-                    &this->backBufferId,
-                    oldActiveFrameBufferId,
-                    0);
-
-            if (localBackBufferId) {
-                // The back buffer slot should be available!
-                ROS_LOG_ASSERTION(
-                    "The free buffer list is already full! (localBackBufferId=%d, oldActiveFrameBufferId=%d, pendingFrameBufferId=%d",
-                    localBackBufferId,
-                    oldActiveFrameBufferId,
-                    pendingFrameBufferId);
-            }
-
-            ROS_LOG_TRACE(
-                "Reporting display progress as complete. (oldActiveFrameBufferId=%d, pendingFrameBufferId=%d)",
-                oldActiveFrameBufferId,
-                pendingFrameBufferId);
-
-            // Disable the VfpStart interrupt. This ensures that the vsync
-            // interrupt only gets fired when a new frame is displayed
-            this->pixelValveIntEn.VfpStart = FALSE;
-
-            notifyPresentComplete = true;
-        } else {
-            ROS_LOG_ASSERTION(
-                "Received VfpStart interrupt without a new frame buffer! (this->activeFrameBufferId=%d, this->pendingFrameBufferId=%d, this->backBufferId=%d)",
-                this->activeFrameBufferId,
-                this->pendingActiveFrameBufferId,
-                this->backBufferId);
-        }
+        ROS_LOG_TRACE("Notifying dxgkrnl lf VSYNC interrupt.");
+        
+        // Notify framework that previous active buffer is now safe
+        // to use again
+        DXGKARGCB_NOTIFY_INTERRUPT_DATA args = {};
+        args.InterruptType = DXGK_INTERRUPT_CRTC_VSYNC;
+        args.CrtcVsync.VidPnTargetId = 0;
+        args.CrtcVsync.PhysicalAddress = this->currentVidPnSourceAddress;
+        args.CrtcVsync.PhysicalAdapterMask = 1;
+        args.Flags.ValidPhysicalAdapterMask = TRUE;
+        this->dxgkInterface.DxgkCbNotifyInterrupt(
+            this->dxgkInterface.DeviceHandle,
+            &args);
+    } else {
+        ROS_LOG_ASSERTION("Unexpected interrupt!");
     }
-
-    // Write new interrupt enable/disable mask
-    WRITE_REGISTER_NOFENCE_ULONG(
-        &this->pvRegistersPtr->IntEn,
-        this->pixelValveIntEn.AsUlong);
-
+    
     // Acknowledge interrupts
     WRITE_REGISTER_NOFENCE_ULONG(
         &this->pvRegistersPtr->IntStat,
         intStat.AsUlong);
-
-    if (notifyPresentComplete) {
-        // Notify framework that previous active buffer is now safe
-        // to use again
-        DXGKARGCB_NOTIFY_INTERRUPT_DATA args = {};
-        args.InterruptType = DXGK_INTERRUPT_DISPLAYONLY_PRESENT_PROGRESS;
-        args.DisplayOnlyPresentProgress.VidPnSourceId = 0;
-        args.DisplayOnlyPresentProgress.ProgressId =
-            DXGK_PRESENT_DISPLAYONLY_PROGRESS_ID_COMPLETE;
-
-        this->dxgkInterface.DxgkCbNotifyInterrupt(
-            this->dxgkInterface.DeviceHandle,
-            &args);
-    }
 
     this->dxgkInterface.DxgkCbQueueDpc(this->dxgkInterface.DeviceHandle);
 
@@ -237,11 +233,6 @@ VC4_DISPLAY::VC4_DISPLAY (
 
     frameBufferLength(0),
     biosFrameBufferPtr(),
-    systemFrameBuffers(),
-
-    activeFrameBufferId(),
-    pendingActiveFrameBufferId(),
-    backBufferId(),
 
     displayListPtr(),
     displayListControlWord0()
@@ -635,24 +626,6 @@ NTSTATUS VC4_DISPLAY::StartDevice (
         MmUnmapIoSpace(_biosFrameBufferPtr, _frameBufferLength);
     });
 
-    // allocate two more buffers so that we can do triple buffering
-    void* systemFrameBuffer1 = MmAllocateContiguousMemory(
-            _frameBufferLength,
-            PHYSICAL_ADDRESS{ULONG(-1)});
-    if (!systemFrameBuffer1) {
-        ROS_LOG_LOW_MEMORY("Failed to allocate contiguous memory for frame buffer");
-        return STATUS_NO_MEMORY;
-    }
-    auto freeSystemFrameBuffer1 = VC4_FINALLY::DoUnless([&] {
-        PAGED_CODE();
-        MmFreeContiguousMemory(systemFrameBuffer1);
-    });
-
-    // XXX: make frame buffer all red for debugging purposes
-    for (ULONG i = 0; i < (_frameBufferLength / sizeof(ULONG)); ++i) {
-        reinterpret_cast<ULONG*>(systemFrameBuffer1)[i] = 0xffff0000; // red ?
-    }
-
     // Validate and store a pointer to the active display list
     {
         VC4HVS_DISPFIFOCTRL dispCtrl1 = {
@@ -727,31 +700,6 @@ NTSTATUS VC4_DISPLAY::StartDevice (
     unmapBiosFrameBuffer.DoNot();
     this->biosFrameBufferPtr = _biosFrameBufferPtr;
 
-    freeSystemFrameBuffer1.DoNot();
-    this->systemFrameBuffers[0] = systemFrameBuffer1;
-
-    // initialize the frameBuffers structure
-    this->frameBuffers[0] = _FRAME_BUFFER_DESCRIPTOR {
-        _biosFrameBufferPtr,
-        Vc4PhysicalAddressFromVirtual(_biosFrameBufferPtr)
-    };
-
-    this->frameBuffers[1] = _FRAME_BUFFER_DESCRIPTOR {
-        this->systemFrameBuffers[0],
-        Vc4PhysicalAddressFromVirtual(this->systemFrameBuffers[0])
-    };
-
-    static_assert(
-        ARRAYSIZE(this->systemFrameBuffers) == 1,
-        "Sanity check on size of systemFrameBuffers");
-    static_assert(
-        ARRAYSIZE(this->frameBuffers) == 2,
-        "Sanity check on size of frameBuffers");
-
-    this->activeFrameBufferId = 1;             // BIOS frame buffer
-    this->pendingActiveFrameBufferId = 0;      // no swap pending
-    this->backBufferId = 2;
-
     *NumberOfVideoPresentSourcesPtr = 1;
     *NumberOfChildrenPtr = CHILD_COUNT;     // represents the HDMI connector
 
@@ -784,14 +732,7 @@ void VC4_DISPLAY::StopDevice ()
     // Make the BIOS frame buffer active before freeing system buffers
     WRITE_REGISTER_NOFENCE_ULONG(
         &this->displayListPtr->PointerWord0,
-        this->frameBuffers[0].PhysicalAddress);
-
-    // Free system frame buffers
-    for (auto& frameBufferPtr : this->systemFrameBuffers) {
-        NT_ASSERT(frameBufferPtr);
-        MmFreeContiguousMemory(frameBufferPtr);
-        frameBufferPtr = nullptr;
-    }
+        Vc4PhysicalAddressFromVirtual(this->biosFrameBufferPtr));
 
     // Unmap BIOS frame buffer
     NT_ASSERT(this->biosFrameBufferPtr);
@@ -1430,7 +1371,18 @@ NTSTATUS VC4_DISPLAY::SetVidPnSourceVisibility (
         "Received request to set visibility. (VidPnSourceId = %d, Visible = %d)",
         SetVidPnSourceVisibilityPtr->VidPnSourceId,
         SetVidPnSourceVisibilityPtr->Visible);
-
+    
+    // XXX where do we enable and disable the interrupt?
+    // if (SetVidPnSourceVisibilityPtr->Visible)
+        // VC4PIXELVALVE_INTERRUPT intEn = {};
+        // intEn.VfpStart = TRUE;
+        // WRITE_REGISTER_NOFENCE_ULONG(
+            // &this->pvRegistersPtr->IntEn,
+            // intEn.AsUlong);
+    // } else {
+        // WRITE_REGISTER_NOFENCE_ULONG(&this->pvRegistersPtr->IntEn, 0);
+    // }
+    
     return STATUS_SUCCESS;
 }
 
@@ -1769,73 +1721,6 @@ NTSTATUS VC4_DISPLAY::QueryVidPnHWCapability (
     VidPnHWCapsPtr->VidPnHWCaps.DriverRemoteDisplay = FALSE;        // driver does not support remote displays
 
     return STATUS_SUCCESS;
-}
-
-_Use_decl_annotations_
-NTSTATUS VC4_DISPLAY::PresentDisplayOnly (
-    const DXGKARG_PRESENT_DISPLAYONLY* PresentDisplayOnlyPtr
-    )
-{
-    PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-
-    ROS_LOG_TRACE(
-        "Received present call. (VidPnSourceId = %d, BytesPerPixel = %d, Pitch = %d, Flags.Rotate = %d, NumMoves = %d, NumDirtyRects = %d)",
-        PresentDisplayOnlyPtr->VidPnSourceId,
-        PresentDisplayOnlyPtr->BytesPerPixel,
-        PresentDisplayOnlyPtr->Pitch,
-        PresentDisplayOnlyPtr->Flags.Rotate,
-        PresentDisplayOnlyPtr->NumMoves,
-        PresentDisplayOnlyPtr->NumDirtyRects);
-
-    NT_ASSERT(PresentDisplayOnlyPtr->BytesPerPixel == 4);
-    NT_ASSERT(ULONG(PresentDisplayOnlyPtr->Pitch) == this->dxgkDisplayInfo.Pitch);
-    NT_ASSERT(!PresentDisplayOnlyPtr->Flags.Rotate);
-
-    // Get a buffer from the free buffer list
-    FRAME_BUFFER_ID localBackBufferId = InterlockedAnd(&this->backBufferId, 0);
-    NT_ASSERT(localBackBufferId);
-
-    _FRAME_BUFFER_DESCRIPTOR* backBufferDescriptorPtr =
-        this->getFrameBufferDescriptorFromId(localBackBufferId);
-
-    // Copy source pixels to back buffer
-    __try {
-        // must copy entire frame each time
-        memcpy(
-            backBufferDescriptorPtr->BufferPtr,
-            PresentDisplayOnlyPtr->pSource,
-            this->frameBufferLength);
-    } __except (EXCEPTION_EXECUTE_HANDLER) {
-        ROS_LOG_ERROR("An exception occurred while accessing the user buffer.");
-        return STATUS_UNSUCCESSFUL;
-    }
-
-    // Update the source address in the display list
-    WRITE_REGISTER_NOFENCE_ULONG(
-        &this->displayListPtr->PointerWord0,
-        backBufferDescriptorPtr->PhysicalAddress);
-
-    // Save the back buffer as the new pending active buffer
-    FRAME_BUFFER_ID oldPendingActive = InterlockedExchange(
-            &this->pendingActiveFrameBufferId,
-            localBackBufferId);
-    if (oldPendingActive) {
-        ROS_LOG_ASSERTION(
-            "PresentDisplayOnly was called before the previous frame was reported as complete! (localBackBufferId=%d, oldPendingActive=%d, activeFrameBufferId=%d)",
-            localBackBufferId,
-            oldPendingActive,
-            this->activeFrameBufferId);
-        return STATUS_UNSUCCESSFUL;
-    }
-
-    // Enable the VFP interrupt
-    this->pixelValveIntEn.VfpStart = TRUE;
-    WRITE_REGISTER_NOFENCE_ULONG(
-        &this->pvRegistersPtr->IntEn,
-        this->pixelValveIntEn.AsUlong);
-
-    return STATUS_PENDING;
 }
 
 _Use_decl_annotations_
