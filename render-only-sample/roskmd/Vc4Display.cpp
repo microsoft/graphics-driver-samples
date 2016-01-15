@@ -100,6 +100,8 @@ BOOLEAN VC4_DISPLAY::InterruptRoutine (
     if (!(intStat.AsUlong & VC4PIXELVALVE_INTERRUPT_MASK)) {
         return FALSE;
     }
+    
+    ROS_LOG_ASSERTION("VC4 interrupt routine should not get called yet.");
 
     // VSync interrupt
     bool notifyPresentComplete = false;
@@ -271,51 +273,24 @@ NTSTATUS VC4_DISPLAY::StartDevice (
 
     // Open handle to HPD driver and register notification
     FILE_OBJECT* localHpdFileObjectPtr;
-    {
-        DECLARE_CONST_UNICODE_STRING(hpdDeviceName, GPIOHPD_DEVICE_OBJECT_NAME_WSZ);
-        status = Vc4OpenDevice(
-                const_cast<UNICODE_STRING*>(&hpdDeviceName),
-                GENERIC_READ | GENERIC_WRITE,
-                0,
-                &localHpdFileObjectPtr);
-
-        if (!NT_SUCCESS(status)) {
-            ROS_LOG_ERROR(
-                "Failed to open handle to hotplug detection device.. (status=%!STATUS!, hpdDeviceName=%wZ)",
-                status,
-                &hpdDeviceName);
-            return status;
-        }
-    }
     auto dereferenceHpdFileObject = VC4_FINALLY::DoUnless([&] {
         PAGED_CODE();
         ObDereferenceObjectWithTag(localHpdFileObjectPtr, VC4_ALLOC_TAG::DEVICE);
-    });
-
-    // Register for hotplug notification
-    {
-        auto inputBuffer = GPIOHPD_REGISTER_NOTIFICATION_INPUT();
-        inputBuffer.EvtHotplugNotificationFunc = EvtHotplugNotification;
-        inputBuffer.ContextPtr = this;
-        GPIOHPD_REGISTER_NOTIFICATION_OUTPUT outputBuffer;
-        ULONG information;
-        status = Vc4SendIoctlSynchronously(
-                localHpdFileObjectPtr,
-                IOCTL_GPIOHPD_REGISTER_NOTIFICATION,
-                &inputBuffer,
-                sizeof(inputBuffer),
-                &outputBuffer,
-                sizeof(outputBuffer),
-                TRUE,                       // InternalDeviceIoControl
-                &information);
-        if (!NT_SUCCESS(status)) {
-            ROS_LOG_ERROR(
-                "Vc4SendIoctlSynchronously(...IOCTL_GPIOHPD_REGISTER_NOTIFICATION...) failed. (status=%!STATUS!, localHpdFileObjectPtr=%p)",
-                status,
-                localHpdFileObjectPtr);
-            return status;
-        }
-        this->hdmiConnected = outputBuffer.Connected;
+    }, true);   // DoNot by default
+    status = this->registerHotplugNotification(&localHpdFileObjectPtr);
+    switch (status) {
+    case STATUS_SUCCESS:
+        dereferenceHpdFileObject.DoNot(false);
+        break;
+    case STATUS_OBJECT_NAME_NOT_FOUND:
+        ROS_LOG_WARNING("Hotplug detection device was not found. Hotplug will not be supported.");
+        this->hdmiConnected = TRUE;
+        break;
+    default:
+        ROS_LOG_ERROR(
+            "Failed to register hotplug notification. (status=%!STATUS!)",
+            status);
+        return status;
     }
 
     // Find and validate hardware resources
@@ -598,12 +573,22 @@ NTSTATUS VC4_DISPLAY::StartDevice (
     status = this->dxgkInterface.DxgkCbAcquirePostDisplayOwnership(
             this->dxgkInterface.DeviceHandle,
             &this->dxgkDisplayInfo);
-    if (!NT_SUCCESS(status) || (this->dxgkDisplayInfo.Width == 0)) {
+    if (!NT_SUCCESS(status)) {
         ROS_LOG_ERROR(
-            "DxgkCbAcquirePostDisplayOwnership() failed. (status = %!STATUS!, this->dxgkDisplayInfo.Width = %d, this->dxgkInterface.DeviceHandle = %p)",
-            status,
+            "DxgkCbAcquirePostDisplayOwnership() failed. (status = %!STATUS!)",
+            status);
+        return status;
+    }
+    
+    if ((this->dxgkDisplayInfo.Width == 0) || 
+        (this->dxgkDisplayInfo.Height == 0) ||
+        (this->dxgkDisplayInfo.PhysicAddress.QuadPart == 0)) {
+        
+        ROS_LOG_ERROR(
+            "DxgkCbAcquirePostDisplayOwnership(...) reported invalid frame buffer. (Width=%d, Height=%d, PhysicAddress=0x%I64x)",
             this->dxgkDisplayInfo.Width,
-            this->dxgkInterface.DeviceHandle);
+            this->dxgkDisplayInfo.Height,
+            this->dxgkDisplayInfo.PhysicAddress.QuadPart);
         return STATUS_UNSUCCESSFUL;
     }
 
@@ -613,11 +598,13 @@ NTSTATUS VC4_DISPLAY::StartDevice (
     this->dxgkVideoSignalInfo.TotalSize.cx = this->dxgkDisplayInfo.Width;
     this->dxgkVideoSignalInfo.TotalSize.cy = this->dxgkDisplayInfo.Height;
     this->dxgkVideoSignalInfo.ActiveSize = this->dxgkVideoSignalInfo.TotalSize;
-    this->dxgkVideoSignalInfo.VSyncFreq.Numerator = D3DKMDT_FREQUENCY_NOTSPECIFIED;
-    this->dxgkVideoSignalInfo.VSyncFreq.Denominator = D3DKMDT_FREQUENCY_NOTSPECIFIED;
-    this->dxgkVideoSignalInfo.HSyncFreq.Numerator = D3DKMDT_FREQUENCY_NOTSPECIFIED;
-    this->dxgkVideoSignalInfo.HSyncFreq.Denominator = D3DKMDT_FREQUENCY_NOTSPECIFIED;
-    this->dxgkVideoSignalInfo.PixelRate = D3DKMDT_FREQUENCY_NOTSPECIFIED;
+    
+    // Settings taken on my ASUS 1080p monitor (60Hz)
+    this->dxgkVideoSignalInfo.VSyncFreq.Numerator = 148500000; // D3DKMDT_FREQUENCY_NOTSPECIFIED;
+    this->dxgkVideoSignalInfo.VSyncFreq.Denominator = 2475000; // D3DKMDT_FREQUENCY_NOTSPECIFIED;
+    this->dxgkVideoSignalInfo.HSyncFreq.Numerator = 67500; // D3DKMDT_FREQUENCY_NOTSPECIFIED;
+    this->dxgkVideoSignalInfo.HSyncFreq.Denominator = 1; //D3DKMDT_FREQUENCY_NOTSPECIFIED;
+    this->dxgkVideoSignalInfo.PixelRate = 148500000; // D3DKMDT_FREQUENCY_NOTSPECIFIED;
     this->dxgkVideoSignalInfo.ScanLineOrdering = D3DDDI_VSSLO_PROGRESSIVE;
 
     ROS_LOG_TRACE(
@@ -779,9 +766,10 @@ void VC4_DISPLAY::StopDevice ()
     VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     // Close HPD notification handle
-    NT_ASSERT(this->hpdFileObjectPtr);
-    ObDereferenceObjectWithTag(this->hpdFileObjectPtr, VC4_ALLOC_TAG::DEVICE);
-    this->hpdFileObjectPtr = nullptr;
+    if (this->hpdFileObjectPtr) {
+        ObDereferenceObjectWithTag(this->hpdFileObjectPtr, VC4_ALLOC_TAG::DEVICE);
+        this->hpdFileObjectPtr = nullptr;
+    }
 
     // Close I2C handles
     for (auto& fileObjectPtr : this->i2cFileObjectPtrs) {
@@ -929,7 +917,12 @@ NTSTATUS VC4_DISPLAY::QueryDeviceDescriptor (
 {
     PAGED_CODE();
     VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    
+    UNREFERENCED_PARAMETER(ChildUid);
+    UNREFERENCED_PARAMETER(DeviceDescriptorPtr);
+    return STATUS_GRAPHICS_CHILD_DESCRIPTOR_NOT_SUPPORTED;
 
+#if 0
     UNREFERENCED_PARAMETER(ChildUid);
     NT_ASSERT(ChildUid == 0);
 
@@ -1021,6 +1014,7 @@ NTSTATUS VC4_DISPLAY::QueryDeviceDescriptor (
 
     NT_ASSERT(status == STATUS_SUCCESS);
     return status;
+#endif // 0
 }
 
 _Use_decl_annotations_
@@ -2299,6 +2293,64 @@ NTSTATUS VC4_DISPLAY::IsVidPnPathFieldsValid (
         return STATUS_GRAPHICS_INVALID_VIDEO_PRESENT_SOURCE_MODE;
     }
 
+    return STATUS_SUCCESS;
+}
+
+_Use_decl_annotations_
+NTSTATUS VC4_DISPLAY::registerHotplugNotification (FILE_OBJECT** FileObjectPPtr)
+{
+    PAGED_CODE();
+    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    
+    DECLARE_CONST_UNICODE_STRING(hpdDeviceName, GPIOHPD_DEVICE_OBJECT_NAME_WSZ);
+    FILE_OBJECT* fileObjectPtr;
+    NTSTATUS status = Vc4OpenDevice(
+            const_cast<UNICODE_STRING*>(&hpdDeviceName),
+            GENERIC_READ | GENERIC_WRITE,
+            0,
+            &fileObjectPtr);
+    if (!NT_SUCCESS(status)) {
+        ROS_LOG_ERROR(
+            "Failed to open handle to hotplug detection device.. (status=%!STATUS!, hpdDeviceName=%wZ)",
+            status,
+            &hpdDeviceName);
+        return status;
+    }
+    auto dereferenceHpdFileObject = VC4_FINALLY::DoUnless([&] {
+        PAGED_CODE();
+        ObDereferenceObjectWithTag(fileObjectPtr, VC4_ALLOC_TAG::DEVICE);
+    });
+
+    // Register for hotplug notification
+    {
+        auto inputBuffer = GPIOHPD_REGISTER_NOTIFICATION_INPUT();
+        inputBuffer.EvtHotplugNotificationFunc = EvtHotplugNotification;
+        inputBuffer.ContextPtr = this;
+        GPIOHPD_REGISTER_NOTIFICATION_OUTPUT outputBuffer;
+        ULONG information;
+        status = Vc4SendIoctlSynchronously(
+                fileObjectPtr,
+                IOCTL_GPIOHPD_REGISTER_NOTIFICATION,
+                &inputBuffer,
+                sizeof(inputBuffer),
+                &outputBuffer,
+                sizeof(outputBuffer),
+                TRUE,                       // InternalDeviceIoControl
+                &information);
+        if (!NT_SUCCESS(status)) {
+            ROS_LOG_ERROR(
+                "Vc4SendIoctlSynchronously(...IOCTL_GPIOHPD_REGISTER_NOTIFICATION...) failed. (status=%!STATUS!, fileObjectPtr=%p)",
+                status,
+                fileObjectPtr);
+            return status;
+        }
+        this->hdmiConnected = outputBuffer.Connected;
+    }
+    
+    dereferenceHpdFileObject.DoNot();
+    *FileObjectPPtr = fileObjectPtr;
+    
+    NT_ASSERT(NT_SUCCESS(status));
     return STATUS_SUCCESS;
 }
 

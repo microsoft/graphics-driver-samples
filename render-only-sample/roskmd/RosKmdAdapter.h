@@ -178,10 +178,6 @@ public:
             INOUT_DXGKARG_QUERYDEPENDENTENGINEGROUP     pQueryDependentEngineGroup);
 
     NTSTATUS
-        GetScanLine(
-            INOUT_PDXGKARG_GETSCANLINE  pGetScanLine);
-
-    NTSTATUS
         ControlInterrupt(
             IN_CONST_DXGK_INTERRUPT_TYPE    InterruptType,
             IN_BOOLEAN                      EnableInterrupt);
@@ -212,18 +208,6 @@ public:
     NTSTATUS
         Escape(
             IN_CONST_PDXGKARG_ESCAPE        pEscape);
-
-    NTSTATUS
-        SetPalette(
-            IN_CONST_PDXGKARG_SETPALETTE    pSetPalette);
-
-    NTSTATUS
-        SetPointerPosition(
-            IN_CONST_PDXGKARG_SETPOINTERPOSITION    pSetPointerPosition);
-
-    NTSTATUS
-        SetPointerShape(
-            IN_CONST_PDXGKARG_SETPOINTERSHAPE   pSetPointerShape);
 
     NTSTATUS
         ResetFromTimeout();
@@ -498,6 +482,27 @@ public: // NONPAGED
 public: // PAGED
 
     _Check_return_
+    _Function_class_DXGK_(DXGKDDI_SETPALETTE)
+    _IRQL_requires_(PASSIVE_LEVEL)
+    NTSTATUS SetPalette (
+        IN_CONST_PDXGKARG_SETPALETTE pSetPalette
+        );
+        
+    _Check_return_
+    _Function_class_DXGK_(DXGKDDI_SETPOINTERPOSITION)
+    _IRQL_requires_(PASSIVE_LEVEL)
+    NTSTATUS SetPointerPosition (
+        IN_CONST_PDXGKARG_SETPOINTERPOSITION SetPointerPositionPtr
+        );
+        
+    _Check_return_
+    _Function_class_DXGK_(DXGKDDI_SETPOINTERSHAPE)
+    _IRQL_requires_(PASSIVE_LEVEL)
+    NTSTATUS SetPointerShape (
+        IN_CONST_PDXGKARG_SETPOINTERSHAPE SetPointerShapePtr
+        );
+
+    _Check_return_
     _Function_class_DXGK_(DXGKDDI_ISSUPPORTEDVIDPN)
     _IRQL_requires_(PASSIVE_LEVEL)
     NTSTATUS IsSupportedVidPn (
@@ -544,6 +549,13 @@ public: // PAGED
     _IRQL_requires_(PASSIVE_LEVEL)
     NTSTATUS RecommendMonitorModes (
         IN_CONST_PDXGKARG_RECOMMENDMONITORMODES_CONST pRecommendMonitorModes
+        );
+        
+    _Check_return_
+    _Function_class_DXGK_(DXGKDDI_GETSCANLINE)
+    _IRQL_requires_(PASSIVE_LEVEL)
+    NTSTATUS GetScanLine (
+        INOUT_PDXGKARG_GETSCANLINE pGetScanLine
         );
 
     _Check_return_

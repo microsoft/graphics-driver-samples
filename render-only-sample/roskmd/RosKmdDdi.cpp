@@ -326,21 +326,6 @@ RosKmdDdi::DdiQueryDependentEngineGroup(
     return pRosKmdAdapter->QueryDependentEngineGroup(pQueryDependentEngineGroup);
 }
 
-
-NTSTATUS
-__stdcall
-RosKmdDdi::DdiGetScanLine(
-    IN_CONST_HANDLE             hAdapter,
-    INOUT_PDXGKARG_GETSCANLINE  pGetScanLine)
-{
-    RosKmAdapter  *pRosKmdAdapter = RosKmAdapter::Cast(hAdapter);
-
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n", __FUNCTION__, hAdapter);
-
-    return pRosKmdAdapter->GetScanLine(pGetScanLine);
-}
-
-
 NTSTATUS
 __stdcall
 RosKmdDdi::DdiControlInterrupt(
@@ -468,49 +453,6 @@ RosKmdDdi::DdiEscape(
 
     return pRosKmdAdapter->Escape(pEscape);
 }
-
-
-NTSTATUS
-__stdcall
-RosKmdDdi::DdiSetPalette(
-    IN_CONST_HANDLE                 hAdapter,
-    IN_CONST_PDXGKARG_SETPALETTE    pSetPalette)
-{
-    RosKmAdapter  *pRosKmdAdapter = RosKmAdapter::Cast(hAdapter);
-
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n", __FUNCTION__, hAdapter);
-
-    return pRosKmdAdapter->SetPalette(pSetPalette);
-}
-
-
-NTSTATUS
-__stdcall
-RosKmdDdi::DdiSetPointerPosition(
-    IN_CONST_HANDLE                         hAdapter,
-    IN_CONST_PDXGKARG_SETPOINTERPOSITION    pSetPointerPosition)
-{
-    RosKmAdapter  *pRosKmdAdapter = RosKmAdapter::Cast(hAdapter);
-
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n", __FUNCTION__, hAdapter);
-
-    return pRosKmdAdapter->SetPointerPosition(pSetPointerPosition);
-}
-
-
-NTSTATUS
-__stdcall
-RosKmdDdi::DdiSetPointerShape(
-    IN_CONST_HANDLE                     hAdapter,
-    IN_CONST_PDXGKARG_SETPOINTERSHAPE   pSetPointerShape)
-{
-    RosKmAdapter  *pRosKmdAdapter = RosKmAdapter::Cast(hAdapter);
-
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n", __FUNCTION__, hAdapter);
-
-    return pRosKmdAdapter->SetPointerShape(pSetPointerShape);
-}
-
 
 NTSTATUS
 __stdcall
@@ -673,6 +615,43 @@ VC4_PAGED_SEGMENT_BEGIN; //===================================================
 //
 
 _Use_decl_annotations_
+NTSTATUS RosKmdDisplayDdi::DdiSetPalette (
+    HANDLE const AdapterPtr,
+    const DXGKARG_SETPALETTE* SetPalettePtr
+    )
+{
+    PAGED_CODE();
+    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    
+    return RosKmAdapter::Cast(AdapterPtr)->SetPalette(SetPalettePtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmdDisplayDdi::DdiSetPointerPosition (
+    HANDLE const AdapterPtr,
+    const DXGKARG_SETPOINTERPOSITION* SetPointerPositionPtr
+    )
+{
+    PAGED_CODE();
+    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    
+    return RosKmAdapter::Cast(AdapterPtr)->SetPointerPosition(
+        SetPointerPositionPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmdDisplayDdi::DdiSetPointerShape (
+    HANDLE const AdapterPtr,
+    const DXGKARG_SETPOINTERSHAPE* SetPointerShapePtr
+    )
+{
+    PAGED_CODE();
+    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    
+    return RosKmAdapter::Cast(AdapterPtr)->SetPointerShape(SetPointerShapePtr);
+}
+
+_Use_decl_annotations_
 NTSTATUS RosKmdDisplayDdi::DdiIsSupportedVidPn (
     VOID* const MiniportDeviceContextPtr,
     DXGKARG_ISSUPPORTEDVIDPN* IsSupportedVidPnPtr
@@ -761,6 +740,18 @@ NTSTATUS RosKmdDisplayDdi::DdiRecommendMonitorModes (
 
     return RosKmAdapter::Cast(MiniportDeviceContextPtr)->RecommendMonitorModes(
             RecommendMonitorModesPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmdDisplayDdi::DdiGetScanLine (
+    HANDLE const AdapterPtr,
+    DXGKARG_GETSCANLINE*  GetScanLinePtr
+    )
+{
+    PAGED_CODE();
+    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    
+    return RosKmAdapter::Cast(AdapterPtr)->GetScanLine(GetScanLinePtr);
 }
 
 _Use_decl_annotations_

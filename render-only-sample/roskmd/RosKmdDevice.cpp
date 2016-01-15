@@ -21,8 +21,10 @@ NTSTATUS __stdcall RosKmDevice::DdiCreateDevice(
     IN_CONST_HANDLE hAdapter,
     INOUT_PDXGKARG_CREATEDEVICE pCreateDevice)
 {
-    if (new RosKmDevice(hAdapter, pCreateDevice) == NULL)
+    pCreateDevice->hDevice = new RosKmDevice(hAdapter, pCreateDevice);
+    if (!pCreateDevice->hDevice)
     {
+        ROS_LOG_LOW_MEMORY("Failed to allocate RosKmDevice.");
         return STATUS_NO_MEMORY;
     }
 
@@ -44,8 +46,6 @@ RosKmDevice::RosKmDevice(IN_CONST_HANDLE hAdapter, INOUT_PDXGKARG_CREATEDEVICE p
     m_hRTDevice = pCreateDevice->hDevice;
     m_pRosKmAdapter = (RosKmAdapter *)hAdapter;
     m_Flags = pCreateDevice->Flags;
-
-    pCreateDevice->hDevice = this;
 }
 
 RosKmDevice::~RosKmDevice()

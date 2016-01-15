@@ -88,21 +88,14 @@ NTSTATUS RosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
     }
 
     ROS_LOG_INFORMATION(
-        "(pDriverObject=0x%p, pRegistryPath=0x%p)",
+        "Initializing roskmd. (pDriverObject=0x%p, pRegistryPath=0x%p)",
         pDriverObject,
         pRegistryPath);
 
-    // Only break into the debugger on driver entry if debugger is present
-    if (KdRefreshDebuggerNotPresent() == FALSE)
-    {
-        DbgBreakPoint();
-    }
-
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "DriverEntry\n");
-
     if (s_bDoNotInstall)
     {
-        return STATUS_NO_MEMORY;
+        ROS_LOG_INFORMATION("s_bDoNotInstall is set; aborting driver initialization.");
+        return STATUS_UNSUCCESSFUL;
     }
 
     //
@@ -174,7 +167,7 @@ NTSTATUS RosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
             PAGED_CODE();
             NTSTATUS tempStatus = ZwClose(keyHandle);
             UNREFERENCED_PARAMETER(tempStatus);
-            NT_ASSERT(NT_SUCCESS(Status));
+            NT_ASSERT(NT_SUCCESS(tempStatus));
         });
 
         DECLARE_CONST_UNICODE_STRING(renderOnlyValueName, L"RenderOnly");
@@ -325,9 +318,15 @@ NTSTATUS RosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
 
     //
     // Register VidPn and display DDIs
+    // Refer to adapterdisplay.cxx:ADAPTER_DISPLAY::CreateDisplayCore() for
+    // required DDIs.
     //
     if (!IsRenderOnly())
     {
+        DriverInitializationData.DxgkDdiSetPalette = RosKmdDisplayDdi::DdiSetPalette;
+        DriverInitializationData.DxgkDdiSetPointerPosition = RosKmdDisplayDdi::DdiSetPointerPosition;
+        DriverInitializationData.DxgkDdiSetPointerShape = RosKmdDisplayDdi::DdiSetPointerShape;
+    
         DriverInitializationData.DxgkDdiIsSupportedVidPn = RosKmdDisplayDdi::DdiIsSupportedVidPn;
         DriverInitializationData.DxgkDdiRecommendFunctionalVidPn = RosKmdDisplayDdi::DdiRecommendFunctionalVidPn;
         DriverInitializationData.DxgkDdiEnumVidPnCofuncModality = RosKmdDisplayDdi::DdiEnumVidPnCofuncModality;
@@ -337,6 +336,7 @@ NTSTATUS RosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
         DriverInitializationData.DxgkDdiUpdateActiveVidPnPresentPath = RosKmdDisplayDdi::DdiUpdateActiveVidPnPresentPath;
 
         DriverInitializationData.DxgkDdiRecommendMonitorModes = RosKmdDisplayDdi::DdiRecommendMonitorModes;
+        DriverInitializationData.DxgkDdiGetScanLine = RosKmdDisplayDdi::DdiGetScanLine;
         DriverInitializationData.DxgkDdiQueryVidPnHWCapability = RosKmdDisplayDdi::DdiQueryVidPnHWCapability;
         DriverInitializationData.DxgkDdiStopDeviceAndReleasePostDisplayOwnership = RosKmdDisplayDdi::DdiStopDeviceAndReleasePostDisplayOwnership;
     }

@@ -30,7 +30,8 @@ protected:
     _Check_return_
     _IRQL_requires_(HIGH_LEVEL)
     virtual BOOLEAN InterruptRoutine(
-        IN_ULONG        MessageNumber);
+        IN_ULONG MessageNumber
+        ) override;
 
 private:
 

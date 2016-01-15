@@ -22,6 +22,7 @@ RosKmdRapAdapter::RosKmdRapAdapter(IN_CONST_PDEVICE_OBJECT PhysicalDeviceObject,
     RosKmAdapter(PhysicalDeviceObject, MiniportDeviceContext)
 {
     m_pVC4RegFile = NULL;
+    m_flags.m_isVC4 = TRUE;
 }
 
 RosKmdRapAdapter::~RosKmdRapAdapter()
@@ -63,7 +64,7 @@ RosKmdRapAdapter::Start(
         PAGED_CODE();
         NTSTATUS tempStatus = RosKmAdapter::Stop();
         UNREFERENCED_PARAMETER(tempStatus);
-        NT_ASSERT(NT_SUCCESS(status));
+        NT_ASSERT(NT_SUCCESS(tempStatus));
     });
 
 #if VC4
@@ -76,30 +77,21 @@ RosKmdRapAdapter::Start(
     CM_PARTIAL_RESOURCE_LIST       *pResourceList = &m_deviceInfo.TranslatedResourceList->List->PartialResourceList;
     CM_PARTIAL_RESOURCE_DESCRIPTOR *pResource = &pResourceList->PartialDescriptors[0];
 
-    // Indicate if we are running on VC4 hardware
-    if ((pResourceList->Count == 2) &&
-        (pResource->Type == CmResourceTypeMemory))
-    {
-        m_flags.m_isVC4 = pResourceList->Count == 2;
-    }
-
 #if VC4
 
-    VC4_REGISTER_FILE* vc4RegistersPtr;
     auto unmapVc4Registers = VC4_FINALLY::DoUnless([&] {
         PAGED_CODE();
-        NTSTATUS unmapStatus = m_DxgkInterface.DxgkCbUnmapMemory(
+        NTSTATUS tempStatus = m_DxgkInterface.DxgkCbUnmapMemory(
                 m_DxgkInterface.DeviceHandle,
-                vc4RegistersPtr);
-        UNREFERENCED_PARAMETER(unmapStatus);
-        NT_ASSERT(NT_SUCCESS(unmapStatus));
+                m_pVC4RegFile);
+        UNREFERENCED_PARAMETER(tempStatus);
+        NT_ASSERT(NT_SUCCESS(tempStatus));
     }, true);   // DoNot by default
 
-    FILE_OBJECT* rpiqFileObjectPtr;
     auto closeRpiq = VC4_FINALLY::DoUnless([&]
     {
         PAGED_CODE();
-        ObDereferenceObjectWithTag(rpiqFileObjectPtr, VC4_ALLOC_TAG::DEVICE);
+        ObDereferenceObjectWithTag(m_pRpiqDevice, VC4_ALLOC_TAG::DEVICE);
     }, true);   // DoNot by default
 
     auto powerDownVc4 = VC4_FINALLY::DoUnless([&]
@@ -129,7 +121,7 @@ RosKmdRapAdapter::Start(
                 pResource);
             return status;
         }
-        vc4RegistersPtr = static_cast<VC4_REGISTER_FILE*>(voidPtr);
+        m_pVC4RegFile = static_cast<VC4_REGISTER_FILE*>(voidPtr);
         unmapVc4Registers.DoNot(false); // arm the cleanup action
 
         // TODO[jordanrh]: get device path from rpiq.h
@@ -139,7 +131,7 @@ RosKmdRapAdapter::Start(
                 const_cast<UNICODE_STRING*>(&rpiqDeviceName),
                 FILE_ALL_ACCESS,
                 FILE_SHARE_READ | FILE_SHARE_WRITE,
-                &rpiqFileObjectPtr,
+                &m_pRpiqDevice,
                 VC4_ALLOC_TAG::DEVICE);
         if (!NT_SUCCESS(status))
         {
@@ -222,7 +214,9 @@ RosKmdRapAdapter::Start(
     auto disableInterrupt = VC4_FINALLY::DoUnless([&] {
         PAGED_CODE();
         m_bReadyToHandleInterrupt = FALSE;
-        WRITE_REGISTER_ULONG(reinterpret_cast<volatile ULONG*>(&m_pVC4RegFile->V3D_INTENA), 0);
+        WRITE_REGISTER_ULONG(reinterpret_cast<volatile ULONG*>(
+            &m_pVC4RegFile->V3D_INTENA),
+            0);
     }, true);
 
     if (g_bUseInterrupt)
@@ -236,7 +230,9 @@ RosKmdRapAdapter::Start(
         regIntEna.EI_FRDONE = 1;
 
         // TODO[jordanrh]: register operations should use READ/WRITE_REGISTER_ULONG
-        m_pVC4RegFile->V3D_INTENA = regIntEna.Value;
+        WRITE_REGISTER_ULONG(reinterpret_cast<volatile ULONG*>(
+            &m_pVC4RegFile->V3D_INTENA),
+            regIntEna.Value);
 
         m_bReadyToHandleInterrupt = TRUE;
         disableInterrupt.DoNot(false);
@@ -259,7 +255,7 @@ RosKmdRapAdapter::Start(
         if (!NT_SUCCESS(status))
         {
             ROS_LOG_ERROR(
-                "Failed to initialize display components. (status=%!STATUS!)",
+                "Failed to initialize display subsystem. (status=%!STATUS!)",
                 status);
             return status;
         }
@@ -275,13 +271,8 @@ RosKmdRapAdapter::Start(
     }
 
     stopKmAdapter.DoNot();
-
     unmapVc4Registers.DoNot();
-    m_pVC4RegFile = vc4RegistersPtr;
-
     closeRpiq.DoNot();
-    m_pRpiqDevice = rpiqFileObjectPtr;
-
     powerDownVc4.DoNot();
     disableInterrupt.DoNot();
     stopDisplay.DoNot();
@@ -803,7 +794,7 @@ RosKmdRapAdapter::SetVC4Power(
             sizeof(setPowerVC4),
             &setPowerVC4,
             sizeof(setPowerVC4),
-            TRUE,
+            FALSE,                  // InternalDeviceIoControl
             &information);
     if (!NT_SUCCESS(status) || (information != sizeof(setPowerVC4)))
     {

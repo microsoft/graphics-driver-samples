@@ -11,3 +11,6 @@
 D3DDDIFORMAT
 TranslateDxgiFormat(
     DXGI_FORMAT dxgiFormat);
+
+_IRQL_requires_max_(PASSIVE_LEVEL)
+DXGI_FORMAT DxgiFormatFromD3dDdiFormat (D3DDDIFORMAT Format);

@@ -309,6 +309,12 @@ private: // PAGED
     static NTSTATUS IsVidPnPathFieldsValid (
         const D3DKMDT_VIDPN_PRESENT_PATH* PathPtr
         );
+        
+    _Check_return_
+    _IRQL_requires_max_(PASSIVE_LEVEL)
+    NTSTATUS registerHotplugNotification (
+        _Outptr_ FILE_OBJECT** FileObjectPPtr
+        );
 };
 
 #endif // _VC4DISPLAY_HPP_
