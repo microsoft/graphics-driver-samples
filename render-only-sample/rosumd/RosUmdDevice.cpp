@@ -1833,9 +1833,24 @@ void RosUmdDevice::WriteUniforms(
 
                 vc4TextureType.TextureType = VC4_TEX_RGBA32R;
 
+                RosUmdSampler * pSampler = m_pixelSamplers[pCurUniformEntry->samplerConfiguration.samplerIndex];
+                D3D10_DDI_SAMPLER_DESC * pSamplerDesc = &pSampler->m_desc;
+
                 //
-                // TODO[indyz] : Set up texture filter and wrap mode
+                // TODO[indyz] : Support wrap mode of border (using border color)
                 //
+                assert(pSampler->m_desc.AddressU != D3D10_DDI_TEXTURE_ADDRESS_BORDER);
+                assert(pSampler->m_desc.AddressV != D3D10_DDI_TEXTURE_ADDRESS_BORDER);
+
+                // VC4 doesn't support Mirror Once wrap mode
+                assert(pSampler->m_desc.AddressU != D3D10_DDI_TEXTURE_ADDRESS_MIRRORONCE);
+                assert(pSampler->m_desc.AddressV != D3D10_DDI_TEXTURE_ADDRESS_MIRRORONCE);
+
+                pVC4TexConfigParam1->WRAP_S = ConvertD3D11TextureAddressMode(pSamplerDesc->AddressU);
+                pVC4TexConfigParam1->WRAP_T = ConvertD3D11TextureAddressMode(pSamplerDesc->AddressV);
+
+                pVC4TexConfigParam1->MINFILT = ConvertD3D11TextureMinFilter(pSamplerDesc->Filter, pTexture->m_mipLevels <= 1);
+                pVC4TexConfigParam1->MAGFILT = ConvertD3D11TextureMagFilter(pSamplerDesc->Filter);
 
                 pVC4TexConfigParam1->WIDTH = pTexture->m_hwWidthPixels;
                 pVC4TexConfigParam1->HEIGHT = pTexture->m_hwHeightPixels;

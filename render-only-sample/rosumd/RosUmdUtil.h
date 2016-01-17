@@ -38,5 +38,18 @@ VC4DepthTestFunc
 ConvertD3D11DepthComparisonFunc(
     D3D10_DDI_COMPARISON_FUNC   comparisonFunc);
 
+VC4TextureWrap
+ConvertD3D11TextureAddressMode(
+    D3D10_DDI_TEXTURE_ADDRESS_MODE  texAddressMode);
+
+VC4TextureMagFilter
+ConvertD3D11TextureMagFilter(
+    D3D10_DDI_FILTER    texFilter);
+
+VC4TextureMinFilter
+ConvertD3D11TextureMinFilter(
+    D3D10_DDI_FILTER    texFilter,
+    BOOLEAN             bClampToLOD0);
+
 #endif
 
