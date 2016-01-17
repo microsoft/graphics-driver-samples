@@ -18,8 +18,8 @@
 struct VSOUT
 {
     float4 vPosition    : SV_POSITION;
-    float4 vLightAndFog : COLOR0_center;        // COLOR0.x = light, COLOR0.y = fog
     float4 vTexCoords   : TEXCOORD1;            // TEXCOORD0.xy = basetex, TEXCOORD0.zw = caustictex
+    float4 vLightAndFog : COLOR0_center;        // COLOR0.x = light, COLOR0.y = fog
 };
 
 //--------------------------------------------------------------------------------------
