@@ -6,7 +6,7 @@
 class Vc4Disasm : public BaseDisasm
 {
 public:
-    Vc4Disasm() { }
+    Vc4Disasm() : uniformIndex(0) { }
     ~Vc4Disasm() { }
     HRESULT Run(const VC4_QPU_INSTRUCTION* pShader, ULONG Size, TCHAR* Title = NULL);
 
@@ -29,6 +29,8 @@ private:
     HRESULT ParseBranchInstruction(VC4_QPU_INSTRUCTION Instruction);
 
     HRESULT ParseFlags(VC4_QPU_INSTRUCTION Instruction);
+
+    uint32_t uniformIndex;
 };
 
 EXTERN_C void Vc4Disassemble(VC4_QPU_INSTRUCTION *pHwCode, UINT HwCodeSize, fnPrinter Printer);

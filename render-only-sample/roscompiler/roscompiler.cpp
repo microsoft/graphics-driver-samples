@@ -119,7 +119,10 @@ HRESULT RosCompiler::Compile()
         {
             // Disassemble h/w shader.
             Disassemble_HW(m_Storage[ROS_VERTEX_SHADER_STORAGE], TEXT("VC4 Vertex shader"));
+            Dump_UniformTable(m_Storage[ROS_VERTEX_SHADER_UNIFORM_STORAGE], TEXT("VC4 Vertex shader Uniform"));
+
             Disassemble_HW(m_Storage[ROS_COORDINATE_SHADER_STORAGE], TEXT("VC4 Coordinate shader"));
+            Dump_UniformTable(m_Storage[ROS_COORDINATE_SHADER_UNIFORM_STORAGE], TEXT("VC4 Coordinate shader Uniform"));
         }
 #endif // DBG 
 
@@ -146,6 +149,7 @@ HRESULT RosCompiler::Compile()
         {
             // Disassemble h/w shader.
             Disassemble_HW(m_Storage[ROS_PIXEL_SHADER_STORAGE], TEXT("VC4 Pixel shader"));
+            Dump_UniformTable(m_Storage[ROS_PIXEL_SHADER_UNIFORM_STORAGE], TEXT("VC4 Vertex shader Uniform"));
         }
 #endif // DBG
 

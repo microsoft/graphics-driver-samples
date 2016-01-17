@@ -340,13 +340,6 @@ void Vc4Shader::Emit_Mad(CInstruction &Inst)
 
                 Vc4Register accum(VC4_QPU_ALU_R3, VC4_QPU_WADDR_ACC3);
 
-                {
-                    Vc4Register zero(VC4_QPU_ALU_REG_B, 0); // 0 as small immediate in raddr_b
-                    Vc4Instruction Vc4Inst(vc4_alu_small_immediate);
-                    Vc4Inst.Vc4_m_MOV(accum, zero);
-                    Vc4Inst.Emit(CurrentStorage);
-                }
-
                 // perform mul first 2 operands
                 {
                     Vc4Register src[2];

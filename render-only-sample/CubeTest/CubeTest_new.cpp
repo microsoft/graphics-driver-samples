@@ -10,12 +10,17 @@
 #include <exception>
 #include <memory>
 
+#include "BitmapDecode.h"
+
 using namespace DirectX;
+
+#define USE_VC4 VC4
 
 #define ANIMATION_COUNT 8
 //#define NO_TRANSFORM 1
 //#define USE_QUAD 1
 #define USE_TEX 1
+#define USE_BITMAP_TEX 1
 
 #if USE_TEX
 struct SimpleVertex
@@ -50,8 +55,8 @@ static const int kHeight = 1080;
 
 #else
 
-static const int kWidth = 256;
-static const int kHeight = 256;
+static const int kWidth = 800;
+static const int kHeight = 600;
 
 #endif
 
@@ -372,7 +377,7 @@ public:
 
         HRESULT hr = inDevice->GetDevice()->CreateTexture2D(&desc, &initData, &pTexture);
 
-        delete pTexels;
+        delete [] pTexels;
 
         if (FAILED(hr))
         {
@@ -399,6 +404,101 @@ public:
 
     ID3D11Texture2D * GetTexture() { return m_pTexture; }
     ID3D11ShaderResourceView * GetShaderResourceView() { return m_pShaderResourceView;  }
+
+private:
+
+    D3DPointer<ID3D11Texture2D>             m_pTexture;
+    D3DPointer<ID3D11ShaderResourceView>    m_pShaderResourceView;
+    std::shared_ptr<D3DDevice>              m_pDevice;
+};
+
+class D3DBitmapTexture
+{
+public:
+
+    D3DBitmapTexture(std::shared_ptr<D3DDevice> & inDevice)
+    {
+        ULONG texWidth, texHeight, resSize;
+        PVOID pRes;
+        BYTE* pTexels = NULL;
+
+        pRes = LoadTextureResource(1010, &resSize);
+        if (!pRes)
+        {
+            throw std::exception("Failed to load bitmap resource");
+        }
+        HRESULT hr = LoadBMP((BYTE*)pRes, &texWidth, &texHeight, &pTexels);
+        if (FAILED(hr))
+        {
+            throw std::exception("Failed to load bitmap resource");
+        }
+
+        D3D11_TEXTURE2D_DESC desc;
+
+        desc.CPUAccessFlags = 0;
+        desc.Width = texWidth;
+        desc.Height = texHeight;
+        desc.MipLevels = 1;
+        desc.ArraySize = 1;
+        desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        desc.SampleDesc.Count = 1;
+        desc.SampleDesc.Quality = 0;
+        desc.Usage = D3D11_USAGE_DEFAULT;
+        desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        desc.MiscFlags = 0;
+
+        D3D11_SUBRESOURCE_DATA initData;
+
+        ZeroMemory(&initData, sizeof(initData));
+        initData.pSysMem = pTexels;
+        initData.SysMemPitch = texWidth * 4;
+        initData.SysMemSlicePitch = texWidth * 4 * texHeight;
+
+        ID3D11Texture2D * pTexture;
+
+        hr = inDevice->GetDevice()->CreateTexture2D(&desc, &initData, &pTexture);
+
+        if (FAILED(hr))
+        {
+            throw std::exception("Failed to create texture");
+        }
+
+        ID3D11ShaderResourceView *  pShaderResourceView;
+
+        hr = inDevice->GetDevice()->CreateShaderResourceView(pTexture, NULL, &pShaderResourceView);
+        if (FAILED(hr))
+        {
+            throw std::exception("Failed to create shader resource view");
+        }
+
+        m_pTexture = pTexture;
+        m_pDevice = inDevice;
+        m_pShaderResourceView = pShaderResourceView;
+    }
+
+    ~D3DBitmapTexture()
+    {
+        // do nothing
+    }
+
+    PVOID LoadTextureResource(INT Name, DWORD *pdwSize)
+    {
+        HRSRC hRsrc = ::FindResourceExW(NULL, (WCHAR*)RT_RCDATA, (WCHAR*)MAKEINTRESOURCE(Name), 0);
+        if (hRsrc == NULL)
+        {
+            return NULL;
+        }
+        HGLOBAL hRes = ::LoadResource(NULL, hRsrc);
+        if (hRes == NULL)
+        {
+            return NULL;
+        }
+        *pdwSize = ::SizeofResource(NULL, hRsrc);
+        return (LockResource(hRes));
+    }
+
+    ID3D11Texture2D * GetTexture() { return m_pTexture; }
+    ID3D11ShaderResourceView * GetShaderResourceView() { return m_pShaderResourceView; }
 
 private:
 
@@ -987,7 +1087,7 @@ public:
 
     D3DEngine()
     {
-#if VC4
+#if USE_VC4
         m_pDevice = std::shared_ptr<D3DDevice>(new D3DDevice(L"Render Only Sample Driver"));
 #else
         m_pDevice = std::shared_ptr<D3DDevice>(new D3DDevice(L"Microsoft Basic Render Driver"));
@@ -1030,7 +1130,11 @@ public:
 
         m_pPSConstantBuffer = std::unique_ptr<D3DPSConstantBuffer>(new D3DPSConstantBuffer(m_pDevice));
 
-        m_pDefaultTexture = std::unique_ptr<D3DDefaultTexture>(new D3DDefaultTexture(m_pDevice, kTexWidth, kTexHeight));
+#if USE_BITMAP_TEX
+        m_pDefaultTexture = std::unique_ptr<D3DBitmapTexture>(new D3DBitmapTexture(m_pDevice));
+#else
+        m_pDefaultTexture = std::unique_ptr<D3DDefaultTexture>(new D3DDefaultTexture(m_pDevice, 256, 256));
+#endif // USE_BITMAP_TEX
 
         m_pVertexBuffer = std::unique_ptr<D3DVertexBuffer>(new D3DVertexBuffer(m_pDevice));
 
@@ -1114,7 +1218,11 @@ public:
         m_pDevice->GetContext()->CopyResource(m_pTexture->GetTexture(), m_pRenderTarget->GetRenderTarget());
         {
             char fileName[MAX_PATH];
-            sprintf_s(fileName, MAX_PATH, "c:\\temp\\image_%d.bmp", iFrame);
+#if USE_VC4
+            sprintf_s(fileName, MAX_PATH, "c:\\temp\\image_%d_vc4.bmp", iFrame);
+#else
+            sprintf_s(fileName, MAX_PATH, "c:\\temp\\image_%d_warp.bmp", iFrame);
+#endif // USE_VC4
             m_pTexture->WriteToBmp(fileName);
         }
     }
@@ -1139,7 +1247,11 @@ private:
     std::unique_ptr<D3DDepthStencilState>   m_pDepthStencilState;
     std::unique_ptr<D3DVSConstantBuffer>    m_pVSConstantBuffer;
     std::unique_ptr<D3DPSConstantBuffer>    m_pPSConstantBuffer;
+#if USE_BITMAP_TEX
+    std::unique_ptr<D3DBitmapTexture>       m_pDefaultTexture;
+#else
     std::unique_ptr<D3DDefaultTexture>      m_pDefaultTexture;
+#endif // USE_BITMAP_TEX
 };
 
 int main()

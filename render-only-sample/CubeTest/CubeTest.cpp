@@ -10,6 +10,8 @@
 #include <exception>
 #include <memory>
 
+#include "BitmapDecode.h"
+
 //using namespace DirectX;
 
 //
@@ -324,14 +326,21 @@ private:
 class D3DDefaultTexture
 {
 public:
-
+    
     D3DDefaultTexture(std::shared_ptr<D3DDevice> & inDevice, int inWidth, int inHeight)
     {
+        ULONG texWidth, texHeight, resSize;
+        PVOID pRes;
+        BYTE* pTexels = NULL;
+
+        pRes = LoadResource(1010, &resSize);
+        LoadBMP((BYTE*)pRes, &texWidth, &texHeight, &pTexels);
+        
         D3D11_TEXTURE2D_DESC desc;
 
         desc.CPUAccessFlags = 0;
-        desc.Width = inWidth;
-        desc.Height = inHeight;
+        desc.Width = texWidth;
+        desc.Height = texHeight;
         desc.MipLevels = 1;
         desc.ArraySize = 1;
         desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -340,6 +349,10 @@ public:
         desc.Usage = D3D11_USAGE_DEFAULT;
         desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
         desc.MiscFlags = 0;
+
+
+
+        /*/
 
         DWORD * pTexels = new DWORD[inWidth*inHeight];
         if (!pTexels)
@@ -360,6 +373,8 @@ public:
                 pTexels[j*inWidth + i] =  checkerColors[((i >> 3 & 0x1) ^ (j >> 3 & 0x1))];
             }
         }
+
+        */
 
         D3D11_SUBRESOURCE_DATA initData;
 
@@ -395,6 +410,24 @@ public:
     ~D3DDefaultTexture()
     {
         // do nothing
+    }
+
+    PVOID LoadResource(INT Name, DWORD *pdwSize)
+    {
+        HRSRC hRsrc = ::FindResourceEx(NULL, RT_RCDATA, MAKEINTRESOURCE(Name), 0);
+        if (hRsrc == NULL)
+        {
+            __debugbreak();
+            return NULL;
+        }
+        HGLOBAL hRes = ::LoadResource(NULL, hRsrc);
+        if (hRes == NULL)
+        {
+            __debugbreak();
+            return NULL;
+        }
+        *pdwSize = ::SizeofResource(NULL, hRsrc);
+        return (LockResource(hRes));
     }
 
     ID3D11Texture2D * GetTexture() { return m_pTexture; }

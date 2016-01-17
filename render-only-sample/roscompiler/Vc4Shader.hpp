@@ -27,6 +27,24 @@ typedef enum _VC4_UNIFORM_TYPE
     VC4_UNIFORM_TYPE_BLEND_SAMPLE_MASK, // 0xRRGGBBAA as 8a.8b.8c.8d.
 } VC4_UNIFORM_TYPE;
 
+_declspec(selectany) TCHAR *UniformTypeFriendlyName[] =
+{
+    TEXT("VC4_UNIFORM_TYPE_INVALID"),
+    TEXT("VC4_UNIFORM_TYPE_USER_CONSTANT"),
+    TEXT("VC4_UNIFORM_TYPE_SAMPLER_CONFIG_P0"),
+    TEXT("VC4_UNIFORM_TYPE_SAMPLER_CONFIG_P1"),
+    TEXT("VC4_UNIFORM_TYPE_SAMPLER_CONFIG_P2"),
+    TEXT("VC4_UNIFORM_TYPE_VIEWPORT_SCALE_X"),
+    TEXT("VC4_UNIFORM_TYPE_VIEWPORT_SCALE_Y"),
+    TEXT("VC4_UNIFORM_TYPE_DEPTH_SCALE"),
+    TEXT("VC4_UNIFORM_TYPE_DEPTH_OFFSET"),
+    TEXT("VC4_UNIFORM_TYPE_BLEND_FACTOR_R"),
+    TEXT("VC4_UNIFORM_TYPE_BLEND_FACTOR_B"),
+    TEXT("VC4_UNIFORM_TYPE_BLEND_FACTOR_G"),
+    TEXT("VC4_UNIFORM_TYPE_BLEND_FACTOR_A"),
+    TEXT("VC4_UNIFORM_TYPE_BLEND_SAMPLE_MASK"),
+};
+
 struct VC4_UNIFORM_FORMAT
 {
     VC4_UNIFORM_FORMAT() :
@@ -567,6 +585,49 @@ private:
         }
         CurrentUniform->Store<VC4_UNIFORM_FORMAT>(fmt);
         return S_OK;
+    }
+
+public:
+
+    static void xprintf(const TCHAR *pStr, ...)
+    {
+        TCHAR sz[512];
+
+        va_list ap;
+        va_start(ap, pStr);
+        _vstprintf_s(sz, _countof(sz), pStr, ap);
+        va_end(ap);
+
+        OutputDebugString(sz);
+    }
+
+    static void DumpUniform(const VC4_UNIFORM_FORMAT *pUniform, uint32_t c, TCHAR *pTitle)
+    {
+        c /= sizeof(VC4_UNIFORM_FORMAT);
+
+        xprintf(TEXT("----------- %s ----------\n"), pTitle);
+        for (uint8_t i = 0; i < c; i++, pUniform++)
+        {
+            xprintf(TEXT("%d : %s\n"), i, UniformTypeFriendlyName[pUniform->Type]);
+            switch (pUniform->Type)
+            {
+            case VC4_UNIFORM_TYPE_USER_CONSTANT:
+                xprintf(TEXT("\t bufferSlot = %d, bufferOffset = %d\n"), 
+                    pUniform->userConstant.bufferSlot, 
+                    pUniform->userConstant.bufferOffset);
+                break;
+            case VC4_UNIFORM_TYPE_SAMPLER_CONFIG_P0:
+            case VC4_UNIFORM_TYPE_SAMPLER_CONFIG_P1:
+            case VC4_UNIFORM_TYPE_SAMPLER_CONFIG_P2:
+                xprintf(TEXT("\t samplerIndex = %d, resourceIndex = %d, samplerConfiguration = %x\n"),
+                    pUniform->samplerConfiguration.samplerIndex,
+                    pUniform->samplerConfiguration.resourceIndex,
+                    pUniform->samplerConfiguration.samplerConfiguration);
+                break;
+            default:
+                break;
+            }
+        }
     }
 
 private:

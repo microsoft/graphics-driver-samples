@@ -188,7 +188,12 @@ private:
 #if VC4
     void Disassemble_HW(Vc4ShaderStorage &Storage, TCHAR *pTitle)
     {
-        Vc4Disasm().Run((const VC4_QPU_INSTRUCTION*)Storage.GetStorage(), Storage.GetUsedSize(), pTitle);
+        Vc4Disasm().Run(Storage.GetStorage<const VC4_QPU_INSTRUCTION>(), Storage.GetUsedSize(), pTitle);
+    }
+
+    void Dump_UniformTable(Vc4ShaderStorage &Storage, TCHAR *pTitle)
+    {
+        Vc4Shader::DumpUniform(Storage.GetStorage<const VC4_UNIFORM_FORMAT>(), Storage.GetUsedSize(), pTitle);
     }
 #endif // VC4
 
