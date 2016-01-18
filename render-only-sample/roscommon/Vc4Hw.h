@@ -578,9 +578,9 @@ typedef struct _VC4GLShaderStateRecord
     {
         struct
         {
-            USHORT  EnableClipping                  : 1;
-            USHORT  PointSizeIncluded               : 1;
             USHORT  FragmentShaderIsSingleThreaded  : 1;
+            USHORT  PointSizeIncluded               : 1;
+            USHORT  EnableClipping                  : 1;
         };
         USHORT      UShort1;
     };
