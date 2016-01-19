@@ -781,7 +781,7 @@ RosKmAdapter::CreateAllocation(
     // The primary surface is expected to be shared  between DWM and application.
     // TODO[douglasc]: Attempt to distinguished allocation type sepcify attributes accordingly
     pAllocationInfo->Flags.CpuVisible = 0;
-    pAllocationInfo->Flags.Cached = 0;
+    pAllocationInfo->Flags.Cached = 1;
     
     pAllocationInfo->HintedBank.Value = 0;
     pAllocationInfo->MaximumRenamingListLength = 0;
