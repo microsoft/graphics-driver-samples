@@ -10,6 +10,8 @@ void __stdcall InitializeShaderCompilerLibrary()
 
 RosCompiler* RosCompilerCreate(D3D10_SB_TOKENIZED_PROGRAM_TYPE ProgramType,
                                const UINT *pCode,
+                               const UINT *pLinkageDownstreamCode,
+                               const UINT *pLinkageUpstreamCode,
                                const D3D11_1_DDI_BLEND_DESC* pBlendState,
                                const D3D10_DDI_DEPTH_STENCIL_DESC* pDepthState,
                                const D3D11_1_DDI_RASTERIZER_DESC* pRasterState,
@@ -23,6 +25,8 @@ RosCompiler* RosCompilerCreate(D3D10_SB_TOKENIZED_PROGRAM_TYPE ProgramType,
     RosCompiler *pCompiler = new RosCompiler(
         ProgramType,
         pCode,
+        pLinkageDownstreamCode,
+        pLinkageUpstreamCode,
         pBlendState,
         pDepthState,
         pRasterState,
@@ -45,6 +49,8 @@ RosCompiler* RosCompilerCreate(D3D10_SB_TOKENIZED_PROGRAM_TYPE ProgramType,
 
 RosCompiler::RosCompiler(D3D10_SB_TOKENIZED_PROGRAM_TYPE ProgramType,
                          const UINT *pCode,
+                         const UINT *pLinkageDownstreamCode,
+                         const UINT *pLinkageUpstreamCode,
                          const D3D11_1_DDI_BLEND_DESC* pBlendState,
                          const D3D10_DDI_DEPTH_STENCIL_DESC* pDepthState,
                          const D3D11_1_DDI_RASTERIZER_DESC* pRasterState,
@@ -56,6 +62,8 @@ RosCompiler::RosCompiler(D3D10_SB_TOKENIZED_PROGRAM_TYPE ProgramType,
                          const D3D11_1DDIARG_SIGNATURE_ENTRY *pPatchConstantSignatureEntries) :
     m_ProgramType(ProgramType),
     m_pCode(pCode),
+    m_pDownstreamCode(pLinkageDownstreamCode),
+    m_pUpstreamCode(pLinkageUpstreamCode),
     m_pBlendState(pBlendState),
     m_pDepthState(pDepthState),
     m_pRasterState(pRasterState),
@@ -64,7 +72,9 @@ RosCompiler::RosCompiler(D3D10_SB_TOKENIZED_PROGRAM_TYPE ProgramType,
     m_numOutputSignatureEntries(numOutputSignatureEntries),
     m_pOutputSignatureEntries(pOutputSignatureEntries),
     m_numPatchConstantSignatureEntries(numPatchConstantSignatureEntries),
-    m_pPatchConstantSignatureEntries(pPatchConstantSignatureEntries)
+    m_pPatchConstantSignatureEntries(pPatchConstantSignatureEntries),
+    m_cShaderInput(0),
+    m_cShaderOutput(0)
 {
 }
 
@@ -90,6 +100,14 @@ HRESULT RosCompiler::Compile()
 
     // Set HLSL bytecode.
     Vc4ShaderCompiler.SetShaderCode(m_pCode);
+    if (m_pDownstreamCode)
+    {
+        Vc4ShaderCompiler.SetDownstreamShaderCode(m_pDownstreamCode);
+    }
+    if (m_pUpstreamCode)
+    {
+        Vc4ShaderCompiler.SetUpstreamShaderCode(m_pUpstreamCode);
+    }
 
     switch (m_ProgramType)
     {
@@ -114,17 +132,20 @@ HRESULT RosCompiler::Compile()
             hr = e.GetError();
         }
 
-#if DBG
         if (SUCCEEDED(hr))
         {
+            m_cShaderInput = Vc4ShaderCompiler.GetInputCount();
+            m_cShaderOutput = Vc4ShaderCompiler.GetOutputCount();
+
+#if DBG
             // Disassemble h/w shader.
             Disassemble_HW(m_Storage[ROS_VERTEX_SHADER_STORAGE], TEXT("VC4 Vertex shader"));
             Dump_UniformTable(m_Storage[ROS_VERTEX_SHADER_UNIFORM_STORAGE], TEXT("VC4 Vertex shader Uniform"));
 
             Disassemble_HW(m_Storage[ROS_COORDINATE_SHADER_STORAGE], TEXT("VC4 Coordinate shader"));
             Dump_UniformTable(m_Storage[ROS_COORDINATE_SHADER_UNIFORM_STORAGE], TEXT("VC4 Coordinate shader Uniform"));
+#endif // DBG
         }
-#endif // DBG 
 
         break;
 
@@ -144,14 +165,18 @@ HRESULT RosCompiler::Compile()
             hr = e.GetError();
         }
 
-#if DBG
         if (SUCCEEDED(hr))
         {
+            m_cShaderInput = Vc4ShaderCompiler.GetInputCount();
+            m_cShaderOutput = Vc4ShaderCompiler.GetOutputCount();
+
+#if DBG
             // Disassemble h/w shader.
             Disassemble_HW(m_Storage[ROS_PIXEL_SHADER_STORAGE], TEXT("VC4 Pixel shader"));
             Dump_UniformTable(m_Storage[ROS_PIXEL_SHADER_UNIFORM_STORAGE], TEXT("VC4 Vertex shader Uniform"));
-        }
 #endif // DBG
+
+        }
 
         break;
 

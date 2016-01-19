@@ -36,6 +36,8 @@ public:
     RosCompiler(
         D3D10_SB_TOKENIZED_PROGRAM_TYPE ProgramType,
         const UINT *pCode,
+        const UINT *pLinkageDownstreamCode,
+        const UINT *pLinkageUpstreamCode,
         const D3D11_1_DDI_BLEND_DESC* pBlendState,
         const D3D10_DDI_DEPTH_STENCIL_DESC* pDepthState,
         const D3D11_1_DDI_RASTERIZER_DESC* pRasterState,
@@ -171,6 +173,16 @@ public:
         return m_numOutputSignatureEntries;
     }
 
+    UINT GetShaderInputCount()
+    {
+        return m_cShaderInput;
+    }
+
+    UINT GetShaderOutputCount()
+    {
+        return m_cShaderOutput;
+    }
+
 private:
 
     void Disassemble_HLSL() 
@@ -204,6 +216,8 @@ private:
     //
     D3D10_SB_TOKENIZED_PROGRAM_TYPE m_ProgramType;
     const UINT *m_pCode;
+    const UINT *m_pDownstreamCode;
+    const UINT *m_pUpstreamCode;
 
     //
     // State(s).
@@ -222,6 +236,9 @@ private:
     UINT m_numPatchConstantSignatureEntries;
     const D3D11_1DDIARG_SIGNATURE_ENTRY *m_pPatchConstantSignatureEntries;
 
+    UINT m_cShaderInput;
+    UINT m_cShaderOutput;
+
 #if VC4
     //
     // Hardware shader data.
@@ -233,6 +250,8 @@ private:
 
 RosCompiler* RosCompilerCreate(D3D10_SB_TOKENIZED_PROGRAM_TYPE ProgramType,
                                const UINT *pCode,
+                               const UINT *pLinkageDownstreamCode,
+                               const UINT *pLinkageUpstreamCode,
                                const D3D11_1_DDI_BLEND_DESC* pBlendState,
                                const D3D10_DDI_DEPTH_STENCIL_DESC* pDepthState,
                                const D3D11_1_DDI_RASTERIZER_DESC* pRasterState,

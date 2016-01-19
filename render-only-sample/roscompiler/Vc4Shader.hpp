@@ -217,8 +217,21 @@ public:
 
     void SetShaderCode(const UINT *pShaderCode)
     {
+        assert(pShaderCode);
         HLSLParser.SetShader(pShaderCode);
         uShaderType = HLSLParser.ShaderType();
+    }
+
+    void SetDownstreamShaderCode(const UINT *pShaderCode)
+    {
+        assert(pShaderCode);
+        HLSLDownstreamParser.SetShader(pShaderCode);
+    }
+
+    void SetUpstreamShaderCode(const UINT *pShaderCode)
+    {
+        assert(pShaderCode);
+        HLSLUpstreamParser.SetShader(pShaderCode);
     }
 
     void SetShaderStorage(Vc4ShaderStorage *Storage, Vc4ShaderStorage *Uniform)
@@ -244,6 +257,16 @@ public:
         pOutputSignatureEntries;
     }
 
+    uint32_t GetInputCount()
+    {
+        return cInput;
+    }
+
+    uint32_t GetOutputCount()
+    {
+        return cOutput;
+    }
+
     HRESULT Translate_VS(); // vertex shader
     HRESULT Translate_PS(); // Fragmaent shader
 
@@ -255,27 +278,28 @@ private:
         this->CurrentUniform = Uniform;
     }
 
-    boolean HLSL_GetShaderInstruction(CInstruction &Inst)
+    boolean HLSL_GetShaderInstruction(CShaderCodeParser &Parser, CInstruction &Inst)
     {
-        if (!HLSLParser.EndOfShader())
+        if (!Parser.EndOfShader())
         {
-            HLSLParser.ParseInstruction(&Inst);
+            Parser.ParseInstruction(&Inst);
             return true;
         }
         return false;
     }
     
-    boolean HLSL_PeekShaderInstructionOpCode(D3D10_SB_OPCODE_TYPE &OpCode)
+    boolean HLSL_PeekShaderInstructionOpCode(CShaderCodeParser &Parser, D3D10_SB_OPCODE_TYPE &OpCode)
     {
-          if (!HLSLParser.EndOfShader())
+        if (!Parser.EndOfShader())
         {
-            OpCode = HLSLParser.PeekNextInstructionOpCode();
+            OpCode = Parser.PeekNextInstructionOpCode();
             return true;
         }
         return false;
     }
 
     void HLSL_ParseDecl();
+    void HLSL_Link_PS();
 
     void Emit_Prologue_VS();
     void Emit_Prologue_PS();
@@ -637,6 +661,8 @@ private:
     D3D10_SB_TOKENIZED_PROGRAM_TYPE uShaderType;
 
     CShaderCodeParser HLSLParser;
+    CShaderCodeParser HLSLUpstreamParser;
+    CShaderCodeParser HLSLDownstreamParser;
 
     Vc4ShaderStorage *CurrentStorage;
     Vc4ShaderStorage *CurrentUniform;
