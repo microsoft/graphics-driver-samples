@@ -34,6 +34,7 @@ struct Vc4RegisterFlags
             uint32_t packed : 1;
             uint32_t immediate : 1;
             uint32_t uniform : 1;
+            uint32_t linkage : 1;
         };
         uint32_t value;
     };

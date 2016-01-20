@@ -83,8 +83,26 @@ RosUmdPipelineShader::Update()
 
     assert(m_pCode != NULL);
 
+    const UINT *ShaderLinkage[2] = { NULL, NULL }; // Downstream, Upstream.
+
+    switch (m_ProgramType)
+    {
+    case D3D10_SB_VERTEX_SHADER:
+        assert(m_pDevice->m_pixelShader);
+        ShaderLinkage[0] = m_pDevice->m_pixelShader->GetHLSLCode();
+        break;
+    case D3D10_SB_PIXEL_SHADER:
+        assert(m_pDevice->m_vertexShader);
+        ShaderLinkage[1] = m_pDevice->m_vertexShader->GetHLSLCode();
+        break;
+    default:
+        assert(false);
+    };
+
     m_pCompiler = RosCompilerCreate(m_ProgramType,
                                     m_pCode,
+                                    ShaderLinkage[0], // Downstream
+                                    ShaderLinkage[1], // Upstream
                                     m_pDevice->m_blendState->GetDesc(),
                                     m_pDevice->m_depthStencilState->GetDesc(),
                                     m_pDevice->m_rasterizerState->GetDesc(),

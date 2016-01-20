@@ -252,14 +252,20 @@ void Vc4Shader::Emit_ShaderOutput_VS(boolean bVS)
     // Only VS emits "varying" (everything read from vpm except position data).
     if (bVS)
     {
-        for (uint8_t i = 0; i < this->cOutput; i++)
+        for (uint8_t i = 0, iRegUsed = 0; iRegUsed < this->cOutput; i++ )
         {
-            if (this->OutputRegister[i / 4][i % 4].GetFlags().position == false)
+            if (this->OutputRegister[i / 4][i % 4].GetFlags().position)
             {
+                iRegUsed++;
+            }
+            else if (this->OutputRegister[i / 4][i % 4].GetFlags().linkage)
+            {
+                VC4_ASSERT(this->OutputRegister[i / 4][i % 4].GetFlags().valid);
                 Vc4Register src = this->OutputRegister[i / 4][i % 4];
                 Vc4Instruction Vc4Inst;
                 Vc4Inst.Vc4_m_MOV(vpm, src);
                 Vc4Inst.Emit(CurrentStorage);
+                iRegUsed++;
             }
         }
     }
@@ -811,30 +817,31 @@ void Vc4Shader::HLSL_ParseDecl()
 {
     assert(this->uShaderType == D3D10_SB_PIXEL_SHADER ||
            this->uShaderType == D3D10_SB_VERTEX_SHADER);
-
+    assert(this->HLSLParser.IsValid());
+    
     boolean bDone = false;
     D3D10_SB_OPCODE_TYPE OpCode;
-    while (HLSL_PeekShaderInstructionOpCode(OpCode) && !bDone)
+    while (HLSL_PeekShaderInstructionOpCode(this->HLSLParser, OpCode) && !bDone)
     { 
         CInstruction Inst;
         switch (OpCode)
         {
         case D3D10_SB_OPCODE_DCL_RESOURCE:
-            HLSL_GetShaderInstruction(Inst);
+            HLSL_GetShaderInstruction(this->HLSLParser, Inst);
             VC4_ASSERT(cResource < 8);
             this->ResourceDimension[cResource++] = Inst.m_ResourceDecl.SRVInfo.Dimension;
             break;
         case D3D10_SB_OPCODE_DCL_CONSTANT_BUFFER:
-            HLSL_GetShaderInstruction(Inst);
+            HLSL_GetShaderInstruction(this->HLSLParser, Inst);
             cConstants++;
             break;
         case D3D10_SB_OPCODE_DCL_SAMPLER:
-            HLSL_GetShaderInstruction(Inst);
+            HLSL_GetShaderInstruction(this->HLSLParser, Inst);
             cSampler++;
             break;
         case D3D10_SB_OPCODE_DCL_INPUT:
         case D3D10_SB_OPCODE_DCL_INPUT_PS:
-            HLSL_GetShaderInstruction(Inst);
+            HLSL_GetShaderInstruction(this->HLSLParser, Inst);
             if (Inst.m_OpCode == D3D10_SB_OPCODE_DCL_INPUT_PS)
             {
                 VC4_ASSERT(Inst.m_InputPSDecl.InterpolationMode == D3D10_SB_INTERPOLATION_LINEAR); // PS input must be linear.
@@ -862,7 +869,7 @@ void Vc4Shader::HLSL_ParseDecl()
             break;
         case D3D10_SB_OPCODE_DCL_OUTPUT:
         case D3D10_SB_OPCODE_DCL_OUTPUT_SIV:
-            HLSL_GetShaderInstruction(Inst);
+            HLSL_GetShaderInstruction(this->HLSLParser, Inst);
             VC4_ASSERT(Inst.m_NumOperands == 1);
             VC4_ASSERT(Inst.m_Operands[0].m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_MASK_MODE);
             VC4_ASSERT(Inst.m_Operands[0].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
@@ -915,7 +922,7 @@ void Vc4Shader::HLSL_ParseDecl()
             }
             break;
         case D3D10_SB_OPCODE_DCL_TEMPS:
-            HLSL_GetShaderInstruction(Inst);
+            HLSL_GetShaderInstruction(this->HLSLParser, Inst);
             // Temp register doesn't have swizzle mask, so assume all 4 components to be used.
             // TODO: AllocateRegister(); Currently temps are allocated at ra16~ra31.
             //       since currently reserve temp to ra16~31, so only upto 4 temps are allowed.
@@ -941,7 +948,7 @@ void Vc4Shader::HLSL_ParseDecl()
         case D3D10_SB_OPCODE_DCL_OUTPUT_SGV:
         case D3D10_SB_OPCODE_DCL_INDEXABLE_TEMP:
         case D3D10_SB_OPCODE_DCL_GLOBAL_FLAGS:
-            HLSL_GetShaderInstruction(Inst);
+            HLSL_GetShaderInstruction(this->HLSLParser, Inst);
             VC4_ASSERT(false); // TODO
             __fallthrough;
         default:
@@ -954,17 +961,60 @@ void Vc4Shader::HLSL_ParseDecl()
     }
 }
 
+void Vc4Shader::HLSL_Link_PS()
+{
+    assert(this->uShaderType == D3D10_SB_VERTEX_SHADER);
+    assert(this->HLSLDownstreamParser.IsValid());
+
+    boolean bDone = false, bFound = false;
+    CInstruction Inst;
+    while (HLSL_GetShaderInstruction(this->HLSLDownstreamParser, Inst) && !bDone)
+    {
+        switch (Inst.m_OpCode)
+        {
+        case D3D10_SB_OPCODE_DCL_INPUT_PS:
+            VC4_ASSERT(Inst.m_InputPSDecl.InterpolationMode == D3D10_SB_INTERPOLATION_LINEAR); // PS input must be linear.
+            VC4_ASSERT(Inst.m_NumOperands == 1);
+            VC4_ASSERT(Inst.m_Operands[0].m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_MASK_MODE);
+            VC4_ASSERT(Inst.m_Operands[0].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
+            VC4_ASSERT(Inst.m_Operands[0].m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
+            VC4_ASSERT(Inst.m_Operands[0].m_Index[0].m_RegIndex < 8);
+            VC4_ASSERT(Inst.m_Operands[0].m_WriteMask & D3D10_SB_OPERAND_4_COMPONENT_MASK_MASK);
+
+            for (uint8_t i = 0, aCurrent = D3D10_SB_OPERAND_4_COMPONENT_MASK_X; i < 4; i++)
+            {
+                if (Inst.m_Operands[0].m_WriteMask & aCurrent)
+                {
+                    VC4_ASSERT(this->OutputRegister[Inst.m_Operands[0].m_Index[0].m_RegIndex][i].flags.valid);
+                    this->OutputRegister[Inst.m_Operands[0].m_Index[0].m_RegIndex][i].flags.linkage = true;
+                }
+                aCurrent <<= 1;
+            }
+            bFound = true;
+
+            break;
+        default:
+            if (bFound)
+            {
+                bDone = true;
+            }
+        }
+    }
+}
+
 HRESULT Vc4Shader::Translate_VS()
 {
     assert(this->uShaderType == D3D10_SB_VERTEX_SHADER);
 
     this->SetCurrentStorage(this->ShaderStorage, this->ShaderUniform);
     this->HLSL_ParseDecl();
+    this->HLSL_Link_PS();  
     this->Emit_Prologue_VS();
 
     {
         CInstruction Inst;
-        while (HLSL_GetShaderInstruction(Inst))
+        assert(Inst.m_bSaturate == false); // saturate is not supported.
+        while (HLSL_GetShaderInstruction(this->HLSLParser, Inst))
         {
             switch (Inst.m_OpCode)
             {
@@ -1018,7 +1068,8 @@ HRESULT Vc4Shader::Translate_PS()
 
     {
         CInstruction Inst;
-        while (HLSL_GetShaderInstruction(Inst))
+        assert(Inst.m_bSaturate == false); // saturate is not supported.
+        while (HLSL_GetShaderInstruction(this->HLSLParser, Inst))
         {
             switch (Inst.m_OpCode)
             {
