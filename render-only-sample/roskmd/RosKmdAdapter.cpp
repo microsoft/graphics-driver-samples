@@ -825,25 +825,18 @@ RosKmAdapter::CreateAllocation(
     pAllocationInfo->Flags.Value = 0;
     
     //
-    // All allocations should be marked CPU visible unless they are shared.
+    // Allocations should be marked CPU visible unless they are shared or
+    // can be flipped.
     // Shared allocations (including the primary) cannot be CPU visible unless
-    // they are exclusively located in an aperture segment
+    // they are exclusively located in an aperture segment.
     //
     pAllocationInfo->Flags.CpuVisible = 
-        !(pRosAllocation->m_miscFlags & D3D10_DDI_RESOURCE_MISC_SHARED);
+        !((pRosAllocation->m_miscFlags & D3D10_DDI_RESOURCE_MISC_SHARED))
+          (pRosAllocation->m_bindFlags & D3D10_DDI_BIND_PRESENT);
     
-    if (pAllocationInfo->Flags.CpuVisible)
-    {
-        // TODO[indyz]: Look into if Cached should be used
-        // Allocations that will be flipped, such as the primary allocation,
-        // cannot be cached.
-        // Cached allocation can't be combined with primary allocation.
-        pAllocationInfo->Flags.Cached = !(pRosAllocation->m_bindFlags & D3D10_DDI_BIND_PRESENT);
-    }
-    else
-    {
-        pAllocationInfo->Flags.Cached = FALSE;
-    }
+    // Allocations that will be flipped, such as the primary allocation,
+    // cannot be cached.
+    pAllocationInfo->Flags.Cached = pAllocationInfo->Flags.CpuVisible;
     
     pAllocationInfo->HintedBank.Value = 0;
     pAllocationInfo->MaximumRenamingListLength = 0;

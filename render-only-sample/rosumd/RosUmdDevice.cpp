@@ -1456,33 +1456,9 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
     
     pVC4GLShaderStateRecord->FragmentShaderIsSingleThreaded = 1;
 
-    //
-    // Calculate Number Of Varyings from pixel shader signature
-    //
-
-    D3D11_1DDIARG_SIGNATURE_ENTRY * pInputEntry;
-    UINT    numEntries = m_pixelShader->m_pCompiler->GetInputSignature(&pInputEntry);
-    BYTE    numVaryings = 0;
-
-    for (UINT i = 0; i < numEntries; i++, pInputEntry++)
-    {
-        if (pInputEntry->SystemValue != D3D10_SB_NAME_UNDEFINED)
-        {
-            continue;
-        }
-
-        for (UINT j = 0; j < 4; j++)
-        {
-            if (pInputEntry->Mask & (1 << j))
-            {
-                numVaryings++;
-            }
-        }
-    }
-
-    // TODO[indyz]: Need to increase by 1 if W is written by VS for FS
-    //
-    pVC4GLShaderStateRecord->FragmentShaderNumberOfVaryings = numVaryings;
+    UINT numVaryings = m_pixelShader->GetShaderInputCount();
+    assert(numVaryings < 0x100);
+    pVC4GLShaderStateRecord->FragmentShaderNumberOfVaryings = (BYTE)numVaryings;
 
 #if DBG
     pVC4GLShaderStateRecord->FragmentShaderCodeAddress      = 0xDEADBEEF;

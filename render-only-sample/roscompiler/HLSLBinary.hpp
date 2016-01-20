@@ -1944,6 +1944,7 @@ public:
     DWORD CurrentInstructionLength(); // Number of DWORDS in the current instruction
     void Advance(UINT InstructionSize);
     UINT ParsedInstructionCount() {return m_NumParsedInstructions;}
+    bool IsValid() { return m_pShaderCode != nullptr; }
 protected:
     CShaderToken*   m_pCurrentToken;
     CShaderToken*   m_pShaderCode;
