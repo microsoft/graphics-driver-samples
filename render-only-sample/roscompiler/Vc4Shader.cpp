@@ -254,17 +254,15 @@ void Vc4Shader::Emit_ShaderOutput_VS(boolean bVS)
     {
         for (uint8_t i = 0, iRegUsed = 0; iRegUsed < this->cOutput; i++ )
         {
-            if (this->OutputRegister[i / 4][i % 4].GetFlags().position)
+            Vc4Register src = this->OutputRegister[i / 4][i % 4];
+            if (src.GetFlags().valid)
             {
-                iRegUsed++;
-            }
-            else if (this->OutputRegister[i / 4][i % 4].GetFlags().linkage)
-            {
-                VC4_ASSERT(this->OutputRegister[i / 4][i % 4].GetFlags().valid);
-                Vc4Register src = this->OutputRegister[i / 4][i % 4];
-                Vc4Instruction Vc4Inst;
-                Vc4Inst.Vc4_m_MOV(vpm, src);
-                Vc4Inst.Emit(CurrentStorage);
+                if (src.GetFlags().linkage)
+                {
+                    Vc4Instruction Vc4Inst;
+                    Vc4Inst.Vc4_m_MOV(vpm, src);
+                    Vc4Inst.Emit(CurrentStorage);
+                }
                 iRegUsed++;
             }
         }
