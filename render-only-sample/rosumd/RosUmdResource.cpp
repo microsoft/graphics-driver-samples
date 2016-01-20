@@ -311,8 +311,9 @@ void RosUmdResource::GetAllocationExchange(
 #if 0
     pOutAllocationExchange->m_usage = m_usage;
     pOutAllocationExchange->m_mapFlags = m_mapFlags;
-    pOutAllocationExchange->m_miscFlags = m_miscFlags;
 #endif
+
+    pOutAllocationExchange->m_miscFlags = m_miscFlags;
     pOutAllocationExchange->m_bindFlags = m_bindFlags;
     pOutAllocationExchange->m_format = m_format;
     pOutAllocationExchange->m_sampleDesc = m_sampleDesc;
@@ -320,6 +321,7 @@ void RosUmdResource::GetAllocationExchange(
     pOutAllocationExchange->m_mipLevels = m_mipLevels;
     pOutAllocationExchange->m_arraySize = m_arraySize;
 #endif
+    
     pOutAllocationExchange->m_primaryDesc = m_primaryDesc;
     pOutAllocationExchange->m_hwLayout = m_hwLayout;
     pOutAllocationExchange->m_hwWidthPixels = m_hwWidthPixels;

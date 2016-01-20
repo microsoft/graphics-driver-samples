@@ -88,7 +88,7 @@ NTSTATUS RosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
     }
 
     ROS_LOG_INFORMATION(
-        "Initializing roskmd. (pDriverObject=0x%p, pRegistryPath=0x%p)",
+        "Initializing roskmd. (pDriverObject=0x%p, pRegistryPath=%wZ)",
         pDriverObject,
         pRegistryPath);
 

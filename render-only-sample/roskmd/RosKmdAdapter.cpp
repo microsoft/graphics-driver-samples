@@ -824,15 +824,27 @@ RosKmAdapter::CreateAllocation(
 
     pAllocationInfo->Flags.Value = 0;
     
-    // Always mark allocation as CPU visible
-    pAllocationInfo->Flags.CpuVisible = 1;
+    //
+    // All allocations should be marked CPU visible unless they are shared.
+    // Shared allocations (including the primary) cannot be CPU visible unless
+    // they are exclusively located in an aperture segment
+    //
+    pAllocationInfo->Flags.CpuVisible = 
+        !(pRosAllocation->m_miscFlags & D3D10_DDI_RESOURCE_MISC_SHARED);
     
-    // TODO[indyz]: Look into if Cached should be used
-    // Allocations that will be flipped, such as the primary allocation,
-    // cannot be cached.
-    // Cached allocation can't be combined with primary allocation.
-    pAllocationInfo->Flags.Cached = !(pRosAllocation->m_bindFlags & D3D10_DDI_BIND_PRESENT);
-
+    if (pAllocationInfo->Flags.CpuVisible)
+    {
+        // TODO[indyz]: Look into if Cached should be used
+        // Allocations that will be flipped, such as the primary allocation,
+        // cannot be cached.
+        // Cached allocation can't be combined with primary allocation.
+        pAllocationInfo->Flags.Cached = !(pRosAllocation->m_bindFlags & D3D10_DDI_BIND_PRESENT);
+    }
+    else
+    {
+        pAllocationInfo->Flags.Cached = FALSE;
+    }
+    
     pAllocationInfo->HintedBank.Value = 0;
     pAllocationInfo->MaximumRenamingListLength = 0;
     pAllocationInfo->pAllocationUsageHint = NULL;
@@ -869,6 +881,12 @@ RosKmAdapter::CreateAllocation(
     {
         pCreateAllocation->hResource = pRosKmdResource;
     }
+    
+    ROS_LOG_TRACE(
+        "Created allocation. (Flags.CpuVisible=%d, Flags.Cacheable=%d, Size=%d",
+        pAllocationInfo->Flags.CpuVisible,
+        pAllocationInfo->Flags.Cached,
+        pAllocationInfo->Size);
 
     return STATUS_SUCCESS;
 }
@@ -1141,8 +1159,9 @@ RosKmAdapter::QueryAdapterInfo(
 
         //
         // Support SupportRuntimePowerManagement
+        // TODO[jordanrh] setting this to true causes constant power state transitions
         //
-        pDriverCaps->SupportRuntimePowerManagement = 1;
+        pDriverCaps->SupportRuntimePowerManagement = FALSE;
 
         //
         // TODO[bhouse] SupportSurpriseRemovalInHibernation
@@ -1417,7 +1436,8 @@ RosKmAdapter::ControlInterrupt(
     IN_CONST_DXGK_INTERRUPT_TYPE    /*InterruptType*/,
     IN_BOOLEAN                      /*EnableInterrupt*/)
 {
-    ROS_LOG_ASSERTION("Not implemented");
+    // TODO[jordanrh]: implement
+    ROS_LOG_WARNING("Not implemented. Implement me by forwarding to display subsystem.");
     return STATUS_NOT_IMPLEMENTED;
 }
 
@@ -1879,7 +1899,10 @@ NTSTATUS RosKmAdapter::GetStandardAllocationDriverData (
         allocParams->m_mip0Info.TexelDepth = 0;
         allocParams->m_mip0Info.PhysicalWidth = surfData->Width;
         allocParams->m_mip0Info.PhysicalHeight = surfData->Height;
-        allocParams->m_mip0Info.PhysicalDepth = 0;        
+        allocParams->m_mip0Info.PhysicalDepth = 0;
+        
+        // The shared primary allocation is shared by definition
+        allocParams->m_miscFlags = D3D10_DDI_RESOURCE_MISC_SHARED;
         
         // We must ensure that the D3D10_DDI_BIND_PRESENT is set so that
         // CreateAllocation() creates an allocation that is suitable
