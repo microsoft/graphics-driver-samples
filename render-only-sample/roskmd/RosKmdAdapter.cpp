@@ -831,8 +831,8 @@ RosKmAdapter::CreateAllocation(
     // they are exclusively located in an aperture segment.
     //
     pAllocationInfo->Flags.CpuVisible = 
-        !((pRosAllocation->m_miscFlags & D3D10_DDI_RESOURCE_MISC_SHARED))
-          (pRosAllocation->m_bindFlags & D3D10_DDI_BIND_PRESENT);
+        !((pRosAllocation->m_miscFlags & D3D10_DDI_RESOURCE_MISC_SHARED) ||
+          (pRosAllocation->m_bindFlags & D3D10_DDI_BIND_PRESENT));
     
     // Allocations that will be flipped, such as the primary allocation,
     // cannot be cached.
