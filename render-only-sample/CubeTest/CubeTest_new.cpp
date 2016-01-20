@@ -981,6 +981,51 @@ private:
     D3DPointer<ID3D11DepthStencilState> m_pDepthStencilState;
 };
 
+//
+// TODO[indyz]: Investigate : Texture address mode of clamp causes 1 triangle to miss texture
+//
+
+class D3DSamplerState
+{
+public:
+
+    D3DSamplerState(std::shared_ptr<D3DDevice> & inDevice)
+    {
+        D3D11_SAMPLER_DESC samplerState;
+
+        ZeroMemory(&samplerState, sizeof(samplerState));
+
+        samplerState.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+        samplerState.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+        samplerState.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+
+        samplerState.MaxLOD = D3D11_FLOAT32_MAX;
+        samplerState.Filter = D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
+
+        HRESULT hr;
+        ID3D11SamplerState * pSamplerState;
+
+        hr = inDevice->GetDevice()->CreateSamplerState(&samplerState, &pSamplerState);
+        if (FAILED(hr))
+        {
+            throw std::exception("Unable to create Sampler State");
+        }
+
+        m_pSamplerState = pSamplerState;
+    }
+
+    ~D3DSamplerState()
+    {
+        // do nothing
+    }
+
+    ID3D11SamplerState * GetSamplerState() { return m_pSamplerState; }
+
+private:
+
+    D3DPointer<ID3D11SamplerState> m_pSamplerState;
+};
+
 class D3DVSConstantBuffer
 {
 public:
@@ -1142,6 +1187,8 @@ public:
 
         m_pDepthStencilState = std::unique_ptr<D3DDepthStencilState>(new D3DDepthStencilState(m_pDevice));
 
+        m_pSamplerState = std::unique_ptr<D3DSamplerState>(new D3DSamplerState(m_pDevice));
+
         // Set vertex buffer
         UINT stride = sizeof(SimpleVertex);
         UINT offset = 0;
@@ -1163,6 +1210,10 @@ public:
         m_pDevice->GetContext()->OMSetDepthStencilState(m_pDepthStencilState->GetDepthStencilState(), 0);
 
         m_pTexture = std::unique_ptr<D3DTexture>(new D3DTexture(m_pDevice, kWidth, kHeight));
+
+        // Set sampler state
+        ID3D11SamplerState *    pSamplerState = m_pSamplerState->GetSamplerState();
+        m_pDevice->GetContext()->PSSetSamplers(0, 1, &pSamplerState);
 
         m_pDevice->GetContext()->VSSetShader(m_pVertexShader->GetVertexShader(), nullptr, 0);
 
@@ -1245,6 +1296,7 @@ private:
     std::unique_ptr<D3DIndexBuffer>         m_pIndexBuffer;
     std::unique_ptr<D3DTexture>             m_pTexture;
     std::unique_ptr<D3DDepthStencilState>   m_pDepthStencilState;
+    std::unique_ptr<D3DSamplerState>        m_pSamplerState;
     std::unique_ptr<D3DVSConstantBuffer>    m_pVSConstantBuffer;
     std::unique_ptr<D3DPSConstantBuffer>    m_pPSConstantBuffer;
 #if USE_BITMAP_TEX
