@@ -90,7 +90,7 @@ public:
 
     void CheckFormatSupport(DXGI_FORMAT inFormat, UINT* pOutFormatSupport);
     void CheckCounterInfo(D3D10DDI_COUNTER_INFO* pOutCounterInfo);
-    void CheckMultisampleQualityLevels(DXGI_FORMAT inFormat, UINT inSampleCount, UINT* pOutNumQualityLevels);
+    void CheckMultisampleQualityLevels(DXGI_FORMAT inFormat, UINT inSampleCount, UINT inFlags, UINT* pOutNumQualityLevels);
 
 public:
 

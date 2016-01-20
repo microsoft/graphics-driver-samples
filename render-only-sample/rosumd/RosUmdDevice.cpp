@@ -56,8 +56,8 @@ RosUmdDevice::RosUmdDevice(
     // but the pointer should be saved. Do not cache function pointers, as the runtime may change the table entries at will.
     m_pMSKTCallbacks = pArgs->pKTCallbacks;
 
-    // Currently only support 11.1
-    assert(m_Interface == D3D11_1_DDI_INTERFACE_VERSION);
+    // Currently only support WDDM1.3 DDI
+    assert(m_Interface == D3DWDDM1_3_DDI_INTERFACE_VERSION);
     m_pMSUMCallbacks = pArgs->p11UMCallbacks;
 
     // Can change these function pointers in this table whenever the UM Driver has context. That's why the UM Driver can
@@ -66,13 +66,12 @@ RosUmdDevice::RosUmdDevice(
     // Immediately fill out the Device function table with default methods.
     m_PipelineLevel = D3D11DDI_EXTRACT_3DPIPELINELEVEL_FROM_FLAGS(pArgs->Flags);
 
-    m_p11_1DeviceFuncs = pArgs->p11_1DeviceFuncs;
-    *m_p11_1DeviceFuncs = RosUmdDeviceDdi::s_deviceFuncs11_1;
+    m_pWDDM1_3DeviceFuncs = pArgs->pWDDM1_3DeviceFuncs;
+    *m_pWDDM1_3DeviceFuncs = RosUmdDeviceDdi::s_deviceFuncsWDDM1_3;
 
-    assert(!IS_DXGI1_3_BASE_FUNCTIONS(pArgs->Interface, pArgs->Version));
-    assert(IS_DXGI1_2_BASE_FUNCTIONS(pArgs->Interface, pArgs->Version));
+    assert(IS_DXGI1_3_BASE_FUNCTIONS(pArgs->Interface, pArgs->Version));
 
-    *(pArgs->DXGIBaseDDI.pDXGIDDIBaseFunctions3) = RosUmdDeviceDdi::s_dxgiDeviceFuncs3;
+    *(pArgs->DXGIBaseDDI.pDXGIDDIBaseFunctions4) = RosUmdDeviceDdi::s_dxgiDeviceFuncs4;
 
     //... and the DXGI callbacks
     m_pDXGICallbacks = pArgs->DXGIBaseDDI.pDXGIBaseCallbacks;
@@ -461,10 +460,12 @@ void RosUmdDevice::CheckCounterInfo(
 void RosUmdDevice::CheckMultisampleQualityLevels(
     DXGI_FORMAT inFormat,
     UINT inSampleCount,
+    UINT inFlags,
     UINT* pOutNumQualityLevels)
 {
     inFormat; // unused
     inSampleCount; // unused
+    inFlags; // unused
 
     *pOutNumQualityLevels = 0;
 }

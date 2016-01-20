@@ -112,12 +112,15 @@ private:
         bool deviceCreated = false;
         D3D_FEATURE_LEVEL level;
         ID3D11DeviceContext * context = NULL;
-        D3D_FEATURE_LEVEL requestedLevel = D3D_FEATURE_LEVEL_11_1;
-
+#if VC4
+        D3D_FEATURE_LEVEL  FeatureLevelsRequested[] = { D3D_FEATURE_LEVEL_9_1 };
+#else
+        D3D_FEATURE_LEVEL  FeatureLevelsRequested[] = { D3D_FEATURE_LEVEL_11_0 };
+#endif 
         ID3D11Device * pDevice;
         ID3D11DeviceContext * pContext;
 
-        HRESULT hr = D3D11CreateDevice(m_pAdapter, D3D_DRIVER_TYPE::D3D_DRIVER_TYPE_UNKNOWN, NULL, 0, &requestedLevel, 1, D3D11_SDK_VERSION, &pDevice, &level, &pContext);
+        HRESULT hr = D3D11CreateDevice(m_pAdapter, D3D_DRIVER_TYPE::D3D_DRIVER_TYPE_UNKNOWN, NULL, 0, FeatureLevelsRequested, 1, D3D11_SDK_VERSION, &pDevice, &level, &pContext);
 
         deviceCreated = (hr == S_OK);
 
