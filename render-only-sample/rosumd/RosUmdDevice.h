@@ -199,6 +199,7 @@ public:
     void SetElementLayout(RosUmdElementLayout * pElementLayout);
     void SetDepthStencilState(RosUmdDepthStencilState * pDepthStencilState, UINT stencilRef);
     void SetRasterizerState(RosUmdRasterizerState * pRasterizerState);
+    void SetScissorRects(UINT NumScissorRects, UINT ClearScissorRects, const D3D10_DDI_RECT *pRects);
 
 
     RosUmdResource *                m_vertexBuffers[kMaxVertexBuffers];
@@ -257,6 +258,9 @@ public:
     UINT                            m_stencilRef;
 
     RosUmdRasterizerState *         m_rasterizerState;
+
+    BOOL                            m_scissorRectSet;
+    D3D10_DDI_RECT                  m_scissorRect;
 
 public:
 

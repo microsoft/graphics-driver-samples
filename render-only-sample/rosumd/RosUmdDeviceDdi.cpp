@@ -69,7 +69,7 @@ const D3DWDDM1_3DDI_DEVICEFUNCS RosUmdDeviceDdi::s_deviceFuncsWDDM1_3 =
     RosUmdDeviceDdi::SOSetTargets_Default,
     RosUmdDeviceDdi::DrawAuto_Dirty,
     RosUmdDeviceDdi::DdiSetViewports,
-    RosUmdDeviceDdi::SetScissorRects_Default,
+    RosUmdDeviceDdi::DdiSetScissorRects,
     RosUmdDeviceDdi::DdiClearRenderTargetView,
     RosUmdDeviceDdi::DdiClearDepthStencilView,
     RosUmdDeviceDdi::SetPredication_Default,
@@ -500,6 +500,19 @@ void APIENTRY RosUmdDeviceDdi::DdiSetRasterizerState(
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     RosUmdRasterizerState * pRasterizerState = RosUmdRasterizerState::CastFrom(hRasterizerState);
     pDevice->SetRasterizerState(pRasterizerState);
+}
+
+void APIENTRY RosUmdDeviceDdi::DdiSetScissorRects(
+    _In_       D3D10DDI_HDEVICE hDevice,
+    _In_       UINT             NumScissorRects,
+    _In_       UINT             ClearScissorRects,
+    _In_ const D3D10_DDI_RECT   *pRects
+    )
+{
+    RosUmdLogging::Call(__FUNCTION__);
+
+    RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
+    pDevice->SetScissorRects(NumScissorRects, ClearScissorRects, pRects);
 }
 
 //

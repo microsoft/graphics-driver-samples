@@ -58,7 +58,7 @@ public:
     static void APIENTRY PsSetConstantBuffers_Preamble(D3D10DDI_HDEVICE, UINT, UINT, const D3D10DDI_HRESOURCE*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY PsSetConstantBuffers11_1_Preamble(D3D10DDI_HDEVICE, UINT, UINT, const D3D10DDI_HRESOURCE*, const UINT*, const UINT*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY DdiSetRasterizerState(D3D10DDI_HDEVICE, D3D10DDI_HRASTERIZERSTATE);
-    static void APIENTRY SetScissorRects_Default(D3D10DDI_HDEVICE, UINT, UINT, const D3D10_DDI_RECT*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
+    static void APIENTRY DdiSetScissorRects(D3D10DDI_HDEVICE, UINT, UINT, const D3D10_DDI_RECT*);
 
     static void APIENTRY DdiSetViewports(D3D10DDI_HDEVICE, UINT, UINT, const D3D10_DDI_VIEWPORT*);
     static void APIENTRY DdiIaSetTopology(D3D10DDI_HDEVICE, D3D10_DDI_PRIMITIVE_TOPOLOGY);
