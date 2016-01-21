@@ -37,6 +37,34 @@
 
 #include "math.h"
 
+static
+BOOLEAN _IntersectRect(RECT* CONST pDst, RECT CONST* CONST pSrc1, RECT CONST* CONST pSrc2)
+{
+    pDst->left = max(pSrc1->left, pSrc2->left);
+    pDst->right = min(pSrc1->right, pSrc2->right);
+
+    //
+    // Left must be less than right for a rect intersection.  Otherwise pDst
+    // is either an empty rect (left == right), or an invalid rect (left > right).
+    //
+    if (pDst->left < pDst->right)
+    {
+        pDst->top = max(pSrc1->top, pSrc2->top);
+        pDst->bottom = min(pSrc1->bottom, pSrc2->bottom);
+
+        //
+        // Top must be less than bottom for a rect intersection.  Otherwise pDst
+        // is either an empty rect (top == bottom), or an invalid rect (top > bottom).
+        //
+        if (pDst->top < pDst->bottom)
+        {
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
 //==================================================================================================================================
 //
 // RosUmdDevice
@@ -56,8 +84,8 @@ RosUmdDevice::RosUmdDevice(
     // but the pointer should be saved. Do not cache function pointers, as the runtime may change the table entries at will.
     m_pMSKTCallbacks = pArgs->pKTCallbacks;
 
-    // Currently only support 11.1
-    assert(m_Interface == D3D11_1_DDI_INTERFACE_VERSION);
+    // Currently only support WDDM1.3 DDI
+    assert(m_Interface == D3DWDDM1_3_DDI_INTERFACE_VERSION);
     m_pMSUMCallbacks = pArgs->p11UMCallbacks;
 
     // Can change these function pointers in this table whenever the UM Driver has context. That's why the UM Driver can
@@ -66,13 +94,12 @@ RosUmdDevice::RosUmdDevice(
     // Immediately fill out the Device function table with default methods.
     m_PipelineLevel = D3D11DDI_EXTRACT_3DPIPELINELEVEL_FROM_FLAGS(pArgs->Flags);
 
-    m_p11_1DeviceFuncs = pArgs->p11_1DeviceFuncs;
-    *m_p11_1DeviceFuncs = RosUmdDeviceDdi::s_deviceFuncs11_1;
+    m_pWDDM1_3DeviceFuncs = pArgs->pWDDM1_3DeviceFuncs;
+    *m_pWDDM1_3DeviceFuncs = RosUmdDeviceDdi::s_deviceFuncsWDDM1_3;
 
-    assert(!IS_DXGI1_3_BASE_FUNCTIONS(pArgs->Interface, pArgs->Version));
-    assert(IS_DXGI1_2_BASE_FUNCTIONS(pArgs->Interface, pArgs->Version));
+    assert(IS_DXGI1_3_BASE_FUNCTIONS(pArgs->Interface, pArgs->Version));
 
-    *(pArgs->DXGIBaseDDI.pDXGIDDIBaseFunctions3) = RosUmdDeviceDdi::s_dxgiDeviceFuncs3;
+    *(pArgs->DXGIBaseDDI.pDXGIDDIBaseFunctions4) = RosUmdDeviceDdi::s_dxgiDeviceFuncs4;
 
     //... and the DXGI callbacks
     m_pDXGICallbacks = pArgs->DXGIBaseDDI.pDXGIBaseCallbacks;
@@ -461,10 +488,12 @@ void RosUmdDevice::CheckCounterInfo(
 void RosUmdDevice::CheckMultisampleQualityLevels(
     DXGI_FORMAT inFormat,
     UINT inSampleCount,
+    UINT inFlags,
     UINT* pOutNumQualityLevels)
 {
     inFormat; // unused
     inSampleCount; // unused
+    inFlags; // unused
 
     *pOutNumQualityLevels = 0;
 }
@@ -933,6 +962,21 @@ void RosUmdDevice::SetRasterizerState(RosUmdRasterizerState * pRasterizerState)
     m_rasterizerState = pRasterizerState;
 }
 
+void RosUmdDevice::SetScissorRects(UINT NumScissorRects, UINT ClearScissorRects, const D3D10_DDI_RECT *pRects)
+{
+    assert((NumScissorRects + ClearScissorRects) == 1);
+    if (NumScissorRects)
+    {
+        m_scissorRectSet = true;
+        m_scissorRect = *pRects;
+    }
+    if (ClearScissorRects)
+    {
+        m_scissorRectSet = false;
+        ZeroMemory(&m_scissorRect, sizeof(m_scissorRect));
+    }
+}
+
 void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
 {
     RosUmdResource * pRenderTarget = (RosUmdResource *)m_renderTargetViews[0]->m_create.hDrvResource.pDrvPrivate;
@@ -1122,10 +1166,34 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
 
     *pVC4ClipWindow = vc4ClipWindow;
 
-    pVC4ClipWindow->ClipWindowLeft   = (USHORT)round(m_viewports[0].TopLeftX);
-    pVC4ClipWindow->ClipWindowBottom = (USHORT)round(m_viewports[0].TopLeftY);
-    pVC4ClipWindow->ClipWindowWidth  = (USHORT)round(m_viewports[0].Width);
-    pVC4ClipWindow->ClipWindowHeight = (USHORT)round(m_viewports[0].Height);
+    if (m_scissorRectSet && m_rasterizerState->GetDesc()->ScissorEnable)
+    {
+        RECT Intersect;
+        RECT Viewport = { 
+            (LONG)round(m_viewports[0].TopLeftX),
+            (LONG)round(m_viewports[0].TopLeftY),
+            (LONG)round((m_viewports[0].TopLeftX + m_viewports[0].Width)),
+            (LONG)round((m_viewports[0].TopLeftY + m_viewports[0].Height)) };
+
+        if (_IntersectRect(&Intersect, &Viewport, &m_scissorRect))
+        {
+            pVC4ClipWindow->ClipWindowLeft = (USHORT)Intersect.left;
+            pVC4ClipWindow->ClipWindowBottom = (USHORT)Intersect.top;
+            pVC4ClipWindow->ClipWindowWidth = (USHORT)(Intersect.right - Intersect.left);
+            pVC4ClipWindow->ClipWindowHeight = (USHORT)(Intersect.bottom - Intersect.top);
+        }
+        else
+        {
+            assert(false); // NOTHING to draw.
+        }
+    }
+    else
+    {
+        pVC4ClipWindow->ClipWindowLeft = (USHORT)round(m_viewports[0].TopLeftX);
+        pVC4ClipWindow->ClipWindowBottom = (USHORT)round(m_viewports[0].TopLeftY);
+        pVC4ClipWindow->ClipWindowWidth = (USHORT)round(m_viewports[0].Width);
+        pVC4ClipWindow->ClipWindowHeight = (USHORT)round(m_viewports[0].Height);
+    }
 
     //
     // Write Configuration Bits command to update render state
