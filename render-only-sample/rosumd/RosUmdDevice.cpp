@@ -1166,7 +1166,7 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
 
     *pVC4ClipWindow = vc4ClipWindow;
 
-    if (m_scissorRectSet)
+    if (m_scissorRectSet && m_rasterizerState->GetDesc()->ScissorEnable)
     {
         RECT Intersect;
         RECT Viewport = { 
