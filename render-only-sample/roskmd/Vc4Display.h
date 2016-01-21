@@ -231,6 +231,13 @@ public: // PAGED
     NTSTATUS RecommendMonitorModes (
         IN_CONST_PDXGKARG_RECOMMENDMONITORMODES_CONST RecommendMonitorModesPtr
         );
+        
+    _Check_return_
+    _IRQL_requires_(PASSIVE_LEVEL)
+    NTSTATUS ControlInterrupt (
+        IN_CONST_DXGK_INTERRUPT_TYPE InterruptType,
+        IN_BOOLEAN EnableInterrupt
+        );
 
     _Check_return_
     _IRQL_requires_(PASSIVE_LEVEL)

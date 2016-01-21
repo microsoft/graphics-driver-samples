@@ -1424,15 +1424,7 @@ RosKmAdapter::QueryDependentEngineGroup(
     return STATUS_NOT_IMPLEMENTED;
 }
 
-NTSTATUS
-RosKmAdapter::ControlInterrupt(
-    IN_CONST_DXGK_INTERRUPT_TYPE    /*InterruptType*/,
-    IN_BOOLEAN                      /*EnableInterrupt*/)
-{
-    // TODO[jordanrh]: implement
-    ROS_LOG_WARNING("Not implemented. Implement me by forwarding to display subsystem.");
-    return STATUS_NOT_IMPLEMENTED;
-}
+
 
 NTSTATUS
 RosKmAdapter::CollectDbgInfo(
@@ -2128,6 +2120,19 @@ NTSTATUS RosKmAdapter::GetScanLine (DXGKARG_GETSCANLINE* /*GetScanLinePtr*/)
     
     ROS_LOG_ASSERTION("Not implemented");
     return STATUS_NOT_IMPLEMENTED;
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmAdapter::ControlInterrupt (
+    const DXGK_INTERRUPT_TYPE InterruptType,
+    BOOLEAN EnableInterrupt
+    )
+{
+    PAGED_CODE();
+    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    
+    NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
+    return m_display.ControlInterrupt(InterruptType, EnableInterrupt);
 }
 
 _Use_decl_annotations_

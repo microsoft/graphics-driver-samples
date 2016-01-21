@@ -84,43 +84,46 @@ NTSTATUS VC4_DISPLAY::SetVidPnSourceAddress (
     )
 {
     NT_ASSERT(Args->VidPnSourceId == 0);
-    
+
     if (Args->Flags.ModeChange) {
         NT_ASSERT(Args->ContextCount == 0);
-        
+
         ROS_LOG_WARNING("Mode change was requested. Not sure what to do.");
         return STATUS_SUCCESS;
     }
-    
+
     NT_ASSERT(Args->ContextCount > 0);
-    
-    // We indicated we do not support immediate flip by setting 
+
+    // We indicated we do not support immediate flip by setting
     // pDriverCaps->FlipCaps.FlipImmediateMmIo to FALSE.
     // TODO[jordanrh]: store the capabilities somewhere so we can ASSERT them
     // whenever we make an assumption based on them
     NT_ASSERT(!Args->Flags.FlipImmediate);
     NT_ASSERT(Args->Flags.FlipOnNextVSync);
-    
+
     if (Args->Flags.SharedPrimaryTransition) {
         ROS_LOG_ASSERTION("What do we do here?");
     }
-    
+
     if (Args->Flags.IndependentFlipExclusive) {
         ROS_LOG_ASSERTION("What do we do here?");
     }
-    
+
     ULONG physicAddress = Vc4PhysicalAddressFromVirtual(
         reinterpret_cast<void*>(Args->PrimaryAddress.LowPart));
-    
+
     // PrimaryAddress is actually a virtual address
     // Update the source address in the display list
     WRITE_REGISTER_NOFENCE_ULONG(
         &this->displayListPtr->PointerWord0,
         physicAddress);
-        
+
     this->currentVidPnSourceAddress = Args->PrimaryAddress;
-    
-    ROS_LOG_TRACE("Successfully programmed VidPn source address");
+
+    ROS_LOG_TRACE(
+        "Successfully programmed VidPn source address. (PrimaryAddress.LowPart=0x%lx, physicAddress=0x%lx)",
+        Args->PrimaryAddress.LowPart,
+        physicAddress);
     return STATUS_SUCCESS;
 }
 
@@ -137,17 +140,11 @@ BOOLEAN VC4_DISPLAY::InterruptRoutine (
     if (!(intStat.AsUlong & VC4PIXELVALVE_INTERRUPT_MASK)) {
         return FALSE;
     }
-    
-    // XXX implement ControlInterrupt
-    // Write new interrupt enable/disable mask
-        // WRITE_REGISTER_NOFENCE_ULONG(
-            // &this->pvRegistersPtr->IntEn,
-            // this->pixelValveIntEn.AsUlong);
 
     // VSync interrupt
     if (intStat.VfpStart) {
         ROS_LOG_TRACE("Notifying dxgkrnl lf VSYNC interrupt.");
-        
+
         // Notify framework that previous active buffer is now safe
         // to use again
         DXGKARGCB_NOTIFY_INTERRUPT_DATA args = {};
@@ -162,7 +159,7 @@ BOOLEAN VC4_DISPLAY::InterruptRoutine (
     } else {
         ROS_LOG_ASSERTION("Unexpected interrupt!");
     }
-    
+
     // Acknowledge interrupts
     WRITE_REGISTER_NOFENCE_ULONG(
         &this->pvRegistersPtr->IntStat,
@@ -570,11 +567,11 @@ NTSTATUS VC4_DISPLAY::StartDevice (
             status);
         return status;
     }
-    
-    if ((this->dxgkDisplayInfo.Width == 0) || 
+
+    if ((this->dxgkDisplayInfo.Width == 0) ||
         (this->dxgkDisplayInfo.Height == 0) ||
         (this->dxgkDisplayInfo.PhysicAddress.QuadPart == 0)) {
-        
+
         ROS_LOG_ERROR(
             "DxgkCbAcquirePostDisplayOwnership(...) reported invalid frame buffer. (Width=%d, Height=%d, PhysicAddress=0x%I64x)",
             this->dxgkDisplayInfo.Width,
@@ -589,7 +586,7 @@ NTSTATUS VC4_DISPLAY::StartDevice (
     this->dxgkVideoSignalInfo.TotalSize.cx = this->dxgkDisplayInfo.Width;
     this->dxgkVideoSignalInfo.TotalSize.cy = this->dxgkDisplayInfo.Height;
     this->dxgkVideoSignalInfo.ActiveSize = this->dxgkVideoSignalInfo.TotalSize;
-    
+
     // Settings taken on my ASUS 1080p monitor (60Hz)
     this->dxgkVideoSignalInfo.VSyncFreq.Numerator = 148500000; // D3DKMDT_FREQUENCY_NOTSPECIFIED;
     this->dxgkVideoSignalInfo.VSyncFreq.Denominator = 2475000; // D3DKMDT_FREQUENCY_NOTSPECIFIED;
@@ -858,7 +855,7 @@ NTSTATUS VC4_DISPLAY::QueryDeviceDescriptor (
 {
     PAGED_CODE();
     VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-    
+
     UNREFERENCED_PARAMETER(ChildUid);
     UNREFERENCED_PARAMETER(DeviceDescriptorPtr);
     return STATUS_GRAPHICS_CHILD_DESCRIPTOR_NOT_SUPPORTED;
@@ -1371,18 +1368,7 @@ NTSTATUS VC4_DISPLAY::SetVidPnSourceVisibility (
         "Received request to set visibility. (VidPnSourceId = %d, Visible = %d)",
         SetVidPnSourceVisibilityPtr->VidPnSourceId,
         SetVidPnSourceVisibilityPtr->Visible);
-    
-    // XXX where do we enable and disable the interrupt?
-    // if (SetVidPnSourceVisibilityPtr->Visible)
-        // VC4PIXELVALVE_INTERRUPT intEn = {};
-        // intEn.VfpStart = TRUE;
-        // WRITE_REGISTER_NOFENCE_ULONG(
-            // &this->pvRegistersPtr->IntEn,
-            // intEn.AsUlong);
-    // } else {
-        // WRITE_REGISTER_NOFENCE_ULONG(&this->pvRegistersPtr->IntEn, 0);
-    // }
-    
+
     return STATUS_SUCCESS;
 }
 
@@ -1693,6 +1679,67 @@ NTSTATUS VC4_DISPLAY::RecommendMonitorModes (
         monitorModePtr->VideoSignalInfo.TotalSize.cx,
         monitorModePtr->VideoSignalInfo.TotalSize.cy);
     return STATUS_SUCCESS;
+}
+
+_Use_decl_annotations_
+NTSTATUS VC4_DISPLAY::ControlInterrupt (
+    const DXGK_INTERRUPT_TYPE InterruptType,
+    BOOLEAN EnableInterrupt
+    )
+{
+    PAGED_CODE();
+    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    switch (InterruptType) {
+    case DXGK_INTERRUPT_CRTC_VSYNC:
+        if (EnableInterrupt) {
+            ROS_LOG_TRACE("Enabling CRTC_VSYNC interrupt");
+
+            // clear interrupt flag
+            auto intStat = VC4PIXELVALVE_INTERRUPT();
+            intStat.VfpStart = TRUE;
+            WRITE_REGISTER_NOFENCE_ULONG(
+                &this->pvRegistersPtr->IntStat,
+                intStat.AsUlong);
+
+            // enable interrupt
+            this->pixelValveIntEn.VfpStart = TRUE;
+            WRITE_REGISTER_NOFENCE_ULONG(
+                &this->pvRegistersPtr->IntEn,
+                this->pixelValveIntEn.AsUlong);
+        } else {
+            ROS_LOG_TRACE("Disabling CRTC_VSYNC interrupt");
+
+            // disable interrupt
+            this->pixelValveIntEn.VfpStart = FALSE;
+            WRITE_REGISTER_NOFENCE_ULONG(
+                &this->pvRegistersPtr->IntEn,
+                this->pixelValveIntEn.AsUlong);
+
+            // clear interrupt flag
+            auto intStat = VC4PIXELVALVE_INTERRUPT();
+            intStat.VfpStart = TRUE;
+            WRITE_REGISTER_NOFENCE_ULONG(
+                &this->pvRegistersPtr->IntStat,
+                intStat.AsUlong);
+        }
+
+        return STATUS_SUCCESS;
+    case DXGK_INTERRUPT_DMA_COMPLETED:
+    case DXGK_INTERRUPT_DMA_PREEMPTED:
+    case DXGK_INTERRUPT_DMA_FAULTED:
+    case DXGK_INTERRUPT_DISPLAYONLY_VSYNC:
+    case DXGK_INTERRUPT_DISPLAYONLY_PRESENT_PROGRESS:
+    case DXGK_INTERRUPT_CRTC_VSYNC_WITH_MULTIPLANE_OVERLAY:
+    case DXGK_INTERRUPT_MICACAST_CHUNK_PROCESSING_COMPLETE:
+    case DXGK_INTERRUPT_DMA_PAGE_FAULTED:
+    default:
+        ROS_LOG_ASSERTION(
+            "Interrupt type not supported. (InterruptType=%d, EnableInterrupt=%d)",
+            InterruptType,
+            EnableInterrupt);
+        return STATUS_NOT_IMPLEMENTED;
+    }
 }
 
 _Use_decl_annotations_
@@ -2186,7 +2233,7 @@ NTSTATUS VC4_DISPLAY::registerHotplugNotification (FILE_OBJECT** FileObjectPPtr)
 {
     PAGED_CODE();
     VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-    
+
     DECLARE_CONST_UNICODE_STRING(hpdDeviceName, GPIOHPD_DEVICE_OBJECT_NAME_WSZ);
     FILE_OBJECT* fileObjectPtr;
     NTSTATUS status = Vc4OpenDevice(
@@ -2231,10 +2278,10 @@ NTSTATUS VC4_DISPLAY::registerHotplugNotification (FILE_OBJECT** FileObjectPPtr)
         }
         this->hdmiConnected = outputBuffer.Connected;
     }
-    
+
     dereferenceHpdFileObject.DoNot();
     *FileObjectPPtr = fileObjectPtr;
-    
+
     NT_ASSERT(NT_SUCCESS(status));
     return STATUS_SUCCESS;
 }
