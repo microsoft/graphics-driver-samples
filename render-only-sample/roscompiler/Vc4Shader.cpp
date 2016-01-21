@@ -78,42 +78,35 @@ void Vc4Shader::Emit_Prologue_PS()
 {
     assert(this->uShaderType == D3D10_SB_PIXEL_SHADER);
     
-    // Issue mul inputs (from varying) with ra15 (W).
     for (uint8_t i = 0, iRegUsed = 0; iRegUsed < this->cInput; i++)
     {
         Vc4Register raX = this->InputRegister[i / 4][i % 4];
         if (raX.GetFlags().valid)
         {
-            Vc4Instruction Vc4Inst;
-            assert(raX.GetMux() == VC4_QPU_ALU_REG_A || raX.GetMux() == VC4_QPU_ALU_REG_B);
-            Vc4Register varying(VC4_QPU_ALU_REG_B, VC4_QPU_RADDR_VERYING);
-            Vc4Register ra15(VC4_QPU_ALU_REG_A, 15);
-            Vc4Inst.Vc4_m_FMUL(raX, varying, ra15);
-            Vc4Inst.Emit(CurrentStorage);
+            // Issue mul inputs (from varying) with ra15 (W).
+            {
+                Vc4Instruction Vc4Inst;
+                assert(raX.GetMux() == VC4_QPU_ALU_REG_A || raX.GetMux() == VC4_QPU_ALU_REG_B);
+                Vc4Register varying(VC4_QPU_ALU_REG_B, VC4_QPU_RADDR_VERYING);
+                Vc4Register ra15(VC4_QPU_ALU_REG_A, 15);
+                Vc4Register r0(VC4_QPU_ALU_R0, VC4_QPU_WADDR_ACC0);
+                Vc4Inst.Vc4_m_FMUL(r0, varying, ra15);
+                Vc4Inst.Emit(CurrentStorage);
+            }
+
+            // Issue add r5 to each input data to complete interpolation.
+            {
+                Vc4Instruction Vc4Inst;
+                Vc4Register r5(VC4_QPU_ALU_R5);
+                Vc4Register r0(VC4_QPU_ALU_R0, VC4_QPU_WADDR_ACC0);
+                Vc4Inst.Vc4_a_FADD(raX, r0, r5);
+                Vc4Inst.Emit(CurrentStorage);
+            }
+
             iRegUsed++;
         }
     }
 
-    // Issue NOP.
-    {
-        Vc4Instruction Vc4Inst;
-        Vc4Inst.Emit(CurrentStorage);
-    }
-
-    // Issue add r5 to each input data to complete interpolation.
-    for (uint8_t iRegUsed = 0, iRegIndex = 0; iRegUsed < this->cInput; iRegIndex++)
-    {
-        Vc4Register raX = this->InputRegister[iRegIndex / 4][iRegIndex % 4];
-        if (raX.GetFlags().valid && raX.GetFlags().require_linear_conversion)
-        {
-            Vc4Instruction Vc4Inst;
-            Vc4Register r5(VC4_QPU_ALU_R5);
-            Vc4Inst.Vc4_a_FADD(raX, raX, r5);
-            Vc4Inst.Emit(CurrentStorage);
-            iRegUsed++;
-        }
-    }
-    
     { // Emit a NOP with 'sbwait'
         Vc4Instruction Vc4Inst;
         Vc4Inst.Vc4_Sig(VC4_QPU_SIG_WAIT_FOR_SCOREBOARD);
@@ -261,6 +254,7 @@ void Vc4Shader::Emit_ShaderOutput_VS(boolean bVS)
                 {
                     Vc4Instruction Vc4Inst;
                     Vc4Inst.Vc4_m_MOV(vpm, src);
+                    // Vc4Inst.Vc4_m_FMUL(vpm, src, r4);
                     Vc4Inst.Emit(CurrentStorage);
                 }
                 iRegUsed++;
