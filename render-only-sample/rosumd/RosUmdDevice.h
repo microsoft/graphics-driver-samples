@@ -90,7 +90,7 @@ public:
 
     void CheckFormatSupport(DXGI_FORMAT inFormat, UINT* pOutFormatSupport);
     void CheckCounterInfo(D3D10DDI_COUNTER_INFO* pOutCounterInfo);
-    void CheckMultisampleQualityLevels(DXGI_FORMAT inFormat, UINT inSampleCount, UINT* pOutNumQualityLevels);
+    void CheckMultisampleQualityLevels(DXGI_FORMAT inFormat, UINT inSampleCount, UINT inFlags, UINT* pOutNumQualityLevels);
 
 public:
 
@@ -199,6 +199,7 @@ public:
     void SetElementLayout(RosUmdElementLayout * pElementLayout);
     void SetDepthStencilState(RosUmdDepthStencilState * pDepthStencilState, UINT stencilRef);
     void SetRasterizerState(RosUmdRasterizerState * pRasterizerState);
+    void SetScissorRects(UINT NumScissorRects, UINT ClearScissorRects, const D3D10_DDI_RECT *pRects);
 
 
     RosUmdResource *                m_vertexBuffers[kMaxVertexBuffers];
@@ -257,6 +258,9 @@ public:
     UINT                            m_stencilRef;
 
     RosUmdRasterizerState *         m_rasterizerState;
+
+    BOOL                            m_scissorRectSet;
+    D3D10_DDI_RECT                  m_scissorRect;
 
 public:
 

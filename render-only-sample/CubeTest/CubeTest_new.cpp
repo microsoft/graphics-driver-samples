@@ -22,6 +22,8 @@ using namespace DirectX;
 #define USE_TEX 1
 #define USE_BITMAP_TEX 1
 
+//#define USE_SCISSOR 1
+
 #if USE_TEX
 struct SimpleVertex
 {
@@ -112,12 +114,15 @@ private:
         bool deviceCreated = false;
         D3D_FEATURE_LEVEL level;
         ID3D11DeviceContext * context = NULL;
-        D3D_FEATURE_LEVEL requestedLevel = D3D_FEATURE_LEVEL_11_1;
-
+#if VC4
+        D3D_FEATURE_LEVEL  FeatureLevelsRequested[] = { D3D_FEATURE_LEVEL_9_1 };
+#else
+        D3D_FEATURE_LEVEL  FeatureLevelsRequested[] = { D3D_FEATURE_LEVEL_11_0 };
+#endif 
         ID3D11Device * pDevice;
         ID3D11DeviceContext * pContext;
 
-        HRESULT hr = D3D11CreateDevice(m_pAdapter, D3D_DRIVER_TYPE::D3D_DRIVER_TYPE_UNKNOWN, NULL, 0, &requestedLevel, 1, D3D11_SDK_VERSION, &pDevice, &level, &pContext);
+        HRESULT hr = D3D11CreateDevice(m_pAdapter, D3D_DRIVER_TYPE::D3D_DRIVER_TYPE_UNKNOWN, NULL, 0, FeatureLevelsRequested, 1, D3D11_SDK_VERSION, &pDevice, &level, &pContext);
 
         deviceCreated = (hr == S_OK);
 
@@ -1026,6 +1031,55 @@ private:
     D3DPointer<ID3D11SamplerState> m_pSamplerState;
 };
 
+class D3DRasterizerState
+{
+public:
+
+    D3DRasterizerState(std::shared_ptr<D3DDevice> & inDevice)
+    {
+        D3D11_RASTERIZER_DESC rasterizerState;
+
+        ZeroMemory(&rasterizerState, sizeof(rasterizerState));
+
+        rasterizerState.FillMode = D3D11_FILL_SOLID;
+        rasterizerState.CullMode = D3D11_CULL_NONE;
+        rasterizerState.FrontCounterClockwise = FALSE;
+        rasterizerState.DepthBias = 0;
+        rasterizerState.SlopeScaledDepthBias = 0.0f;
+        rasterizerState.DepthBiasClamp = 0;
+        rasterizerState.DepthClipEnable = true;
+#if USE_SCISSOR
+        rasterizerState.ScissorEnable = true;
+#else
+        rasterizerState.ScissorEnable = false;
+#endif // USE_SCISSOR
+        rasterizerState.MultisampleEnable = false;
+        rasterizerState.AntialiasedLineEnable = false;
+
+        HRESULT hr;
+        ID3D11RasterizerState * pRasterizerState;
+
+        hr = inDevice->GetDevice()->CreateRasterizerState(&rasterizerState, &pRasterizerState);
+        if (FAILED(hr))
+        {
+            throw std::exception("Unable to create Rasterizer State");
+        }
+
+        m_pRasterizerState = pRasterizerState;
+    }
+
+    ~D3DRasterizerState()
+    {
+        // do nothing
+    }
+
+    ID3D11RasterizerState * GetRasterizerState() { return m_pRasterizerState; }
+
+private:
+
+    D3DPointer<ID3D11RasterizerState> m_pRasterizerState;
+};
+
 class D3DVSConstantBuffer
 {
 public:
@@ -1189,6 +1243,8 @@ public:
 
         m_pSamplerState = std::unique_ptr<D3DSamplerState>(new D3DSamplerState(m_pDevice));
 
+        m_pRasterizerState = std::unique_ptr<D3DRasterizerState>(new D3DRasterizerState(m_pDevice));
+
         // Set vertex buffer
         UINT stride = sizeof(SimpleVertex);
         UINT offset = 0;
@@ -1215,6 +1271,14 @@ public:
         ID3D11SamplerState *    pSamplerState = m_pSamplerState->GetSamplerState();
         m_pDevice->GetContext()->PSSetSamplers(0, 1, &pSamplerState);
 
+        // Set rasterizer state
+        m_pDevice->GetContext()->RSSetState(m_pRasterizerState->GetRasterizerState());
+
+#if USE_SCISSOR
+        RECT ScissorRect = { kWidth/2, 0, kWidth, kHeight};
+        m_pDevice->GetContext()->RSSetScissorRects(1, &ScissorRect);
+#endif // USE_SCISSOR
+    
         m_pDevice->GetContext()->VSSetShader(m_pVertexShader->GetVertexShader(), nullptr, 0);
 
         ID3D11Buffer *pVSConstantBuffer = m_pVSConstantBuffer->GetConstantBuffer();
@@ -1296,6 +1360,7 @@ private:
     std::unique_ptr<D3DIndexBuffer>         m_pIndexBuffer;
     std::unique_ptr<D3DTexture>             m_pTexture;
     std::unique_ptr<D3DDepthStencilState>   m_pDepthStencilState;
+    std::unique_ptr<D3DRasterizerState>     m_pRasterizerState;
     std::unique_ptr<D3DSamplerState>        m_pSamplerState;
     std::unique_ptr<D3DVSConstantBuffer>    m_pVSConstantBuffer;
     std::unique_ptr<D3DPSConstantBuffer>    m_pPSConstantBuffer;
