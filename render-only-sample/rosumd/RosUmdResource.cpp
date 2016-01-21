@@ -76,6 +76,53 @@ RosUmdResource::Teardown(void)
 }
 
 void
+RosUmdResource::ConstantBufferUpdateSubresourceUP(
+    UINT DstSubresource,
+    _In_opt_ const D3D10_DDI_BOX *pDstBox,
+    _In_ const VOID *pSysMemUP,
+    UINT RowPitch,
+    UINT DepthPitch,
+    UINT CopyFlags)
+{
+    assert(DstSubresource == 0);
+    assert(pSysMemUP);
+
+    assert(m_bindFlags & D3D10_DDI_BIND_CONSTANT_BUFFER); // must be constant buffer
+    assert(m_resourceDimension == D3D10DDIRESOURCE_BUFFER);
+
+    BYTE *pSysMemCopy = m_pSysMemCopy;
+    UINT BytesToCopy = RowPitch;
+    if (pDstBox)
+    {
+        if (pDstBox->left < 0 || 
+            pDstBox->left > (INT)m_hwSizeBytes ||
+            pDstBox->left > pDstBox->right ||
+            pDstBox->right > (INT)m_hwSizeBytes)
+        {
+            return; // box is outside of buffer size. Nothing to copy.
+        }
+
+        pSysMemCopy += pDstBox->left;
+        BytesToCopy = (pDstBox->right - pDstBox->left);
+    }
+    else if (BytesToCopy == 0)
+    {
+        BytesToCopy = m_hwSizeBytes; // copy whole.
+    }
+    else
+    {
+        BytesToCopy = min(BytesToCopy, m_hwSizeBytes);
+    }
+
+    CopyMemory(pSysMemCopy, pSysMemUP, BytesToCopy);
+
+    return;
+
+    DepthPitch;
+    CopyFlags;
+}
+
+void
 RosUmdResource::Map(
     RosUmdDevice *pUmdDevice,
     UINT subResource,
@@ -216,7 +263,7 @@ RosUmdResource::CalculateMemoryLayout(
 
             assert(m_hwFormat == RosHwFormat::X8);
             assert(m_hwHeightPixels == 1);
-            m_hwSizeBytes = m_hwWidthPixels;
+            m_hwPitchBytes = m_hwSizeBytes = m_hwWidthPixels;
         }
     break;
     case D3D10DDIRESOURCE_TEXTURE2D:
