@@ -25,7 +25,7 @@
 
 const D3DWDDM1_3DDI_DEVICEFUNCS RosUmdDeviceDdi::s_deviceFuncsWDDM1_3 =
 {
-    RosUmdDeviceDdi::DefaultConstantBufferUpdateSubresourceUP11_1_Default,
+    RosUmdDeviceDdi::DdiConstantBufferUpdateSubresourceUP11_1,
     RosUmdDeviceDdi::DdiVsSetConstantBuffers11_1,
     RosUmdDeviceDdi::DdiPSSetShaderResources,
     RosUmdDeviceDdi::DdiPsSetShader,
@@ -326,6 +326,34 @@ void APIENTRY RosUmdDeviceDdi::DdiResourceCopy(
     try
     {
         pRosUmdDevice->ResourceCopy(pDestinationResource, pSourceResource);
+    }
+
+    catch (std::exception & e)
+    {
+        pRosUmdDevice->SetException(e);
+    }
+
+    RosUmdLogging::Exit(__FUNCTION__);
+}
+
+void APIENTRY RosUmdDeviceDdi::DdiConstantBufferUpdateSubresourceUP11_1(
+    D3D10DDI_HDEVICE   hDevice,
+    D3D10DDI_HRESOURCE hDstResource,
+    UINT               DstSubresource,
+    _In_opt_ const D3D10_DDI_BOX  *pDstBox,
+    _In_     const VOID           *pSysMemUP,
+    UINT               RowPitch,
+    UINT               DepthPitch,
+    UINT               CopyFlags)
+{
+    RosUmdLogging::Entry(__FUNCTION__);
+
+    RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
+    RosUmdResource * pResource = (RosUmdResource *)hDstResource.pDrvPrivate;
+
+    try
+    {
+       pRosUmdDevice->ConstantBufferUpdateSubresourceUP(pResource, DstSubresource, pDstBox, pSysMemUP, RowPitch, DepthPitch, CopyFlags);
     }
 
     catch (std::exception & e)

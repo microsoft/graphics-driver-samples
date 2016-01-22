@@ -81,15 +81,18 @@ void Vc4Shader::Emit_Prologue_PS()
     for (uint8_t i = 0, iRegUsed = 0; iRegUsed < this->cInput; i++)
     {
         Vc4Register raX = this->InputRegister[i / 4][i % 4];
+
         if (raX.GetFlags().valid)
         {
+            assert(raX.GetMux() == VC4_QPU_ALU_REG_A || raX.GetMux() == VC4_QPU_ALU_REG_B);
+
+            Vc4Register r0(VC4_QPU_ALU_R0, VC4_QPU_WADDR_ACC0);
+
             // Issue mul inputs (from varying) with ra15 (W).
             {
                 Vc4Instruction Vc4Inst;
-                assert(raX.GetMux() == VC4_QPU_ALU_REG_A || raX.GetMux() == VC4_QPU_ALU_REG_B);
                 Vc4Register varying(VC4_QPU_ALU_REG_B, VC4_QPU_RADDR_VERYING);
                 Vc4Register ra15(VC4_QPU_ALU_REG_A, 15);
-                Vc4Register r0(VC4_QPU_ALU_R0, VC4_QPU_WADDR_ACC0);
                 Vc4Inst.Vc4_m_FMUL(r0, varying, ra15);
                 Vc4Inst.Emit(CurrentStorage);
             }
@@ -98,7 +101,6 @@ void Vc4Shader::Emit_Prologue_PS()
             {
                 Vc4Instruction Vc4Inst;
                 Vc4Register r5(VC4_QPU_ALU_R5);
-                Vc4Register r0(VC4_QPU_ALU_R0, VC4_QPU_WADDR_ACC0);
                 Vc4Inst.Vc4_a_FADD(raX, r0, r5);
                 Vc4Inst.Emit(CurrentStorage);
             }

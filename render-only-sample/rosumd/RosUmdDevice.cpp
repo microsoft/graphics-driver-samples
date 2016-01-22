@@ -370,6 +370,18 @@ void RosUmdDevice::ResourceCopy(
     }
 }
 
+void RosUmdDevice::ConstantBufferUpdateSubresourceUP(
+    RosUmdResource *pDstResource,
+    UINT DstSubresource,
+    _In_opt_ const D3D10_DDI_BOX *pDstBox,
+    _In_ const VOID *pSysMemUP,
+    UINT RowPitch,
+    UINT DepthPitch,
+    UINT CopyFlags)
+{
+    pDstResource->ConstantBufferUpdateSubresourceUP(DstSubresource, pDstBox, pSysMemUP, RowPitch, DepthPitch, CopyFlags);
+}
+
 void RosUmdDevice::CreatePixelShader(
     const UINT* pCode,
     D3D10DDI_HSHADER hShader,

@@ -74,7 +74,8 @@ public:
     void CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResource, D3D10DDI_HRESOURCE hResource, D3D10DDI_HRTRESOURCE hRTResource);
     void DestroyResource(RosUmdResource * pResource);
     void ResourceCopy(RosUmdResource *pDestinationResource, RosUmdResource * pSourceResource);
-
+    void ConstantBufferUpdateSubresourceUP(RosUmdResource *pDestinationResource, UINT DstSubresource, _In_opt_ const D3D10_DDI_BOX *pDstBox, _In_ const VOID *pSysMemUP, UINT RowPitch, UINT DepthPitch, UINT CopyFlags);
+    
     void CreatePixelShader(const UINT* pCode, D3D10DDI_HSHADER hShader, D3D10DDI_HRTSHADER hRTShader, const D3D11_1DDIARG_STAGE_IO_SIGNATURES* pSignatures);
     void CreateVertexShader(const UINT* pCode, D3D10DDI_HSHADER hShader, D3D10DDI_HRTSHADER hRTShader, const D3D11_1DDIARG_STAGE_IO_SIGNATURES* pSignatures);
     void CreateGeometryShader(const UINT* pCode, D3D10DDI_HSHADER hShader, D3D10DDI_HRTSHADER hRTShader, const D3D11_1DDIARG_STAGE_IO_SIGNATURES* pSignatures);
