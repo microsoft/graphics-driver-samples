@@ -77,6 +77,15 @@ public:
         UINT subResource);
 
     void
+    ConstantBufferUpdateSubresourceUP(
+        UINT DstSubresource,
+        _In_opt_ const D3D10_DDI_BOX *pDstBox,
+        _In_ const VOID *pSysMemUP,
+        UINT RowPitch,
+        UINT DepthPitch,
+        UINT CopyFlags);
+
+    void
     SetLockFlags(
         D3D10_DDI_MAP mapType,
         UINT mapFlags,

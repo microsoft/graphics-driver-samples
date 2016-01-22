@@ -1111,10 +1111,18 @@ public:
 
         D3D11_BUFFER_DESC bd;
         ZeroMemory(&bd, sizeof(bd));
+#if USE_MAP_FOR_CONSTANT_UPDATE
         bd.Usage = D3D11_USAGE_DYNAMIC;
+#else
+        bd.Usage = D3D11_USAGE_DEFAULT;
+#endif
         bd.ByteWidth = sizeof(m_data);
         bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+#if USE_MAP_FOR_CONSTANT_UPDATE
         bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+#else
+        bd.CPUAccessFlags = 0;
+#endif
 
         D3D11_SUBRESOURCE_DATA initData;
         ZeroMemory(&initData, sizeof(initData));
@@ -1308,7 +1316,7 @@ public:
 
         // Change rotation.
         m_pVSConstantBuffer->m_data.World = XMMatrixTranspose(XMMatrixRotationY(fAngle));
-        //m_pDevice->GetContext()->UpdateSubresource(m_pVSConstantBuffer->GetConstantBuffer(), 0, nullptr, &(m_pVSConstantBuffer->m_data), 0, 0);
+#if USE_MAP_FOR_CONSTANT_UPDATE
         {
             ID3D11Resource *pResource;
             m_pVSConstantBuffer->GetConstantBuffer()->QueryInterface(&pResource);
@@ -1321,6 +1329,11 @@ public:
             m_pDevice->GetContext()->Unmap(m_pVSConstantBuffer->GetConstantBuffer(), 0);
             pResource->Release();
         }
+#else
+        m_pDevice->GetContext()->UpdateSubresource(
+            m_pVSConstantBuffer->GetConstantBuffer(), 0, nullptr, 
+            &(m_pVSConstantBuffer->m_data), sizeof(m_pVSConstantBuffer->m_data), 0);
+#endif // USE_MAP_FOR_CONSTANT_UPDATE
         
         // Draw.
 #if USE_QUAD

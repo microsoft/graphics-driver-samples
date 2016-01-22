@@ -96,7 +96,7 @@ public:
     static void APIENTRY DdiResourceCopy(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, D3D10DDI_HRESOURCE);
     static void APIENTRY ResourceResolveSubresource_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT, D3D10DDI_HRESOURCE, UINT, DXGI_FORMAT) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY DefaultConstantBufferUpdateSubresourceUP_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT, const D3D10_DDI_BOX*, const VOID*, UINT, UINT) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
-    static void APIENTRY DefaultConstantBufferUpdateSubresourceUP11_1_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT, const D3D10_DDI_BOX*, const VOID*, UINT, UINT, UINT) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
+    static void APIENTRY DdiConstantBufferUpdateSubresourceUP11_1(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT, const D3D10_DDI_BOX*, const VOID*, UINT, UINT, UINT);
     static void APIENTRY ResourceUpdateSubresourceUP_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT, const D3D10_DDI_BOX*, const VOID*, UINT, UINT) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY ResourceUpdateSubresourceUP11_1_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT, const D3D10_DDI_BOX*, const VOID*, UINT, UINT, UINT) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY CopyStructureCount_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT, D3D11DDI_HUNORDEREDACCESSVIEW) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
