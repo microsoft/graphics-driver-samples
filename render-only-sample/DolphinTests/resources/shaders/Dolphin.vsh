@@ -88,10 +88,14 @@ VSOUT ShadeSeaFloorVertex( const float3 vPosition      : POSITION,
 VSOUT ShadeDolphinVertex( const float3 vPosition0     : POSITION0,
                           const float3 vPosition1     : POSITION1,
                           const float3 vPosition2     : POSITION2,
-                          const float3 vNormal0       : NORMAL0,
-                       // const float3 vNormal1       : NORMAL1,
-                       // const float3 vNormal2       : NORMAL2,
-                          const float2 vBaseTexCoords : TEXCOORD0 )
+// #if VC4_HACK
+//                        const float3 vNormal0       : NORMAL0,
+//                        const float3 vNormal1       : NORMAL1,
+//                        const float3 vNormal2       : NORMAL2,
+// #else
+                          const float3 vNormal4       : NORMAL4,
+// #endif // VC4_HACK
+                          const float2 vBaseTexCoords : TEXCOORD0)
 {
     // Tween the 3 positions (v0,v1,v2) into one position
     float4 vModelPosition = float4( vPosition0 * g_vBlendWeights.x + vPosition1 * g_vBlendWeights.y + vPosition2 * g_vBlendWeights.z, 1.0f );
@@ -103,7 +107,12 @@ VSOUT ShadeDolphinVertex( const float3 vPosition0     : POSITION0,
     float4 vViewPosition = mul( vModelPosition, g_matWorldView );
 
     // Tween the 3 normals (v3,v4,v5) into one normal
-    float3 vModelNormal = vNormal0 * g_vBlendWeights.x; // + vNormal1 * g_vBlendWeights.y + vNormal2 * g_vBlendWeights.z;
+
+// #if VC4_HACK
+//  float3 vModelNormal = vNormal0 * g_vBlendWeights.x + vNormal1 * g_vBlendWeights.y + vNormal2 * g_vBlendWeights.z;
+// #else
+    float3 vModelNormal = vNormal4;
+// #endif // VC4_HACK
 
     // Do the lighting calculation
     float fLightValue = max( dot( vModelNormal, g_vDolphinLightDir ), g_vZero.x );
