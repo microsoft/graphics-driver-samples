@@ -554,6 +554,43 @@ void RosUmdDevice::DestroyContext(D3DDDICB_DESTROYCONTEXT * pDestroyContext)
     if (hr != S_OK) throw RosUmdException(hr);
 }
 
+HRESULT RosUmdDevice::SetDisplayMode(
+    DXGI_DDI_ARG_SETDISPLAYMODE* pDisplayModeData)
+{
+    assert(RosUmdDevice::CastFrom(pDisplayModeData->hDevice) == this);
+
+    // Translate hResource and SubResourceIndex to a primary allocation handle
+    auto pResource = reinterpret_cast<RosUmdResource*>(pDisplayModeData->hResource);
+
+    // Only a single subresource is supported right now
+    assert(pDisplayModeData->SubResourceIndex == 0);
+
+    // We are expecting the resource to represent a primary allocation
+    assert(pResource->m_bindFlags & D3D10_DDI_BIND_PRESENT);
+    assert(pResource->m_primaryDesc.ModeDesc.Width != 0);
+    assert(pResource->m_hKMAllocation);
+
+    // XXX Do we need to flush all rendering tasks before calling kernel side?
+
+    D3DDDICB_SETDISPLAYMODE args = {};
+    args.hPrimaryAllocation = pResource->m_hKMAllocation;
+
+    HRESULT hr = m_pMSKTCallbacks->pfnSetDisplayModeCb(m_hRTDevice.handle, &args);
+    if (FAILED(hr)) {
+        switch (hr) {
+        case D3DDDIERR_INCOMPATIBLEPRIVATEFORMAT:
+            // TODO[jordanrh] Use args.PrivateDriverFormatAttribute to convert the
+            // primary surface
+            assert(args.PrivateDriverFormatAttribute != 0);
+        default:
+            return hr;
+        }
+    }
+
+    assert(SUCCEEDED(hr));
+    return S_OK;
+}
+
 //
 // User mode call backs
 //

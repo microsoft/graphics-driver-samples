@@ -67,6 +67,7 @@ public:
     void Teardown();
 
     static RosUmdDevice* CastFrom( D3D10DDI_HDEVICE );
+    static RosUmdDevice* CastFrom( DXGI_DDI_HDEVICE );
     D3D10DDI_HDEVICE CastTo() const;
 
 public:
@@ -104,6 +105,8 @@ public:
     void Unlock(D3DDDICB_UNLOCK * pLock);
     void Render(D3DDDICB_RENDER * pRender);
     void DestroyContext(D3DDDICB_DESTROYCONTEXT * pDestroyContext);
+
+    HRESULT SetDisplayMode(DXGI_DDI_ARG_SETDISPLAYMODE* pDisplayModeData);
 
     //
     // User mode call backs
@@ -294,6 +297,11 @@ public:
 inline RosUmdDevice* RosUmdDevice::CastFrom(D3D10DDI_HDEVICE hDevice)
 {
     return static_cast< RosUmdDevice* >(hDevice.pDrvPrivate);
+}
+
+inline RosUmdDevice* RosUmdDevice::CastFrom(DXGI_DDI_HDEVICE hDevice)
+{
+    return reinterpret_cast< RosUmdDevice* >(hDevice);
 }
 
 inline D3D10DDI_HDEVICE RosUmdDevice::CastTo() const
