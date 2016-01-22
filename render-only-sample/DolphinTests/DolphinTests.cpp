@@ -112,6 +112,9 @@ ID3D11PixelShader*          pPixelShader = NULL;
 ID3D11ShaderResourceView *  pCausticTextureViews[32] = { NULL };
 ID3D11ShaderResourceView *  pCurrentCausticTextureView = NULL;
 
+IDXGIDevice2*   pDxgiDev2 = NULL;
+HANDLE          hQueueEvent = NULL;
+
 UINT GetDXGIFormatTexelSize(DXGI_FORMAT Format)
 {
     switch (Format)
@@ -361,7 +364,7 @@ VOID UninitD3D()
     SAFE_RELEASE(pDefaultRasterState);
 }
 
-BOOL InitD3D(VOID)
+BOOL InitD3D(UINT rtWidth, UINT rtHeight)
 {
     BOOL bRet = FALSE;
     HRESULT hr;
@@ -415,8 +418,8 @@ BOOL InitD3D(VOID)
 
 #if VC4
     ModeDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    ModeDesc.Width = 800;
-    ModeDesc.Height = 600;
+    ModeDesc.Width = rtWidth;
+    ModeDesc.Height = rtHeight;
 #else
     //
     // Get the current mode information from the output (i.e. as it is
@@ -1069,16 +1072,118 @@ void SaveDolphin(int iFrame)
     SaveBMP(fileName, pd3dDevice, pStaging);
 }
 
-int main()
+void UninitPerf()
 {
-    InitD3D();
+    SAFE_RELEASE(pDxgiDev2);
+
+    if (hQueueEvent)
+    {
+        CloseHandle(hQueueEvent);
+    }
+}
+
+BOOL InitPerf()
+{
+    pd3dDevice->QueryInterface<IDXGIDevice2>(&pDxgiDev2);
+
+    // Create a manual-reset event object. 
+    hQueueEvent = CreateEvent(
+        NULL,               // default security attributes
+        TRUE,               // manual-reset event
+        FALSE,              // initial state is nonsignaled
+        FALSE
+        );
+
+    return hQueueEvent ? true : false;
+}
+
+int main(int argc, char *argv[])
+{
+    BOOL            bPerfMode = false;
+    
+    UINT            rtWidth = 800;
+    UINT            rtHeight = 600;
+    UINT            frames = 3;
+
+    LARGE_INTEGER   framesStart;
+    LARGE_INTEGER   framesEnd;
+
+    LARGE_INTEGER   frequenceStart;
+    LARGE_INTEGER   frequenceEnd;
+
+    if (argc == 3)
+    {
+        bPerfMode = true;
+    }
+
+    if (bPerfMode)
+    {
+        sscanf_s(argv[1], "%d", &rtWidth);
+        sscanf_s(argv[2], "%d", &rtHeight);
+
+        frames = 20;
+    }
+
+    InitD3D(rtWidth, rtHeight);
+
     InitDolphin();
 
-    for (UINT i = 0; i < 3; i++)
+    if (bPerfMode)
+    {
+        InitPerf();
+
+        QueryPerformanceCounter(&framesStart);
+        QueryPerformanceFrequency(&frequenceStart);
+    }
+
+    for (UINT i = 0; i < frames; i++)
     {
         UpdateDolphin();
         RenderDolphin();
-        SaveDolphin(i);
+
+        if (!bPerfMode)
+        {
+            SaveDolphin(i);
+        }
+        else
+        {
+            if (i < (frames - 1))
+            {
+                pd3dContext->Flush();
+            }
+            else
+            {
+                pDxgiDev2->EnqueueSetEvent(hQueueEvent);
+            }
+        }
+    }
+
+    if (bPerfMode)
+    {
+        DWORD dwWaitResult;
+        
+        dwWaitResult = WaitForSingleObject(
+            hQueueEvent,    // event handle
+            INFINITE);      // indefinite wait
+
+        if (dwWaitResult == WAIT_OBJECT_0)
+        {
+            QueryPerformanceCounter(&framesEnd);
+            QueryPerformanceFrequency(&frequenceEnd);
+
+            if (frequenceStart.QuadPart != frequenceEnd.QuadPart)
+            {
+                printf("Perf frequence changed during 20 frames of rendering");
+            }
+
+            printf(
+                "Average rendering time for (%d x %d) from 20 frames: %I64d ms\n",
+                rtWidth,
+                rtHeight,
+                ((framesEnd.QuadPart - framesStart.QuadPart)*1000)/(frames*frequenceEnd.QuadPart));
+        }
+
+        UninitPerf();
     }
 
     UninitDolphin();
