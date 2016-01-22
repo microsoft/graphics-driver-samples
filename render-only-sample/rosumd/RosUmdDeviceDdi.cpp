@@ -197,14 +197,14 @@ const D3DWDDM1_3DDI_DEVICEFUNCS RosUmdDeviceDdi::s_deviceFuncsWDDM1_3 =
 
 const DXGI1_3_DDI_BASE_FUNCTIONS RosUmdDeviceDdi::s_dxgiDeviceFuncs4 =
 {
-    NULL, // RosUmdDeviceDdi::Present,          //Present
+    RosUmdDeviceDdi::Present,
     NULL, // RosUmdDeviceDdi::GetGammaCaps,     //GetGammaCaps
-    NULL, // RosUmdDeviceDdi::SetDisplayMode,   //SetDisplayMode
-    NULL, // RosUmdDeviceDdi::SetResourcePriority,
+    RosUmdDeviceDdi::SetDisplayMode,
+    RosUmdDeviceDdi::SetResourcePriority,
     NULL, // RosUmdDeviceDdi::QueryResourceResidency,
-    NULL, // RosUmdDeviceDdi::RotateResourceIdentities,
+    RosUmdDeviceDdi::RotateResourceIdentities,
     NULL, // RosUmdDeviceDdi::Blt,
-    NULL, // RosUmdDeviceDdi::ResolveSharedResource,
+    RosUmdDeviceDdi::ResolveSharedResource,
     NULL, // RosUmdDeviceDdi::Blt1,
     NULL, // pfnOfferResources
     NULL, // pfnReclaimResources
@@ -213,7 +213,7 @@ const DXGI1_3_DDI_BASE_FUNCTIONS RosUmdDeviceDdi::s_dxgiDeviceFuncs4 =
     NULL, // pfnReserved1
     NULL, // pfnPresentMultiplaneOverlay
     NULL, // pfnReserved2
-    NULL, // pfnPresent1
+    RosUmdDeviceDdi::Present1, // pfnPresent1
     NULL, // pfnCheckPresentDurationSupport
 };
 
