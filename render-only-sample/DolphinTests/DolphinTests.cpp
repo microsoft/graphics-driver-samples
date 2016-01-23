@@ -85,6 +85,19 @@ ID3D11Buffer*       pDolphinVB2 = NULL;
 ID3D11Buffer*       pDolphinVB3 = NULL;
 ID3D11Buffer*       pDolphinIB = NULL;
 
+#if VC4 // VC4_HACK
+#pragma pack(1)
+typedef struct
+{
+    XMFLOAT3 pos;
+    XMFLOAT3 normal;
+    XMFLOAT2 tex;
+} DOLPHIN_VERTEX;
+#pragma pack()
+DOLPHIN_VERTEX* pDolphinTweenedNormalBuffer = NULL;
+ID3D11Buffer* pDolphinTweenedNormalVB = NULL;
+#endif // VC4_HACK;
+
 D3D11_PRIMITIVE_TOPOLOGY    DolphinPrimType;
 DWORD                       dwDolphinVertexStride;
 DWORD                       dwNumDolphinIndices;
@@ -111,6 +124,9 @@ ID3D11PixelShader*          pPixelShader = NULL;
 // Water caustics
 ID3D11ShaderResourceView *  pCausticTextureViews[32] = { NULL };
 ID3D11ShaderResourceView *  pCurrentCausticTextureView = NULL;
+
+IDXGIDevice2*   pDxgiDev2 = NULL;
+HANDLE          hQueueEvent = NULL;
 
 UINT GetDXGIFormatTexelSize(DXGI_FORMAT Format)
 {
@@ -361,7 +377,7 @@ VOID UninitD3D()
     SAFE_RELEASE(pDefaultRasterState);
 }
 
-BOOL InitD3D(VOID)
+BOOL InitD3D(UINT rtWidth, UINT rtHeight)
 {
     BOOL bRet = FALSE;
     HRESULT hr;
@@ -415,8 +431,8 @@ BOOL InitD3D(VOID)
 
 #if VC4
     ModeDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    ModeDesc.Width = 800;
-    ModeDesc.Height = 600;
+    ModeDesc.Width = rtWidth;
+    ModeDesc.Height = rtHeight;
 #else
     //
     // Get the current mode information from the output (i.e. as it is
@@ -589,6 +605,9 @@ VOID UninitDolphin(VOID)
     SAFE_RELEASE(pDolphinVB1);
     SAFE_RELEASE(pDolphinVB2);
     SAFE_RELEASE(pDolphinVB3);
+#if VC4 // VC4_HACK
+    SAFE_RELEASE(pDolphinTweenedNormalVB);
+#endif // VC4_HACK
     SAFE_RELEASE(pDolphinIB);
     SAFE_RELEASE(pDolphinTextureView);
     SAFE_RELEASE(pDolphinVertexLayout);
@@ -617,6 +636,9 @@ BOOL InitDolphin(VOID)
         { "POSITION",  2, DXGI_FORMAT_R32G32B32_FLOAT, 2, 0,  D3D11_INPUT_PER_VERTEX_DATA, 0 },
         { "NORMAL",    2, DXGI_FORMAT_R32G32B32_FLOAT, 2, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
         { "TEXCOORD",  2, DXGI_FORMAT_R32G32_FLOAT,    2, 24, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+#if VC4 // VC4_HACK
+        { "NORMAL",    4, DXGI_FORMAT_R32G32B32_FLOAT, 3,  0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+#endif // VC4_HACK
     };
 
     // Create constant buffers
@@ -694,6 +716,25 @@ BOOL InitDolphin(VOID)
             DolphinVertexFormat = DolphinMesh1.GetIBFormat11(0);
         }
 
+#if VC4 // VC4_HACK
+        {
+            assert(sizeof(DOLPHIN_VERTEX) == DolphinMesh1.GetVertexStride(0, 0));
+            assert(DolphinMesh1.GetNumVertices(0, 0) == DolphinMesh2.GetNumVertices(0, 0));
+            assert(DolphinMesh2.GetNumVertices(0, 0) == DolphinMesh3.GetNumVertices(0, 0));
+            assert(DolphinMesh1.GetVertexStride(0, 0) == DolphinMesh2.GetVertexStride(0, 0));
+            assert(DolphinMesh2.GetVertexStride(0, 0) == DolphinMesh3.GetVertexStride(0, 0));
+
+            D3D11_BUFFER_DESC bufferDesc = {};
+            bufferDesc.ByteWidth = (UINT)DolphinMesh1.GetNumVertices(0, 0) * sizeof(XMFLOAT3);
+            bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+            bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+            bufferDesc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
+            bufferDesc.MiscFlags = 0;
+
+            CHR(pd3dDevice->CreateBuffer(&bufferDesc, NULL, &pDolphinTweenedNormalVB));
+        }
+#endif // VC4_HACK
+        
         {
             DWORD dwDolphinVSSize = 0;
             PBYTE pDolphinVSData = (PBYTE)MyLoadResource(IDD_DOLPHIN_VS, &dwDolphinVSSize);
@@ -704,7 +745,7 @@ BOOL InitDolphin(VOID)
                 goto EXIT_RETURN;
             }
             CHR(pd3dDevice->CreateVertexShader((DWORD*)pDolphinVSData, dwDolphinVSSize, NULL, &pDolphinVertexShader));
-            CHR(pd3dDevice->CreateInputLayout(layout, 9, pDolphinVSData, dwDolphinVSSize, &pDolphinVertexLayout));
+            CHR(pd3dDevice->CreateInputLayout(layout, ARRAYSIZE(layout), pDolphinVSData, dwDolphinVSSize, &pDolphinVertexLayout));
         }
     }
 
@@ -788,7 +829,7 @@ BOOL InitDolphin(VOID)
                 goto EXIT_RETURN;
             }
             CHR(pd3dDevice->CreateVertexShader((DWORD*)pSeaFloorVSData, dwSeaFloorVSSize, NULL, &pSeaFloorVertexShader));
-            CHR(pd3dDevice->CreateInputLayout(layout, 9, pSeaFloorVSData, dwSeaFloorVSSize, &pSeaFloorVertexLayout));
+            CHR(pd3dDevice->CreateInputLayout(layout, 3, pSeaFloorVSData, dwSeaFloorVSSize, &pSeaFloorVertexLayout));
         }
     }
 
@@ -931,7 +972,57 @@ VOID UpdateDolphin(VOID)
     DWORD tex = ((DWORD)(fTime * 32)) % 32;
     pCurrentCausticTextureView = pCausticTextureViews[tex];
 
+    FLOAT fWeight1;
+    FLOAT fWeight2;
+    FLOAT fWeight3;
+
+    if (fBlendWeight > 0.0f)
+    {
+        fWeight1 = fabsf(fBlendWeight);
+        fWeight2 = 1.0f - fabsf(fBlendWeight);
+        fWeight3 = 0.0f;
+    }
+    else
+    {
+        fWeight1 = 0.0f;
+        fWeight2 = 1.0f - fabsf(fBlendWeight);
+        fWeight3 = fabsf(fBlendWeight);
+    }
+
     D3D11_MAPPED_SUBRESOURCE MappedResource;
+
+#if VC4 // VC4_HACK
+    pd3dContext->Map(pDolphinTweenedNormalVB, 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource);
+    {
+        XMFLOAT3* pTweenedNormal = (XMFLOAT3*)MappedResource.pData;
+
+        // Gather normal data from DolphinMesh.
+        DOLPHIN_VERTEX *pVertices1 = (DOLPHIN_VERTEX *)DolphinMesh1.GetRawVerticesAt(0);
+        DOLPHIN_VERTEX *pVertices2 = (DOLPHIN_VERTEX *)DolphinMesh2.GetRawVerticesAt(0);
+        DOLPHIN_VERTEX *pVertices3 = (DOLPHIN_VERTEX *)DolphinMesh3.GetRawVerticesAt(0);
+
+        for (UINT n = 0; n < DolphinMesh1.GetNumVertices(0, 0); n++)
+        {
+            // float3 vModelNormal = vNormal0 * g_vBlendWeights.x + 
+            //                       vNormal1 * g_vBlendWeights.y + 
+            //                       vNormal2 * g_vBlendWeights.z;
+
+            XMVECTOR vNormal0 = XMLoadFloat3(&pVertices1[n].normal);
+            XMVECTOR vNormal1 = XMLoadFloat3(&pVertices2[n].normal);
+            XMVECTOR vNormal2 = XMLoadFloat3(&pVertices3[n].normal);
+            
+            vNormal0 = XMVectorScale(vNormal0, fWeight1);
+            vNormal1 = XMVectorScale(vNormal1, fWeight2);
+            vNormal2 = XMVectorScale(vNormal2, fWeight3);
+
+            XMVECTOR vNormal = XMVectorAdd(XMVectorAdd(vNormal0, vNormal1), vNormal2);
+
+            XMStoreFloat3(&pTweenedNormal[n], vNormal);
+        }
+    }
+    pd3dContext->Unmap(pDolphinTweenedNormalVB, 0);
+#endif // VC4_HACK
+
     pd3dContext->Map(pVSConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource);
     {
         VS_CONSTANT_BUFFER* pVsConstData = (VS_CONSTANT_BUFFER*)MappedResource.pData;
@@ -939,22 +1030,6 @@ VOID UpdateDolphin(VOID)
         pVsConstData->vZero = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
         pVsConstData->vConstants = XMVectorSet(1.0f, 0.5f, 0.2f, 0.05f);
 
-        FLOAT fWeight1;
-        FLOAT fWeight2;
-        FLOAT fWeight3;
-
-        if (fBlendWeight > 0.0f)
-        {
-            fWeight1 = fabsf(fBlendWeight);
-            fWeight2 = 1.0f - fabsf(fBlendWeight);
-            fWeight3 = 0.0f;
-        }
-        else
-        {
-            fWeight1 = 0.0f;
-            fWeight2 = 1.0f - fabsf(fBlendWeight);
-            fWeight3 = fabsf(fBlendWeight);
-        }
         pVsConstData->vWeight = XMVectorSet(fWeight1, fWeight2, fWeight3, 0.0f);
 
         // Lighting vectors (in world space and in dolphin model space)
@@ -1023,7 +1098,7 @@ VOID RenderDolphin(VOID)
     SeaFloorOffsets[0] = 0;
     pd3dContext->IASetVertexBuffers(0, 1, &pSeaFloorVB, SeaFloorStrides, SeaFloorOffsets);
     pd3dContext->IASetIndexBuffer(pSeaFloorIB, SeaFloorVertexFormat, 0);
-    pd3dContext->IASetPrimitiveTopology(DolphinPrimType);
+    pd3dContext->IASetPrimitiveTopology(SeaFloorPrimType);
     pd3dContext->VSSetShader(pSeaFloorVertexShader, NULL, 0);
     pd3dContext->GSSetShader(NULL, NULL, 0);
     pd3dContext->PSSetShader(pPixelShader, NULL, 0);
@@ -1038,19 +1113,30 @@ VOID RenderDolphin(VOID)
     ////////////////////////////////////////////////////
 
     pd3dContext->IASetInputLayout(pDolphinVertexLayout);
-    UINT DolphinStrides[3];
-    UINT DolphinOffsets[3];
-    ID3D11Buffer* pDolphinVB[3];
+    UINT DolphinStrides[4];
+    UINT DolphinOffsets[4];
+    ID3D11Buffer* pDolphinVB[4];
     pDolphinVB[0] = pDolphinVB1;
     pDolphinVB[1] = pDolphinVB2;
     pDolphinVB[2] = pDolphinVB3;
+#if VC4 // VC4_HACK
+    pDolphinVB[3] = pDolphinTweenedNormalVB;
+#endif // VC4_HACK
     DolphinStrides[0] = (UINT)dwDolphinVertexStride;
     DolphinStrides[1] = (UINT)dwDolphinVertexStride;
     DolphinStrides[2] = (UINT)dwDolphinVertexStride;
+#if VC4 // VC4_HACK
+    DolphinStrides[3] = sizeof(XMFLOAT3);
+#endif // VC4_HACK
     DolphinOffsets[0] = 0;
     DolphinOffsets[1] = 0;
     DolphinOffsets[2] = 0;
+#if VC4
+    DolphinOffsets[3] = 0;
+    pd3dContext->IASetVertexBuffers(0, 4, pDolphinVB, DolphinStrides, DolphinOffsets);
+#else
     pd3dContext->IASetVertexBuffers(0, 3, pDolphinVB, DolphinStrides, DolphinOffsets);
+#endif // VC4_HACK
     pd3dContext->IASetIndexBuffer(pDolphinIB, DolphinVertexFormat, 0);
     pd3dContext->IASetPrimitiveTopology(DolphinPrimType);
     pd3dContext->VSSetShader(pDolphinVertexShader, NULL, 0);
@@ -1069,16 +1155,156 @@ void SaveDolphin(int iFrame)
     SaveBMP(fileName, pd3dDevice, pStaging);
 }
 
-int main()
+void UninitPerf()
 {
-    InitD3D();
+    SAFE_RELEASE(pDxgiDev2);
+
+    if (hQueueEvent)
+    {
+        CloseHandle(hQueueEvent);
+    }
+}
+
+BOOL InitPerf()
+{
+    pd3dDevice->QueryInterface<IDXGIDevice2>(&pDxgiDev2);
+
+    // Create a manual-reset event object. 
+    hQueueEvent = CreateEvent(
+        NULL,               // default security attributes
+        TRUE,               // manual-reset event
+        FALSE,              // initial state is nonsignaled
+        FALSE
+        );
+
+    return hQueueEvent ? true : false;
+}
+
+int main(int argc, char *argv[])
+{
+    BOOL            bPerfMode = false;
+    
+    UINT            rtWidth = 800;
+    UINT            rtHeight = 600;
+    UINT            frames = 3;
+
+    LARGE_INTEGER   framesStart;
+    LARGE_INTEGER   framesEnd;
+
+    LARGE_INTEGER   frequenceStart;
+    LARGE_INTEGER   frequenceEnd;
+
+    if (argc >= 3)
+    {
+        bPerfMode = true;
+    }
+
+    if (bPerfMode)
+    {
+        sscanf_s(argv[1], "%d", &rtWidth);
+        sscanf_s(argv[2], "%d", &rtHeight);
+
+        if (argc > 3)
+        {
+            sscanf_s(argv[3], "%d", &frames);
+
+            if (frames < 20)
+            {
+                frames = 20;
+            }
+        }
+        else
+        {
+            frames = 20;
+        }
+    }
+
+    InitD3D(rtWidth, rtHeight);
+
     InitDolphin();
 
-    for (UINT i = 0; i < 3; i++)
+    if (bPerfMode)
     {
+        InitPerf();
+
+        QueryPerformanceCounter(&framesStart);
+        QueryPerformanceFrequency(&frequenceStart);
+    }
+
+    for (UINT i = 0; i < frames; i++)
+    {
+        // Skip the 1st frame for shader compilation time
+        if (bPerfMode && (i == 1))
+        {
+            QueryPerformanceCounter(&framesStart);
+            QueryPerformanceFrequency(&frequenceStart);
+        }
+
         UpdateDolphin();
         RenderDolphin();
-        SaveDolphin(i);
+
+        if (!bPerfMode)
+        {
+            SaveDolphin(i);
+        }
+        else
+        {
+            if (i == 0)
+            {
+                //
+                // Wait for the 1st frame to finish to account for the GPU paging cost
+                //
+
+                DWORD dwWaitResult;
+
+                pDxgiDev2->EnqueueSetEvent(hQueueEvent);
+
+                dwWaitResult = WaitForSingleObject(
+                    hQueueEvent,    // event handle
+                    INFINITE);      // indefinite wait
+
+                ResetEvent(hQueueEvent);
+            }
+            else if (i < (frames - 1))
+            {
+                pd3dContext->Flush();
+            }
+            else
+            {
+                pDxgiDev2->EnqueueSetEvent(hQueueEvent);
+            }
+        }
+    }
+
+    if (bPerfMode)
+    {
+        DWORD dwWaitResult;
+        
+        dwWaitResult = WaitForSingleObject(
+            hQueueEvent,    // event handle
+            INFINITE);      // indefinite wait
+
+        if (dwWaitResult == WAIT_OBJECT_0)
+        {
+            QueryPerformanceCounter(&framesEnd);
+            QueryPerformanceFrequency(&frequenceEnd);
+
+            UINT measuredFrames = frames - 1;
+
+            if (frequenceStart.QuadPart != frequenceEnd.QuadPart)
+            {
+                printf("Perf frequence changed during %d frames of rendering", measuredFrames);
+            }
+
+            printf(
+                "Average rendering time for (%d x %d) from %d frames: %I64d ms\n",
+                rtWidth,
+                rtHeight,
+                measuredFrames,
+                ((framesEnd.QuadPart - framesStart.QuadPart) * 1000) / (measuredFrames*frequenceEnd.QuadPart));
+        }
+
+        UninitPerf();
     }
 
     UninitDolphin();
