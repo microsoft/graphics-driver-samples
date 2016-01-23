@@ -16,7 +16,6 @@ using namespace DirectX;
 
 #define USE_VC4 VC4
 
-#define ANIMATION_COUNT 8
 //#define NO_TRANSFORM 1
 //#define USE_QUAD 1
 #define USE_TEX 1
@@ -50,17 +49,9 @@ struct PSConstantBuffer
     XMFLOAT4 Ambient;
 };
 
-#if 0
-
-static const int kWidth = 1920;
-static const int kHeight = 1080;
-
-#else
-
-static const int kWidth = 800;
-static const int kHeight = 600;
-
-#endif
+int kWidth = 800;
+int kHeight = 600;
+UINT frames = 8;
 
 static const int kTexWidth = 64;
 static const int kTexHeight = 64;
@@ -1301,7 +1292,7 @@ public:
         m_pDevice->GetContext()->PSSetConstantBuffers(0, 1, &pPSConstantBuffer);
     }
 
-    void Render(UINT iFrame, float fAngle)
+    void Render(UINT iFrame, float fAngle, BOOL bPerfMode)
     {
         // Clear
         m_pDevice->GetContext()->ClearRenderTargetView(
@@ -1342,16 +1333,19 @@ public:
         m_pDevice->GetContext()->DrawIndexed(36, 0, 0);
 #endif // USE_QUAD
 
-        // Save frame.
-        m_pDevice->GetContext()->CopyResource(m_pTexture->GetTexture(), m_pRenderTarget->GetRenderTarget());
+        if (! bPerfMode)
         {
-            char fileName[MAX_PATH];
+            // Save frame.
+            m_pDevice->GetContext()->CopyResource(m_pTexture->GetTexture(), m_pRenderTarget->GetRenderTarget());
+            {
+                char fileName[MAX_PATH];
 #if USE_VC4
-            sprintf_s(fileName, MAX_PATH, "c:\\temp\\image_%d_vc4.bmp", iFrame);
+                sprintf_s(fileName, MAX_PATH, "c:\\temp\\image_%d_vc4.bmp", iFrame);
 #else
-            sprintf_s(fileName, MAX_PATH, "c:\\temp\\image_%d_warp.bmp", iFrame);
+                sprintf_s(fileName, MAX_PATH, "c:\\temp\\image_%d_warp.bmp", iFrame);
 #endif // USE_VC4
-            m_pTexture->WriteToBmp(fileName);
+                m_pTexture->WriteToBmp(fileName);
+            }
         }
     }
 
@@ -1361,6 +1355,9 @@ public:
     }
 
     std::unique_ptr<D3DTexture> & GetTexture() { return m_pTexture; }
+
+    ID3D11Device* GetDevice() { return m_pDevice->GetDevice(); }
+    ID3D11DeviceContext* GetContext() { return m_pDevice->GetContext(); }
 
 private:
 
@@ -1384,17 +1381,156 @@ private:
 #endif // USE_BITMAP_TEX
 };
 
-int main()
+#define SAFE_RELEASE(x) { if (x) { (x)->Release(); (x) = NULL; } }
+
+ID3D11Device*           pd3dDevice = NULL;
+ID3D11DeviceContext*    pd3dContext = NULL;
+IDXGIDevice2*           pDxgiDev2 = NULL;
+HANDLE                  hQueueEvent = NULL;
+
+void UninitPerf()
+{
+    SAFE_RELEASE(pDxgiDev2);
+
+    if (hQueueEvent)
+    {
+        CloseHandle(hQueueEvent);
+    }
+}
+
+BOOL InitPerf()
+{
+    pd3dDevice->QueryInterface<IDXGIDevice2>(&pDxgiDev2);
+
+    // Create a manual-reset event object.
+    hQueueEvent = CreateEvent(
+        NULL,               // default security attributes
+        TRUE,               // manual-reset event
+        FALSE,              // initial state is nonsignaled
+        FALSE
+        );
+
+    return hQueueEvent ? true : false;
+}
+
+int main(int argc, char* argv[])
 {
     try
     {
+        BOOL bPerfMode = false;
+
+        LARGE_INTEGER   framesStart;
+        LARGE_INTEGER   framesEnd;
+
+        LARGE_INTEGER   frequenceStart;
+        LARGE_INTEGER   frequenceEnd;
+
+        if (argc >= 3)
+        {
+            bPerfMode = true;
+        }
+
+        if (bPerfMode)
+        {
+            sscanf_s(argv[1], "%d", &kWidth);
+            sscanf_s(argv[2], "%d", &kHeight);
+
+            if (argc > 3)
+            {
+                sscanf_s(argv[3], "%d", &frames);
+
+                if (frames < 20)
+                {
+                    frames = 20;
+                }
+            }
+            else
+            {
+                frames = 20;
+            }
+        }
+
         D3DEngine engine;
 
-        float t = 0.0f;
-        for (UINT i = 0; i < ANIMATION_COUNT; i++)
+        if (bPerfMode)
         {
+            pd3dDevice = engine.GetDevice();
+            pd3dContext = engine.GetContext();
+
+            InitPerf();
+        }
+
+        float t = 0.0f;
+        for (UINT i = 0; i < frames; i++)
+        {
+            // Skip the 1st frame for shader compilation time
+            if (bPerfMode && (i == 1))
+            {
+                QueryPerformanceCounter(&framesStart);
+                QueryPerformanceFrequency(&frequenceStart);
+            }
+
             t += (float)XM_PI * 0.125f;
-            engine.Render(i, t);
+            engine.Render(i, t, bPerfMode);
+
+            if (bPerfMode)
+            {
+                if (i == 0)
+                {
+                    //
+                    // Wait for the 1st frame to finish to account for the GPU paging cost
+                    //
+
+                    DWORD dwWaitResult;
+
+                    pDxgiDev2->EnqueueSetEvent(hQueueEvent);
+
+                    dwWaitResult = WaitForSingleObject(
+                        hQueueEvent,    // event handle
+                        INFINITE);      // indefinite wait
+
+                    ResetEvent(hQueueEvent);
+                }
+                else if (i < (frames - 1))
+                {
+                    pd3dContext->Flush();
+                }
+                else
+                {
+                    pDxgiDev2->EnqueueSetEvent(hQueueEvent);
+                }
+            }
+        }
+
+        if (bPerfMode)
+        {
+            DWORD dwWaitResult;
+
+            dwWaitResult = WaitForSingleObject(
+                hQueueEvent,    // event handle
+                INFINITE);      // indefinite wait
+
+            if (dwWaitResult == WAIT_OBJECT_0)
+            {
+                QueryPerformanceCounter(&framesEnd);
+                QueryPerformanceFrequency(&frequenceEnd);
+
+                UINT measuredFrames = frames - 1;
+
+                if (frequenceStart.QuadPart != frequenceEnd.QuadPart)
+                {
+                    printf("Perf frequence changed during %d frames of rendering", measuredFrames);
+                }
+
+                printf(
+                    "Average rendering time for (%d x %d) from %d frames: %I64d ms\n",
+                    kWidth,
+                    kHeight,
+                    measuredFrames,
+                    ((framesEnd.QuadPart - framesStart.QuadPart) * 1000) / (measuredFrames*frequenceEnd.QuadPart));
+            }
+
+            UninitPerf();
         }
 
         printf("Success\n");

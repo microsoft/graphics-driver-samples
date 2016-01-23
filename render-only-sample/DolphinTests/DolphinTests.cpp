@@ -1194,7 +1194,7 @@ int main(int argc, char *argv[])
     LARGE_INTEGER   frequenceStart;
     LARGE_INTEGER   frequenceEnd;
 
-    if (argc == 3)
+    if (argc >= 3)
     {
         bPerfMode = true;
     }
@@ -1204,7 +1204,19 @@ int main(int argc, char *argv[])
         sscanf_s(argv[1], "%d", &rtWidth);
         sscanf_s(argv[2], "%d", &rtHeight);
 
-        frames = 20;
+        if (argc > 3)
+        {
+            sscanf_s(argv[3], "%d", &frames);
+
+            if (frames < 20)
+            {
+                frames = 20;
+            }
+        }
+        else
+        {
+            frames = 20;
+        }
     }
 
     InitD3D(rtWidth, rtHeight);
@@ -1221,6 +1233,13 @@ int main(int argc, char *argv[])
 
     for (UINT i = 0; i < frames; i++)
     {
+        // Skip the 1st frame for shader compilation time
+        if (bPerfMode && (i == 1))
+        {
+            QueryPerformanceCounter(&framesStart);
+            QueryPerformanceFrequency(&frequenceStart);
+        }
+
         UpdateDolphin();
         RenderDolphin();
 
@@ -1230,7 +1249,23 @@ int main(int argc, char *argv[])
         }
         else
         {
-            if (i < (frames - 1))
+            if (i == 0)
+            {
+                //
+                // Wait for the 1st frame to finish to account for the GPU paging cost
+                //
+
+                DWORD dwWaitResult;
+
+                pDxgiDev2->EnqueueSetEvent(hQueueEvent);
+
+                dwWaitResult = WaitForSingleObject(
+                    hQueueEvent,    // event handle
+                    INFINITE);      // indefinite wait
+
+                ResetEvent(hQueueEvent);
+            }
+            else if (i < (frames - 1))
             {
                 pd3dContext->Flush();
             }
@@ -1254,16 +1289,19 @@ int main(int argc, char *argv[])
             QueryPerformanceCounter(&framesEnd);
             QueryPerformanceFrequency(&frequenceEnd);
 
+            UINT measuredFrames = frames - 1;
+
             if (frequenceStart.QuadPart != frequenceEnd.QuadPart)
             {
-                printf("Perf frequence changed during 20 frames of rendering");
+                printf("Perf frequence changed during %d frames of rendering", measuredFrames);
             }
 
             printf(
-                "Average rendering time for (%d x %d) from 20 frames: %I64d ms\n",
+                "Average rendering time for (%d x %d) from %d frames: %I64d ms\n",
                 rtWidth,
                 rtHeight,
-                ((framesEnd.QuadPart - framesStart.QuadPart)*1000)/(frames*frequenceEnd.QuadPart));
+                measuredFrames,
+                ((framesEnd.QuadPart - framesStart.QuadPart) * 1000) / (measuredFrames*frequenceEnd.QuadPart));
         }
 
         UninitPerf();
