@@ -1232,12 +1232,12 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
 	}
 
 	//
-	// It looks like that VC4ConfigBits::CloseWisePrimitives 
+	// It looks like that VC4ConfigBits::ClockwisePrimitives 
 	// matches the D3D11_1_DDI_RASTERIZER_DESC::FrontCounterClockwise.
 	// It must be set in the same way for proper behavior.
 	//
 
-	pVC4ConfigBits->ClosewisePrimitives = m_rasterizerState->m_desc.FrontCounterClockwise;
+	pVC4ConfigBits->ClockwisePrimitives = m_rasterizerState->m_desc.FrontCounterClockwise;
 
     //
     // The D3D11 default depth stencil state is DepthEnable of true with
