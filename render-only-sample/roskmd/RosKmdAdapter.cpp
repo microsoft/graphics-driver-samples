@@ -114,7 +114,7 @@ RosKmAdapter::QueryEngineStatus(
     DXGKARG_QUERYENGINESTATUS  *pQueryEngineStatus)
 {
     ROS_LOG_TRACE("QueryEngineStatus was called.");
-    
+
     pQueryEngineStatus->EngineStatus.Responsive = 1;
     return STATUS_SUCCESS;
 }
@@ -807,7 +807,7 @@ RosKmAdapter::CreateAllocation(
     if (!pRosKmdAllocation)
     {
         if (pRosKmdResource != NULL) ExFreePoolWithTag(pRosKmdResource, 'ROSD');
-        
+
         ROS_LOG_ERROR(
             "Failed to allocated nonpaged pool for RosKmdAllocation. (sizeof(RosKmdAllocation)=%d)",
             sizeof(RosKmdAllocation));
@@ -823,21 +823,21 @@ RosKmAdapter::CreateAllocation(
     pAllocationInfo->EvictionSegmentSet = 0; // don't use apperture for eviction
 
     pAllocationInfo->Flags.Value = 0;
-    
+
     //
     // Allocations should be marked CPU visible unless they are shared or
     // can be flipped.
     // Shared allocations (including the primary) cannot be CPU visible unless
     // they are exclusively located in an aperture segment.
     //
-    pAllocationInfo->Flags.CpuVisible = 
+    pAllocationInfo->Flags.CpuVisible =
         !((pRosAllocation->m_miscFlags & D3D10_DDI_RESOURCE_MISC_SHARED) ||
           (pRosAllocation->m_bindFlags & D3D10_DDI_BIND_PRESENT));
-    
+
     // Allocations that will be flipped, such as the primary allocation,
     // cannot be cached.
     pAllocationInfo->Flags.Cached = pAllocationInfo->Flags.CpuVisible;
-    
+
     pAllocationInfo->HintedBank.Value = 0;
     pAllocationInfo->MaximumRenamingListLength = 0;
     pAllocationInfo->pAllocationUsageHint = NULL;
@@ -846,11 +846,11 @@ RosKmAdapter::CreateAllocation(
     pAllocationInfo->PreferredSegment.Value = 0;
     pAllocationInfo->PreferredSegment.SegmentId0 = ROSD_SEGMENT_VIDEO_MEMORY;
     pAllocationInfo->PreferredSegment.Direction0 = 0;
-    
+
     // zero-size allocations are not allowed
     NT_ASSERT(pRosAllocation->m_hwSizeBytes != 0);
     pAllocationInfo->Size = pRosAllocation->m_hwSizeBytes;
-    
+
     pAllocationInfo->SupportedReadSegmentSet = 1 << (ROSD_SEGMENT_VIDEO_MEMORY - 1);
     pAllocationInfo->SupportedWriteSegmentSet = 1 << (ROSD_SEGMENT_VIDEO_MEMORY - 1);
 
@@ -874,7 +874,7 @@ RosKmAdapter::CreateAllocation(
     {
         pCreateAllocation->hResource = pRosKmdResource;
     }
-    
+
     ROS_LOG_TRACE(
         "Created allocation. (Flags.CpuVisible=%d, Flags.Cacheable=%d, Size=%d",
         pAllocationInfo->Flags.CpuVisible,
@@ -993,7 +993,7 @@ RosKmAdapter::QueryAdapterInfo(
         //
         // TODO[bhouse] GammarRampCaps
         //
-        
+
         //
         // TODO[bhouse] PresentationCaps
         //
@@ -1021,7 +1021,7 @@ RosKmAdapter::QueryAdapterInfo(
         //   - DxgkDdiSetVidPnSourceAddress will be called at DIRQL
         //
         pDriverCaps->FlipCaps.FlipOnVSyncMmIo = TRUE;
-        
+
         // TODO[jordanrh] Do these need to be inside an IsRenderOnly check?
         if (!RosKmdGlobal::IsRenderOnly())
         {
@@ -1037,26 +1037,26 @@ RosKmAdapter::QueryAdapterInfo(
             // effect at the next vsync.
             //
             pDriverCaps->FlipCaps.FlipOnVSyncWithNoWait = TRUE;
-        
+
             //
             // We do not support the scheduling of a flip command to take effect
             // after two, three, or four vertical syncs.
             //
             pDriverCaps->FlipCaps.FlipInterval = FALSE;
-            
+
             //
             // The address we program into hardware does not take effect until
             // the next vsync.
             //
             pDriverCaps->FlipCaps.FlipImmediateMmIo = FALSE;
-            
+
             //
             // WDDM 1.3 and later drivers must set this to TRUE.
             // In an independent flip, the DWM user-mode present call is skipped
             // and DxgkDdiPresent and DxgkDdiSetVidPnSourceAddress are called.
             //
             pDriverCaps->FlipCaps.FlipIndependent = TRUE;
-            
+
             //
             // TODO[jordanrh] VSyncPowerSaveAware
             // https://msdn.microsoft.com/en-us/library/windows/hardware/ff569520(v=vs.85).aspx
@@ -1122,7 +1122,7 @@ RosKmAdapter::QueryAdapterInfo(
 
         //
         // Must support DxgkDdiStopDeviceAndReleasePostDisplayOwnership
-        // 
+        //
         pDriverCaps->SupportNonVGA = TRUE;
 
         //
@@ -1834,42 +1834,42 @@ NTSTATUS RosKmAdapter::GetStandardAllocationDriverData (
 {
     PAGED_CODE();
     VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-    
+
     //
     // ResourcePrivateDriverDataSize gets passed to CreateAllocation as
     // PrivateDriverDataSize.
     // AllocationPrivateDriverDataSize get passed to CreateAllocation as
     // pAllocationInfo->PrivateDriverDataSize.
     //
-    
+
     if (!Args->pResourcePrivateDriverData && !Args->pResourcePrivateDriverData)
     {
         Args->ResourcePrivateDriverDataSize = sizeof(RosAllocationGroupExchange);
         Args->AllocationPrivateDriverDataSize = sizeof(RosAllocationExchange);
         return STATUS_SUCCESS;
     }
-    
+
     // we expect them to both be null or both be valid
-    NT_ASSERT(Args->pResourcePrivateDriverData && Args->pResourcePrivateDriverData);        
+    NT_ASSERT(Args->pResourcePrivateDriverData && Args->pResourcePrivateDriverData);
     NT_ASSERT(
-        Args->ResourcePrivateDriverDataSize == 
+        Args->ResourcePrivateDriverDataSize ==
         sizeof(RosAllocationGroupExchange));
-        
+
     NT_ASSERT(
-        Args->AllocationPrivateDriverDataSize == 
+        Args->AllocationPrivateDriverDataSize ==
         sizeof(RosAllocationExchange));
-    
+
     new (Args->pResourcePrivateDriverData) RosAllocationGroupExchange();
     auto allocParams = new (Args->pAllocationPrivateDriverData) RosAllocationExchange();
-    
+
     // Not sure what we're supposed to do with this information yet; just trace it
     switch (Args->StandardAllocationType)
     {
     case D3DKMDT_STANDARDALLOCATION_SHAREDPRIMARYSURFACE:
     {
-        const D3DKMDT_SHAREDPRIMARYSURFACEDATA* surfData = 
+        const D3DKMDT_SHAREDPRIMARYSURFACEDATA* surfData =
                 Args->pCreateSharedPrimarySurfaceData;
-                
+
         ROS_LOG_TRACE(
             "Preparing private allocation data for SHAREDPRIMARYSURFACEDATA. (Width=%d, Height=%d, Format=%d, RefreshRate=%d/%d, VidPnSourceId=%d)",
             surfData->Width,
@@ -1885,10 +1885,10 @@ NTSTATUS RosKmAdapter::GetStandardAllocationDriverData (
         allocParams->m_mip0Info.PhysicalWidth = surfData->Width;
         allocParams->m_mip0Info.PhysicalHeight = surfData->Height;
         allocParams->m_mip0Info.PhysicalDepth = 0;
-        
+
         // The shared primary allocation is shared by definition
         allocParams->m_miscFlags = D3D10_DDI_RESOURCE_MISC_SHARED;
-        
+
         // We must ensure that the D3D10_DDI_BIND_PRESENT is set so that
         // CreateAllocation() creates an allocation that is suitable
         // for the primary, which must be flippable.
@@ -1896,8 +1896,8 @@ NTSTATUS RosKmAdapter::GetStandardAllocationDriverData (
         static_assert(
             D3D10_DDI_BIND_MASK & D3D10_DDI_BIND_PRESENT,
             "BIND_PRESENT must be a member of BIND_MASK");
-        allocParams->m_bindFlags = D3D10_DDI_BIND_MASK; 
-        
+        allocParams->m_bindFlags = D3D10_DDI_BIND_MASK;
+
         allocParams->m_format = DxgiFormatFromD3dDdiFormat(surfData->Format);
         allocParams->m_sampleDesc.Count = 1;
         allocParams->m_sampleDesc.Quality = 0;
@@ -1919,7 +1919,7 @@ NTSTATUS RosKmAdapter::GetStandardAllocationDriverData (
         NT_ASSERT(surfData->Format == D3DDDIFMT_A8R8G8B8);
         allocParams->m_hwFormat = RosHwFormat::X8888;
         allocParams->m_hwSizeBytes = surfData->Width * surfData->Height * 4;
-        
+
         return STATUS_SUCCESS;
     }
     case D3DKMDT_STANDARDALLOCATION_SHADOWSURFACE:
@@ -1930,20 +1930,20 @@ NTSTATUS RosKmAdapter::GetStandardAllocationDriverData (
             surfData->Width,
             surfData->Height,
             surfData->Format);
-        
+
         allocParams->m_mip0Info.TexelWidth = surfData->Width;
         allocParams->m_mip0Info.TexelHeight = surfData->Height;
         allocParams->m_mip0Info.TexelDepth = 0;
         allocParams->m_mip0Info.PhysicalWidth = surfData->Width;
         allocParams->m_mip0Info.PhysicalHeight = surfData->Height;
-        allocParams->m_mip0Info.PhysicalDepth = 0;        
-        
+        allocParams->m_mip0Info.PhysicalDepth = 0;
+
         // The shadow allocation does not get flipped directly
         static_assert(
             !(D3D10_DDI_BIND_PIPELINE_MASK & D3D10_DDI_BIND_PRESENT),
             "BIND_PRESENT must not be part of BIND_MASK");
-        allocParams->m_bindFlags = D3D10_DDI_BIND_PIPELINE_MASK; 
-        
+        allocParams->m_bindFlags = D3D10_DDI_BIND_PIPELINE_MASK;
+
         allocParams->m_format = DxgiFormatFromD3dDdiFormat(surfData->Format);
         allocParams->m_sampleDesc.Count = 1;
         allocParams->m_sampleDesc.Quality = 0;
@@ -1959,7 +1959,7 @@ NTSTATUS RosKmAdapter::GetStandardAllocationDriverData (
         NT_ASSERT(surfData->Format == D3DDDIFMT_A8R8G8B8);
         allocParams->m_hwFormat = RosHwFormat::X8888;
         allocParams->m_hwSizeBytes = surfData->Width * surfData->Height * 4;
-        
+
         Args->pCreateShadowSurfaceData->Pitch = surfData->Width * 4;
         return STATUS_SUCCESS;
     }
@@ -1999,7 +1999,7 @@ NTSTATUS RosKmAdapter::SetPalette (const DXGKARG_SETPALETTE* /*SetPalettePtr*/)
 {
     PAGED_CODE();
     VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-    
+
     ROS_LOG_ASSERTION("Not implemented.");
     return STATUS_NOT_IMPLEMENTED;
 }
@@ -2011,7 +2011,7 @@ NTSTATUS RosKmAdapter::SetPointerPosition (
 {
     PAGED_CODE();
     VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-    
+
     NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
     return m_display.SetPointerPosition(SetPointerPositionPtr);
 }
@@ -2023,7 +2023,7 @@ NTSTATUS RosKmAdapter::SetPointerShape (
 {
     PAGED_CODE();
     VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-    
+
     NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
     return m_display.SetPointerShape(SetPointerShapePtr);
 }
@@ -2117,7 +2117,7 @@ NTSTATUS RosKmAdapter::GetScanLine (DXGKARG_GETSCANLINE* /*GetScanLinePtr*/)
 {
     PAGED_CODE();
     VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-    
+
     ROS_LOG_ASSERTION("Not implemented");
     return STATUS_NOT_IMPLEMENTED;
 }
@@ -2130,7 +2130,7 @@ NTSTATUS RosKmAdapter::ControlInterrupt (
 {
     PAGED_CODE();
     VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-    
+
     NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
     return m_display.ControlInterrupt(InterruptType, EnableInterrupt);
 }

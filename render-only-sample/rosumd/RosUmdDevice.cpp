@@ -591,6 +591,37 @@ HRESULT RosUmdDevice::SetDisplayMode(
     return S_OK;
 }
 
+HRESULT RosUmdDevice::Present(DXGI_DDI_ARG_PRESENT* pPresentData)
+{
+    assert(this == CastFrom(pPresentData->hDevice));
+    
+    D3DDDICB_PRESENT args = {};
+    
+    // Get the allocation for the source resource
+    auto pSrcResource = reinterpret_cast<RosUmdResource*>(pPresentData->hSurfaceToPresent);
+    
+    // we only handle a single subresource for now
+    assert(pPresentData->SrcSubResourceIndex == 0);
+    assert(pSrcResource->m_hKMAllocation);
+    args.hSrcAllocation = pSrcResource->m_hKMAllocation;
+    
+    // hDstResource can be null
+    if (pPresentData->hDstResource)
+    {
+        auto pDstResource = reinterpret_cast<RosUmdResource*>(pPresentData->hDstResource);
+        
+        // we only handle a single subresource for now
+        assert(pPresentData->DstSubResourceIndex == 0);
+        assert(pDstResource->m_hKMAllocation);
+        args.hDstAllocation = pDstResource->m_hKMAllocation;
+    }
+    
+    args.hContext = m_hContext;
+    args.BroadcastContextCount = 0;
+    
+    return m_pMSKTCallbacks->pfnPresentCb(m_hRTDevice.handle, &args);
+}
+
 //
 // User mode call backs
 //
@@ -1013,7 +1044,7 @@ void RosUmdDevice::SetRasterizerState(RosUmdRasterizerState * pRasterizerState)
 
 void RosUmdDevice::SetScissorRects(UINT NumScissorRects, UINT ClearScissorRects, const D3D10_DDI_RECT *pRects)
 {
-    assert((NumScissorRects + ClearScissorRects) == 1);
+    assert((NumScissorRects + ClearScissorRects) <= 1);
     if (NumScissorRects)
     {
         m_scissorRectSet = true;

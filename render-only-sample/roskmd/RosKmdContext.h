@@ -26,7 +26,7 @@ public:
         DdiCreateContext(
             IN_CONST_HANDLE                 hDevice,
             INOUT_PDXGKARG_CREATECONTEXT    pCreateContext);
-        
+
     static NTSTATUS
         __stdcall
         DdiDestroyContext(
@@ -68,15 +68,16 @@ public:
         return rosKmContext;
     }
 
-public:
-
-    NTSTATUS
-        Present(
-            INOUT_PDXGKARG_PRESENT  pPresent);
-
     NTSTATUS
         RenderKm(
             INOUT_PDXGKARG_RENDER   pRender);
+
+public: // PAGED
+
+    _Check_return_
+    _Function_class_DXGK_(DXGKDDI_PRESENT)
+    _IRQL_requires_(PASSIVE_LEVEL)
+    NTSTATUS Present (INOUT_PDXGKARG_PRESENT Args);
 
 private:
 

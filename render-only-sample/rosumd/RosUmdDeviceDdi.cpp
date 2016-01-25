@@ -1442,6 +1442,21 @@ void APIENTRY RosUmdDeviceDdi::DdiDynamicConstantBufferUnmap(
     RosUmdLogging::Exit(__FUNCTION__);
 }
 
+HRESULT APIENTRY RosUmdDeviceDdi::Present(DXGI_DDI_ARG_PRESENT* pPresent)
+{
+	RosUmdLogging::Entry(__FUNCTION__);
+    
+    RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(pPresent->hDevice);
+    HRESULT hr = pRosUmdDevice->Present(pPresent);
+    if (FAILED(hr))
+    {
+        pRosUmdDevice->SetError(hr);
+    }
+    
+    RosUmdLogging::Exit(__FUNCTION__);
+    return hr;
+}
+
 HRESULT APIENTRY RosUmdDeviceDdi::SetDisplayMode(
     DXGI_DDI_ARG_SETDISPLAYMODE* pDisplayModeData)
 {

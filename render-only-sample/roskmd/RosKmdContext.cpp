@@ -10,6 +10,7 @@
 #include "RosGpuCommand.h"
 #include "RosKmdGlobal.h"
 #include "RosKmdUtil.h"
+#include "Vc4Common.h"
 
 NTSTATUS
 __stdcall
@@ -194,15 +195,6 @@ RosKmContext::DdiDestroyContext(
 }
 
 NTSTATUS
-RosKmContext::Present(
-    INOUT_PDXGKARG_PRESENT  pPresent)
-{
-    pPresent;
-
-    return STATUS_SUCCESS;
-}
-
-NTSTATUS
 RosKmContext::RenderKm(
     INOUT_PDXGKARG_RENDER   pRender)
 {
@@ -211,3 +203,27 @@ RosKmContext::RenderKm(
     NT_ASSERT(FALSE);
     return STATUS_SUCCESS;
 }
+
+VC4_PAGED_SEGMENT_BEGIN; //===================================================
+
+_Use_decl_annotations_
+NTSTATUS RosKmContext::Present (DXGKARG_PRESENT* Args)
+{
+    PAGED_CODE();
+    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    ROS_LOG_ASSERTION(
+        "Kernel-mode DxgkDdiPresent should not be called in direct-flip case! (Flags=%s %s %s %s %s %s %s %s)",
+        Args->Flags.Blt ? "Blt" : "",
+        Args->Flags.ColorFill ? "ColorFill" : "",
+        Args->Flags.Flip ? "Flip" : "",
+        Args->Flags.FlipWithNoWait ? "FlipWithNoWait" : "",
+        Args->Flags.SrcColorKey ? "SrcColorKey" : "",
+        Args->Flags.DstColorKey ? "DstColorKey" : "",
+        Args->Flags.LinearToSrgb ? "LinearToSrgb" : "",
+        Args->Flags.Rotate ? "Rotate" : "");
+
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+VC4_PAGED_SEGMENT_END; //=====================================================

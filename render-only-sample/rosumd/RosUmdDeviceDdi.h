@@ -63,7 +63,7 @@ public:
     static void APIENTRY DdiSetViewports(D3D10DDI_HDEVICE, UINT, UINT, const D3D10_DDI_VIEWPORT*);
     static void APIENTRY DdiIaSetTopology(D3D10DDI_HDEVICE, D3D10_DDI_PRIMITIVE_TOPOLOGY);
 
-    static void APIENTRY SetPredication_Default(D3D10DDI_HDEVICE, D3D10DDI_HQUERY, BOOL) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
+    static void APIENTRY SetPredication_Default(D3D10DDI_HDEVICE, D3D10DDI_HQUERY, BOOL) { RosUmdLogging::Call(__FUNCTION__); /*__debugbreak();*/ }
     static void APIENTRY SetTextFilter_Default(D3D10DDI_HDEVICE, UINT, UINT) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY ClearUnorderedAccessViewUint_Default(D3D10DDI_HDEVICE, D3D11DDI_HUNORDEREDACCESSVIEW, const UINT[4]) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY ClearUnorderedAccessViewFloat_Default(D3D10DDI_HDEVICE, D3D11DDI_HUNORDEREDACCESSVIEW, const FLOAT[4]) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
@@ -217,7 +217,7 @@ public:
     static void APIENTRY DdiDestroyDevice(D3D10DDI_HDEVICE);
 
     //DXGI DDI table entry points:
-    static HRESULT APIENTRY Present(DXGI_DDI_ARG_PRESENT*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak();  return S_OK; }
+    static HRESULT APIENTRY Present(DXGI_DDI_ARG_PRESENT*);
     static HRESULT APIENTRY RotateResourceIdentities(DXGI_DDI_ARG_ROTATE_RESOURCE_IDENTITIES*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak();  return S_OK; }
     static HRESULT APIENTRY GetGammaCaps(DXGI_DDI_ARG_GET_GAMMA_CONTROL_CAPS*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak();  return S_OK; }
     static HRESULT APIENTRY SetDisplayMode(DXGI_DDI_ARG_SETDISPLAYMODE*);

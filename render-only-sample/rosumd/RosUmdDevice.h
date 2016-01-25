@@ -106,6 +106,7 @@ public:
     void Render(D3DDDICB_RENDER * pRender);
     void DestroyContext(D3DDDICB_DESTROYCONTEXT * pDestroyContext);
 
+    HRESULT Present(DXGI_DDI_ARG_PRESENT* pPresentData);
     HRESULT SetDisplayMode(DXGI_DDI_ARG_SETDISPLAYMODE* pDisplayModeData);
 
     //
