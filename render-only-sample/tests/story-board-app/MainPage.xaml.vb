@@ -31,8 +31,7 @@ Public NotInheritable Class MainPage
         While True
             Try
 
-
-                Dim str As StorageFile = Await Windows.Storage.ApplicationData.Current.LocalFolder.GetFileAsync("IMG_0435.JPG")
+                Dim str As StorageFile = Await Windows.ApplicationModel.Package.Current.InstalledLocation.GetFileAsync("Assets\IMG_0435.Jpg")
 
                 Dim b As New BitmapImage
 
