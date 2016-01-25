@@ -1,3 +1,8 @@
+#include "precomp.h"
+
+#include "RosKmdLogging.h"
+#include "RosKmdDevice.tmh"
+
 #include "RosKmdAdapter.h"
 #include "RosKmdDevice.h"
 #include "RosKmdAllocation.h"
@@ -83,6 +88,9 @@ RosKmDevice::DdiOpenAllocation(
     RosKmdDeviceAllocation * pRosKmdDeviceAllocation = (RosKmdDeviceAllocation *)ExAllocatePoolWithTag(NonPagedPoolNx, sizeof(RosKmdDeviceAllocation), 'ROSD');
     if (!pRosKmdDeviceAllocation)
     {
+        ROS_LOG_LOW_MEMORY(
+            "Failed to allocate memory for RosKmdDeviceAllocation structure. (sizeof(RosKmdDeviceAllocation)=%d)",
+            sizeof(RosKmdDeviceAllocation));
         return STATUS_NO_MEMORY;
     }
 

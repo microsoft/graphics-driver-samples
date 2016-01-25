@@ -17,6 +17,12 @@
 
 #include "RosUmdResource.h"
 
+#include "RosUmdShader.h"
+
+#include "RosUmdBlendState.h"
+#include "RosUmdRasterizerState.h"
+#include "RosUmdDepthStencilState.h"
+
 #ifndef PAGE_SIZE
 #define PAGE_SIZE 4096
 #endif
@@ -24,11 +30,9 @@
 class RosUmdAdapter;
 class RosUmdRenderTargetView;
 class RosUmdDepthStencilView;
-class RosUmdBlendState;
 class RosUmdShader;
 class RosUmdElementLayout;
-class RosUmdDepthStencilState;
-class RosUmdRasterizerState;
+
 class RosUmdSampler;
 class RosUmdShaderResourceView;
 
@@ -70,7 +74,8 @@ public:
     void CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResource, D3D10DDI_HRESOURCE hResource, D3D10DDI_HRTRESOURCE hRTResource);
     void DestroyResource(RosUmdResource * pResource);
     void ResourceCopy(RosUmdResource *pDestinationResource, RosUmdResource * pSourceResource);
-
+    void ConstantBufferUpdateSubresourceUP(RosUmdResource *pDestinationResource, UINT DstSubresource, _In_opt_ const D3D10_DDI_BOX *pDstBox, _In_ const VOID *pSysMemUP, UINT RowPitch, UINT DepthPitch, UINT CopyFlags);
+    
     void CreatePixelShader(const UINT* pCode, D3D10DDI_HSHADER hShader, D3D10DDI_HRTSHADER hRTShader, const D3D11_1DDIARG_STAGE_IO_SIGNATURES* pSignatures);
     void CreateVertexShader(const UINT* pCode, D3D10DDI_HSHADER hShader, D3D10DDI_HRTSHADER hRTShader, const D3D11_1DDIARG_STAGE_IO_SIGNATURES* pSignatures);
     void CreateGeometryShader(const UINT* pCode, D3D10DDI_HSHADER hShader, D3D10DDI_HRTSHADER hRTShader, const D3D11_1DDIARG_STAGE_IO_SIGNATURES* pSignatures);
@@ -86,7 +91,7 @@ public:
 
     void CheckFormatSupport(DXGI_FORMAT inFormat, UINT* pOutFormatSupport);
     void CheckCounterInfo(D3D10DDI_COUNTER_INFO* pOutCounterInfo);
-    void CheckMultisampleQualityLevels(DXGI_FORMAT inFormat, UINT inSampleCount, UINT* pOutNumQualityLevels);
+    void CheckMultisampleQualityLevels(DXGI_FORMAT inFormat, UINT inSampleCount, UINT inFlags, UINT* pOutNumQualityLevels);
 
 public:
 
@@ -195,6 +200,7 @@ public:
     void SetElementLayout(RosUmdElementLayout * pElementLayout);
     void SetDepthStencilState(RosUmdDepthStencilState * pDepthStencilState, UINT stencilRef);
     void SetRasterizerState(RosUmdRasterizerState * pRasterizerState);
+    void SetScissorRects(UINT NumScissorRects, UINT ClearScissorRects, const D3D10_DDI_RECT *pRects);
 
 
     RosUmdResource *                m_vertexBuffers[kMaxVertexBuffers];
@@ -254,6 +260,9 @@ public:
 
     RosUmdRasterizerState *         m_rasterizerState;
 
+    BOOL                            m_scissorRectSet;
+    D3D10_DDI_RECT                  m_scissorRect;
+
 public:
 
     void CreateInternalBuffer(RosUmdResource * pRes, UINT size);
@@ -265,6 +274,18 @@ private:
     //
 
     void RefreshPipelineState(UINT vertexOffset);
+
+#if VC4
+
+    void WriteUniforms(
+        BOOLEAN                     bPSUniform,
+        VC4_UNIFORM_FORMAT *        pUniformEntries,
+        UINT                        numUniformEntries,
+        BYTE *                     &pCurCommand,
+        UINT                       &curCommandOffset,
+        D3DDDI_PATCHLOCATIONLIST * &pCurPatchLocation);
+
+#endif
 
 public:
     void WriteEpilog();

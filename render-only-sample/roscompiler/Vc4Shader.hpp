@@ -18,7 +18,32 @@ typedef enum _VC4_UNIFORM_TYPE
     VC4_UNIFORM_TYPE_SAMPLER_CONFIG_P2,
     VC4_UNIFORM_TYPE_VIEWPORT_SCALE_X,
     VC4_UNIFORM_TYPE_VIEWPORT_SCALE_Y,
+    VC4_UNIFORM_TYPE_DEPTH_SCALE,
+    VC4_UNIFORM_TYPE_DEPTH_OFFSET,
+    VC4_UNIFORM_TYPE_BLEND_FACTOR_R,
+    VC4_UNIFORM_TYPE_BLEND_FACTOR_B,
+    VC4_UNIFORM_TYPE_BLEND_FACTOR_G,
+    VC4_UNIFORM_TYPE_BLEND_FACTOR_A,
+    VC4_UNIFORM_TYPE_BLEND_SAMPLE_MASK, // 0xRRGGBBAA as 8a.8b.8c.8d.
 } VC4_UNIFORM_TYPE;
+
+_declspec(selectany) TCHAR *UniformTypeFriendlyName[] =
+{
+    TEXT("VC4_UNIFORM_TYPE_INVALID"),
+    TEXT("VC4_UNIFORM_TYPE_USER_CONSTANT"),
+    TEXT("VC4_UNIFORM_TYPE_SAMPLER_CONFIG_P0"),
+    TEXT("VC4_UNIFORM_TYPE_SAMPLER_CONFIG_P1"),
+    TEXT("VC4_UNIFORM_TYPE_SAMPLER_CONFIG_P2"),
+    TEXT("VC4_UNIFORM_TYPE_VIEWPORT_SCALE_X"),
+    TEXT("VC4_UNIFORM_TYPE_VIEWPORT_SCALE_Y"),
+    TEXT("VC4_UNIFORM_TYPE_DEPTH_SCALE"),
+    TEXT("VC4_UNIFORM_TYPE_DEPTH_OFFSET"),
+    TEXT("VC4_UNIFORM_TYPE_BLEND_FACTOR_R"),
+    TEXT("VC4_UNIFORM_TYPE_BLEND_FACTOR_B"),
+    TEXT("VC4_UNIFORM_TYPE_BLEND_FACTOR_G"),
+    TEXT("VC4_UNIFORM_TYPE_BLEND_FACTOR_A"),
+    TEXT("VC4_UNIFORM_TYPE_BLEND_SAMPLE_MASK"),
+};
 
 struct VC4_UNIFORM_FORMAT
 {
@@ -41,7 +66,7 @@ struct VC4_UNIFORM_FORMAT
             UINT32 samplerIndex;  // sampler slot
             UINT32 resourceIndex; // resource binding slot.
             UINT32 samplerConfiguration; // default sampler configuration embeded in shader code.
-        } sampilerConfiguration;
+        } samplerConfiguration;
 
         UINT32 value[4];
     };
@@ -192,8 +217,21 @@ public:
 
     void SetShaderCode(const UINT *pShaderCode)
     {
+        assert(pShaderCode);
         HLSLParser.SetShader(pShaderCode);
         uShaderType = HLSLParser.ShaderType();
+    }
+
+    void SetDownstreamShaderCode(const UINT *pShaderCode)
+    {
+        assert(pShaderCode);
+        HLSLDownstreamParser.SetShader(pShaderCode);
+    }
+
+    void SetUpstreamShaderCode(const UINT *pShaderCode)
+    {
+        assert(pShaderCode);
+        HLSLUpstreamParser.SetShader(pShaderCode);
     }
 
     void SetShaderStorage(Vc4ShaderStorage *Storage, Vc4ShaderStorage *Uniform)
@@ -219,6 +257,16 @@ public:
         pOutputSignatureEntries;
     }
 
+    uint32_t GetInputCount()
+    {
+        return cInput;
+    }
+
+    uint32_t GetOutputCount()
+    {
+        return cOutput;
+    }
+
     HRESULT Translate_VS(); // vertex shader
     HRESULT Translate_PS(); // Fragmaent shader
 
@@ -230,31 +278,34 @@ private:
         this->CurrentUniform = Uniform;
     }
 
-    boolean HLSL_GetShaderInstruction(CInstruction &Inst)
+    boolean HLSL_GetShaderInstruction(CShaderCodeParser &Parser, CInstruction &Inst)
     {
-        if (!HLSLParser.EndOfShader())
+        if (!Parser.EndOfShader())
         {
-            HLSLParser.ParseInstruction(&Inst);
+            Parser.ParseInstruction(&Inst);
             return true;
         }
         return false;
     }
     
-    boolean HLSL_PeekShaderInstructionOpCode(D3D10_SB_OPCODE_TYPE &OpCode)
+    boolean HLSL_PeekShaderInstructionOpCode(CShaderCodeParser &Parser, D3D10_SB_OPCODE_TYPE &OpCode)
     {
-          if (!HLSLParser.EndOfShader())
+        if (!Parser.EndOfShader())
         {
-            OpCode = HLSLParser.PeekNextInstructionOpCode();
+            OpCode = Parser.PeekNextInstructionOpCode();
             return true;
         }
         return false;
     }
 
     void HLSL_ParseDecl();
+    void HLSL_Link_PS();
 
     void Emit_Prologue_VS();
     void Emit_Prologue_PS();
     void Emit_Epilogue();
+
+    void Emit_Blending_PS();
     void Emit_ShaderOutput_VS(boolean bVS);
 
     void Emit_Mad(CInstruction &Inst);
@@ -560,6 +611,49 @@ private:
         return S_OK;
     }
 
+public:
+
+    static void xprintf(const TCHAR *pStr, ...)
+    {
+        TCHAR sz[512];
+
+        va_list ap;
+        va_start(ap, pStr);
+        _vstprintf_s(sz, _countof(sz), pStr, ap);
+        va_end(ap);
+
+        OutputDebugString(sz);
+    }
+
+    static void DumpUniform(const VC4_UNIFORM_FORMAT *pUniform, uint32_t c, TCHAR *pTitle)
+    {
+        c /= sizeof(VC4_UNIFORM_FORMAT);
+
+        xprintf(TEXT("----------- %s ----------\n"), pTitle);
+        for (uint8_t i = 0; i < c; i++, pUniform++)
+        {
+            xprintf(TEXT("%d : %s\n"), i, UniformTypeFriendlyName[pUniform->Type]);
+            switch (pUniform->Type)
+            {
+            case VC4_UNIFORM_TYPE_USER_CONSTANT:
+                xprintf(TEXT("\t bufferSlot = %d, bufferOffset = %d\n"), 
+                    pUniform->userConstant.bufferSlot, 
+                    pUniform->userConstant.bufferOffset);
+                break;
+            case VC4_UNIFORM_TYPE_SAMPLER_CONFIG_P0:
+            case VC4_UNIFORM_TYPE_SAMPLER_CONFIG_P1:
+            case VC4_UNIFORM_TYPE_SAMPLER_CONFIG_P2:
+                xprintf(TEXT("\t samplerIndex = %d, resourceIndex = %d, samplerConfiguration = %x\n"),
+                    pUniform->samplerConfiguration.samplerIndex,
+                    pUniform->samplerConfiguration.resourceIndex,
+                    pUniform->samplerConfiguration.samplerConfiguration);
+                break;
+            default:
+                break;
+            }
+        }
+    }
+
 private:
 
     RosCompiler *UmdCompiler;
@@ -567,6 +661,8 @@ private:
     D3D10_SB_TOKENIZED_PROGRAM_TYPE uShaderType;
 
     CShaderCodeParser HLSLParser;
+    CShaderCodeParser HLSLUpstreamParser;
+    CShaderCodeParser HLSLDownstreamParser;
 
     Vc4ShaderStorage *CurrentStorage;
     Vc4ShaderStorage *CurrentUniform;

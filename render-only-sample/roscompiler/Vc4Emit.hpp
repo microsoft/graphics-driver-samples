@@ -34,6 +34,7 @@ struct Vc4RegisterFlags
             uint32_t packed : 1;
             uint32_t immediate : 1;
             uint32_t uniform : 1;
+            uint32_t linkage : 1;
         };
         uint32_t value;
     };
@@ -188,7 +189,7 @@ public:
     {
         assert(dst.flags.valid);
         assert(src.flags.valid && (src.flags.immediate == false));
-        assert(this->Type == vc4_alu);
+        assert(this->Type == vc4_alu || this->Type == vc4_alu_small_immediate);
         this->ALU.op_add = opcode;
         this->ALU.cond_add = cond;
         this->ALU.waddr_add = dst.addr;
@@ -335,7 +336,7 @@ public:
     {
         assert(dst.flags.valid);
         assert(src.flags.valid && (src.flags.immediate == false));
-        assert(this->Type == vc4_alu);
+        assert(this->Type == vc4_alu || this->Type == vc4_alu_small_immediate);
         this->ALU.op_mul = opcode;
         this->ALU.cond_mul = cond;
         this->ALU.waddr_mul = dst.addr;

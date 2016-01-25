@@ -61,5 +61,52 @@ ConvertD3D11DepthComparisonFunc(
     return (VC4DepthTestFunc)(comparisonFunc - 1);
 }
 
+VC4TextureWrap
+ConvertD3D11TextureAddressMode(
+    D3D10_DDI_TEXTURE_ADDRESS_MODE  texAddressMode)
+{
+    static VC4TextureWrap vc4TextureWraps[6] =
+    {
+        VC4TextureWrap(0xFF),
+        VC4_TEX_REPEAT,
+        VC4_TEX_MIRROR,
+        VC4_TEX_CLAMP,
+        VC4_TEX_BORDER,
+        VC4_TEX_MIRROR
+    };
+
+    return vc4TextureWraps[texAddressMode];
+}
+
+VC4TextureMagFilter
+ConvertD3D11TextureMagFilter(
+    D3D10_DDI_FILTER    texFilter)
+{
+    return (texFilter & 0x4) ? VC4_TEX_MAG_LINEAR : VC4_TEX_MAG_NEAREST;
+}
+
+VC4TextureMinFilter
+ConvertD3D11TextureMinFilter(
+    D3D10_DDI_FILTER    texFilter,
+    BOOLEAN             bClampToLOD0)
+{
+    if (bClampToLOD0)
+    {
+        return (texFilter & 0x10) ? VC4_TEX_MIN_LINEAR : VC4_TEX_MIN_NEAREST;
+    }
+    else
+    {
+        static VC4TextureMinFilter vc4TextureMinFilters[4] =
+        {
+            VC4_TEX_MIN_NEAR_MIP_NEAR,
+            VC4_TEX_MIN_NEAR_MIP_LIN,
+            VC4_TEX_MIN_LIN_MIP_NEAR,
+            VC4_TEX_MIN_LIN_MIP_LIN,
+        };
+
+        return vc4TextureMinFilters[((texFilter & 0x10) >> 3) | (texFilter & 0x1)];
+    }
+}
+
 #endif
 

@@ -578,9 +578,9 @@ typedef struct _VC4GLShaderStateRecord
     {
         struct
         {
-            USHORT  EnableClipping                  : 1;
-            USHORT  PointSizeIncluded               : 1;
             USHORT  FragmentShaderIsSingleThreaded  : 1;
+            USHORT  PointSizeIncluded               : 1;
+            USHORT  EnableClipping                  : 1;
         };
         USHORT      UShort1;
     };
@@ -958,6 +958,30 @@ typedef struct _VC4TextureType
         UINT        TextureType;
     };
 } VC4TextureType;
+
+typedef enum _VC4TextureWrap
+{
+    VC4_TEX_REPEAT  = 0,
+    VC4_TEX_CLAMP   = 1,
+    VC4_TEX_MIRROR  = 2,
+    VC4_TEX_BORDER  = 3
+} VC4TextureWrap;
+
+typedef enum _VC4TextureMagFilter
+{
+    VC4_TEX_MAG_LINEAR  = 0,
+    VC4_TEX_MAG_NEAREST = 1
+} VC4TextureMagFilter;
+
+typedef enum _VC4TextureMinFilter
+{
+    VC4_TEX_MIN_LINEAR          = 0,
+    VC4_TEX_MIN_NEAREST         = 1,
+    VC4_TEX_MIN_NEAR_MIP_NEAR   = 2,
+    VC4_TEX_MIN_NEAR_MIP_LIN    = 3,
+    VC4_TEX_MIN_LIN_MIP_NEAR    = 4,
+    VC4_TEX_MIN_LIN_MIP_LIN     = 5,
+} VC4TextureMinFilter;
 
 //
 // Constants

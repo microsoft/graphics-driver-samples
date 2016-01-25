@@ -1,3 +1,8 @@
+#include "precomp.h"
+
+#include "RosKmdLogging.h"
+#include "RosKmdAcpi.tmh"
+
 #include "RosKmdAcpi.h"
 
 RosKmAcpiReader::RosKmAcpiReader(RosKmAdapter* pAdapter, ULONG DeviceUid) :
@@ -50,7 +55,7 @@ NTSTATUS RosKmAcpiReader::EvalAcpiMethod()
         {
             break;
         }
-    } 
+    }
 
     return Status;
 }

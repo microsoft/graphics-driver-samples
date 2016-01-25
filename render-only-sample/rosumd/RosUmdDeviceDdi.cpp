@@ -23,9 +23,9 @@
 // Ddi Tables
 //
 
-const D3D11_1DDI_DEVICEFUNCS RosUmdDeviceDdi::s_deviceFuncs11_1 =
+const D3DWDDM1_3DDI_DEVICEFUNCS RosUmdDeviceDdi::s_deviceFuncsWDDM1_3 =
 {
-    RosUmdDeviceDdi::DefaultConstantBufferUpdateSubresourceUP11_1_Default,
+    RosUmdDeviceDdi::DdiConstantBufferUpdateSubresourceUP11_1,
     RosUmdDeviceDdi::DdiVsSetConstantBuffers11_1,
     RosUmdDeviceDdi::DdiPSSetShaderResources,
     RosUmdDeviceDdi::DdiPsSetShader,
@@ -69,7 +69,7 @@ const D3D11_1DDI_DEVICEFUNCS RosUmdDeviceDdi::s_deviceFuncs11_1 =
     RosUmdDeviceDdi::SOSetTargets_Default,
     RosUmdDeviceDdi::DrawAuto_Dirty,
     RosUmdDeviceDdi::DdiSetViewports,
-    RosUmdDeviceDdi::SetScissorRects_Default,
+    RosUmdDeviceDdi::DdiSetScissorRects,
     RosUmdDeviceDdi::DdiClearRenderTargetView,
     RosUmdDeviceDdi::DdiClearDepthStencilView,
     RosUmdDeviceDdi::SetPredication_Default,
@@ -184,9 +184,18 @@ const D3D11_1DDI_DEVICEFUNCS RosUmdDeviceDdi::s_deviceFuncs11_1 =
     RosUmdDeviceDdi::DynamicConstantBufferMapNoOverwrite_Default,
     NULL, // PFND3D11_1DDI_CHECKDIRECTFLIPSUPPORT
     RosUmdDeviceDdi::ClearView_Default,
+    NULL, // PFND3DWDDM1_3DDI_UPDATETILEMAPPINGS 
+    NULL, // PFND3DWDDM1_3DDI_COPYTILEMAPPINGS
+    NULL, // PFND3DWDDM1_3DDI_COPYTILES
+    NULL, // PFND3DWDDM1_3DDI_UPDATETILES
+    NULL, // PFND3DWDDM1_3DDI_TILEDRESOURCEBARRIER
+    NULL, // PFND3DWDDM1_3DDI_GETMIPPACKING
+    NULL, // PFND3DWDDM1_3DDI_RESIZETILEPOOL
+    NULL, // PFND3DWDDM1_3DDI_SETMARKER
+    NULL, // PFND3DWDDM1_3DDI_SETMARKERMODE
 };
 
-const DXGI1_2_DDI_BASE_FUNCTIONS RosUmdDeviceDdi::s_dxgiDeviceFuncs3 =
+const DXGI1_3_DDI_BASE_FUNCTIONS RosUmdDeviceDdi::s_dxgiDeviceFuncs4 =
 {
     NULL, // RosUmdDeviceDdi::Present,          //Present
     NULL, // RosUmdDeviceDdi::GetGammaCaps,     //GetGammaCaps
@@ -199,6 +208,13 @@ const DXGI1_2_DDI_BASE_FUNCTIONS RosUmdDeviceDdi::s_dxgiDeviceFuncs3 =
     NULL, // RosUmdDeviceDdi::Blt1,
     NULL, // pfnOfferResources
     NULL, // pfnReclaimResources
+    NULL, // pfnGetMultiplaneOverlayCaps
+    NULL, // pfnGetMultiplaneOverlayGroupCaps
+    NULL, // pfnReserved1
+    NULL, // pfnPresentMultiplaneOverlay
+    NULL, // pfnReserved2
+    NULL, // pfnPresent1
+    NULL, // pfnCheckPresentDurationSupport
 };
 
 //
@@ -320,6 +336,34 @@ void APIENTRY RosUmdDeviceDdi::DdiResourceCopy(
     RosUmdLogging::Exit(__FUNCTION__);
 }
 
+void APIENTRY RosUmdDeviceDdi::DdiConstantBufferUpdateSubresourceUP11_1(
+    D3D10DDI_HDEVICE   hDevice,
+    D3D10DDI_HRESOURCE hDstResource,
+    UINT               DstSubresource,
+    _In_opt_ const D3D10_DDI_BOX  *pDstBox,
+    _In_     const VOID           *pSysMemUP,
+    UINT               RowPitch,
+    UINT               DepthPitch,
+    UINT               CopyFlags)
+{
+    RosUmdLogging::Entry(__FUNCTION__);
+
+    RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
+    RosUmdResource * pResource = (RosUmdResource *)hDstResource.pDrvPrivate;
+
+    try
+    {
+       pRosUmdDevice->ConstantBufferUpdateSubresourceUP(pResource, DstSubresource, pDstBox, pSysMemUP, RowPitch, DepthPitch, CopyFlags);
+    }
+
+    catch (std::exception & e)
+    {
+        pRosUmdDevice->SetException(e);
+    }
+
+    RosUmdLogging::Exit(__FUNCTION__);
+}
+
 void APIENTRY RosUmdDeviceDdi::DdiStagingResourceMap(
     D3D10DDI_HDEVICE hDevice,
     D3D10DDI_HRESOURCE hResource,
@@ -419,12 +463,13 @@ void APIENTRY RosUmdDeviceDdi::DdiCheckMultisampleQualityLevels(
     D3D10DDI_HDEVICE hDevice,
     DXGI_FORMAT Format,
     UINT SampleCount,
+    UINT Flags,
     UINT* pNumQualityLevels)
 {
     // RosUmdLogging::Call(__FUNCTION__);
 
     RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
-    pRosUmdDevice->CheckMultisampleQualityLevels(Format, SampleCount, pNumQualityLevels);
+    pRosUmdDevice->CheckMultisampleQualityLevels(Format, SampleCount, Flags, pNumQualityLevels);
 }
 
 SIZE_T APIENTRY RosUmdDeviceDdi::DdiCalcPrivateResourceSize(
@@ -483,6 +528,19 @@ void APIENTRY RosUmdDeviceDdi::DdiSetRasterizerState(
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     RosUmdRasterizerState * pRasterizerState = RosUmdRasterizerState::CastFrom(hRasterizerState);
     pDevice->SetRasterizerState(pRasterizerState);
+}
+
+void APIENTRY RosUmdDeviceDdi::DdiSetScissorRects(
+    _In_       D3D10DDI_HDEVICE hDevice,
+    _In_       UINT             NumScissorRects,
+    _In_       UINT             ClearScissorRects,
+    _In_ const D3D10_DDI_RECT   *pRects
+    )
+{
+    RosUmdLogging::Call(__FUNCTION__);
+
+    RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
+    pDevice->SetScissorRects(NumScissorRects, ClearScissorRects, pRects);
 }
 
 //

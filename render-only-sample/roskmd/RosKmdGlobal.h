@@ -17,6 +17,7 @@ public:
 
     static const size_t kMaxVideoMemorySize = 128 * 1024 * 1024;
 
+    static DRIVER_OBJECT* s_pDriverObject;
     static size_t s_videoMemorySize;
     static void * s_pVideoMemory;
     static PHYSICAL_ADDRESS s_videoMemoryPhysicalAddress;

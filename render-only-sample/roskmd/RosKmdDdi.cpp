@@ -1,5 +1,9 @@
-#include "RosKmd.h"
+#include "precomp.h"
 
+#include "RosKmdLogging.h"
+#include "RosKmdDdi.tmh"
+
+#include "RosKmd.h"
 #include "RosKmdAdapter.h"
 #include "RosKmdDevice.h"
 #include "RosKmdAllocation.h"

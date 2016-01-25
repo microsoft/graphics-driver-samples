@@ -6,6 +6,8 @@
 
 class RosUmdSampler
 {
+    friend class RosUmdDevice;
+
 public:
 
     RosUmdSampler(const D3D10_DDI_SAMPLER_DESC * desc, D3D10DDI_HRTSAMPLER & hRT) :

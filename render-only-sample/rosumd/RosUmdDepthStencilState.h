@@ -17,6 +17,11 @@ public:
     static RosUmdDepthStencilState* CastFrom(D3D10DDI_HDEPTHSTENCILSTATE);
     D3D10DDI_HDEPTHSTENCILSTATE CastTo() const;
 
+    const D3D10_DDI_DEPTH_STENCIL_DESC* GetDesc()
+    {
+        return &m_desc;
+    }
+
 private:
 
     D3D10_DDI_DEPTH_STENCIL_DESC m_desc;

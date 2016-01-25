@@ -58,7 +58,7 @@ public:
     static void APIENTRY PsSetConstantBuffers_Preamble(D3D10DDI_HDEVICE, UINT, UINT, const D3D10DDI_HRESOURCE*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY PsSetConstantBuffers11_1_Preamble(D3D10DDI_HDEVICE, UINT, UINT, const D3D10DDI_HRESOURCE*, const UINT*, const UINT*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY DdiSetRasterizerState(D3D10DDI_HDEVICE, D3D10DDI_HRASTERIZERSTATE);
-    static void APIENTRY SetScissorRects_Default(D3D10DDI_HDEVICE, UINT, UINT, const D3D10_DDI_RECT*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
+    static void APIENTRY DdiSetScissorRects(D3D10DDI_HDEVICE, UINT, UINT, const D3D10_DDI_RECT*);
 
     static void APIENTRY DdiSetViewports(D3D10DDI_HDEVICE, UINT, UINT, const D3D10_DDI_VIEWPORT*);
     static void APIENTRY DdiIaSetTopology(D3D10DDI_HDEVICE, D3D10_DDI_PRIMITIVE_TOPOLOGY);
@@ -96,7 +96,7 @@ public:
     static void APIENTRY DdiResourceCopy(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, D3D10DDI_HRESOURCE);
     static void APIENTRY ResourceResolveSubresource_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT, D3D10DDI_HRESOURCE, UINT, DXGI_FORMAT) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY DefaultConstantBufferUpdateSubresourceUP_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT, const D3D10_DDI_BOX*, const VOID*, UINT, UINT) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
-    static void APIENTRY DefaultConstantBufferUpdateSubresourceUP11_1_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT, const D3D10_DDI_BOX*, const VOID*, UINT, UINT, UINT) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
+    static void APIENTRY DdiConstantBufferUpdateSubresourceUP11_1(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT, const D3D10_DDI_BOX*, const VOID*, UINT, UINT, UINT);
     static void APIENTRY ResourceUpdateSubresourceUP_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT, const D3D10_DDI_BOX*, const VOID*, UINT, UINT) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY ResourceUpdateSubresourceUP11_1_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT, const D3D10_DDI_BOX*, const VOID*, UINT, UINT, UINT) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY CopyStructureCount_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT, D3D11DDI_HUNORDEREDACCESSVIEW) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
@@ -105,7 +105,7 @@ public:
     static void APIENTRY RelocateDeviceFuncs_Default(D3D10DDI_HDEVICE, D3D10DDI_DEVICEFUNCS*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY RelocateDeviceFuncs1_Default(D3D10DDI_HDEVICE, D3D10_1DDI_DEVICEFUNCS*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY RelocateDeviceFuncs11_Default(D3D10DDI_HDEVICE, D3D11DDI_DEVICEFUNCS*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
-    static void APIENTRY RelocateDeviceFuncs11_1_Default(D3D10DDI_HDEVICE, D3D11_1DDI_DEVICEFUNCS*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
+    static void APIENTRY RelocateDeviceFuncs11_1_Default(D3D10DDI_HDEVICE, D3DWDDM1_3DDI_DEVICEFUNCS*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY RelocateDeviceFuncsWDDM1_3_Default(D3D10DDI_HDEVICE, D3DWDDM1_3DDI_DEVICEFUNCS*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY RelocateDeviceFuncsWDDM2_0_Default(D3D10DDI_HDEVICE, D3DWDDM2_0DDI_DEVICEFUNCS*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static BOOL APIENTRY ResourceIsStagingBusy_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE) { RosUmdLogging::Call(__FUNCTION__); __debugbreak();  return 0; }
@@ -207,7 +207,7 @@ public:
     static void APIENTRY DestroyCommandList_Default(D3D10DDI_HDEVICE, D3D11DDI_HCOMMANDLIST) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
 
     static void APIENTRY DdiCheckFormatSupport(D3D10DDI_HDEVICE, DXGI_FORMAT, UINT*);
-    static void APIENTRY DdiCheckMultisampleQualityLevels(D3D10DDI_HDEVICE, DXGI_FORMAT, UINT, UINT*);
+    static void APIENTRY DdiCheckMultisampleQualityLevels(D3D10DDI_HDEVICE, DXGI_FORMAT, UINT, UINT, UINT*);
     static void APIENTRY CheckMultisampleQualityLevelsWDDM1_3_Default(D3D10DDI_HDEVICE, DXGI_FORMAT, UINT, UINT, UINT*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY DdiCheckCounterInfo(D3D10DDI_HDEVICE, D3D10DDI_COUNTER_INFO*);
     static void APIENTRY CheckCounter_Default(D3D10DDI_HDEVICE, D3D10DDI_QUERY, D3D10DDI_COUNTER_TYPE*, UINT*, LPSTR, UINT*, LPSTR, UINT*, LPSTR, UINT*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
@@ -266,7 +266,7 @@ public:
 
     static void APIENTRY ClearView_Default(D3D10DDI_HDEVICE, D3D11DDI_HANDLETYPE, VOID*, const FLOAT Color[4], const D3D10_DDI_RECT*, UINT) { Color; RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
 
-    static const D3D11_1DDI_DEVICEFUNCS s_deviceFuncs11_1;
-    static const DXGI1_2_DDI_BASE_FUNCTIONS s_dxgiDeviceFuncs3;
+    static const D3DWDDM1_3DDI_DEVICEFUNCS s_deviceFuncsWDDM1_3;
+    static const DXGI1_3_DDI_BASE_FUNCTIONS s_dxgiDeviceFuncs4;
 
 };

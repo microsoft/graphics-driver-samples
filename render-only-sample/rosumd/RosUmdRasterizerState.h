@@ -18,6 +18,11 @@ public:
     static RosUmdRasterizerState* CastFrom(D3D10DDI_HRASTERIZERSTATE);
     D3D10DDI_HRASTERIZERSTATE CastTo() const;
 
+    const D3D11_1_DDI_RASTERIZER_DESC *GetDesc()
+    {
+        return &m_desc;
+    }
+
 private:
 
     D3D11_1_DDI_RASTERIZER_DESC m_desc;

@@ -1,85 +1,109 @@
 #include <windows.h>
+#include <strsafe.h>
 #include <dxgi1_3.h>
 #include <d3d11.h>
 
+#include <wrl.h>
+#include <string>
 #include <stdio.h>
 #include <assert.h>
 
 #include <exception>
 
-class test_exception
+using namespace Microsoft::WRL;
+
+class wexception
 {
 public:
+    wexception (PCWSTR Message, HRESULT Hr = S_OK) noexcept : m_hr(Hr)
+    {
+        try {
+            m_message = Message;
+        } catch (const std::exception&) {
+            // string assignment operator can throw
+        }
+    }
 
-    test_exception(const char * inMessage, HRESULT inHr = S_OK) : m_message(inMessage), m_hr(inHr) { }
+    virtual ~wexception () {}
 
-    const char * m_message;
+    virtual PCWSTR wwhat () const { return m_message.c_str(); }
+
+    HRESULT HResult () const { return m_hr; }
+
+private:
+    std::wstring m_message;
     HRESULT m_hr;
 };
 
-bool FindAdapter(WCHAR * inDescription, IDXGIAdapter2 ** outAdapter2)
+class test_exception : public wexception
+{
+public:
+    test_exception (PCWSTR Message, HRESULT Hr = S_OK) : wexception(Message, Hr) {}
+};
+
+bool FindAdapter(PCWSTR inDescription, _COM_Outptr_ IDXGIAdapter2 ** outAdapter2)
 {
     assert(inDescription != NULL);
     assert(outAdapter2 != NULL);
 
     bool found = false;
-    IDXGIFactory2 * factory = NULL;
-    HRESULT hr = CreateDXGIFactory2(0, __uuidof(IDXGIFactory2), ((void **)&factory));
-
-    if (hr == S_OK)
-    {
-        UINT adapterIndex = 0;
-        bool done = false;
-
-        while (!done && !found) {
-
-            IDXGIAdapter1 * adapter = NULL;
-
-            hr = factory->EnumAdapters1(adapterIndex, &adapter);
-
-            if (hr == S_OK)
-            {
-                IDXGIAdapter2 * adapter2 = NULL;
-
-                hr = adapter->QueryInterface(__uuidof(IDXGIAdapter2), (void **)&adapter2);
-
-                if (hr == S_OK)
-                {
-                    DXGI_ADAPTER_DESC2 desc;
-                    adapter2->GetDesc2(&desc);
-
-                    found = (wcscmp(inDescription, desc.Description) == 0);
-
-                    if (found)
-                    {
-                        *outAdapter2 = adapter2;
-                    }
-                    else
-                    {
-                        adapter2->Release();
-                    }
-                }
-
-                adapter->Release();
-
-                adapterIndex++;
-            }
-            else
-            {
-                if (hr != DXGI_ERROR_NOT_FOUND)
-                {
-                    fprintf(stderr, "ERROR: Unexpected error enumerating adapters (hr = %lx)\n", hr);
-                }
-
-                done = true;
-            }
+    ComPtr<IDXGIFactory2> factory;
+    HRESULT hr = CreateDXGIFactory2(
+            0,
+            __uuidof(IDXGIFactory2),
+            reinterpret_cast<void**>(factory.GetAddressOf()));
+    if (FAILED(hr)) {
+        if (hr == HRESULT_FROM_WIN32(ERROR_GEN_FAILURE)) {
+            throw wexception(
+                L"Failed to create instance of IDXGIFactory2. "
+                L"The system must be rebooted before running rostest.exe.",
+                hr);
         }
 
-        factory->Release();
+        throw wexception(
+            L"Failed to create instance of IDXGIFactory2.",
+            hr);
     }
-    else
-    {
-        fprintf(stderr, "Unable to create DXGIFactory2\n");
+
+    UINT adapterIndex = 0;
+    bool done = false;
+
+    while (!done && !found) {
+
+        ComPtr<IDXGIAdapter1> adapter;
+
+        hr = factory->EnumAdapters1(adapterIndex, &adapter);
+
+        if (hr == S_OK)
+        {
+            ComPtr<IDXGIAdapter2> adapter2;
+            hr = adapter.As(&adapter2);
+            if (hr == S_OK)
+            {
+                DXGI_ADAPTER_DESC2 desc;
+                adapter2->GetDesc2(&desc);
+
+                found = (wcscmp(inDescription, desc.Description) == 0);
+
+                if (found)
+                {
+                    *outAdapter2 = adapter2.Detach();
+                }
+            }
+
+            adapterIndex++;
+        }
+        else
+        {
+            if (hr != DXGI_ERROR_NOT_FOUND)
+            {
+                throw wexception(
+                    L"Unexpected error enumerating adapters.",
+                    hr);
+            }
+
+            done = true;
+        }
     }
 
     return found;
@@ -98,7 +122,7 @@ bool CreateDevice(IDXGIAdapter2 * pAdapter2, ID3D11Device ** outDevice)
 
     if (!deviceCreated)
     {
-        fprintf(stderr, "ERROR: Unable to create device (hr = %lx)\n", hr);
+        fwprintf(stderr, L"ERROR: Unable to create device (hr = %lx)\n", hr);
     }
 
     return deviceCreated;
@@ -127,36 +151,32 @@ bool TestShaderConstantBuffer(ID3D11Device * pDevice)
     desc.StructureByteStride = 0;
     desc.Usage = D3D11_USAGE_DEFAULT;   // read and write access by GPU
 
-    ID3D11Buffer * pBufferA;
-
+    ComPtr<ID3D11Buffer> pBufferA;
     HRESULT hr = pDevice->CreateBuffer(&desc, &subresourceData, &pBufferA);
-
-    if (hr == S_OK)
+    if (FAILED(hr))
     {
-        ID3D11Buffer * pBufferB;
-
-        hr = pDevice->CreateBuffer(&desc, NULL, &pBufferB);
-
-        if (hr == S_OK)
-        {
-            ID3D11DeviceContext * pDeviceContext;
-
-            pDevice->GetImmediateContext(&pDeviceContext);
-
-            pDeviceContext->CopyResource(pBufferB, pBufferA);
-            pDeviceContext->Flush();
-            pDeviceContext->Release();
-
-            testPassed = true;
-            pBufferB->Release();
-        }
-
-        pBufferA->Release();
+        throw wexception(
+            L"Failed to create shader constant buffer.",
+            hr);
     }
-    else
+
+    ComPtr<ID3D11Buffer> pBufferB;
+    hr = pDevice->CreateBuffer(&desc, NULL, &pBufferB);
+    if (FAILED(hr))
     {
-        fprintf(stderr, "ERROR: failed to create shader constant buffer (hr = %lx)\n", hr);
+        throw wexception(
+            L"Failed to create shader constant buffer.",
+            hr);
     }
+
+
+    ComPtr<ID3D11DeviceContext> pDeviceContext;
+    pDevice->GetImmediateContext(&pDeviceContext);
+
+    pDeviceContext->CopyResource(pBufferB.Get(), pBufferA.Get());
+    pDeviceContext->Flush();
+
+    testPassed = true;
 
     return testPassed;
 }
@@ -196,24 +216,24 @@ bool TestTexture2D(ID3D11Device * pDevice)
     desc.CPUAccessFlags = 0;    // no CPU access
     desc.MiscFlags = 0;
 
-    ID3D11Texture2D * pTextureDefaultA = NULL;
-    ID3D11Texture2D * pTextureDefaultB = NULL;
-    ID3D11Texture2D * pTextureStagingA = NULL;
-    ID3D11Texture2D * pTextureStagingB = NULL;
-    ID3D11Texture2D * pTextureStagingC = NULL;
-    ID3D11DeviceContext * pDeviceContext = NULL;
+    ComPtr<ID3D11Texture2D> pTextureDefaultA;
+    ComPtr<ID3D11Texture2D> pTextureDefaultB;
+    ComPtr<ID3D11Texture2D> pTextureStagingA;
+    ComPtr<ID3D11Texture2D> pTextureStagingB;
+    ComPtr<ID3D11Texture2D> pTextureStagingC;
+    ComPtr<ID3D11DeviceContext> pDeviceContext;
 
     try
     {
         data[0] = 'defA';
         HRESULT hr = pDevice->CreateTexture2D(&desc, &subresourceData, &pTextureDefaultA);
 
-        if (hr != S_OK) throw test_exception("Failed to create default texture A", hr);
+        if (hr != S_OK) throw test_exception(L"Failed to create default texture A", hr);
 
         data[0] = 'defB';
         hr = pDevice->CreateTexture2D(&desc, &subresourceData, &pTextureDefaultB);
 
-        if (hr != S_OK) throw test_exception("Failed to create default texture B", hr);
+        if (hr != S_OK) throw test_exception(L"Failed to create default texture B", hr);
 
         desc.Usage = D3D11_USAGE_STAGING;
         desc.BindFlags = 0;
@@ -222,74 +242,66 @@ bool TestTexture2D(ID3D11Device * pDevice)
         data[0] = 'stgA';
         hr = pDevice->CreateTexture2D(&desc, &subresourceData, &pTextureStagingA);
 
-        if (hr != S_OK) throw test_exception("Failed to create staging texture A", hr);
+        if (hr != S_OK) throw test_exception(L"Failed to create staging texture A", hr);
 
         data[0] = 'stgB';
         hr = pDevice->CreateTexture2D(&desc, &subresourceData, &pTextureStagingB);
 
-        if (hr != S_OK) throw test_exception("Failed to create staging texture B", hr);
+        if (hr != S_OK) throw test_exception(L"Failed to create staging texture B", hr);
 
         data[0] = 'stgC';
         hr = pDevice->CreateTexture2D(&desc, &subresourceData, &pTextureStagingC);
 
-        if (hr != S_OK) throw test_exception("Failed to create staging texture C", hr);
+        if (hr != S_OK) throw test_exception(L"Failed to create staging texture C", hr);
 
         pDevice->GetImmediateContext(&pDeviceContext);
 
-        pDeviceContext->CopyResource(pTextureDefaultA, pTextureStagingA);
-        pDeviceContext->CopyResource(pTextureDefaultB, pTextureDefaultA);
-        pDeviceContext->CopyResource(pTextureStagingB, pTextureDefaultB);
-        pDeviceContext->CopyResource(pTextureStagingC, pTextureStagingB);
+        pDeviceContext->CopyResource(pTextureDefaultA.Get(), pTextureStagingA.Get());
+        pDeviceContext->CopyResource(pTextureDefaultB.Get(), pTextureDefaultA.Get());
+        pDeviceContext->CopyResource(pTextureStagingB.Get(), pTextureDefaultB.Get());
+        pDeviceContext->CopyResource(pTextureStagingC.Get(), pTextureStagingB.Get());
 
         D3D11_MAPPED_SUBRESOURCE  mappedSubRes;
 
-        hr = pDeviceContext->Map(pTextureStagingA, 0, D3D11_MAP_READ, 0, &mappedSubRes);
+        hr = pDeviceContext->Map(pTextureStagingA.Get(), 0, D3D11_MAP_READ, 0, &mappedSubRes);
 
-        if (hr != S_OK) throw test_exception("Failed to map staging texture A", hr);
+        if (hr != S_OK) throw test_exception(L"Failed to map staging texture A", hr);
 
         DWORD * pMappedData = static_cast<DWORD *>(mappedSubRes.pData);
 
-        if (pMappedData[0] != 'stgA') throw test_exception("Staging A data mis-match");
+        if (pMappedData[0] != 'stgA') throw test_exception(L"Staging A data mis-match");
 
-        pDeviceContext->Unmap(pTextureStagingA, 0);
+        pDeviceContext->Unmap(pTextureStagingA.Get(), 0);
 
-        hr = pDeviceContext->Map(pTextureStagingB, 0, D3D11_MAP_READ, 0, &mappedSubRes);
+        hr = pDeviceContext->Map(pTextureStagingB.Get(), 0, D3D11_MAP_READ, 0, &mappedSubRes);
 
-        if (hr != S_OK) throw test_exception("Failed to map staging texture B", hr);
-
-        pMappedData = static_cast<DWORD *>(mappedSubRes.pData);
-
-        if (pMappedData[0] != 'stgA') throw test_exception("copies failed, staging B incorrect");
-
-        pDeviceContext->Unmap(pTextureStagingB, 0);
-
-        hr = pDeviceContext->Map(pTextureStagingC, 0, D3D11_MAP_READ, 0, &mappedSubRes);
-
-        if (hr != S_OK) throw test_exception("Failed to map staging texture C", hr);
+        if (hr != S_OK) throw test_exception(L"Failed to map staging texture B", hr);
 
         pMappedData = static_cast<DWORD *>(mappedSubRes.pData);
 
-        if (pMappedData[0] != 'stgA') throw test_exception("staging to staging copy failed");
+        if (pMappedData[0] != 'stgA') throw test_exception(L"copies failed, staging B incorrect");
 
-        pDeviceContext->Unmap(pTextureStagingC, 0);
+        pDeviceContext->Unmap(pTextureStagingB.Get(), 0);
+
+        hr = pDeviceContext->Map(pTextureStagingC.Get(), 0, D3D11_MAP_READ, 0, &mappedSubRes);
+
+        if (hr != S_OK) throw test_exception(L"Failed to map staging texture C", hr);
+
+        pMappedData = static_cast<DWORD *>(mappedSubRes.pData);
+
+        if (pMappedData[0] != 'stgA') throw test_exception(L"staging to staging copy failed");
+
+        pDeviceContext->Unmap(pTextureStagingC.Get(), 0);
 
         testPassed = true;
     }
-
-    catch (test_exception & e)
+    catch (const test_exception & e)
     {
-        if (e.m_hr != S_OK)
-            fprintf(stderr, "ERROR: %s (hr = 0x%08x)\n", e.m_message, e.m_hr);
+        if (e.HResult() != S_OK)
+            fwprintf(stderr, L"ERROR: %s (hr = 0x%08x)\n", e.wwhat(), e.HResult());
         else
-            fprintf(stderr, "ERROR: %s\n", e.m_message);
+            fwprintf(stderr, L"ERROR: %s\n", e.wwhat());
     }
-
-    if (pTextureDefaultA != NULL) pTextureDefaultA->Release();
-    if (pTextureDefaultB != NULL) pTextureDefaultB->Release();
-    if (pTextureStagingA != NULL) pTextureStagingA->Release();
-    if (pTextureStagingB != NULL) pTextureStagingB->Release();
-    if (pTextureStagingC != NULL) pTextureStagingC->Release();
-    if (pDeviceContext != NULL) pDeviceContext->Release();
 
     return testPassed;
 }
@@ -308,38 +320,44 @@ bool RunTestsOnAdapter(WCHAR * inAdapterDescription)
 {
     bool passedAllTests = false;
 
-    IDXGIAdapter2 * pRosAdapter2 = NULL;
+    ComPtr<IDXGIAdapter2> pRosAdapter2;
 
     if (FindAdapter(inAdapterDescription, &pRosAdapter2))
     {
-        ID3D11Device * pRosDevice = NULL;
+        ComPtr<ID3D11Device> pRosDevice;
 
-        if (CreateDevice(pRosAdapter2, &pRosDevice))
+        if (CreateDevice(pRosAdapter2.Get(), &pRosDevice))
         {
-            passedAllTests = RunTestsOnDevice(pRosDevice);
-
-            pRosDevice->Release();
+            passedAllTests = RunTestsOnDevice(pRosDevice.Get());
         }
-
-        pRosAdapter2->Release();
     }
     else
     {
-        fprintf(stderr, "ERROR: Unable to to find adapter %S\n", inAdapterDescription);
+        fwprintf(stderr, L"ERROR: Unable to to find adapter %s\n", inAdapterDescription);
     }
 
     return passedAllTests;
 }
 
-int main(int argc, char ** argv)
+int wmain (int argc, wchar_t *argv[])
 {
-    if (!RunTestsOnAdapter(L"Microsoft Basic Render Driver"))
+    try
     {
-        fprintf(stderr, "ERROR: Basic Render Driver failed the tests\n");
+        if (!RunTestsOnAdapter(L"Microsoft Basic Render Driver"))
+        {
+            fwprintf(stderr, L"ERROR: Basic Render Driver failed the tests\n");
+        }
+
+        if (RunTestsOnAdapter(L"Render Only Sample Driver"))
+        {
+            wprintf(L"Success\n");
+        }
+    }
+    catch (const wexception& ex)
+    {
+        fwprintf(stderr, L"Error(0x%x): %s\n", ex.HResult(), ex.wwhat());
+        return 1;
     }
 
-    if (RunTestsOnAdapter(L"Render Only Sample Driver"))
-    {
-        printf("Success\n");
-    }
+    return 0;
 }

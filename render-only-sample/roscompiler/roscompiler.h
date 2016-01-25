@@ -35,13 +35,18 @@ public:
 
     RosCompiler(
         D3D10_SB_TOKENIZED_PROGRAM_TYPE ProgramType,
-        UINT *pCode,
+        const UINT *pCode,
+        const UINT *pLinkageDownstreamCode,
+        const UINT *pLinkageUpstreamCode,
+        const D3D11_1_DDI_BLEND_DESC* pBlendState,
+        const D3D10_DDI_DEPTH_STENCIL_DESC* pDepthState,
+        const D3D11_1_DDI_RASTERIZER_DESC* pRasterState,
         UINT numInputSignatureEntries,
-        D3D11_1DDIARG_SIGNATURE_ENTRY *pInputSignatureEntries,
+        const D3D11_1DDIARG_SIGNATURE_ENTRY *pInputSignatureEntries,
         UINT numOutputSignatureEntries,
-        D3D11_1DDIARG_SIGNATURE_ENTRY *pOutputSignatureEntries,
+        const D3D11_1DDIARG_SIGNATURE_ENTRY *pOutputSignatureEntries,
         UINT numPatchConstantSignatureEntries,
-        D3D11_1DDIARG_SIGNATURE_ENTRY *pPatchConstantSignatureEntries);
+        const D3D11_1DDIARG_SIGNATURE_ENTRY *pPatchConstantSignatureEntries);
     ~RosCompiler();
 
     HRESULT Compile();
@@ -141,16 +146,41 @@ public:
 
     }
 
+    const D3D11_1_DDI_BLEND_DESC* GetBlendState()
+    {
+        return m_pBlendState;
+    }
+
+    const D3D10_DDI_DEPTH_STENCIL_DESC* GetDepthState()
+    {
+        return m_pDepthState;
+    }
+
+    const D3D11_1_DDI_RASTERIZER_DESC* GetRasterState()
+    {
+        return m_pRasterState;
+    }
+
     UINT GetInputSignature(D3D11_1DDIARG_SIGNATURE_ENTRY ** ppInputSignatureEntries)
     {
-        *ppInputSignatureEntries = m_pInputSignatureEntries;
+        *ppInputSignatureEntries = const_cast<D3D11_1DDIARG_SIGNATURE_ENTRY*>(m_pInputSignatureEntries);
         return m_numInputSignatureEntries;
     }
 
     UINT GetOutputSignature(D3D11_1DDIARG_SIGNATURE_ENTRY ** ppOutputSignatureEntries)
     {
-        *ppOutputSignatureEntries = m_pOutputSignatureEntries;
+        *ppOutputSignatureEntries = const_cast<D3D11_1DDIARG_SIGNATURE_ENTRY*>(m_pOutputSignatureEntries);
         return m_numOutputSignatureEntries;
+    }
+
+    UINT GetShaderInputCount()
+    {
+        return m_cShaderInput;
+    }
+
+    UINT GetShaderOutputCount()
+    {
+        return m_cShaderOutput;
     }
 
 private:
@@ -170,7 +200,12 @@ private:
 #if VC4
     void Disassemble_HW(Vc4ShaderStorage &Storage, TCHAR *pTitle)
     {
-        Vc4Disasm().Run((const VC4_QPU_INSTRUCTION*)Storage.GetStorage(), Storage.GetUsedSize(), pTitle);
+        Vc4Disasm().Run(Storage.GetStorage<const VC4_QPU_INSTRUCTION>(), Storage.GetUsedSize(), pTitle);
+    }
+
+    void Dump_UniformTable(Vc4ShaderStorage &Storage, TCHAR *pTitle)
+    {
+        Vc4Shader::DumpUniform(Storage.GetStorage<const VC4_UNIFORM_FORMAT>(), Storage.GetUsedSize(), pTitle);
     }
 #endif // VC4
 
@@ -180,13 +215,29 @@ private:
     // HLSL code data.
     //
     D3D10_SB_TOKENIZED_PROGRAM_TYPE m_ProgramType;
-    UINT *m_pCode;
+    const UINT *m_pCode;
+    const UINT *m_pDownstreamCode;
+    const UINT *m_pUpstreamCode;
+
+    //
+    // State(s).
+    //
+    const D3D11_1_DDI_BLEND_DESC* m_pBlendState;
+    const D3D10_DDI_DEPTH_STENCIL_DESC* m_pDepthState;
+    const D3D11_1_DDI_RASTERIZER_DESC* m_pRasterState;
+
+    //
+    // I/O signature(s).
+    //
     UINT m_numInputSignatureEntries;
-    D3D11_1DDIARG_SIGNATURE_ENTRY *m_pInputSignatureEntries;
+    const D3D11_1DDIARG_SIGNATURE_ENTRY *m_pInputSignatureEntries;
     UINT m_numOutputSignatureEntries;
-    D3D11_1DDIARG_SIGNATURE_ENTRY *m_pOutputSignatureEntries;
+    const D3D11_1DDIARG_SIGNATURE_ENTRY *m_pOutputSignatureEntries;
     UINT m_numPatchConstantSignatureEntries;
-    D3D11_1DDIARG_SIGNATURE_ENTRY *m_pPatchConstantSignatureEntries;
+    const D3D11_1DDIARG_SIGNATURE_ENTRY *m_pPatchConstantSignatureEntries;
+
+    UINT m_cShaderInput;
+    UINT m_cShaderOutput;
 
 #if VC4
     //
@@ -198,10 +249,15 @@ private:
 };
 
 RosCompiler* RosCompilerCreate(D3D10_SB_TOKENIZED_PROGRAM_TYPE ProgramType,
-                               UINT *pCode,
+                               const UINT *pCode,
+                               const UINT *pLinkageDownstreamCode,
+                               const UINT *pLinkageUpstreamCode,
+                               const D3D11_1_DDI_BLEND_DESC* pBlendState,
+                               const D3D10_DDI_DEPTH_STENCIL_DESC* pDepthState,
+                               const D3D11_1_DDI_RASTERIZER_DESC* pRasterState,
                                UINT numInputSignatureEntries,
-                               D3D11_1DDIARG_SIGNATURE_ENTRY *pInputSignatureEntries,
+                               const D3D11_1DDIARG_SIGNATURE_ENTRY *pInputSignatureEntries,
                                UINT numOutputSignatureEntries,
-                               D3D11_1DDIARG_SIGNATURE_ENTRY *pOutputSignatureEntries,
+                               const D3D11_1DDIARG_SIGNATURE_ENTRY *pOutputSignatureEntries,
                                UINT numPatchConstantSignatureEntries,
-                               D3D11_1DDIARG_SIGNATURE_ENTRY *pPatchConstantSignatureEntries);
+                               const D3D11_1DDIARG_SIGNATURE_ENTRY *pPatchConstantSignatureEntries);

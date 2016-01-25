@@ -1,3 +1,8 @@
+#include "precomp.h"
+
+#include "RosKmdLogging.h"
+#include "RosKmdRapAdapter.tmh"
+
 #include "RosKmdRapAdapter.h"
 #include "RosGpuCommand.h"
 
@@ -9,6 +14,8 @@
 bool g_bUseSimPenrose = false;
 
 #endif
+
+bool g_bUseInterrupt = true;
 
 RosKmdRapAdapter::RosKmdRapAdapter(IN_CONST_PDEVICE_OBJECT PhysicalDeviceObject, OUT_PPVOID MiniportDeviceContext) :
     RosKmAdapter(PhysicalDeviceObject, MiniportDeviceContext)
@@ -160,17 +167,20 @@ RosKmdRapAdapter::Start(
 
 #endif
 
-    //
-    // Enable End of Frame interrupt when Render Control List completes
-    //
+    if (g_bUseInterrupt)
+    {
+        //
+        // Enable End of Frame interrupt when Render Control List completes
+        //
 
-    V3D_REG_INTENA  regIntEna = { 0 };
+        V3D_REG_INTENA  regIntEna = { 0 };
 
-    regIntEna.EI_FRDONE = 1;
+        regIntEna.EI_FRDONE = 1;
 
-    m_pVC4RegFile->V3D_INTENA = regIntEna.Value;
+        m_pVC4RegFile->V3D_INTENA = regIntEna.Value;
 
-    m_bReadyToHandleInterrupt = TRUE;
+        m_bReadyToHandleInterrupt = TRUE;
+    }
 
     return STATUS_SUCCESS;
 
@@ -263,7 +273,7 @@ RosKmdRapAdapter::ProcessRenderBuffer(
 
             MoveToNextBinnerRenderMemChunk(renderingControlListLength);
         }
-        else 
+        else
 
 #endif // USE_SIMPENROSE
 
@@ -285,7 +295,7 @@ RosKmdRapAdapter::ProcessRenderBuffer(
 
 #if 1
 
-            // TODO[indyz]: Decide the best way to handle the cache 
+            // TODO[indyz]: Decide the best way to handle the cache
             //
             KeInvalidateAllCaches();
 
@@ -406,7 +416,7 @@ RosKmdRapAdapter::SubmitControlList(
     }
 
     //
-    // Completion of DMA buffer is acknowledged with interrupt and 
+    // Completion of DMA buffer is acknowledged with interrupt and
     // subsequent DPC signals m_hwDmaBufCompletionEvent
     //
     // TODO[indyz]: Enable interrupt and handle TDR
@@ -415,16 +425,54 @@ RosKmdRapAdapter::SubmitControlList(
     NTSTATUS status;
     LARGE_INTEGER timeOut;
 
-#if 0
-    //
-    // Set time out to 64 millisecond
-    //
-
-    timeOut.QuadPart = -64 * 1000 * 1000 / 10;
-
-    UINT i;
-    for (i = 0; i < 32; i++)
+    if (! g_bUseInterrupt)
     {
+        //
+        // Set time out to 64 millisecond
+        //
+
+        timeOut.QuadPart = -64 * 1000 * 1000 / 10;
+
+        UINT i;
+        for (i = 0; i < 32; i++)
+        {
+            status = KeWaitForSingleObject(
+                &m_hwDmaBufCompletionEvent,
+                Executive,
+                KernelMode,
+                FALSE,
+                &timeOut);
+
+            NT_ASSERT(status == STATUS_TIMEOUT);
+
+            // Check Control List Executor Thread 0 or 1 Control and Status
+
+            if (bBinningControlList)
+            {
+                regCTnCS.Value = m_pVC4RegFile->V3D_CT0CS;
+            }
+            else
+            {
+                regCTnCS.Value = m_pVC4RegFile->V3D_CT1CS;
+            }
+
+            if (regCTnCS.CTRUN == 0)
+            {
+                break;
+            }
+        }
+
+        // Check for TDR condition
+        NT_ASSERT(i < 32);
+    }
+    else
+    {
+        //
+        // Set time out to 2 seconds
+        //
+
+        timeOut.QuadPart = -2000 * 1000 * 1000 / 10;
+
         status = KeWaitForSingleObject(
             &m_hwDmaBufCompletionEvent,
             Executive,
@@ -432,47 +480,8 @@ RosKmdRapAdapter::SubmitControlList(
             FALSE,
             &timeOut);
 
-        NT_ASSERT(status == STATUS_TIMEOUT);
-
-        // Check Control List Executor Thread 0 or 1 Control and Status
-
-        if (bBinningControlList)
-        {
-            regCTnCS.Value = m_pVC4RegFile->V3D_CT0CS;
-        }
-        else
-        {
-            regCTnCS.Value = m_pVC4RegFile->V3D_CT1CS;
-        }
-
-        if (regCTnCS.CTRUN == 0)
-        {
-            break;
-        }
+        NT_ASSERT(status == STATUS_SUCCESS);
     }
-
-    // Check for TDR condition
-    NT_ASSERT(i < 32);
-
-#else
-
-    //
-    // Set time out to 2 seconds
-    //
-
-    timeOut.QuadPart = -2000 * 1000 * 1000 / 10;
-
-    status = KeWaitForSingleObject(
-        &m_hwDmaBufCompletionEvent,
-        Executive,
-        KernelMode,
-        FALSE,
-        &timeOut);
-
-    NT_ASSERT(status == STATUS_SUCCESS);
-
-#endif
-
 }
 
 UINT

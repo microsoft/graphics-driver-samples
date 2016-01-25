@@ -6,6 +6,11 @@
 //
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+#include "precomp.h"
+
+#include "RosKmdLogging.h"
+#include "RosKmdUtil.tmh"
+
 #include "RosKmdAdapter.h"
 #include "RosKmdContext.h"
 #include "RosKmdAllocation.h"
@@ -148,7 +153,7 @@ static VC4DepthOffset              *pVC4DepthOffset = NULL;
 static VC4ClipWindow               *pVC4ClipWindow = NULL;
 
 // Code: 103
-static VC4ViewportOffset           *pVC4ViewportOffset = NULL; 
+static VC4ViewportOffset           *pVC4ViewportOffset = NULL;
 
 // Code: 104
 static VC4ZClippingPlanes          *pVC4ZClippingPlanes = NULL;
@@ -160,13 +165,13 @@ static VC4ClipperXYScaling         *pVC4ClipperXYScaling = NULL;
 static VC4ClipperZScaleAndOffset   *pVC4ClipperZScaleAndOffset = NULL;
 
 // Code: 112,   Binning only
-static VC4TileBinningModeConfig    *pVC4TileBinningModeConfig = NULL; 
+static VC4TileBinningModeConfig    *pVC4TileBinningModeConfig = NULL;
 
 // Code: 113,   Rendering only
-static VC4TileRenderingModeConfig  *pVC4TileRenderingModeConfig = NULL; 
+static VC4TileRenderingModeConfig  *pVC4TileRenderingModeConfig = NULL;
 
 // Code: 114,   Rendering only
-static VC4ClearColors              *pVC4ClearColors = NULL; 
+static VC4ClearColors              *pVC4ClearColors = NULL;
 
 // Code: 115,   Rendering only
 static VC4TileCoordinates          *pVC4TileCoordinates = NULL;
