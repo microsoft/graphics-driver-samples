@@ -155,7 +155,7 @@ void RosUmdDevice::Standup()
     memset(m_vsConstantBuffer, 0, sizeof(m_vsConstantBuffer));
     memset(m_vs1stConstant, 0, sizeof(m_vs1stConstant));
     memset(m_vsNumberContants, 0, sizeof(m_vsNumberContants));
-        
+
     memset(m_renderTargetViews, 0, sizeof(m_renderTargetViews));
 
     m_blendState = nullptr;
@@ -315,7 +315,7 @@ void RosUmdDevice::ResourceCopy(
     }
     else
     {
-        // Before accessing the resources on CPU, flush if there is pending 
+        // Before accessing the resources on CPU, flush if there is pending
         // GPU operation
         m_commandBuffer.FlushIfMatching(pDestinationResource->m_mostRecentFence);
         m_commandBuffer.FlushIfMatching(pSourceResource->m_mostRecentFence);
@@ -554,6 +554,71 @@ void RosUmdDevice::DestroyContext(D3DDDICB_DESTROYCONTEXT * pDestroyContext)
     if (hr != S_OK) throw RosUmdException(hr);
 }
 
+HRESULT RosUmdDevice::Present(DXGI_DDI_ARG_PRESENT* pPresentData)
+{
+    assert(this == CastFrom(pPresentData->hDevice));
+
+    // Verify that only the Flip flag is set
+    DXGI_DDI_PRESENT_FLAGS flipOnlyFlags;
+    flipOnlyFlags.Value = 0;
+    flipOnlyFlags.Flip = TRUE;
+    if (pPresentData->Flags.Value != flipOnlyFlags.Value)
+    {
+        assert(!"Only Flip is supported currently");
+        return E_NOTIMPL;
+    }
+
+    if (pPresentData->FlipInterval != DXGI_DDI_FLIP_INTERVAL_ONE)
+    {
+        assert(!"The only supported flip interval is 1.");
+        return E_INVALIDARG;
+    }
+
+    // Get the allocation for the source resource
+    auto pSrcResource = reinterpret_cast<RosUmdResource*>(
+            pPresentData->hSurfaceToPresent);
+
+    // we only handle a single subresource for now
+    if (pPresentData->SrcSubResourceIndex != 0)
+    {
+        assert(!"Only a single subresource is support right now");
+        return E_NOTIMPL;
+    }
+
+    if (!pSrcResource->IsPrimary())
+    {
+        assert(!"Only primaries may be flipped");
+        return E_INVALIDARG;
+    }
+
+    assert(pSrcResource->m_hKMAllocation);
+
+    // hDstResource can be null
+    D3DKMT_HANDLE hDstAllocation = {};
+    if (pPresentData->hDstResource)
+    {
+        auto pDstResource = reinterpret_cast<RosUmdResource*>(
+                pPresentData->hDstResource);
+
+        // we only handle a single subresource for now
+        if (pPresentData->DstSubResourceIndex != 0)
+        {
+            assert(!"Only a single subresource is support right now");
+            return E_NOTIMPL;
+        }
+        assert(pDstResource->m_hKMAllocation);
+        hDstAllocation = pDstResource->m_hKMAllocation;
+    }
+
+    DXGIDDICB_PRESENT args = {};
+    args.hSrcAllocation = pSrcResource->m_hKMAllocation;
+    args.hDstAllocation = hDstAllocation;
+    args.pDXGIContext = pPresentData->pDXGIContext;
+    args.hContext = m_hContext;
+
+    return m_pDXGICallbacks->pfnPresentCb(m_hRTDevice.handle, &args);
+}
+
 HRESULT RosUmdDevice::SetDisplayMode(
     DXGI_DDI_ARG_SETDISPLAYMODE* pDisplayModeData)
 {
@@ -562,13 +627,14 @@ HRESULT RosUmdDevice::SetDisplayMode(
     // Translate hResource and SubResourceIndex to a primary allocation handle
     auto pResource = reinterpret_cast<RosUmdResource*>(pDisplayModeData->hResource);
 
-    // Only a single subresource is supported right now
-    assert(pDisplayModeData->SubResourceIndex == 0);
+    if (pDisplayModeData->SubResourceIndex != 0)
+    {
+        assert(!"Only a single subresource is supported right now");
+        return E_NOTIMPL;
+    }
 
     // We are expecting the resource to represent a primary allocation
-    assert(pResource->m_bindFlags & D3D10_DDI_BIND_PRESENT);
-    assert(pResource->m_primaryDesc.ModeDesc.Width != 0);
-    assert(pResource->m_hKMAllocation);
+    assert(pResource->IsPrimary());
 
     // XXX Do we need to flush all rendering tasks before calling kernel side?
 
@@ -591,35 +657,79 @@ HRESULT RosUmdDevice::SetDisplayMode(
     return S_OK;
 }
 
-HRESULT RosUmdDevice::Present(DXGI_DDI_ARG_PRESENT* pPresentData)
+HRESULT RosUmdDevice::Present1(DXGI_DDI_ARG_PRESENT1* pPresentData)
 {
     assert(this == CastFrom(pPresentData->hDevice));
-    
-    D3DDDICB_PRESENT args = {};
-    
-    // Get the allocation for the source resource
-    auto pSrcResource = reinterpret_cast<RosUmdResource*>(pPresentData->hSurfaceToPresent);
-    
-    // we only handle a single subresource for now
-    assert(pPresentData->SrcSubResourceIndex == 0);
-    assert(pSrcResource->m_hKMAllocation);
-    args.hSrcAllocation = pSrcResource->m_hKMAllocation;
-    
-    // hDstResource can be null
-    if (pPresentData->hDstResource)
+
+    // Verify that only the Flip flag is set
+    DXGI_DDI_PRESENT_FLAGS flipOnlyFlags;
+    flipOnlyFlags.Value = 0;
+    flipOnlyFlags.Flip = TRUE;
+    if (pPresentData->Flags.Value != flipOnlyFlags.Value)
     {
-        auto pDstResource = reinterpret_cast<RosUmdResource*>(pPresentData->hDstResource);
-        
-        // we only handle a single subresource for now
-        assert(pPresentData->DstSubResourceIndex == 0);
-        assert(pDstResource->m_hKMAllocation);
-        args.hDstAllocation = pDstResource->m_hKMAllocation;
+        assert(!"Only Flip is supported currently");
+        return E_NOTIMPL;
     }
-    
-    args.hContext = m_hContext;
-    args.BroadcastContextCount = 0;
-    
-    return m_pMSKTCallbacks->pfnPresentCb(m_hRTDevice.handle, &args);
+
+    if (pPresentData->FlipInterval != DXGI_DDI_FLIP_INTERVAL_ONE)
+    {
+        assert(!"The only supported flip interval is 1.");
+        return E_INVALIDARG;
+    }
+
+    // TODO[jordanrh]: Ensure all rendering commands are flushed
+
+    // Call pfnPresentCb for each source surface
+    for (UINT i = 0; i < pPresentData->SurfacesToPresent; ++i)
+    {
+        // Get the allocation for the source resource
+        auto pSrcResource = reinterpret_cast<RosUmdResource*>(
+            pPresentData->phSurfacesToPresent[i].hSurface);
+
+        // we only handle a single subresource for now
+        if (pPresentData->phSurfacesToPresent[i].SubResourceIndex != 0)
+        {
+            assert(!"Only a single subresource is supported right now");
+            return E_NOTIMPL;
+        }
+
+        if (!pSrcResource->IsPrimary())
+        {
+            assert(!"Only primaries may be flipped");
+            return E_INVALIDARG;
+        }
+
+        assert(pSrcResource->m_hKMAllocation);
+
+        // hDstResource can be null
+        D3DKMT_HANDLE hDstAllocation = {};
+        if (pPresentData->hDstResource)
+        {
+            auto pDstResource = reinterpret_cast<RosUmdResource*>(
+                    pPresentData->hDstResource);
+
+            // we only handle a single subresource for now
+            if (pPresentData->DstSubResourceIndex != 0)
+            {
+                assert(!"Only a single subresource is supported right now");
+                return E_NOTIMPL;
+            }
+            assert(pDstResource->m_hKMAllocation);
+            hDstAllocation = pDstResource->m_hKMAllocation;
+        }
+
+        DXGIDDICB_PRESENT args = {};
+        args.hSrcAllocation = pSrcResource->m_hKMAllocation;
+        args.hDstAllocation = hDstAllocation;
+        args.pDXGIContext = pPresentData->pDXGIContext;
+        args.hContext = m_hContext;
+
+        HRESULT hr = m_pDXGICallbacks->pfnPresentCb(m_hRTDevice.handle, &args);
+        if (FAILED(hr))
+            return hr;
+    }
+
+    return S_OK;
 }
 
 //
@@ -748,7 +858,7 @@ void RosUmdDevice::DrawIndexed(UINT indexCount, UINT startIndexLocation, INT bas
         0,
         startIndexLocation*indexSize + m_indexOffset);
 
-    pVC4IndexedPrimitiveList->MaximumIndex = 0xffff;    // Maximal USHORT 
+    pVC4IndexedPrimitiveList->MaximumIndex = 0xffff;    // Maximal USHORT
 
 #endif
 
@@ -760,7 +870,7 @@ void RosUmdDevice::DrawIndexed(UINT indexCount, UINT startIndexLocation, INT bas
 
 void RosUmdDevice::ClearRenderTargetView(RosUmdRenderTargetView * pRenderTargetView, FLOAT clearColor[4])
 {
-    // TODO[indyz]: Use format from pRenderTargetView to decide if 
+    // TODO[indyz]: Use format from pRenderTargetView to decide if
     //              VC4ClearColors::ClearColor16 should be used
     pRenderTargetView; // unused
 
@@ -835,7 +945,7 @@ void RosUmdDevice::VsSetConstantBuffers11_1(
     const UINT *    pNumberConstants)
 {
     UINT bufIndex;
-    
+
     bufIndex = startBuffer;
     for (UINT i = 0; i < numberBuffers; i++, bufIndex++)
     {
@@ -881,7 +991,7 @@ void RosUmdDevice::SetRenderTargets(const D3D10DDI_HRENDERTARGETVIEW* phRenderTa
 #if VC4
 
     //
-    // Flush is necessary for tile based render 
+    // Flush is necessary for tile based render
     // if there is Draw command for the previous render target
     //
 
@@ -1249,7 +1359,7 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
     if (m_scissorRectSet && m_rasterizerState->GetDesc()->ScissorEnable)
     {
         RECT Intersect;
-        RECT Viewport = { 
+        RECT Viewport = {
             (LONG)round(m_viewports[0].TopLeftX),
             (LONG)round(m_viewports[0].TopLeftY),
             (LONG)round((m_viewports[0].TopLeftX + m_viewports[0].Width)),
@@ -1391,7 +1501,7 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
 
     // TODO[indyz] : Decide the size of Uniforms by constant buffer bound
     //
-    
+
     pVC4NVShaderStateRecord->FragmentShaderNumberOfUniforms = 0;
 
     // TODO[indyz] : Need to calculate it from Input Layout Elements, etc
@@ -1601,7 +1711,7 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
 
 
     pVC4GLShaderStateRecord->EnableClipping = 1;
-    
+
     pVC4GLShaderStateRecord->FragmentShaderIsSingleThreaded = 1;
 
     UINT numVaryings = m_pixelShader->GetShaderInputCount();
@@ -1682,7 +1792,7 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
             dummyAllocIndex,
             vc4GLShaderStateRecordOffset + offsetof(VC4GLShaderStateRecord, VertexShaderUniformsAddress));
     }
-    
+
 #if DBG
     pVC4GLShaderStateRecord->CoordinateShaderCodeAddress        = 0xDEADBEEF;
     pVC4GLShaderStateRecord->CoordinateShaderUniformsAddress    = 0xDEADBEEF;

@@ -226,7 +226,7 @@ public:
     static HRESULT APIENTRY Blt(DXGI_DDI_ARG_BLT*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak();  return S_OK; }
     static HRESULT APIENTRY ResolveSharedResource(DXGI_DDI_ARG_RESOLVESHAREDRESOURCE*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak();  return S_OK; }
     static HRESULT APIENTRY Blt1(DXGI_DDI_ARG_BLT1*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak();  return S_OK; }
-    static HRESULT APIENTRY Present1(DXGI_DDI_ARG_PRESENT1*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak();  return S_OK; }
+    static HRESULT APIENTRY Present1(DXGI_DDI_ARG_PRESENT1*);
 
 
     static void APIENTRY HSSetShaderResources_Default(D3D10DDI_HDEVICE, UINT, UINT, const D3D10DDI_HSHADERRESOURCEVIEW*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }

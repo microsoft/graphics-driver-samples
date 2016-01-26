@@ -2,6 +2,7 @@
 
 #include "RosAllocation.h"
 #include "Pixel.hpp"
+#include "RosUmdDebug.h"
 
 class RosUmdResource
 {
@@ -26,6 +27,7 @@ public:
     UINT                    m_mipLevels;
     UINT                    m_arraySize;
 
+    bool                    m_isPrimary;
     DXGI_DDI_PRIMARY_DESC   m_primaryDesc;
 
     // HW specific information calculated based on the fields above
@@ -97,6 +99,17 @@ public:
 
     void GetAllocationExchange(
         RosAllocationExchange * pOutAllocationExchange);
+
+    bool IsPrimary()
+    {
+        if (m_isPrimary)
+        {
+            assert(m_miscFlags & D3D10_DDI_RESOURCE_MISC_SHARED);
+            assert(m_bindFlags & D3D10_DDI_BIND_PRESENT);
+            assert(m_primaryDesc.ModeDesc.Width != 0);
+        }
+        return m_isPrimary;
+    }
 };
 
 inline RosUmdResource* RosUmdResource::CastFrom(D3D10DDI_HRESOURCE hResource)

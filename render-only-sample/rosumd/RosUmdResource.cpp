@@ -46,10 +46,12 @@ RosUmdResource::Standup(
 
     if (pCreateResource->pPrimaryDesc)
     {
+        m_isPrimary = true;
         m_primaryDesc = *pCreateResource->pPrimaryDesc;
     }
     else
     {
+        m_isPrimary = false;
         ZeroMemory(&m_primaryDesc, sizeof(m_primaryDesc));
     }
 
@@ -94,7 +96,7 @@ RosUmdResource::ConstantBufferUpdateSubresourceUP(
     UINT BytesToCopy = RowPitch;
     if (pDstBox)
     {
-        if (pDstBox->left < 0 || 
+        if (pDstBox->left < 0 ||
             pDstBox->left > (INT)m_hwSizeBytes ||
             pDstBox->left > pDstBox->right ||
             pDstBox->right > (INT)m_hwSizeBytes)
@@ -368,7 +370,7 @@ void RosUmdResource::GetAllocationExchange(
     pOutAllocationExchange->m_mipLevels = m_mipLevels;
     pOutAllocationExchange->m_arraySize = m_arraySize;
 #endif
-    
+
     pOutAllocationExchange->m_primaryDesc = m_primaryDesc;
     pOutAllocationExchange->m_hwLayout = m_hwLayout;
     pOutAllocationExchange->m_hwWidthPixels = m_hwWidthPixels;
