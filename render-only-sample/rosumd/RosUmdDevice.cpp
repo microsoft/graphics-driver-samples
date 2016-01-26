@@ -619,6 +619,29 @@ HRESULT RosUmdDevice::Present(DXGI_DDI_ARG_PRESENT* pPresentData)
     return m_pDXGICallbacks->pfnPresentCb(m_hRTDevice.handle, &args);
 }
 
+HRESULT RosUmdDevice::RotateResourceIdentities(
+    DXGI_DDI_ARG_ROTATE_RESOURCE_IDENTITIES* Args)
+{
+    assert(RosUmdDevice::CastFrom(Args->hDevice) == this);
+    
+    assert(Args->Resources != 0);
+    RosUmdResource firstResourceCopy = *RosUmdResource::CastFrom(Args->pResources[0]);
+    for (UINT i = 0; i < Args->Resources; ++i)
+    {
+        RosUmdResource* rotateTo = RosUmdResource::CastFrom(Args->pResources[i]);
+        RosUmdResource* rotateFrom = ((i + 1) < Args->Resources) ?
+            RosUmdResource::CastFrom(Args->pResources[i + 1]) :
+            &firstResourceCopy;
+
+        // We should not get asked to rotate incompatible resources
+        assert(rotateTo->CanRotateFrom(rotateFrom));
+        
+        rotateTo->RotateFrom(rotateFrom);
+    }
+    
+    return S_OK;
+}
+
 HRESULT RosUmdDevice::SetDisplayMode(
     DXGI_DDI_ARG_SETDISPLAYMODE* pDisplayModeData)
 {

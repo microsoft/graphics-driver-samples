@@ -53,3 +53,17 @@ ConvertD3D11TextureMinFilter(
 
 #endif
 
+inline operator== (const D3D10DDI_MIPINFO &Lhs, const D3D10DDI_MIPINFO &Rhs)
+{
+    return memcmp(&Lhs, &Rhs, sizeof(Lhs)) == 0;
+}
+
+inline operator== (const DXGI_SAMPLE_DESC &Lhs, const DXGI_SAMPLE_DESC &Rhs)
+{
+    return memcmp(&Lhs, &Rhs, sizeof(Lhs)) == 0;
+}
+
+inline operator== (const DXGI_DDI_PRIMARY_DESC &Lhs, const DXGI_DDI_PRIMARY_DESC &Rhs)
+{
+    return memcmp(&Lhs, &Rhs, sizeof(Lhs)) == 0;
+}

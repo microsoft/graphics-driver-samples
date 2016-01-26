@@ -382,3 +382,50 @@ void RosUmdResource::GetAllocationExchange(
 
     pOutAllocationExchange->m_hwSizeBytes = m_hwSizeBytes;
 }
+
+bool RosUmdResource::CanRotateFrom(const RosUmdResource* Other) const
+{
+    // Make sure we're not rotating from ourself and that the resources
+    // are compatible (e.g. size, flags, ...)
+
+    return (this != Other) &&
+           (!m_pData && !Other->m_pData) &&
+           (!m_pSysMemCopy && !Other->m_pSysMemCopy) &&
+           (m_hRTResource != Other->m_hRTResource) &&
+           (m_hKMAllocation != Other->m_hKMAllocation) &&
+           (m_hKMResource != Other->m_hKMResource) &&
+           (m_resourceDimension == Other->m_resourceDimension) &&
+           (m_mip0Info == Other->m_mip0Info) &&
+           (m_usage == Other->m_usage) &&
+           (m_bindFlags == Other->m_bindFlags) &&
+           (m_bindFlags & D3D10_DDI_BIND_PRESENT) &&
+           (m_mapFlags ==Other->m_mapFlags) &&
+           (m_miscFlags == Other->m_miscFlags) &&
+           (m_format == Other->m_format) &&
+           (m_sampleDesc == Other->m_sampleDesc) &&
+           (m_mipLevels == Other->m_mipLevels) &&
+           (m_arraySize == Other->m_arraySize) &&
+           (m_isPrimary == Other->m_isPrimary) &&
+           (m_primaryDesc == Other->m_primaryDesc) &&
+           (m_hwLayout == Other->m_hwLayout) &&
+           (m_hwWidthPixels == Other->m_hwWidthPixels) &&
+           (m_hwHeightPixels == Other->m_hwHeightPixels) &&
+           (m_hwFormat == Other->m_hwFormat) &&
+           (m_hwPitchBytes == Other->m_hwPitchBytes) &&
+           (m_hwSizeBytes == Other->m_hwSizeBytes) &&
+           (m_hwWidthTilePixels == Other->m_hwWidthTilePixels) &&
+           (m_hwHeightTilePixels == Other->m_hwHeightTilePixels) &&
+           (m_hwWidthTiles == Other->m_hwWidthTiles) &&
+           (m_hwHeightTiles == Other->m_hwHeightTiles) &&
+           (m_allocationListIndex == Other->m_allocationListIndex);
+}
+
+void RosUmdResource::RotateFrom(const RosUmdResource* Other)
+{
+    assert(this->CanRotateFrom(Other));
+
+    // Replace our kernel mode allocation handles with the ones from
+    // the supplied object
+    m_hKMResource = Other->m_hKMResource;
+    m_hKMAllocation = Other->m_hKMAllocation;
+}

@@ -107,6 +107,7 @@ public:
     void DestroyContext(D3DDDICB_DESTROYCONTEXT * pDestroyContext);
 
     HRESULT Present(DXGI_DDI_ARG_PRESENT* pPresentData);
+    HRESULT RotateResourceIdentities(DXGI_DDI_ARG_ROTATE_RESOURCE_IDENTITIES* Args);
     HRESULT SetDisplayMode(DXGI_DDI_ARG_SETDISPLAYMODE* pDisplayModeData);
     HRESULT Present1(DXGI_DDI_ARG_PRESENT1* pPresentData);
 

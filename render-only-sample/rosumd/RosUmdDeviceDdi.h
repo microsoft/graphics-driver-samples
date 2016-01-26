@@ -218,7 +218,7 @@ public:
 
     //DXGI DDI table entry points:
     static HRESULT APIENTRY Present(DXGI_DDI_ARG_PRESENT*);
-    static HRESULT APIENTRY RotateResourceIdentities(DXGI_DDI_ARG_ROTATE_RESOURCE_IDENTITIES*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak();  return S_OK; }
+    static HRESULT APIENTRY RotateResourceIdentities(DXGI_DDI_ARG_ROTATE_RESOURCE_IDENTITIES*);
     static HRESULT APIENTRY GetGammaCaps(DXGI_DDI_ARG_GET_GAMMA_CONTROL_CAPS*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak();  return S_OK; }
     static HRESULT APIENTRY SetDisplayMode(DXGI_DDI_ARG_SETDISPLAYMODE*);
     static HRESULT APIENTRY SetResourcePriority(DXGI_DDI_ARG_SETRESOURCEPRIORITY*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak();  return S_OK; }

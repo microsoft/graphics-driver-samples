@@ -1457,6 +1457,22 @@ HRESULT RosUmdDeviceDdi::Present(DXGI_DDI_ARG_PRESENT* pPresentData)
     return hr;
 }
 
+HRESULT RosUmdDeviceDdi::RotateResourceIdentities(
+    DXGI_DDI_ARG_ROTATE_RESOURCE_IDENTITIES* Args)
+{
+    RosUmdLogging::Entry(__FUNCTION__);
+
+    RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(Args->hDevice);
+    HRESULT hr = pRosUmdDevice->RotateResourceIdentities(Args);
+    if (FAILED(hr))
+    {
+        pRosUmdDevice->SetError(hr);
+    }
+
+    RosUmdLogging::Exit(__FUNCTION__);
+    return hr;
+}
+
 HRESULT RosUmdDeviceDdi::SetDisplayMode(
     DXGI_DDI_ARG_SETDISPLAYMODE* pDisplayModeData)
 {

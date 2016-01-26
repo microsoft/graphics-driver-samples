@@ -12,6 +12,7 @@ public:
     ~RosUmdResource();
 
     static RosUmdResource* CastFrom(D3D10DDI_HRESOURCE);
+    static RosUmdResource* CastFrom(DXGI_DDI_HRESOURCE);
     D3D10DDI_HRESOURCE CastTo() const;
 
     // Input from UMD CreateResource DDI
@@ -99,6 +100,13 @@ public:
 
     void GetAllocationExchange(
         RosAllocationExchange * pOutAllocationExchange);
+        
+    // Determines whether the supplied resource can be rotated into this one.
+    // Resources must have equivalent dimensions and flags to rotate.
+    bool CanRotateFrom(const RosUmdResource* Other) const;
+    
+    // Rotates the supplied resource into this resource.
+    void RotateFrom(const RosUmdResource* Other);
 
     bool IsPrimary()
     {
@@ -115,6 +123,14 @@ public:
 inline RosUmdResource* RosUmdResource::CastFrom(D3D10DDI_HRESOURCE hResource)
 {
     return static_cast< RosUmdResource* >(hResource.pDrvPrivate);
+}
+
+inline RosUmdResource* RosUmdResource::CastFrom(DXGI_DDI_HRESOURCE hResource)
+{
+    static_assert(
+        sizeof(hResource) == sizeof(RosUmdResource*),
+        "Sanity check on cast compatibility");
+    return reinterpret_cast<RosUmdResource*>(hResource);
 }
 
 inline D3D10DDI_HRESOURCE RosUmdResource::CastTo() const
