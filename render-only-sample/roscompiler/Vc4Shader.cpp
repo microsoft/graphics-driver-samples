@@ -468,9 +468,14 @@ void Vc4Shader::Emit_DPx(CInstruction &Inst)
             {
                 Vc4Instruction Vc4Inst;
                 Vc4Inst.Vc4_m_FMUL(temp, src[0], src[1]);
+                if (i > 0)
+                {
+                    Vc4Inst.Vc4_a_FADD(accum, accum, temp);
+                }
                 Vc4Inst.Emit(CurrentStorage);
             }
 
+            if (i+1 == c)
             {
                 Vc4Instruction Vc4Inst;
                 Vc4Inst.Vc4_a_FADD(accum, accum, temp);
