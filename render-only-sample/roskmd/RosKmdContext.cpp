@@ -42,6 +42,7 @@ RosKmContext::DdiRender(
 #endif
     __except (EXCEPTION_EXECUTE_HANDLER)
     {
+        ROS_LOG_ERROR("Caught structured exception while copying usermode buffer.");
         return STATUS_INVALID_PARAMETER;
     }
 
@@ -49,6 +50,10 @@ RosKmContext::DdiRender(
     GpuCommand *    pCmdBufHeader = (GpuCommand *)pRender->pDmaBuffer;
     if (pCmdBufHeader->m_commandId != Header)
     {
+        ROS_LOG_ERROR(
+            "Invalid command buffer header. (pCmdBufHeader->m_commandId=0x%x, Header=0x%x)",
+            pCmdBufHeader->m_commandId,
+            Header);
         return STATUS_ILLEGAL_INSTRUCTION;
     }
 
@@ -65,6 +70,7 @@ RosKmContext::DdiRender(
     }
     __except (EXCEPTION_EXECUTE_HANDLER)
     {
+        ROS_LOG_ERROR("Caught structured exception while copying usermode buffer.");
         return STATUS_INVALID_PARAMETER;
     }
 
@@ -96,6 +102,7 @@ RosKmContext::DdiRender(
 
     if (! isValidDmaBuffer)
     {
+        ROS_LOG_ERROR("DMA buffer is not valid. (pDmaBufInfo=0x%p)", pDmaBufInfo);
         return STATUS_INVALID_PARAMETER;
     }
 

@@ -34,9 +34,9 @@ struct RosAllocationExchange
 #if 0
     UINT                    m_usage;        // D3D10_DDI_RESOURCE_USAGE
     UINT                    m_mapFlags;     // D3D10_DDI_MAP
-    UINT                    m_miscFlags;    // D3D10_DDI_RESOURCE_MISC_FLAG
 #endif
-
+    
+    UINT                    m_miscFlags;    // D3D10_DDI_RESOURCE_MISC_FLAG
     UINT                    m_bindFlags;    // D3D10_DDI_RESOURCE_BIND_FLAG
 
     DXGI_FORMAT             m_format;
@@ -48,6 +48,7 @@ struct RosAllocationExchange
 #endif
 
     DXGI_DDI_PRIMARY_DESC   m_primaryDesc;
+    
 
     // HW specific information calculated based on the fields above
     RosHwLayout             m_hwLayout;
