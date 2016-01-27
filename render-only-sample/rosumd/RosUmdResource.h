@@ -5,7 +5,14 @@
 #include "RosUmdDebug.h"
 
 class RosUmdResource
-{
+{    
+    enum class _SIGNATURE {
+        UNINITIALIZED,
+        CONSTRUCTED = 'ures',
+        INITIALIZED = 'URES',
+        DESTRUCTED = '_res',
+    } m_signature;
+    
 public:
 
     RosUmdResource();
@@ -112,7 +119,7 @@ public:
     {
         if (m_isPrimary)
         {
-            assert(m_miscFlags & D3D10_DDI_RESOURCE_MISC_SHARED);
+            assert(m_miscFlags & D3DWDDM2_0DDI_RESOURCE_MISC_DISPLAYABLE_SURFACE);
             assert(m_bindFlags & D3D10_DDI_BIND_PRESENT);
             assert(m_primaryDesc.ModeDesc.Width != 0);
         }
@@ -122,7 +129,9 @@ public:
 
 inline RosUmdResource* RosUmdResource::CastFrom(D3D10DDI_HRESOURCE hResource)
 {
-    return static_cast< RosUmdResource* >(hResource.pDrvPrivate);
+    auto thisPtr = static_cast< RosUmdResource* >(hResource.pDrvPrivate);
+    if (thisPtr) { assert(thisPtr->m_signature == _SIGNATURE::INITIALIZED); }
+    return thisPtr;
 }
 
 inline RosUmdResource* RosUmdResource::CastFrom(DXGI_DDI_HRESOURCE hResource)
@@ -130,7 +139,9 @@ inline RosUmdResource* RosUmdResource::CastFrom(DXGI_DDI_HRESOURCE hResource)
     static_assert(
         sizeof(hResource) == sizeof(RosUmdResource*),
         "Sanity check on cast compatibility");
-    return reinterpret_cast<RosUmdResource*>(hResource);
+    auto thisPtr = reinterpret_cast<RosUmdResource*>(hResource);
+    if (thisPtr) { assert(thisPtr->m_signature == _SIGNATURE::INITIALIZED); }
+    return thisPtr;
 }
 
 inline D3D10DDI_HRESOURCE RosUmdResource::CastTo() const

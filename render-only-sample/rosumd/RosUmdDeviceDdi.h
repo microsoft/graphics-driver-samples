@@ -259,7 +259,7 @@ public:
     static void APIENTRY DsSetShaderWithInterfaces_Default(D3D10DDI_HDEVICE, D3D10DDI_HSHADER, UINT, const UINT*, const D3D11DDIARG_POINTERDATA*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY CsSetShaderWithInterfaces_Default(D3D10DDI_HDEVICE, D3D10DDI_HSHADER, UINT, const UINT*, const D3D11DDIARG_POINTERDATA*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
 
-    static void APIENTRY Discard_Default(D3D10DDI_HDEVICE, D3D11DDI_HANDLETYPE, VOID*, const D3D10_DDI_RECT*, UINT) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
+    static void APIENTRY Discard_Default(D3D10DDI_HDEVICE, D3D11DDI_HANDLETYPE, VOID*, const D3D10_DDI_RECT*, UINT) { RosUmdLogging::Call(__FUNCTION__); /*__debugbreak();*/ }
 
     static void APIENTRY AssignDebugBinary_Default(D3D10DDI_HDEVICE, D3D10DDI_HSHADER, UINT, CONST VOID*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY DynamicConstantBufferMapNoOverwrite_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT, D3D10_DDI_MAP, UINT, D3D10DDI_MAPPED_SUBRESOURCE*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }

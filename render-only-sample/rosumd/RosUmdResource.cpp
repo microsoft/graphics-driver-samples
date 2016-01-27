@@ -15,6 +15,7 @@
 #include "Vc4Hw.h"
 
 RosUmdResource::RosUmdResource() :
+    m_signature(_SIGNATURE::CONSTRUCTED),
     m_hKMAllocation(NULL)
 {
     // do nothing
@@ -22,6 +23,7 @@ RosUmdResource::RosUmdResource() :
 
 RosUmdResource::~RosUmdResource()
 {
+    assert(m_signature > _SIGNATURE::UNINITIALIZED);
     // do nothing
 }
 
@@ -32,6 +34,8 @@ RosUmdResource::Standup(
     D3D10DDI_HRTRESOURCE hRTResource)
 {
     UNREFERENCED_PARAMETER(pUmdDevice);
+    
+    assert(m_signature == _SIGNATURE::CONSTRUCTED);
 
     m_resourceDimension = pCreateResource->ResourceDimension;
     m_mip0Info = *pCreateResource->pMipInfoList;
@@ -46,6 +50,11 @@ RosUmdResource::Standup(
 
     if (pCreateResource->pPrimaryDesc)
     {
+        assert(
+            (pCreateResource->MiscFlags & D3DWDDM2_0DDI_RESOURCE_MISC_DISPLAYABLE_SURFACE) &&
+            (pCreateResource->BindFlags & D3D10_DDI_BIND_PRESENT) &&
+            (pCreateResource->pPrimaryDesc->ModeDesc.Width != 0));
+        
         m_isPrimary = true;
         m_primaryDesc = *pCreateResource->pPrimaryDesc;
     }
@@ -69,11 +78,13 @@ RosUmdResource::Standup(
     m_allocationListIndex = 0;
 
     m_pSysMemCopy = NULL;
+    m_signature = _SIGNATURE::INITIALIZED;
 }
 
 void
 RosUmdResource::Teardown(void)
 {
+    m_signature = _SIGNATURE::CONSTRUCTED;
     // TODO[indyz]: Implement
 }
 
@@ -387,19 +398,19 @@ bool RosUmdResource::CanRotateFrom(const RosUmdResource* Other) const
 {
     // Make sure we're not rotating from ourself and that the resources
     // are compatible (e.g. size, flags, ...)
-
+    
     return (this != Other) &&
            (!m_pData && !Other->m_pData) &&
            (!m_pSysMemCopy && !Other->m_pSysMemCopy) &&
            (m_hRTResource != Other->m_hRTResource) &&
-           (m_hKMAllocation != Other->m_hKMAllocation) &&
-           (m_hKMResource != Other->m_hKMResource) &&
+           ((m_hKMAllocation != Other->m_hKMAllocation) || !m_hKMAllocation) &&
+           ((m_hKMResource != Other->m_hKMResource) || !m_hKMResource) &&
            (m_resourceDimension == Other->m_resourceDimension) &&
            (m_mip0Info == Other->m_mip0Info) &&
            (m_usage == Other->m_usage) &&
            (m_bindFlags == Other->m_bindFlags) &&
            (m_bindFlags & D3D10_DDI_BIND_PRESENT) &&
-           (m_mapFlags ==Other->m_mapFlags) &&
+           (m_mapFlags == Other->m_mapFlags) &&
            (m_miscFlags == Other->m_miscFlags) &&
            (m_format == Other->m_format) &&
            (m_sampleDesc == Other->m_sampleDesc) &&

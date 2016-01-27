@@ -575,8 +575,7 @@ HRESULT RosUmdDevice::Present(DXGI_DDI_ARG_PRESENT* pPresentData)
     }
 
     // Get the allocation for the source resource
-    auto pSrcResource = reinterpret_cast<RosUmdResource*>(
-            pPresentData->hSurfaceToPresent);
+    auto pSrcResource = RosUmdResource::CastFrom(pPresentData->hSurfaceToPresent);
 
     // we only handle a single subresource for now
     if (pPresentData->SrcSubResourceIndex != 0)
@@ -597,8 +596,7 @@ HRESULT RosUmdDevice::Present(DXGI_DDI_ARG_PRESENT* pPresentData)
     D3DKMT_HANDLE hDstAllocation = {};
     if (pPresentData->hDstResource)
     {
-        auto pDstResource = reinterpret_cast<RosUmdResource*>(
-                pPresentData->hDstResource);
+        auto pDstResource = RosUmdResource::CastFrom(pPresentData->hDstResource);
 
         // we only handle a single subresource for now
         if (pPresentData->DstSubResourceIndex != 0)
@@ -623,7 +621,7 @@ HRESULT RosUmdDevice::RotateResourceIdentities(
     DXGI_DDI_ARG_ROTATE_RESOURCE_IDENTITIES* Args)
 {
     assert(RosUmdDevice::CastFrom(Args->hDevice) == this);
-    
+
     assert(Args->Resources != 0);
     RosUmdResource firstResourceCopy = *RosUmdResource::CastFrom(Args->pResources[0]);
     for (UINT i = 0; i < Args->Resources; ++i)
@@ -635,10 +633,10 @@ HRESULT RosUmdDevice::RotateResourceIdentities(
 
         // We should not get asked to rotate incompatible resources
         assert(rotateTo->CanRotateFrom(rotateFrom));
-        
+
         rotateTo->RotateFrom(rotateFrom);
     }
-    
+
     return S_OK;
 }
 
@@ -684,6 +682,9 @@ HRESULT RosUmdDevice::Present1(DXGI_DDI_ARG_PRESENT1* pPresentData)
 {
     assert(this == CastFrom(pPresentData->hDevice));
 
+    // XXX[jordanrh]: We are currently being called for non-redirected blt.
+    // Figure out why flip isn't specified
+#if 0
     // Verify that only the Flip flag is set
     DXGI_DDI_PRESENT_FLAGS flipOnlyFlags;
     flipOnlyFlags.Value = 0;
@@ -699,6 +700,7 @@ HRESULT RosUmdDevice::Present1(DXGI_DDI_ARG_PRESENT1* pPresentData)
         assert(!"The only supported flip interval is 1.");
         return E_INVALIDARG;
     }
+#endif
 
     // TODO[jordanrh]: Ensure all rendering commands are flushed
 
@@ -706,8 +708,8 @@ HRESULT RosUmdDevice::Present1(DXGI_DDI_ARG_PRESENT1* pPresentData)
     for (UINT i = 0; i < pPresentData->SurfacesToPresent; ++i)
     {
         // Get the allocation for the source resource
-        auto pSrcResource = reinterpret_cast<RosUmdResource*>(
-            pPresentData->phSurfacesToPresent[i].hSurface);
+        auto pSrcResource = RosUmdResource::CastFrom(
+                pPresentData->phSurfacesToPresent[i].hSurface);
 
         // we only handle a single subresource for now
         if (pPresentData->phSurfacesToPresent[i].SubResourceIndex != 0)
@@ -716,7 +718,7 @@ HRESULT RosUmdDevice::Present1(DXGI_DDI_ARG_PRESENT1* pPresentData)
             return E_NOTIMPL;
         }
 
-        if (!pSrcResource->IsPrimary())
+        if (pPresentData->Flags.Flip && !pSrcResource->IsPrimary())
         {
             assert(!"Only primaries may be flipped");
             return E_INVALIDARG;
@@ -728,7 +730,7 @@ HRESULT RosUmdDevice::Present1(DXGI_DDI_ARG_PRESENT1* pPresentData)
         D3DKMT_HANDLE hDstAllocation = {};
         if (pPresentData->hDstResource)
         {
-            auto pDstResource = reinterpret_cast<RosUmdResource*>(
+            auto pDstResource = RosUmdResource::CastFrom(
                     pPresentData->hDstResource);
 
             // we only handle a single subresource for now
@@ -1192,7 +1194,7 @@ void RosUmdDevice::SetScissorRects(UINT NumScissorRects, UINT ClearScissorRects,
 
 void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
 {
-    RosUmdResource * pRenderTarget = (RosUmdResource *)m_renderTargetViews[0]->m_create.hDrvResource.pDrvPrivate;
+    RosUmdResource * pRenderTarget = RosUmdResource::CastFrom(m_renderTargetViews[0]->m_create.hDrvResource);
 
     // TODO[indyz] : Update RosHwFormat
     assert(pRenderTarget->m_hwFormat == RosHwFormat::X8888);

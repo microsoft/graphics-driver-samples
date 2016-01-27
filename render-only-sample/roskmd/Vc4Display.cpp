@@ -143,7 +143,7 @@ BOOLEAN VC4_DISPLAY::InterruptRoutine (
 
     // VSync interrupt
     if (intStat.VfpStart) {
-        ROS_LOG_TRACE("Notifying dxgkrnl lf VSYNC interrupt.");
+        // ROS_LOG_TRACE("Notifying dxgkrnl of VSYNC interrupt.");
 
         // Notify framework that previous active buffer is now safe
         // to use again

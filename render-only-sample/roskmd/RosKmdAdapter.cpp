@@ -1333,7 +1333,7 @@ NTSTATUS
 RosKmAdapter::DescribeAllocation(
     INOUT_PDXGKARG_DESCRIBEALLOCATION       pDescribeAllocation)
 {
-    RosKmdAllocation *pAllocation = (RosKmdAllocation *)pDescribeAllocation;
+    RosKmdAllocation *pAllocation = (RosKmdAllocation *)pDescribeAllocation->hAllocation;
 
     pDescribeAllocation->Width = pAllocation->m_mip0Info.TexelWidth;
     pDescribeAllocation->Height = pAllocation->m_mip0Info.TexelHeight;
