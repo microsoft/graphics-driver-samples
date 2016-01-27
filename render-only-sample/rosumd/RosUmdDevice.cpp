@@ -242,36 +242,38 @@ void RosUmdDevice::CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResou
         return;
     }
 
-    RosAllocationExchange rosAllocationExchange;
+    // Call kernel mode allocation routine
+    {
+        RosAllocationExchange rosAllocationExchange;
+        pResource->GetAllocationExchange(&rosAllocationExchange);
+        
+        auto allocate = D3DDDICB_ALLOCATE{};
+        auto allocationInfo = D3DDDI_ALLOCATIONINFO{};
+        {
+            // allocationInfo.hAllocation - out: Private driver data for allocation
+            allocationInfo.pSystemMem = nullptr;
+            allocationInfo.pPrivateDriverData = &rosAllocationExchange;
+            allocationInfo.PrivateDriverDataSize = sizeof(rosAllocationExchange);
+            allocationInfo.VidPnSourceId = 0;
+            allocationInfo.Flags.Primary = pCreateResource->pPrimaryDesc != nullptr;
+        }
 
-    pResource->GetAllocationExchange(&rosAllocationExchange);
+        auto rosAllocationGroupExchange = RosAllocationGroupExchange{};
 
-    D3DDDI_ALLOCATIONINFO allocationInfo;
+        allocate.pPrivateDriverData = &rosAllocationGroupExchange;
+        allocate.PrivateDriverDataSize = sizeof(rosAllocationGroupExchange);
+        allocate.hResource = hRTResource.handle;
+        // allocate.hKMResource - out: kernel resource handle
+        allocate.NumAllocations = 1;
+        allocate.pAllocationInfo = &allocationInfo;
 
-    allocationInfo.Flags.Value = 0;
-    allocationInfo.hAllocation = NULL;
-    allocationInfo.pPrivateDriverData = &rosAllocationExchange;
-    allocationInfo.PrivateDriverDataSize = sizeof(rosAllocationExchange);
-    allocationInfo.pSystemMem = NULL;
-    allocationInfo.VidPnSourceId = 0;
-
-    RosAllocationGroupExchange rosAllocationGroupExchange;
-
-    rosAllocationGroupExchange.m_dummy = 0;
-
-    D3DDDICB_ALLOCATE allocate;
-
-    allocate.pPrivateDriverData = &rosAllocationGroupExchange;
-    allocate.PrivateDriverDataSize = sizeof(rosAllocationGroupExchange);
-    allocate.hResource = hRTResource.handle;
-    allocate.hKMResource = NULL;
-    allocate.NumAllocations = 1;
-    allocate.pAllocationInfo = &allocationInfo;
-
-    Allocate(&allocate);
-
-    pResource->m_hKMResource = allocate.hKMResource;
-    pResource->m_hKMAllocation = allocationInfo.hAllocation;
+        HRESULT hr = m_pMSKTCallbacks->pfnAllocateCb(m_hRTDevice.handle, &allocate);
+        if (FAILED(hr))
+            throw RosUmdException(hr);
+        
+        pResource->m_hKMResource = allocate.hKMResource;
+        pResource->m_hKMAllocation = allocationInfo.hAllocation;
+    }
 
     if (pCreateResource->pInitialDataUP != NULL && pCreateResource->pInitialDataUP[0].pSysMem != NULL)
     {
@@ -513,13 +515,6 @@ void RosUmdDevice::CheckMultisampleQualityLevels(
 //
 // Kernel mode callbacks
 //
-
-void RosUmdDevice::Allocate(D3DDDICB_ALLOCATE * pAllocate)
-{
-    HRESULT hr = m_pMSKTCallbacks->pfnAllocateCb(m_hRTDevice.handle, pAllocate);
-
-    if (hr != S_OK) throw RosUmdException(hr);
-}
 
 void RosUmdDevice::Lock(D3DDDICB_LOCK * pLock)
 {

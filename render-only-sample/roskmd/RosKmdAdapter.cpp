@@ -1381,8 +1381,8 @@ NTSTATUS
 RosKmAdapter::PreemptCommand(
     IN_CONST_PDXGKARG_PREEMPTCOMMAND    /*pPreemptCommand*/)
 {
-    ROS_LOG_ASSERTION("Not implemented");
-    return STATUS_NOT_IMPLEMENTED;
+    ROS_LOG_WARNING("Not implemented");
+    return STATUS_SUCCESS;
 }
 
 NTSTATUS
@@ -1416,13 +1416,7 @@ RosKmAdapter::ResetEngine(
     return STATUS_NOT_IMPLEMENTED;
 }
 
-NTSTATUS
-RosKmAdapter::QueryDependentEngineGroup(
-    INOUT_DXGKARG_QUERYDEPENDENTENGINEGROUP     /*pQueryDependentEngineGroup*/)
-{
-    ROS_LOG_ASSERTION("Not implemented");
-    return STATUS_NOT_IMPLEMENTED;
-}
+
 
 
 
@@ -1818,6 +1812,8 @@ NTSTATUS RosKmAdapter::SetVidPnSourceAddress (
 VC4_NONPAGED_SEGMENT_END; //==================================================
 VC4_PAGED_SEGMENT_BEGIN; //===================================================
 
+
+
 _Use_decl_annotations_
 NTSTATUS RosKmAdapter::QueryInterface (QUERY_INTERFACE* Args)
 {
@@ -2145,6 +2141,21 @@ NTSTATUS RosKmAdapter::QueryVidPnHWCapability (
 
     NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
     return m_display.QueryVidPnHWCapability(VidPnHWCapsPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmAdapter::QueryDependentEngineGroup (
+    DXGKARG_QUERYDEPENDENTENGINEGROUP* ArgsPtr
+    )
+{
+    PAGED_CODE();
+    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    NT_ASSERT(ArgsPtr->NodeOrdinal == 0);
+    NT_ASSERT(EngineOrdinal == 0);
+
+    ArgsPtr->DependentNodeOrdinalMask = 0;
+    return STATUS_SUCCESS;
 }
 
 _Use_decl_annotations_

@@ -165,19 +165,15 @@ public:
         QueryCurrentFence(
             INOUT_PDXGKARG_QUERYCURRENTFENCE   pCurrentFence);
 
-    NTSTATUS
-        ResetEngine(
-            INOUT_PDXGKARG_RESETENGINE  pResetEngine);
 
     NTSTATUS
         QueryEngineStatus(
             INOUT_PDXGKARG_QUERYENGINESTATUS    pQueryEngineStatus);
 
     NTSTATUS
-        QueryDependentEngineGroup(
-            INOUT_DXGKARG_QUERYDEPENDENTENGINEGROUP     pQueryDependentEngineGroup);
+        ResetEngine(
+            INOUT_PDXGKARG_RESETENGINE  pResetEngine);
 
-    
 
     NTSTATUS
         CollectDbgInfo(
@@ -484,14 +480,14 @@ public: // PAGED
     NTSTATUS SetPalette (
         IN_CONST_PDXGKARG_SETPALETTE pSetPalette
         );
-        
+
     _Check_return_
     _Function_class_DXGK_(DXGKDDI_SETPOINTERPOSITION)
     _IRQL_requires_(PASSIVE_LEVEL)
     NTSTATUS SetPointerPosition (
         IN_CONST_PDXGKARG_SETPOINTERPOSITION SetPointerPositionPtr
         );
-        
+
     _Check_return_
     _Function_class_DXGK_(DXGKDDI_SETPOINTERSHAPE)
     _IRQL_requires_(PASSIVE_LEVEL)
@@ -547,14 +543,14 @@ public: // PAGED
     NTSTATUS RecommendMonitorModes (
         IN_CONST_PDXGKARG_RECOMMENDMONITORMODES_CONST pRecommendMonitorModes
         );
-        
+
     _Check_return_
     _Function_class_DXGK_(DXGKDDI_GETSCANLINE)
     _IRQL_requires_(PASSIVE_LEVEL)
     NTSTATUS GetScanLine (
         INOUT_PDXGKARG_GETSCANLINE pGetScanLine
         );
-        
+
     _Check_return_
     _Function_class_DXGK_(DXGKDDI_CONTROLINTERRUPT)
     _IRQL_requires_(PASSIVE_LEVEL)
@@ -568,6 +564,13 @@ public: // PAGED
     _IRQL_requires_(PASSIVE_LEVEL)
     NTSTATUS QueryVidPnHWCapability (
         INOUT_PDXGKARG_QUERYVIDPNHWCAPABILITY io_pVidPnHWCaps
+        );
+
+    _Check_return_
+    _Function_class_DXGK_(DXGKDDI_QUERYDEPENDENTENGINEGROUP)
+    _IRQL_requires_(PASSIVE_LEVEL)
+    NTSTATUS QueryDependentEngineGroup (
+        INOUT_DXGKARG_QUERYDEPENDENTENGINEGROUP Args
         );
 
     _Check_return_

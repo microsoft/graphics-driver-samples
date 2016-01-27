@@ -313,18 +313,7 @@ RosKmdDdi::DdiQueryEngineStatus(
 }
 
 
-NTSTATUS
-__stdcall
-RosKmdDdi::DdiQueryDependentEngineGroup(
-    IN_CONST_HANDLE                             hAdapter,
-    INOUT_DXGKARG_QUERYDEPENDENTENGINEGROUP     pQueryDependentEngineGroup)
-{
-    RosKmAdapter  *pRosKmdAdapter = RosKmAdapter::Cast(hAdapter);
 
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n", __FUNCTION__, hAdapter);
-
-    return pRosKmdAdapter->QueryDependentEngineGroup(pQueryDependentEngineGroup);
-}
 
 NTSTATUS
 __stdcall
@@ -622,7 +611,7 @@ NTSTATUS RosKmdDisplayDdi::DdiSetPalette (
 {
     PAGED_CODE();
     VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-    
+
     return RosKmAdapter::Cast(AdapterPtr)->SetPalette(SetPalettePtr);
 }
 
@@ -634,7 +623,7 @@ NTSTATUS RosKmdDisplayDdi::DdiSetPointerPosition (
 {
     PAGED_CODE();
     VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-    
+
     return RosKmAdapter::Cast(AdapterPtr)->SetPointerPosition(
         SetPointerPositionPtr);
 }
@@ -647,7 +636,7 @@ NTSTATUS RosKmdDisplayDdi::DdiSetPointerShape (
 {
     PAGED_CODE();
     VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-    
+
     return RosKmAdapter::Cast(AdapterPtr)->SetPointerShape(SetPointerShapePtr);
 }
 
@@ -750,7 +739,7 @@ NTSTATUS RosKmdDisplayDdi::DdiGetScanLine (
 {
     PAGED_CODE();
     VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-    
+
     return RosKmAdapter::Cast(AdapterPtr)->GetScanLine(GetScanLinePtr);
 }
 
@@ -765,6 +754,18 @@ NTSTATUS RosKmdDisplayDdi::DdiQueryVidPnHWCapability (
 
     return RosKmAdapter::Cast(MiniportDeviceContextPtr)->QueryVidPnHWCapability(
             VidPnHWCapsPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmdDdi::DdiQueryDependentEngineGroup (
+    const HANDLE hAdapter,
+    DXGKARG_QUERYDEPENDENTENGINEGROUP* ArgsPtr
+    )
+{
+    PAGED_CODE();
+    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    return RosKmAdapter::Cast(hAdapter)->QueryDependentEngineGroup(ArgsPtr);
 }
 
 _Use_decl_annotations_

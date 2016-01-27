@@ -117,12 +117,6 @@ public:
 
     static NTSTATUS
         __stdcall
-        DdiQueryDependentEngineGroup(
-            IN_CONST_HANDLE                             hAdapter,
-            INOUT_DXGKARG_QUERYDEPENDENTENGINEGROUP     pQueryDependentEngineGroup);
-
-    static NTSTATUS
-        __stdcall
         DdiControlInterrupt(
             IN_CONST_HANDLE                 hAdapter,
             IN_CONST_DXGK_INTERRUPT_TYPE    InterruptType,
@@ -265,10 +259,11 @@ public: // PAGED
     static DXGKDDI_SETVIDPNSOURCEVISIBILITY DdiSetVidPnSourceVisibility;
     static DXGKDDI_COMMITVIDPN DdiCommitVidPn;
     static DXGKDDI_UPDATEACTIVEVIDPNPRESENTPATH DdiUpdateActiveVidPnPresentPath;
-    
+
     static DXGKDDI_RECOMMENDMONITORMODES DdiRecommendMonitorModes;
     static DXGKDDI_GETSCANLINE DdiGetScanLine;
     static DXGKDDI_QUERYVIDPNHWCAPABILITY DdiQueryVidPnHWCapability;
+    static DXGKDDI_QUERYDEPENDENTENGINEGROUP DdiQueryDependentEngineGroup;
     static DXGKDDI_STOP_DEVICE_AND_RELEASE_POST_DISPLAY_OWNERSHIP
         DdiStopDeviceAndReleasePostDisplayOwnership;
 
