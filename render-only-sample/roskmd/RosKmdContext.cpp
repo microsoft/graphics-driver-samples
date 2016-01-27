@@ -212,7 +212,7 @@ NTSTATUS RosKmContext::Present (DXGKARG_PRESENT* Args)
     PAGED_CODE();
     VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
-    ROS_LOG_ASSERTION(
+    ROS_LOG_WARNING(
         "Kernel-mode DxgkDdiPresent should not be called in direct-flip case! (Flags=%s %s %s %s %s %s %s %s)",
         Args->Flags.Blt ? "Blt" : "",
         Args->Flags.ColorFill ? "ColorFill" : "",
@@ -223,7 +223,7 @@ NTSTATUS RosKmContext::Present (DXGKARG_PRESENT* Args)
         Args->Flags.LinearToSrgb ? "LinearToSrgb" : "",
         Args->Flags.Rotate ? "Rotate" : "");
 
-    return STATUS_NOT_IMPLEMENTED;
+    return STATUS_SUCCESS;
 }
 
 VC4_PAGED_SEGMENT_END; //=====================================================

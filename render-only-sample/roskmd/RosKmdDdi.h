@@ -231,10 +231,17 @@ public:
             IN_PVOID            Argument,
             OUT_PULONG          AcpiFlags);
 
+    
+            
     static void
         DdiResetDevice(
             IN_CONST_PVOID  MiniportDeviceContext);
 
+            
+public: // PAGED
+
+    static DXGKDDI_QUERYDEPENDENTENGINEGROUP DdiQueryDependentEngineGroup;
+    
 };
 
 //
@@ -263,7 +270,6 @@ public: // PAGED
     static DXGKDDI_RECOMMENDMONITORMODES DdiRecommendMonitorModes;
     static DXGKDDI_GETSCANLINE DdiGetScanLine;
     static DXGKDDI_QUERYVIDPNHWCAPABILITY DdiQueryVidPnHWCapability;
-    static DXGKDDI_QUERYDEPENDENTENGINEGROUP DdiQueryDependentEngineGroup;
     static DXGKDDI_STOP_DEVICE_AND_RELEASE_POST_DISPLAY_OWNERSHIP
         DdiStopDeviceAndReleasePostDisplayOwnership;
 

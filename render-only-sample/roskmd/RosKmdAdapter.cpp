@@ -1402,30 +1402,31 @@ RosKmAdapter::CancelCommand(
 
 NTSTATUS
 RosKmAdapter::QueryCurrentFence(
-    INOUT_PDXGKARG_QUERYCURRENTFENCE   /*pCurrentFence*/)
+    INOUT_PDXGKARG_QUERYCURRENTFENCE pCurrentFence)
 {
-    ROS_LOG_ASSERTION("Not implemented");
-    return STATUS_NOT_IMPLEMENTED;
+    ROS_LOG_WARNING("Not implemented");
+    
+    NT_ASSERT(pCurrentFence->NodeOrdinal == 0);
+    NT_ASSERT(pCurrentFence->EngineOrdinal == 0);
+    
+    pCurrentFence->CurrentFence = 0;
+    return STATUS_SUCCESS;
 }
 
 NTSTATUS
 RosKmAdapter::ResetEngine(
     INOUT_PDXGKARG_RESETENGINE  /*pResetEngine*/)
 {
-    ROS_LOG_ASSERTION("Not implemented");
-    return STATUS_NOT_IMPLEMENTED;
+    ROS_LOG_WARNING("Not implemented");
+    return STATUS_SUCCESS;
 }
-
-
-
-
 
 NTSTATUS
 RosKmAdapter::CollectDbgInfo(
     IN_CONST_PDXGKARG_COLLECTDBGINFO        /*pCollectDbgInfo*/)
 {
-    ROS_LOG_ASSERTION("Not implemented");
-    return STATUS_NOT_IMPLEMENTED;
+    ROS_LOG_WARNING("Not implemented");
+    return STATUS_SUCCESS;
 }
 
 NTSTATUS
@@ -2152,7 +2153,7 @@ NTSTATUS RosKmAdapter::QueryDependentEngineGroup (
     VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     NT_ASSERT(ArgsPtr->NodeOrdinal == 0);
-    NT_ASSERT(EngineOrdinal == 0);
+    NT_ASSERT(ArgsPtr->EngineOrdinal == 0);
 
     ArgsPtr->DependentNodeOrdinalMask = 0;
     return STATUS_SUCCESS;

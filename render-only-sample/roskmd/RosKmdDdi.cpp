@@ -600,6 +600,22 @@ VC4_PAGED_SEGMENT_BEGIN; //===================================================
 // TODO[jordanh] put PASSIVE_LEVEL DDIs in the paged section
 
 //
+// RosKmdDdi
+//
+
+_Use_decl_annotations_
+NTSTATUS RosKmdDdi::DdiQueryDependentEngineGroup (
+    const HANDLE hAdapter,
+    DXGKARG_QUERYDEPENDENTENGINEGROUP* ArgsPtr
+    )
+{
+    PAGED_CODE();
+    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    return RosKmAdapter::Cast(hAdapter)->QueryDependentEngineGroup(ArgsPtr);
+}
+
+//
 // RosKmdDisplayDdi
 //
 
@@ -756,17 +772,7 @@ NTSTATUS RosKmdDisplayDdi::DdiQueryVidPnHWCapability (
             VidPnHWCapsPtr);
 }
 
-_Use_decl_annotations_
-NTSTATUS RosKmdDdi::DdiQueryDependentEngineGroup (
-    const HANDLE hAdapter,
-    DXGKARG_QUERYDEPENDENTENGINEGROUP* ArgsPtr
-    )
-{
-    PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
-    return RosKmAdapter::Cast(hAdapter)->QueryDependentEngineGroup(ArgsPtr);
-}
 
 _Use_decl_annotations_
 NTSTATUS RosKmdDisplayDdi::DdiStopDeviceAndReleasePostDisplayOwnership (
