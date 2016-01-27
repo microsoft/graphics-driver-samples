@@ -658,7 +658,7 @@ typedef struct _VC4ConfigBits
         {
             USHORT  EnableForwardFacingPrimitive    : 1;
             USHORT  EnableReverseFacingPrimitive    : 1;
-            USHORT  ClosewisePrimitives             : 1;
+            USHORT  ClockwisePrimitives             : 1;
             USHORT  EnableDepthOffset               : 1;
             USHORT  AntialisedPointsAndLines        : 1;    // Not actually supported
             USHORT  CoverageReadType                : 1;    // (0 = 4*8-bit level, 1 = 16-bit mask)
