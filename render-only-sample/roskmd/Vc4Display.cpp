@@ -109,8 +109,7 @@ NTSTATUS VC4_DISPLAY::SetVidPnSourceAddress (
         ROS_LOG_ASSERTION("What do we do here?");
     }
 
-    ULONG physicAddress = Vc4PhysicalAddressFromVirtual(
-        reinterpret_cast<void*>(Args->PrimaryAddress.LowPart));
+    ULONG physicAddress = Args->PrimaryAddress.LowPart;
 
     // PrimaryAddress is actually a virtual address
     // Update the source address in the display list

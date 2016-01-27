@@ -77,7 +77,8 @@ RosUmdResource::Standup(
 
     m_allocationListIndex = 0;
 
-    m_pSysMemCopy = NULL;
+    m_pData = nullptr;
+    m_pSysMemCopy = nullptr;
     m_signature = _SIGNATURE::INITIALIZED;
 }
 
@@ -417,7 +418,11 @@ bool RosUmdResource::CanRotateFrom(const RosUmdResource* Other) const
            (m_mipLevels == Other->m_mipLevels) &&
            (m_arraySize == Other->m_arraySize) &&
            (m_isPrimary == Other->m_isPrimary) &&
-           (m_primaryDesc == Other->m_primaryDesc) &&
+           ((m_primaryDesc.Flags & ~DXGI_DDI_PRIMARY_OPTIONAL) ==
+            (Other->m_primaryDesc.Flags & ~DXGI_DDI_PRIMARY_OPTIONAL)) &&
+           (m_primaryDesc.VidPnSourceId == Other->m_primaryDesc.VidPnSourceId) &&
+           (m_primaryDesc.ModeDesc == Other->m_primaryDesc.ModeDesc) &&
+           (m_primaryDesc.DriverFlags == Other->m_primaryDesc.DriverFlags) &&
            (m_hwLayout == Other->m_hwLayout) &&
            (m_hwWidthPixels == Other->m_hwWidthPixels) &&
            (m_hwHeightPixels == Other->m_hwHeightPixels) &&

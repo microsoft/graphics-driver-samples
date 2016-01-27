@@ -67,3 +67,8 @@ inline operator== (const DXGI_DDI_PRIMARY_DESC &Lhs, const DXGI_DDI_PRIMARY_DESC
 {
     return memcmp(&Lhs, &Rhs, sizeof(Lhs)) == 0;
 }
+
+inline operator== (const DXGI_DDI_MODE_DESC &Lhs, const DXGI_DDI_MODE_DESC &Rhs)
+{
+    return memcmp(&Lhs, &Rhs, sizeof(Lhs)) == 0;
+}
