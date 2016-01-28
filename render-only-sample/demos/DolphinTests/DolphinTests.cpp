@@ -85,7 +85,6 @@ ID3D11Buffer*       pDolphinVB2 = NULL;
 ID3D11Buffer*       pDolphinVB3 = NULL;
 ID3D11Buffer*       pDolphinIB = NULL;
 
-#if VC4 // VC4_HACK
 #pragma pack(1)
 typedef struct
 {
@@ -96,7 +95,6 @@ typedef struct
 #pragma pack()
 DOLPHIN_VERTEX* pDolphinTweenedNormalBuffer = NULL;
 ID3D11Buffer* pDolphinTweenedNormalVB = NULL;
-#endif // VC4_HACK;
 
 D3D11_PRIMITIVE_TOPOLOGY    DolphinPrimType;
 DWORD                       dwDolphinVertexStride;
@@ -377,7 +375,7 @@ VOID UninitD3D()
     SAFE_RELEASE(pDefaultRasterState);
 }
 
-BOOL InitD3D(UINT rtWidth, UINT rtHeight)
+BOOL InitD3D(bool useRosDriver, UINT rtWidth, UINT rtHeight)
 {
     BOOL bRet = FALSE;
     HRESULT hr;
@@ -391,11 +389,12 @@ BOOL InitD3D(UINT rtWidth, UINT rtHeight)
     DXGI_MODE_DESC ModeDesc = { 0 };
 
     CHR(CreateDXGIFactory(__uuidof(IDXGIFactory), (void**)&pFactory));
-#if VC4
+
     for (UINT i = 0; ; i++)
     {
         DXGI_ADAPTER_DESC adapterDesc = { 0 };
         CHR(pFactory->EnumAdapters(i, &pAdapter));
+        if (!useRosDriver) break;
         pAdapter->GetDesc(&adapterDesc);
         if (_tcsicmp(adapterDesc.Description, TEXT("Render Only Sample Driver")) == 0)
         {
@@ -403,19 +402,17 @@ BOOL InitD3D(UINT rtWidth, UINT rtHeight)
         }
         SAFE_RELEASE(pAdapter);
     }
-#else
-    CHR(pFactory->EnumAdapters(0, &pAdapter));
-#endif
 
     {
         // Create Direct3D
-#if VC4
-        D3D_FEATURE_LEVEL  FeatureLevelsRequested[] = { D3D_FEATURE_LEVEL_9_1 };
-        D3D_FEATURE_LEVEL  FeatureLevelsSupported = D3D_FEATURE_LEVEL_9_1;
-#else
         D3D_FEATURE_LEVEL  FeatureLevelsRequested[] = { D3D_FEATURE_LEVEL_11_0 };
         D3D_FEATURE_LEVEL  FeatureLevelsSupported = D3D_FEATURE_LEVEL_11_0;
-#endif 
+
+        if (useRosDriver)
+        {
+            FeatureLevelsRequested[0] = D3D_FEATURE_LEVEL_9_1;
+            FeatureLevelsSupported = D3D_FEATURE_LEVEL_9_1;
+        }
 
         CHR(D3D11CreateDevice(pAdapter,
             D3D_DRIVER_TYPE_UNKNOWN,
@@ -429,21 +426,24 @@ BOOL InitD3D(UINT rtWidth, UINT rtHeight)
             &pd3dContext));
     }
 
-#if VC4
-    ModeDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    ModeDesc.Width = rtWidth;
-    ModeDesc.Height = rtHeight;
-#else
-    //
-    // Get the current mode information from the output (i.e. as it is
-    // currently being used for the desktop).
-    //
-    CHR(pAdapter->EnumOutputs(0, &pOutput));
-    ZeroMemory(&ModeToMatch, sizeof(ModeToMatch));
-    CHR(pOutput->FindClosestMatchingMode(&ModeToMatch,
-        &ModeDesc,
-        pd3dDevice));
-#endif
+    if (useRosDriver)
+    {
+        ModeDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        ModeDesc.Width = rtWidth;
+        ModeDesc.Height = rtHeight;
+    }
+    else
+    {
+        //
+        // Get the current mode information from the output (i.e. as it is
+        // currently being used for the desktop).
+        //
+        CHR(pAdapter->EnumOutputs(0, &pOutput));
+        ZeroMemory(&ModeToMatch, sizeof(ModeToMatch));
+        CHR(pOutput->FindClosestMatchingMode(&ModeToMatch,
+            &ModeDesc,
+            pd3dDevice));
+    }
 
     {
         D3D11_TEXTURE2D_DESC desc;
@@ -605,9 +605,7 @@ VOID UninitDolphin(VOID)
     SAFE_RELEASE(pDolphinVB1);
     SAFE_RELEASE(pDolphinVB2);
     SAFE_RELEASE(pDolphinVB3);
-#if VC4 // VC4_HACK
     SAFE_RELEASE(pDolphinTweenedNormalVB);
-#endif // VC4_HACK
     SAFE_RELEASE(pDolphinIB);
     SAFE_RELEASE(pDolphinTextureView);
     SAFE_RELEASE(pDolphinVertexLayout);
@@ -619,7 +617,7 @@ VOID UninitDolphin(VOID)
     SAFE_RELEASE(pSeaFloorVertexLayout);
 }
 
-BOOL InitDolphin(VOID)
+BOOL InitDolphin(bool useTweenedNormal)
 {
     HRESULT hr;
     BOOL bRet = FALSE;
@@ -636,10 +634,13 @@ BOOL InitDolphin(VOID)
         { "POSITION",  2, DXGI_FORMAT_R32G32B32_FLOAT, 2, 0,  D3D11_INPUT_PER_VERTEX_DATA, 0 },
         { "NORMAL",    2, DXGI_FORMAT_R32G32B32_FLOAT, 2, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
         { "TEXCOORD",  2, DXGI_FORMAT_R32G32_FLOAT,    2, 24, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-#if VC4 // VC4_HACK
+        // used when using tweened normal
         { "NORMAL",    4, DXGI_FORMAT_R32G32B32_FLOAT, 3,  0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-#endif // VC4_HACK
     };
+
+    UINT layoutLength = ARRAYSIZE(layout);
+
+    if (!useTweenedNormal) layoutLength--;
 
     // Create constant buffers
     {
@@ -716,7 +717,7 @@ BOOL InitDolphin(VOID)
             DolphinVertexFormat = DolphinMesh1.GetIBFormat11(0);
         }
 
-#if VC4 // VC4_HACK
+        if (useTweenedNormal)
         {
             assert(sizeof(DOLPHIN_VERTEX) == DolphinMesh1.GetVertexStride(0, 0));
             assert(DolphinMesh1.GetNumVertices(0, 0) == DolphinMesh2.GetNumVertices(0, 0));
@@ -733,7 +734,6 @@ BOOL InitDolphin(VOID)
 
             CHR(pd3dDevice->CreateBuffer(&bufferDesc, NULL, &pDolphinTweenedNormalVB));
         }
-#endif // VC4_HACK
         
         {
             DWORD dwDolphinVSSize = 0;
@@ -745,7 +745,7 @@ BOOL InitDolphin(VOID)
                 goto EXIT_RETURN;
             }
             CHR(pd3dDevice->CreateVertexShader((DWORD*)pDolphinVSData, dwDolphinVSSize, NULL, &pDolphinVertexShader));
-            CHR(pd3dDevice->CreateInputLayout(layout, ARRAYSIZE(layout), pDolphinVSData, dwDolphinVSSize, &pDolphinVertexLayout));
+            CHR(pd3dDevice->CreateInputLayout(layout, layoutLength, pDolphinVSData, dwDolphinVSSize, &pDolphinVertexLayout));
         }
     }
 
@@ -942,7 +942,7 @@ EXIT_RETURN:
     return bRet;
 }
 
-VOID UpdateDolphin(VOID)
+VOID UpdateDolphin(bool useTweenedNormal)
 {
     /*
     static float deg = 0;
@@ -991,37 +991,38 @@ VOID UpdateDolphin(VOID)
 
     D3D11_MAPPED_SUBRESOURCE MappedResource;
 
-#if VC4 // VC4_HACK
-    pd3dContext->Map(pDolphinTweenedNormalVB, 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource);
+    if (useTweenedNormal)
     {
-        XMFLOAT3* pTweenedNormal = (XMFLOAT3*)MappedResource.pData;
-
-        // Gather normal data from DolphinMesh.
-        DOLPHIN_VERTEX *pVertices1 = (DOLPHIN_VERTEX *)DolphinMesh1.GetRawVerticesAt(0);
-        DOLPHIN_VERTEX *pVertices2 = (DOLPHIN_VERTEX *)DolphinMesh2.GetRawVerticesAt(0);
-        DOLPHIN_VERTEX *pVertices3 = (DOLPHIN_VERTEX *)DolphinMesh3.GetRawVerticesAt(0);
-
-        for (UINT n = 0; n < DolphinMesh1.GetNumVertices(0, 0); n++)
+        pd3dContext->Map(pDolphinTweenedNormalVB, 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource);
         {
-            // float3 vModelNormal = vNormal0 * g_vBlendWeights.x + 
-            //                       vNormal1 * g_vBlendWeights.y + 
-            //                       vNormal2 * g_vBlendWeights.z;
+            XMFLOAT3* pTweenedNormal = (XMFLOAT3*)MappedResource.pData;
 
-            XMVECTOR vNormal0 = XMLoadFloat3(&pVertices1[n].normal);
-            XMVECTOR vNormal1 = XMLoadFloat3(&pVertices2[n].normal);
-            XMVECTOR vNormal2 = XMLoadFloat3(&pVertices3[n].normal);
-            
-            vNormal0 = XMVectorScale(vNormal0, fWeight1);
-            vNormal1 = XMVectorScale(vNormal1, fWeight2);
-            vNormal2 = XMVectorScale(vNormal2, fWeight3);
+            // Gather normal data from DolphinMesh.
+            DOLPHIN_VERTEX *pVertices1 = (DOLPHIN_VERTEX *)DolphinMesh1.GetRawVerticesAt(0);
+            DOLPHIN_VERTEX *pVertices2 = (DOLPHIN_VERTEX *)DolphinMesh2.GetRawVerticesAt(0);
+            DOLPHIN_VERTEX *pVertices3 = (DOLPHIN_VERTEX *)DolphinMesh3.GetRawVerticesAt(0);
 
-            XMVECTOR vNormal = XMVectorAdd(XMVectorAdd(vNormal0, vNormal1), vNormal2);
+            for (UINT n = 0; n < DolphinMesh1.GetNumVertices(0, 0); n++)
+            {
+                // float3 vModelNormal = vNormal0 * g_vBlendWeights.x + 
+                //                       vNormal1 * g_vBlendWeights.y + 
+                //                       vNormal2 * g_vBlendWeights.z;
 
-            XMStoreFloat3(&pTweenedNormal[n], vNormal);
+                XMVECTOR vNormal0 = XMLoadFloat3(&pVertices1[n].normal);
+                XMVECTOR vNormal1 = XMLoadFloat3(&pVertices2[n].normal);
+                XMVECTOR vNormal2 = XMLoadFloat3(&pVertices3[n].normal);
+
+                vNormal0 = XMVectorScale(vNormal0, fWeight1);
+                vNormal1 = XMVectorScale(vNormal1, fWeight2);
+                vNormal2 = XMVectorScale(vNormal2, fWeight3);
+
+                XMVECTOR vNormal = XMVectorAdd(XMVectorAdd(vNormal0, vNormal1), vNormal2);
+
+                XMStoreFloat3(&pTweenedNormal[n], vNormal);
+            }
         }
+        pd3dContext->Unmap(pDolphinTweenedNormalVB, 0);
     }
-    pd3dContext->Unmap(pDolphinTweenedNormalVB, 0);
-#endif // VC4_HACK
 
     pd3dContext->Map(pVSConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource);
     {
@@ -1065,7 +1066,7 @@ VOID UpdateDolphin(VOID)
     pd3dContext->Unmap(pPSConstantBuffer, 0);
 }
 
-VOID RenderDolphin(VOID)
+VOID RenderDolphin(bool useTweenedNormal)
 {
     //
     // Clear the back buffer
@@ -1119,24 +1120,25 @@ VOID RenderDolphin(VOID)
     pDolphinVB[0] = pDolphinVB1;
     pDolphinVB[1] = pDolphinVB2;
     pDolphinVB[2] = pDolphinVB3;
-#if VC4 // VC4_HACK
-    pDolphinVB[3] = pDolphinTweenedNormalVB;
-#endif // VC4_HACK
     DolphinStrides[0] = (UINT)dwDolphinVertexStride;
     DolphinStrides[1] = (UINT)dwDolphinVertexStride;
     DolphinStrides[2] = (UINT)dwDolphinVertexStride;
-#if VC4 // VC4_HACK
-    DolphinStrides[3] = sizeof(XMFLOAT3);
-#endif // VC4_HACK
     DolphinOffsets[0] = 0;
     DolphinOffsets[1] = 0;
     DolphinOffsets[2] = 0;
-#if VC4
-    DolphinOffsets[3] = 0;
-    pd3dContext->IASetVertexBuffers(0, 4, pDolphinVB, DolphinStrides, DolphinOffsets);
-#else
-    pd3dContext->IASetVertexBuffers(0, 3, pDolphinVB, DolphinStrides, DolphinOffsets);
-#endif // VC4_HACK
+
+    if (useTweenedNormal)
+    {
+        pDolphinVB[3] = pDolphinTweenedNormalVB;
+        DolphinStrides[3] = sizeof(XMFLOAT3);
+        DolphinOffsets[3] = 0;
+        pd3dContext->IASetVertexBuffers(0, 4, pDolphinVB, DolphinStrides, DolphinOffsets);
+    }
+    else
+    {
+        pd3dContext->IASetVertexBuffers(0, 3, pDolphinVB, DolphinStrides, DolphinOffsets);
+    }
+
     pd3dContext->IASetIndexBuffer(pDolphinIB, DolphinVertexFormat, 0);
     pd3dContext->IASetPrimitiveTopology(DolphinPrimType);
     pd3dContext->VSSetShader(pDolphinVertexShader, NULL, 0);
@@ -1183,7 +1185,13 @@ BOOL InitPerf()
 int main(int argc, char *argv[])
 {
     BOOL            bPerfMode = false;
-    
+    bool            useRosDriver = false;
+    bool            useTweenedNormal = true;
+
+#if defined(_M_ARM) && defined(VC4)
+    useRosDriver = true;
+#endif
+
     UINT            rtWidth = 800;
     UINT            rtHeight = 600;
     UINT            frames = 3;
@@ -1219,9 +1227,9 @@ int main(int argc, char *argv[])
         }
     }
 
-    InitD3D(rtWidth, rtHeight);
+    InitD3D(useRosDriver, rtWidth, rtHeight);
 
-    InitDolphin();
+    InitDolphin(useTweenedNormal);
 
     if (bPerfMode)
     {
@@ -1240,8 +1248,8 @@ int main(int argc, char *argv[])
             QueryPerformanceFrequency(&frequenceStart);
         }
 
-        UpdateDolphin();
-        RenderDolphin();
+        UpdateDolphin(useTweenedNormal);
+        RenderDolphin(useTweenedNormal);
 
         if (!bPerfMode)
         {

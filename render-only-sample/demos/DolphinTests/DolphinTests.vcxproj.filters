@@ -27,10 +27,10 @@
     <ClInclude Include="resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SDKmesh.h">
+    <ClInclude Include="..\common\SDKmesh.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="BitmapDecode.h">
+    <ClInclude Include="..\common\BitmapDecode.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="xTimer.h">
@@ -44,137 +44,137 @@
     <ClCompile Include="DolphinTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="SDKmesh.cpp">
+    <ClCompile Include="..\common\SDKmesh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="BitmapDecode.cpp">
+    <ClCompile Include="..\common\BitmapDecode.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="resources\caust00.tga">
+    <Image Include="..\resources\caust00.tga">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resources\caust01.tga">
+    <Image Include="..\resources\caust01.tga">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resources\caust02.tga">
+    <Image Include="..\resources\caust02.tga">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resources\caust03.tga">
+    <Image Include="..\resources\caust03.tga">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resources\caust04.tga">
+    <Image Include="..\resources\caust04.tga">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resources\caust05.tga">
+    <Image Include="..\resources\caust05.tga">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resources\caust06.tga">
+    <Image Include="..\resources\caust06.tga">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resources\caust07.tga">
+    <Image Include="..\resources\caust07.tga">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resources\caust08.tga">
+    <Image Include="..\resources\caust08.tga">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resources\caust09.tga">
+    <Image Include="..\resources\caust09.tga">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resources\caust10.tga">
+    <Image Include="..\resources\caust10.tga">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resources\caust11.tga">
+    <Image Include="..\resources\caust11.tga">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resources\caust12.tga">
+    <Image Include="..\resources\caust12.tga">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resources\caust13.tga">
+    <Image Include="..\resources\caust13.tga">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resources\caust14.tga">
+    <Image Include="..\resources\caust14.tga">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resources\caust15.tga">
+    <Image Include="..\resources\caust15.tga">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resources\caust16.tga">
+    <Image Include="..\resources\caust16.tga">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resources\caust17.tga">
+    <Image Include="..\resources\caust17.tga">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resources\caust18.tga">
+    <Image Include="..\resources\caust18.tga">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resources\caust19.tga">
+    <Image Include="..\resources\caust19.tga">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resources\caust20.tga">
+    <Image Include="..\resources\caust20.tga">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resources\caust21.tga">
+    <Image Include="..\resources\caust21.tga">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resources\caust22.tga">
+    <Image Include="..\resources\caust22.tga">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resources\caust23.tga">
+    <Image Include="..\resources\caust23.tga">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resources\caust24.tga">
+    <Image Include="..\resources\caust24.tga">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resources\caust25.tga">
+    <Image Include="..\resources\caust25.tga">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resources\caust26.tga">
+    <Image Include="..\resources\caust26.tga">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resources\caust27.tga">
+    <Image Include="..\resources\caust27.tga">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resources\caust28.tga">
+    <Image Include="..\resources\caust28.tga">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resources\caust29.tga">
+    <Image Include="..\resources\caust29.tga">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resources\caust30.tga">
+    <Image Include="..\resources\caust30.tga">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resources\caust31.tga">
+    <Image Include="..\resources\caust31.tga">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resources\dolphin.bmp">
+    <Image Include="..\resources\dolphin.bmp">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="resources\seafloor.bmp">
+    <Image Include="..\resources\seafloor.bmp">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <None Include="resources\Dolphin1.sdkmesh">
+    <None Include="..\resources\Dolphin1.sdkmesh">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="resources\Dolphin2.sdkmesh">
+    <None Include="..\resources\Dolphin2.sdkmesh">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="resources\Dolphin3.sdkmesh">
+    <None Include="..\resources\Dolphin3.sdkmesh">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="resources\DolphinTween.xvu">
+    <None Include="..\resources\DolphinTween.xvu">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="resources\seafloor.sdkmesh">
+    <None Include="..\resources\seafloor.sdkmesh">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="resources\SeaFloor.xvu">
+    <None Include="..\resources\SeaFloor.xvu">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="resources\ShadeCausticsPixel.xpu">
+    <None Include="..\resources\ShadeCausticsPixel.xpu">
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>
