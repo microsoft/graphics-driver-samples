@@ -18,13 +18,7 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="stdafx.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="targetver.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="resource.h">
+    <ClInclude Include="..\common\resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\common\SDKmesh.h">
@@ -33,14 +27,14 @@
     <ClInclude Include="..\common\BitmapDecode.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="xTimer.h">
+    <ClInclude Include="..\common\xTimer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\common\DolphinRender.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="stdafx.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="DolphinTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -48,6 +42,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\common\BitmapDecode.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\common\DolphinRender.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
