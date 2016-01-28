@@ -14,10 +14,18 @@ dolphinMain::dolphinMain(const std::shared_ptr<DX::DeviceResources>& deviceResou
 	// Register to be notified if the Device is lost or recreated
 	m_deviceResources->RegisterDeviceNotify(this);
 
-	// TODO: Replace this with your app's content initialization.
-	m_sceneRenderer = std::unique_ptr<Sample3DSceneRenderer>(new Sample3DSceneRenderer(m_deviceResources));
+    m_showDolphin = true;
+    
+    if (m_showDolphin)
+    {
+        m_dolphinSceneRenderer = std::unique_ptr<DolphinSceneRenderer>(new DolphinSceneRenderer(m_deviceResources));
+    }
+    else
+    {
+        m_sceneRenderer = std::unique_ptr<Sample3DSceneRenderer>(new Sample3DSceneRenderer(m_deviceResources));
+        m_fpsTextRenderer = std::unique_ptr<SampleFpsTextRenderer>(new SampleFpsTextRenderer(m_deviceResources));
+    }
 
-	m_fpsTextRenderer = std::unique_ptr<SampleFpsTextRenderer>(new SampleFpsTextRenderer(m_deviceResources));
 
 	// TODO: Change the timer settings if you want something other than the default variable timestep mode.
 	// e.g. for 60 FPS fixed timestep update logic, call:
@@ -36,8 +44,14 @@ dolphinMain::~dolphinMain()
 // Updates application state when the window size changes (e.g. device orientation change)
 void dolphinMain::CreateWindowSizeDependentResources() 
 {
-	// TODO: Replace this with the size-dependent initialization of your app's content.
-	m_sceneRenderer->CreateWindowSizeDependentResources();
+    if (m_showDolphin)
+    {
+        m_dolphinSceneRenderer->CreateWindowSizeDependentResources();
+    }
+    else
+    {
+        m_sceneRenderer->CreateWindowSizeDependentResources();
+    }
 }
 
 // Updates the application state once per frame.
@@ -46,9 +60,15 @@ void dolphinMain::Update()
 	// Update scene objects.
 	m_timer.Tick([&]()
 	{
-		// TODO: Replace this with your app's content update functions.
-		m_sceneRenderer->Update(m_timer);
-		m_fpsTextRenderer->Update(m_timer);
+        if (m_showDolphin)
+        {
+            m_dolphinSceneRenderer->Update(m_timer);
+        }
+        else
+        {
+            m_sceneRenderer->Update(m_timer);
+            m_fpsTextRenderer->Update(m_timer);
+        }
 	});
 }
 
@@ -77,9 +97,15 @@ bool dolphinMain::Render()
 	context->ClearDepthStencilView(m_deviceResources->GetDepthStencilView(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
 	// Render the scene objects.
-	// TODO: Replace this with your app's content rendering functions.
-	m_sceneRenderer->Render();
-	m_fpsTextRenderer->Render();
+    if (m_showDolphin)
+    {
+        m_dolphinSceneRenderer->Render();
+    }
+    else
+    {
+        m_sceneRenderer->Render();
+        m_fpsTextRenderer->Render();
+    }
 
 	return true;
 }
@@ -87,14 +113,28 @@ bool dolphinMain::Render()
 // Notifies renderers that device resources need to be released.
 void dolphinMain::OnDeviceLost()
 {
-	m_sceneRenderer->ReleaseDeviceDependentResources();
-	m_fpsTextRenderer->ReleaseDeviceDependentResources();
+    if (m_showDolphin)
+    {
+        m_dolphinSceneRenderer->ReleaseDeviceDependentResources();
+    }
+    else
+    {
+        m_sceneRenderer->ReleaseDeviceDependentResources();
+        m_fpsTextRenderer->ReleaseDeviceDependentResources();
+    }
 }
 
 // Notifies renderers that device resources may now be recreated.
 void dolphinMain::OnDeviceRestored()
 {
-	m_sceneRenderer->CreateDeviceDependentResources();
-	m_fpsTextRenderer->CreateDeviceDependentResources();
+    if (m_showDolphin)
+    {
+        m_dolphinSceneRenderer->CreateDeviceDependentResources();
+    }
+    else
+    {
+        m_sceneRenderer->CreateDeviceDependentResources();
+        m_fpsTextRenderer->CreateDeviceDependentResources();
+    }
 	CreateWindowSizeDependentResources();
 }

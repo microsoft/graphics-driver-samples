@@ -8,13 +8,13 @@
       <UniqueIdentifier>c48491f7-ca4f-4738-9165-564a41a871af</UniqueIdentifier>
       <Extensions>bmp;fbx;gif;jpg;jpeg;tga;tiff;tif;png</Extensions>
     </Filter>
-	<Filter Include="Content">
+    <Filter Include="Content">
       <UniqueIdentifier>dd0f664c-c0fb-4700-a76f-269fe5906ec5</UniqueIdentifier>
     </Filter>
     <ClInclude Include="Common\DirectXHelper.h">
       <Filter>Common</Filter>
     </ClInclude>
-	<ClInclude Include="Common\StepTimer.h">
+    <ClInclude Include="Common\StepTimer.h">
       <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="Common\DeviceResources.h">
@@ -23,22 +23,19 @@
     <ClCompile Include="Common\DeviceResources.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-	<ClInclude Include="Content\Sample3DSceneRenderer.h">
-      <Filter>Content</Filter>
-    </ClInclude>
     <ClInclude Include="Content\SampleFpsTextRenderer.h">
       <Filter>Content</Filter>
     </ClInclude>
     <ClInclude Include="Content\ShaderStructures.h">
       <Filter>Content</Filter>
     </ClInclude>
-	<ClCompile Include="Content\Sample3DSceneRenderer.cpp">
+    <ClCompile Include="Content\Sample3DSceneRenderer.cpp">
       <Filter>Content</Filter>
     </ClCompile>
     <ClCompile Include="Content\SampleFpsTextRenderer.cpp">
       <Filter>Content</Filter>
     </ClCompile>
-	<FxCompile Include="Content\SamplePixelShader.hlsl">
+    <FxCompile Include="Content\SamplePixelShader.hlsl">
       <Filter>Content</Filter>
     </FxCompile>
     <FxCompile Include="Content\SampleVertexShader.hlsl">
@@ -62,5 +59,47 @@
     <Image Include="Assets\Wide310x150Logo.scale-200.png">
       <Filter>Assets</Filter>
     </Image>
+    <Filter Include="resources">
+      <UniqueIdentifier>{4d553695-3750-4a03-8696-6dab3a57406c}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="App.cpp" />
+    <ClCompile Include="dolphinMain.cpp" />
+    <ClCompile Include="pch.cpp" />
+    <ClCompile Include="Content\DolphinSceneRenderer.cpp">
+      <Filter>Content</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="App.h" />
+    <ClInclude Include="dolphinMain.h" />
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="Content\DolphinSceneRenderer.h">
+      <Filter>Content</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="Assets\StoreLogo.png">
+      <Filter>Assets</Filter>
+    </Image>
+    <Image Include="resources\dolphin.bmp">
+      <Filter>resources</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <AppxManifest Include="Package.appxmanifest" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="dolphin_TemporaryKey.pfx" />
+    <None Include="resources\DolphinTween.xvu">
+      <Filter>resources</Filter>
+    </None>
+    <None Include="resources\SeaFloor.xvu">
+      <Filter>resources</Filter>
+    </None>
+    <None Include="resources\ShadeCausticsPixel.xpu">
+      <Filter>resources</Filter>
+    </None>
   </ItemGroup>
 </Project>
