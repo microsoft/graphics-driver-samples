@@ -936,6 +936,10 @@ void Vc4Shader::HLSL_ParseDecl()
                 this->TempRegister[i / 4][i % 4].swizzleMask = D3D10_SB_OPERAND_4_COMPONENT_MASK_X << (i % 4);
             }
             break;
+        case D3D10_SB_OPCODE_DCL_GLOBAL_FLAGS:
+            HLSL_GetShaderInstruction(this->HLSLParser, Inst);
+            // TODO:
+            break;
         case D3D10_SB_OPCODE_DCL_INDEX_RANGE:
         case D3D10_SB_OPCODE_DCL_GS_OUTPUT_PRIMITIVE_TOPOLOGY:
         case D3D10_SB_OPCODE_DCL_GS_INPUT_PRIMITIVE:
@@ -946,7 +950,6 @@ void Vc4Shader::HLSL_ParseDecl()
         case D3D10_SB_OPCODE_DCL_INPUT_PS_SIV:
         case D3D10_SB_OPCODE_DCL_OUTPUT_SGV:
         case D3D10_SB_OPCODE_DCL_INDEXABLE_TEMP:
-        case D3D10_SB_OPCODE_DCL_GLOBAL_FLAGS:
             HLSL_GetShaderInstruction(this->HLSLParser, Inst);
             VC4_ASSERT(false); // TODO
             __fallthrough;
