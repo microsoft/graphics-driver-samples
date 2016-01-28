@@ -7,9 +7,12 @@
 #include "RosKmdLogging.h"
 #include "Vc4Display.tmh"
 
+#include "RosKmdGlobal.h"
 #include "Vc4Common.h"
 #include "Vc4Debug.h"
 #include "Vc4Display.h"
+
+
 
 VC4_NONPAGED_SEGMENT_BEGIN; //================================================
 
@@ -109,7 +112,8 @@ NTSTATUS VC4_DISPLAY::SetVidPnSourceAddress (
         ROS_LOG_ASSERTION("What do we do here?");
     }
 
-    ULONG physicAddress = Args->PrimaryAddress.LowPart;
+    ULONG physicAddress = RosKmdGlobal::s_videoMemoryPhysicalAddress.LowPart + 
+        Args->PrimaryAddress.LowPart;
 
     // PrimaryAddress is actually a virtual address
     // Update the source address in the display list

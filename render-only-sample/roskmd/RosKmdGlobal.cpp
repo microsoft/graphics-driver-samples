@@ -263,7 +263,7 @@ NTSTATUS RosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
     // DriverInitializationData.DxgkDdiAcquireSwizzlingRange   = RosKmdAcquireSwizzlingRange;
     // DriverInitializationData.DxgkDdiReleaseSwizzlingRange   = RosKmdReleaseSwizzlingRange;
 
-    DriverInitializationData.DxgkDdiOpenAllocation = RosKmDevice::DdiOpenAllocation;
+    DriverInitializationData.DxgkDdiOpenAllocation = RosKmdDdi::DdiOpenAllocation;
     DriverInitializationData.DxgkDdiCloseAllocation = RosKmDevice::DdiCloseAllocation;
 
     DriverInitializationData.DxgkDdiPatch = RosKmdDdi::DdiPatch;

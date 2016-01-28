@@ -1243,6 +1243,7 @@ RosKmAdapter::QueryAdapterInfo(
             pSegmentDesc[1].BaseAddress.QuadPart = 0LL; // Gpu base physical address
             pSegmentDesc[1].Flags.CpuVisible = true;
             pSegmentDesc[1].Flags.CacheCoherent = true;
+            pSegmentDesc[1].Flags.DirectFlip = true;
             pSegmentDesc[1].CpuTranslatedAddress = RosKmdGlobal::s_videoMemoryPhysicalAddress; // cpu base physical address
             pSegmentDesc[1].Size = RosKmdGlobal::s_videoMemorySize;
 

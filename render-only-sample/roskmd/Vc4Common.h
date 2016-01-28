@@ -121,6 +121,11 @@ __forceinline void __cdecl operator delete ( void* Ptr ) throw ()
     if (Ptr) ExFreePool(Ptr);
 } // operator delete ( void* )
 
+__forceinline void __cdecl operator delete (void* Ptr, size_t) throw ()
+{
+    if (Ptr) ExFreePool(Ptr);
+} // operator delete (void*, size_t)
+
 __forceinline void* __cdecl operator new[] (
     size_t Size,
     POOL_TYPE PoolType,

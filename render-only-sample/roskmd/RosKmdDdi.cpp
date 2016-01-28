@@ -604,8 +604,20 @@ VC4_PAGED_SEGMENT_BEGIN; //===================================================
 //
 
 _Use_decl_annotations_
+NTSTATUS RosKmdDdi::DdiOpenAllocation (
+    HANDLE const hDevice,
+    const DXGKARG_OPENALLOCATION* ArgsPtr
+    )
+{
+    PAGED_CODE();
+    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    return RosKmDevice::Cast(hDevice)->OpenAllocation(ArgsPtr);
+}
+
+_Use_decl_annotations_
 NTSTATUS RosKmdDdi::DdiQueryDependentEngineGroup (
-    const HANDLE hAdapter,
+    HANDLE const hAdapter,
     DXGKARG_QUERYDEPENDENTENGINEGROUP* ArgsPtr
     )
 {
@@ -771,8 +783,6 @@ NTSTATUS RosKmdDisplayDdi::DdiQueryVidPnHWCapability (
     return RosKmAdapter::Cast(MiniportDeviceContextPtr)->QueryVidPnHWCapability(
             VidPnHWCapsPtr);
 }
-
-
 
 _Use_decl_annotations_
 NTSTATUS RosKmdDisplayDdi::DdiStopDeviceAndReleasePostDisplayOwnership (
