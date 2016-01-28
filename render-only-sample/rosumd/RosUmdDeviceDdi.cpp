@@ -86,7 +86,7 @@ const D3DWDDM1_3DDI_DEVICEFUNCS RosUmdDeviceDdi::s_deviceFuncsWDDM1_3 =
     RosUmdDeviceDdi::DdiCalcPrivateResourceSize,
     RosUmdDeviceDdi::CalcPrivateOpenedResourceSize_Default,
     RosUmdDeviceDdi::DdiCreateResource,
-    RosUmdDeviceDdi::OpenResource_Default,
+    RosUmdDeviceDdi::DdiOpenResource,
     RosUmdDeviceDdi::DdiDestroyResource,
     RosUmdDeviceDdi::DdiCalcPrivateShaderResourceViewSize11,
     RosUmdDeviceDdi::DdiCreateShaderResourceView11,
@@ -253,6 +253,28 @@ void APIENTRY RosUmdDeviceDdi::DdiCreateResource(
 
     try {
         pRosUmdDevice->CreateResource(pCreateResource, hResource, hRTResource);
+    }
+
+    catch (std::exception & e)
+    {
+        pRosUmdDevice->SetException(e);
+    }
+
+    RosUmdLogging::Exit(__FUNCTION__);
+}
+
+void APIENTRY RosUmdDeviceDdi::DdiOpenResource(
+    D3D10DDI_HDEVICE hDevice,
+    const D3D10DDIARG_OPENRESOURCE* Args,
+    D3D10DDI_HRESOURCE hResource,
+    D3D10DDI_HRTRESOURCE hRTResource)
+{
+    RosUmdLogging::Entry(__FUNCTION__);
+
+    RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
+
+    try {
+        pRosUmdDevice->OpenResource(Args, hResource, hRTResource);
     }
 
     catch (std::exception & e)

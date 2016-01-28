@@ -73,6 +73,7 @@ public:
 public:
 
     void CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResource, D3D10DDI_HRESOURCE hResource, D3D10DDI_HRTRESOURCE hRTResource);
+    void OpenResource(const D3D10DDIARG_OPENRESOURCE*, D3D10DDI_HRESOURCE, D3D10DDI_HRTRESOURCE);
     void DestroyResource(RosUmdResource * pResource);
     void ResourceCopy(RosUmdResource *pDestinationResource, RosUmdResource * pSourceResource);
     void ConstantBufferUpdateSubresourceUP(RosUmdResource *pDestinationResource, UINT DstSubresource, _In_opt_ const D3D10_DDI_BOX *pDstBox, _In_ const VOID *pSysMemUP, UINT RowPitch, UINT DepthPitch, UINT CopyFlags);

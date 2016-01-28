@@ -4,13 +4,12 @@
 #include "Pixel.hpp"
 #include "RosUmdDebug.h"
 
-class RosUmdResource
+class RosUmdResource : public RosAllocationExchange
 {    
     enum class _SIGNATURE {
-        UNINITIALIZED,
-        CONSTRUCTED = 'ures',
+        CONSTRUCTED = 'Ures',
         INITIALIZED = 'URES',
-        DESTRUCTED = '_res',
+        DESTRUCTED = 'ures',
     } m_signature;
     
 public:
@@ -22,39 +21,14 @@ public:
     static RosUmdResource* CastFrom(DXGI_DDI_HRESOURCE);
     D3D10DDI_HRESOURCE CastTo() const;
 
-    // Input from UMD CreateResource DDI
-    D3D10DDIRESOURCE_TYPE   m_resourceDimension;
-
-    D3D10DDI_MIPINFO        m_mip0Info;
-    UINT                    m_usage;        // D3D10_DDI_RESOURCE_USAGE
-    UINT                    m_bindFlags;    // D3D10_DDI_RESOURCE_BIND_FLAG
-    UINT                    m_mapFlags;     // D3D10_DDI_MAP
-    UINT                    m_miscFlags;    // D3D10_DDI_RESOURCE_MISC_FLAG
-    DXGI_FORMAT             m_format;
-    DXGI_SAMPLE_DESC        m_sampleDesc;
-    UINT                    m_mipLevels;
-    UINT                    m_arraySize;
-
-    bool                    m_isPrimary;
-    DXGI_DDI_PRIMARY_DESC   m_primaryDesc;
-
-    // HW specific information calculated based on the fields above
-    RosHwLayout             m_hwLayout;
-
-    UINT                    m_hwWidthPixels;
-    UINT                    m_hwHeightPixels;
-    RosHwFormat             m_hwFormat;
-    UINT                    m_hwPitchBytes;
-    UINT                    m_hwSizeBytes;
-
     UINT                    m_hwWidthTilePixels;
     UINT                    m_hwHeightTilePixels;
     UINT                    m_hwWidthTiles;
     UINT                    m_hwHeightTiles;
 
     D3D10DDI_HRTRESOURCE    m_hRTResource;
-    D3DKMT_HANDLE           m_hKMResource;
-    D3DKMT_HANDLE           m_hKMAllocation;
+    D3DKMT_HANDLE           m_hKMResource;      // can this be a D3D10DDI_HKMRESOURCE?
+    D3DKMT_HANDLE           m_hKMAllocation;    // can this be a D3D10DDI_HKMALLOCATION?
 
     ULONGLONG               m_mostRecentFence;
     UINT                    m_allocationListIndex;
@@ -71,6 +45,13 @@ public:
         const D3D11DDIARG_CREATERESOURCE* pCreateResource,
         D3D10DDI_HRTRESOURCE hRTResource);
 
+    void InitSharedResourceFromExistingAllocation (
+        const RosAllocationExchange* ExistingAllocationPtr,
+        D3D10DDI_HKMRESOURCE hKMResource,
+        D3DKMT_HANDLE hKMAllocation,        // can this be a D3D10DDI_HKMALLOCATION?
+        D3D10DDI_HRTRESOURCE hRTResource
+        );
+        
     void Teardown(void);
 
     void
@@ -105,9 +86,6 @@ public:
     CalculateMemoryLayout(
         void);
 
-    void GetAllocationExchange(
-        RosAllocationExchange * pOutAllocationExchange);
-        
     // Determines whether the supplied resource can be rotated into this one.
     // Resources must have equivalent dimensions and flags to rotate.
     bool CanRotateFrom(const RosUmdResource* Other) const;

@@ -23,7 +23,9 @@ RosUmdResource::RosUmdResource() :
 
 RosUmdResource::~RosUmdResource()
 {
-    assert(m_signature > _SIGNATURE::UNINITIALIZED);
+    assert(
+        (m_signature == _SIGNATURE::CONSTRUCTED) ||
+        (m_signature == _SIGNATURE::INITIALIZED));
     // do nothing
 }
 
@@ -79,6 +81,35 @@ RosUmdResource::Standup(
 
     m_pData = nullptr;
     m_pSysMemCopy = nullptr;
+    m_signature = _SIGNATURE::INITIALIZED;
+}
+
+void RosUmdResource::InitSharedResourceFromExistingAllocation (
+    const RosAllocationExchange* ExistingAllocationPtr,
+    D3D10DDI_HKMRESOURCE hKMResource,
+    D3DKMT_HANDLE hKMAllocation,        // can this be a D3D10DDI_HKMALLOCATION?
+    D3D10DDI_HRTRESOURCE hRTResource
+    )
+{
+    assert(m_signature == _SIGNATURE::CONSTRUCTED);
+    
+    // copy members from the existing allocation into this object
+    RosAllocationExchange* basePtr = this;
+    *basePtr = *ExistingAllocationPtr;
+
+    // HW specific information calculated based on the fields above
+    CalculateMemoryLayout();
+    
+    m_hRTResource = hRTResource;
+    m_hKMResource = hKMResource.handle;
+    m_hKMAllocation = hKMAllocation;
+
+    m_mostRecentFence = RosUmdCommandBuffer::s_nullFence;
+    m_allocationListIndex = 0;
+
+    m_pData = nullptr;
+    m_pSysMemCopy = nullptr;
+    
     m_signature = _SIGNATURE::INITIALIZED;
 }
 
@@ -360,39 +391,6 @@ RosUmdResource::CalculateMemoryLayout(
         }
         break;
     }
-}
-
-void RosUmdResource::GetAllocationExchange(
-    RosAllocationExchange * pOutAllocationExchange)
-{
-#if 0
-    pOutAllocationExchange->m_resourceDimension = m_resourceDimension;
-#endif
-    pOutAllocationExchange->m_mip0Info = m_mip0Info;
-#if 0
-    pOutAllocationExchange->m_usage = m_usage;
-    pOutAllocationExchange->m_mapFlags = m_mapFlags;
-#endif
-
-    pOutAllocationExchange->m_miscFlags = m_miscFlags;
-    pOutAllocationExchange->m_bindFlags = m_bindFlags;
-    pOutAllocationExchange->m_format = m_format;
-    pOutAllocationExchange->m_sampleDesc = m_sampleDesc;
-#if 0
-    pOutAllocationExchange->m_mipLevels = m_mipLevels;
-    pOutAllocationExchange->m_arraySize = m_arraySize;
-#endif
-
-    pOutAllocationExchange->m_primaryDesc = m_primaryDesc;
-    pOutAllocationExchange->m_hwLayout = m_hwLayout;
-    pOutAllocationExchange->m_hwWidthPixels = m_hwWidthPixels;
-    pOutAllocationExchange->m_hwHeightPixels = m_hwHeightPixels;
-    pOutAllocationExchange->m_hwFormat = m_hwFormat;
-#if 0
-    pOutAllocationExchange->m_hwPitch = m_hwPitch;
-#endif
-
-    pOutAllocationExchange->m_hwSizeBytes = m_hwSizeBytes;
 }
 
 bool RosUmdResource::CanRotateFrom(const RosUmdResource* Other) const

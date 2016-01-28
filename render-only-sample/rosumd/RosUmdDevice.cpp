@@ -244,16 +244,15 @@ void RosUmdDevice::CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResou
 
     // Call kernel mode allocation routine
     {
-        RosAllocationExchange rosAllocationExchange;
-        pResource->GetAllocationExchange(&rosAllocationExchange);
+        RosAllocationExchange* rosAllocationExchange = pResource;
         
         auto allocate = D3DDDICB_ALLOCATE{};
         auto allocationInfo = D3DDDI_ALLOCATIONINFO{};
         {
             // allocationInfo.hAllocation - out: Private driver data for allocation
             allocationInfo.pSystemMem = nullptr;
-            allocationInfo.pPrivateDriverData = &rosAllocationExchange;
-            allocationInfo.PrivateDriverDataSize = sizeof(rosAllocationExchange);
+            allocationInfo.pPrivateDriverData = rosAllocationExchange;
+            allocationInfo.PrivateDriverDataSize = sizeof(*rosAllocationExchange);
             allocationInfo.VidPnSourceId = 0;
             allocationInfo.Flags.Primary = pCreateResource->pPrimaryDesc != nullptr;
         }
@@ -296,6 +295,40 @@ void RosUmdDevice::CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResou
 
         Unlock(&unlock);
     }
+}
+
+//
+// Need to instantiate a new RosUmdResource object in the memory
+// pointed to by hResource.pDrvPrivate and initialize it according to
+// the existing RosAllocationExchange object pointed to by the pPrivateDriverData
+// member of D3DDDI_OPENALLOCATIONINFO.
+//
+void RosUmdDevice::OpenResource(
+    const D3D10DDIARG_OPENRESOURCE* Args,
+    D3D10DDI_HRESOURCE hResource,
+    D3D10DDI_HRTRESOURCE hRTResource)
+{
+    assert(Args->PrivateDriverDataSize == sizeof(RosAllocationGroupExchange));
+    
+    if (Args->NumAllocations != 1)
+        throw RosUmdException(E_INVALIDARG);
+    
+    D3DDDI_OPENALLOCATIONINFO* openAllocationInfoPtr = &Args->pOpenAllocationInfo[0];
+    assert(
+        openAllocationInfoPtr->PrivateDriverDataSize == 
+        sizeof(RosAllocationExchange));
+    
+    auto rosAllocationExchangePtr = static_cast<const RosAllocationExchange*>(
+            openAllocationInfoPtr->pPrivateDriverData);
+    
+    // Instantiate the new resource in the memory provided to us by the framework
+    auto rosUmdResourcePtr = new (hResource.pDrvPrivate) RosUmdResource();
+    
+    rosUmdResourcePtr->InitSharedResourceFromExistingAllocation(
+            rosAllocationExchangePtr,
+            Args->hKMResource,
+            openAllocationInfoPtr->hAllocation,
+            hRTResource);
 }
 
 void RosUmdDevice::DestroyResource(
