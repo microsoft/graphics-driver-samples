@@ -111,7 +111,7 @@ public:
     static BOOL APIENTRY ResourceIsStagingBusy_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE) { RosUmdLogging::Call(__FUNCTION__); __debugbreak();  return 0; }
     static SIZE_T APIENTRY CalcPrivateResourceSize_Default(D3D10DDI_HDEVICE, const D3D10DDIARG_CREATERESOURCE*) { RosUmdLogging::Call(__FUNCTION__); return 0; }
     static SIZE_T APIENTRY DdiCalcPrivateResourceSize(D3D10DDI_HDEVICE, const D3D11DDIARG_CREATERESOURCE*);
-    static SIZE_T APIENTRY CalcPrivateOpenedResourceSize_Default(D3D10DDI_HDEVICE, const D3D10DDIARG_OPENRESOURCE*) { RosUmdLogging::Call(__FUNCTION__); return 0; }
+    static SIZE_T APIENTRY DdiCalcPrivateOpenedResourceSize(D3D10DDI_HDEVICE, const D3D10DDIARG_OPENRESOURCE*);
     static void APIENTRY CreateResource_Default(D3D10DDI_HDEVICE, const D3D10DDIARG_CREATERESOURCE*, D3D10DDI_HRESOURCE, D3D10DDI_HRTRESOURCE) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY DdiCreateResource(D3D10DDI_HDEVICE, const D3D11DDIARG_CREATERESOURCE*, D3D10DDI_HRESOURCE, D3D10DDI_HRTRESOURCE);
     static void APIENTRY DdiOpenResource(D3D10DDI_HDEVICE, const D3D10DDIARG_OPENRESOURCE*, D3D10DDI_HRESOURCE, D3D10DDI_HRTRESOURCE);

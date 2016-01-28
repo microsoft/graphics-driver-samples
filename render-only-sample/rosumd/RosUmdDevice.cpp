@@ -295,6 +295,8 @@ void RosUmdDevice::CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResou
 
         Unlock(&unlock);
     }
+    
+    pResource->m_isOpenResource = false;
 }
 
 //
@@ -329,6 +331,8 @@ void RosUmdDevice::OpenResource(
             Args->hKMResource,
             openAllocationInfoPtr->hAllocation,
             hRTResource);
+            
+    rosUmdResourcePtr->m_isOpenResource = true;
 }
 
 void RosUmdDevice::DestroyResource(

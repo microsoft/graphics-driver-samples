@@ -38,6 +38,8 @@ public:
 
     // Used by constant buffer
     BYTE                   *m_pSysMemCopy;
+    
+    bool                   m_isOpenResource;
 
     void
     Standup(

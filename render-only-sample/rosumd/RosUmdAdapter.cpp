@@ -92,7 +92,7 @@ HRESULT APIENTRY RosUmdAdapter::CreateDevice(
         return e.m_hr;
     }
 
-    return S_OK;
+    return S_OK; // DXGI_STATUS_NO_REDIRECTION;
 }
 
 //----------------------------------------------------------------------------------------------------------------------------------

@@ -84,7 +84,7 @@ const D3DWDDM1_3DDI_DEVICEFUNCS RosUmdDeviceDdi::s_deviceFuncsWDDM1_3 =
     RosUmdDeviceDdi::ResourceIsStagingBusy_Default,
     RosUmdDeviceDdi::RelocateDeviceFuncs11_1_Default,
     RosUmdDeviceDdi::DdiCalcPrivateResourceSize,
-    RosUmdDeviceDdi::CalcPrivateOpenedResourceSize_Default,
+    RosUmdDeviceDdi::DdiCalcPrivateOpenedResourceSize,
     RosUmdDeviceDdi::DdiCreateResource,
     RosUmdDeviceDdi::DdiOpenResource,
     RosUmdDeviceDdi::DdiDestroyResource,
@@ -500,6 +500,13 @@ SIZE_T APIENTRY RosUmdDeviceDdi::DdiCalcPrivateResourceSize(
 {
     RosUmdLogging::Call(__FUNCTION__);
 
+    return sizeof(RosUmdResource);
+}
+
+SIZE_T RosUmdDeviceDdi::DdiCalcPrivateOpenedResourceSize(
+    D3D10DDI_HDEVICE,
+    const D3D10DDIARG_OPENRESOURCE*)
+{
     return sizeof(RosUmdResource);
 }
 
