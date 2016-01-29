@@ -392,7 +392,7 @@ bool InitD3D(bool useRosDriver, unsigned int rtWidth, unsigned int rtHeight)
     DXGI_MODE_DESC ModeToMatch = { 0 };
     DXGI_MODE_DESC ModeDesc = { 0 };
 
-    CHR(CreateDXGIFactory(__uuidof(IDXGIFactory), (void**)&pFactory));
+    CHR(CreateDXGIFactory1(__uuidof(IDXGIFactory), (void**)&pFactory));
 
     for (UINT i = 0; ; i++)
     {
@@ -736,7 +736,7 @@ bool InitDolphin(bool useTweenedNormal, LoadResourceFunc loadResourceFunc)
             bufferDesc.ByteWidth = (UINT)DolphinMesh1.GetNumVertices(0, 0) * sizeof(XMFLOAT3);
             bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
             bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-            bufferDesc.CPUAccessFlags = D3D10_CPU_ACCESS_WRITE;
+            bufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
             bufferDesc.MiscFlags = 0;
 
             CHR(pd3dDevice->CreateBuffer(&bufferDesc, NULL, &pDolphinTweenedNormalVB));
