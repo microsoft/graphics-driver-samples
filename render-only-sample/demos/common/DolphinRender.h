@@ -15,3 +15,5 @@ void EnqueueRenderEvent();
 unsigned long WaitForRenderEvent();
 void ResetRenderEvent();
 void FlushRender();
+
+bool LoadDeviceDependentDolphinResources(bool useTweenedNormal, LoadResourceFunc loadResourceFunc, ID3D11Device * inDevice, ID3D11DeviceContext * inContext);

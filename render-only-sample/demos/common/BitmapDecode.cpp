@@ -13,6 +13,17 @@
 
 #include "BitmapDecode.h"
 
+#if !(WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP))
+typedef struct tagBITMAPFILEHEADER {
+    WORD    bfType;
+    DWORD   bfSize;
+    WORD    bfReserved1;
+    WORD    bfReserved2;
+    DWORD   bfOffBits;
+} BITMAPFILEHEADER, FAR *LPBITMAPFILEHEADER, *PBITMAPFILEHEADER;
+#endif
+
+
 //--------------------------------------------------------------------------------------
 // BitmapDecode.cpp
 //
