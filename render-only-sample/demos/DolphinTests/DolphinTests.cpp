@@ -23,6 +23,87 @@
 
 #include <DolphinRender.h>
 
+#define CHR(x) { hr = (x); if (FAILED(hr)) {__debugbreak(); goto EXIT_RETURN; } }
+
+#define SAFE_RELEASE(x) { if (x) { (x)->Release(); (x) = NULL; } }
+
+class DeviceState
+{
+public:
+
+    DeviceState()
+    {
+        m_device = NULL;
+        m_context = NULL;
+        m_adapter = NULL;
+    }
+
+    HRESULT Init(bool useRosDriver)
+    {
+        HRESULT hr;
+
+        IDXGIFactory*   pFactory = NULL;
+
+        CHR(CreateDXGIFactory1(__uuidof(IDXGIFactory), (void**)&pFactory));
+
+        for (UINT i = 0; ; i++)
+        {
+            DXGI_ADAPTER_DESC adapterDesc = { 0 };
+            CHR(pFactory->EnumAdapters(i, &m_adapter));
+            if (!useRosDriver) break;
+            m_adapter->GetDesc(&adapterDesc);
+            if (_tcsicmp(adapterDesc.Description, TEXT("Render Only Sample Driver")) == 0)
+            {
+                break;
+            }
+            SAFE_RELEASE(m_adapter);
+        }
+
+        {
+            // Create Direct3D
+            D3D_FEATURE_LEVEL  FeatureLevelsRequested[] = { D3D_FEATURE_LEVEL_11_0 };
+            D3D_FEATURE_LEVEL  FeatureLevelsSupported = D3D_FEATURE_LEVEL_11_0;
+
+            if (useRosDriver)
+            {
+                FeatureLevelsRequested[0] = D3D_FEATURE_LEVEL_9_1;
+                FeatureLevelsSupported = D3D_FEATURE_LEVEL_9_1;
+            }
+
+            CHR(D3D11CreateDevice(m_adapter,
+                D3D_DRIVER_TYPE_UNKNOWN,
+                NULL,
+                D3D11_CREATE_DEVICE_SINGLETHREADED /*| D3D11_CREATE_DEVICE_DEBUG*/,
+                FeatureLevelsRequested,
+                RTL_NUMBER_OF(FeatureLevelsRequested),
+                D3D11_SDK_VERSION,
+                &m_device,
+                &FeatureLevelsSupported,
+                &m_context));
+        }
+
+    EXIT_RETURN:
+
+        SAFE_RELEASE(pFactory);
+
+        return hr;
+
+    }
+
+    void Uninit()
+    {
+        SAFE_RELEASE(m_context);
+        SAFE_RELEASE(m_device);
+        SAFE_RELEASE(m_adapter);
+    }
+
+    IDXGIAdapter*              m_adapter;
+    ID3D11Device*              m_device;
+    ID3D11DeviceContext*       m_context;
+};
+
+DeviceState g_deviceState;
+
 static void * MyLoadResource(INT Name, DWORD *pdwSize)
 {
     HRSRC hRsrc = FindResourceExW(NULL, RT_RCDATA, MAKEINTRESOURCE(Name), 0);
@@ -86,13 +167,26 @@ int main(int argc, char *argv[])
         }
     }
 
-    InitD3D(useRosDriver, rtWidth, rtHeight);
+    // TODO: We don't check return result of InitD3D
+    g_deviceState.Init(useRosDriver);
+    InitD3D(useRosDriver, rtWidth, rtHeight, g_deviceState.m_adapter, g_deviceState.m_device, g_deviceState.m_context);
 
-    InitDolphin(useTweenedNormal, MyLoadResource);
+    InitDolphin(useTweenedNormal, MyLoadResource, g_deviceState.m_device, g_deviceState.m_context);
+
+    IDXGIDevice2*   pDxgiDev2 = NULL;
+    HANDLE          hQueueEvent = NULL;
 
     if (bPerfMode)
     {
-        InitPerf();
+        g_deviceState.m_device->QueryInterface<IDXGIDevice2>(&pDxgiDev2);
+
+        // Create a manual-reset event object. 
+        hQueueEvent = CreateEvent(
+            NULL,               // default security attributes
+            TRUE,               // manual-reset event
+            FALSE,              // initial state is nonsignaled
+            FALSE
+            );
 
         QueryPerformanceCounter(&framesStart);
         QueryPerformanceFrequency(&frequenceStart);
@@ -107,12 +201,12 @@ int main(int argc, char *argv[])
             QueryPerformanceFrequency(&frequenceStart);
         }
 
-        UpdateDolphin(useTweenedNormal);
-        RenderDolphin(useTweenedNormal);
+        UpdateDolphin(useTweenedNormal, g_deviceState.m_context);
+        RenderDolphin(useTweenedNormal, g_deviceState.m_context);
 
         if (!bPerfMode)
         {
-            SaveDolphin(i);
+            SaveDolphin(i, g_deviceState.m_device, g_deviceState.m_context);
         }
         else
         {
@@ -122,24 +216,30 @@ int main(int argc, char *argv[])
                 // Wait for the 1st frame to finish to account for the GPU paging cost
                 //
 
-                EnqueueRenderEvent();
-                WaitForRenderEvent();
-                ResetRenderEvent();
+                pDxgiDev2->EnqueueSetEvent(hQueueEvent);
+                
+                WaitForSingleObject(
+                    hQueueEvent,    // event handle
+                    INFINITE);      // indefinite wait
+
+                ResetEvent(hQueueEvent);
             }
             else if (i < (frames - 1))
             {
-                FlushRender();
+                g_deviceState.m_context->Flush();
             }
             else
             {
-                EnqueueRenderEvent();
+                pDxgiDev2->EnqueueSetEvent(hQueueEvent);
             }
         }
     }
 
     if (bPerfMode)
     {
-        DWORD dwWaitResult = WaitForRenderEvent();
+        DWORD dwWaitResult = WaitForSingleObject(
+            hQueueEvent,    // event handle
+            INFINITE);      // indefinite wait
         
         if (dwWaitResult == WAIT_OBJECT_0)
         {
@@ -161,7 +261,12 @@ int main(int argc, char *argv[])
                 ((framesEnd.QuadPart - framesStart.QuadPart) * 1000) / (measuredFrames*frequenceEnd.QuadPart));
         }
 
-        UninitPerf();
+        SAFE_RELEASE(pDxgiDev2);
+
+        if (hQueueEvent)
+        {
+            CloseHandle(hQueueEvent);
+        }
     }
 
     UninitDolphin();
