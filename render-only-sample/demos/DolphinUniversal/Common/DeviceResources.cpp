@@ -1,6 +1,7 @@
 ﻿#include "pch.h"
 #include "DeviceResources.h"
 #include "DirectXHelper.h"
+#include <tchar.h>
 
 using namespace D2D1;
 using namespace DirectX;
@@ -123,9 +124,45 @@ void DX::DeviceResources::CreateDeviceIndependentResources()
 		);
 }
 
+IDXGIAdapter* DX::DeviceResources::FindRosAdapter()
+{
+    IDXGIAdapter* adapter = nullptr;
+    ComPtr<IDXGIFactory> factory;
+
+    HRESULT hr = CreateDXGIFactory1(__uuidof(IDXGIFactory), (void**)&factory);
+
+    if (SUCCEEDED(hr))
+    {
+        for (UINT i = 0; ; i++)
+        {
+            DXGI_ADAPTER_DESC adapterDesc = { 0 };
+            if (FAILED(factory->EnumAdapters(i, &adapter)))
+            {
+                adapter = nullptr;
+                break;
+            }
+
+            adapter->GetDesc(&adapterDesc);
+            if (_tcsicmp(adapterDesc.Description, TEXT("Render Only Sample Driver")) == 0)
+            {
+                break;
+            }
+            adapter->Release();
+        }
+    }
+
+    return adapter;
+}
+
 // Configures the Direct3D device, and stores handles to it and the device context.
 void DX::DeviceResources::CreateDeviceResources() 
 {
+    bool useRosDriver = false;
+
+#if defined(_M_ARM)
+    useRosDriver = true;    // we assume we will run demo on RosDriver on ARM
+#endif
+
 	// This flag adds support for surfaces with a different color channel ordering
 	// than the API default. It is required for compatibility with Direct2D.
 	UINT creationFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
@@ -155,17 +192,29 @@ void DX::DeviceResources::CreateDeviceResources()
 		D3D_FEATURE_LEVEL_9_1
 	};
 
+    UINT featureLevelsCount = ARRAYSIZE(featureLevels);
+
+    if (useRosDriver)
+    {
+        featureLevels[0] = D3D_FEATURE_LEVEL_9_1;
+        featureLevelsCount = 1;
+    }
+
+    ComPtr<IDXGIAdapter> adapter;
+
+    adapter = FindRosAdapter();
+
 	// Create the Direct3D 11 API device object and a corresponding context.
 	ComPtr<ID3D11Device> device;
 	ComPtr<ID3D11DeviceContext> context;
 
 	HRESULT hr = D3D11CreateDevice(
-		nullptr,					// Specify nullptr to use the default adapter.
+		adapter.Get(),		        // Use the adapter we found (could be nullptr to use default).
 		D3D_DRIVER_TYPE_HARDWARE,	// Create a device using the hardware graphics driver.
 		0,							// Should be 0 unless the driver is D3D_DRIVER_TYPE_SOFTWARE.
 		creationFlags,				// Set debug and Direct2D compatibility flags.
 		featureLevels,				// List of feature levels this app can support.
-		ARRAYSIZE(featureLevels),	// Size of the list above.
+        featureLevelsCount,	        // Number of feature levels in list to consider.
 		D3D11_SDK_VERSION,			// Always set this to D3D11_SDK_VERSION for Windows Store apps.
 		&device,					// Returns the Direct3D device created.
 		&m_d3dFeatureLevel,			// Returns feature level of device created.

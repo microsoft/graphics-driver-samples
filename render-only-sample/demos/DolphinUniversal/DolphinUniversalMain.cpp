@@ -17,7 +17,9 @@ DolphinUniversalMain::DolphinUniversalMain(const std::shared_ptr<DX::DeviceResou
 	// TODO: Replace this with your app's content initialization.
 	m_sceneRenderer = std::unique_ptr<Sample3DSceneRenderer>(new Sample3DSceneRenderer(m_deviceResources));
 
+#ifdef USE_FPS
 	m_fpsTextRenderer = std::unique_ptr<SampleFpsTextRenderer>(new SampleFpsTextRenderer(m_deviceResources));
+#endif
 
 	// TODO: Change the timer settings if you want something other than the default variable timestep mode.
 	// e.g. for 60 FPS fixed timestep update logic, call:
@@ -46,9 +48,12 @@ void DolphinUniversalMain::Update()
 	// Update scene objects.
 	m_timer.Tick([&]()
 	{
-		// TODO: Replace this with your app's content update functions.
 		m_sceneRenderer->Update(m_timer);
+
+#ifdef USE_FPS
 		m_fpsTextRenderer->Update(m_timer);
+#endif
+
 	});
 }
 
@@ -79,7 +84,10 @@ bool DolphinUniversalMain::Render()
 	// Render the scene objects.
 	// TODO: Replace this with your app's content rendering functions.
 	m_sceneRenderer->Render();
+
+#ifdef USE_FPS
 	m_fpsTextRenderer->Render();
+#endif
 
 	return true;
 }
@@ -88,13 +96,18 @@ bool DolphinUniversalMain::Render()
 void DolphinUniversalMain::OnDeviceLost()
 {
 	m_sceneRenderer->ReleaseDeviceDependentResources();
+
+#ifdef USE_FPS
 	m_fpsTextRenderer->ReleaseDeviceDependentResources();
+#endif
 }
 
 // Notifies renderers that device resources may now be recreated.
 void DolphinUniversalMain::OnDeviceRestored()
 {
 	m_sceneRenderer->CreateDeviceDependentResources();
+#if USE_FPS
 	m_fpsTextRenderer->CreateDeviceDependentResources();
+#endif
 	CreateWindowSizeDependentResources();
 }
