@@ -15,8 +15,6 @@ using namespace Windows::Foundation;
 // Loads vertex and pixel shaders from files and instantiates the cube geometry.
 Sample3DSceneRenderer::Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceResources>& deviceResources) :
 	m_loadingComplete(false),
-	m_degreesPerSecond(45),
-	m_indexCount(0),
 	m_tracking(false),
 	m_deviceResources(deviceResources)
 {
@@ -28,6 +26,15 @@ Sample3DSceneRenderer::Sample3DSceneRenderer(const std::shared_ptr<DX::DeviceRes
 void Sample3DSceneRenderer::CreateWindowSizeDependentResources()
 {
 	Size outputSize = m_deviceResources->GetOutputSize();
+
+    auto device = m_deviceResources->GetD3DDevice();
+    auto context = m_deviceResources->GetD3DDeviceContext();
+    auto renderTargetView = m_deviceResources->GetBackBufferRenderTargetView();
+    auto depthStencilView = m_deviceResources->GetDepthStencilView();
+
+    InitTargetSizeDependentDolphinResources(outputSize.Width, outputSize.Height, device, context, renderTargetView, depthStencilView);
+
+#if 0
 	float aspectRatio = outputSize.Width / outputSize.Height;
 	float fovAngleY = 70.0f * XM_PI / 180.0f;
 
@@ -67,11 +74,13 @@ void Sample3DSceneRenderer::CreateWindowSizeDependentResources()
 	static const XMVECTORF32 up = { 0.0f, 1.0f, 0.0f, 0.0f };
 
 	XMStoreFloat4x4(&m_constantBufferData.view, XMMatrixTranspose(XMMatrixLookAtRH(eye, at, up)));
+#endif
 }
 
 // Called once per frame, rotates the cube and calculates the model and view matrices.
 void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 {
+#if 0
 	if (!m_tracking)
 	{
 		// Convert degrees to radians, then convert seconds to rotation angle
@@ -81,13 +90,22 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 
 		Rotate(radians);
 	}
+#endif
+    // Need to wait for loading to complete before we can update
+    if (m_loadingComplete)
+    {
+        auto context = m_deviceResources->GetD3DDeviceContext();
+        UpdateDolphin(true, context);
+    }
 }
 
 // Rotate the 3D cube model a set amount of radians.
 void Sample3DSceneRenderer::Rotate(float radians)
 {
+#if 0
 	// Prepare to pass the updated model matrix to the shader
-	XMStoreFloat4x4(&m_constantBufferData.model, XMMatrixTranspose(XMMatrixRotationY(radians)));
+	XStoreFloat4x4(&m_constantBufferData.model, XMMatrixTranspose(XMMatrixRotationY(radians)));
+#endif
 }
 
 void Sample3DSceneRenderer::StartTracking()
@@ -119,6 +137,13 @@ void Sample3DSceneRenderer::Render()
 		return;
 	}
 
+    auto context = m_deviceResources->GetD3DDeviceContext();
+    auto renderTargetView = m_deviceResources->GetBackBufferRenderTargetView();
+    auto depthStencilView = m_deviceResources->GetDepthStencilView();
+
+    RenderDolphin(true, context, renderTargetView, depthStencilView);
+
+#if 0
 	auto context = m_deviceResources->GetD3DDeviceContext();
 
 	// Prepare the constant buffer to send it to the graphics device.
@@ -182,6 +207,8 @@ void Sample3DSceneRenderer::Render()
 		0,
 		0
 		);
+#endif
+
 }
 
 const wchar_t *  Sample3DSceneRenderer::ResourceFileName(int id)
@@ -263,9 +290,12 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
         ID3D11Device * device = m_deviceResources->GetD3DDevice();
         ID3D11DeviceContext * deviceContext = m_deviceResources->GetD3DDeviceContext();
 
-        LoadDeviceDependentDolphinResources(useTweenedNormal, loadResourceFunc, device, deviceContext);
+        InitDeviceDependentDolphinResources(useTweenedNormal, loadResourceFunc, device, deviceContext);
+
+        m_loadingComplete = true;
     });
 
+#if 0
 	// Load shaders asynchronously.
 	auto loadVSTask = DX::ReadDataAsync(L"SampleVertexShader.cso");
 	auto loadPSTask = DX::ReadDataAsync(L"SamplePixelShader.cso");
@@ -394,15 +424,19 @@ void Sample3DSceneRenderer::CreateDeviceDependentResources()
 	createCubeTask.then([this] () {
 		m_loadingComplete = true;
 	});
+#endif
 }
 
 void Sample3DSceneRenderer::ReleaseDeviceDependentResources()
 {
 	m_loadingComplete = false;
+    UninitDeviceDependentDolphinResources();
+#if 0
 	m_vertexShader.Reset();
 	m_inputLayout.Reset();
 	m_pixelShader.Reset();
 	m_constantBuffer.Reset();
 	m_vertexBuffer.Reset();
 	m_indexBuffer.Reset();
+#endif
 }

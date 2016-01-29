@@ -326,7 +326,7 @@ int main(int argc, char *argv[])
     g_deviceState.Init(useRosDriver);
     g_targetState.Init(useRosDriver, rtWidth, rtHeight, g_deviceState.m_adapter, g_deviceState.m_device);
 
-    InitTargetSizeDependentDolphinResources(useRosDriver, g_targetState.m_width, g_targetState.m_height, g_deviceState.m_adapter, g_deviceState.m_device, g_deviceState.m_context,
+    InitTargetSizeDependentDolphinResources(g_targetState.m_width, g_targetState.m_height, g_deviceState.m_device, g_deviceState.m_context,
         g_targetState.m_renderTargetView, g_targetState.m_depthStencilView);
 
     InitDeviceDependentDolphinResources(useTweenedNormal, MyLoadResource, g_deviceState.m_device, g_deviceState.m_context);

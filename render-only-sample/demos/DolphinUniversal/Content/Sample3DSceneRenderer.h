@@ -33,6 +33,7 @@ namespace DolphinUniversal
 		// Cached pointer to device resources.
 		std::shared_ptr<DX::DeviceResources> m_deviceResources;
 
+#if 0
 		// Direct3D resources for cube geometry.
 		Microsoft::WRL::ComPtr<ID3D11InputLayout>	m_inputLayout;
 		Microsoft::WRL::ComPtr<ID3D11Buffer>		m_vertexBuffer;
@@ -44,10 +45,13 @@ namespace DolphinUniversal
 		// System resources for cube geometry.
 		ModelViewProjectionConstantBuffer	m_constantBufferData;
 		uint32	m_indexCount;
+#endif
 
 		// Variables used with the rendering loop.
 		bool	m_loadingComplete;
+#if 0
 		float	m_degreesPerSecond;
+#endif
 		bool	m_tracking;
 	};
 }

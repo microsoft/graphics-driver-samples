@@ -352,8 +352,13 @@ void UninitTargetSizeDependentDolphinResources()
     SAFE_RELEASE(pDefaultRasterState);
 }
 
-bool InitTargetSizeDependentDolphinResources(bool useRosDriver, UINT actualWidth, UINT actualHeight, IDXGIAdapter* pAdapter, ID3D11Device* pDevice, ID3D11DeviceContext * pContext,
-    ID3D11RenderTargetView* pRenderTargetView, ID3D11DepthStencilView* pDepthStencilView)
+bool InitTargetSizeDependentDolphinResources(
+    UINT actualWidth, 
+    UINT actualHeight, 
+    ID3D11Device* pDevice, 
+    ID3D11DeviceContext * pContext,
+    ID3D11RenderTargetView* pRenderTargetView, 
+    ID3D11DepthStencilView* pDepthStencilView)
 {
     BOOL bRet = FALSE;
     HRESULT hr;
