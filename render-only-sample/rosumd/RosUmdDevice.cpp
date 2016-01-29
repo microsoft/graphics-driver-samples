@@ -1237,27 +1237,27 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
     MoveToNextCommand(pVC4ClipWindow, pVC4ConfigBits, curCommandOffset);
 
     *pVC4ConfigBits = vc4ConfigBits;
-	switch (m_rasterizerState->m_desc.CullMode)
-	{
-	case D3D10_DDI_CULL_NONE:
-		pVC4ConfigBits->EnableForwardFacingPrimitive = 1;
-		pVC4ConfigBits->EnableReverseFacingPrimitive = 1;
-		break;
-	case D3D10_DDI_CULL_FRONT:
-		pVC4ConfigBits->EnableReverseFacingPrimitive = 1;
-		break;
-	case D3D10_DDI_CULL_BACK:
-		pVC4ConfigBits->EnableForwardFacingPrimitive = 1;
-		break;
-	}
+    switch (m_rasterizerState->m_desc.CullMode)
+    {
+    case D3D10_DDI_CULL_NONE:
+        pVC4ConfigBits->EnableForwardFacingPrimitive = 1;
+        pVC4ConfigBits->EnableReverseFacingPrimitive = 1;
+        break;
+    case D3D10_DDI_CULL_FRONT:
+        pVC4ConfigBits->EnableReverseFacingPrimitive = 1;
+        break;
+    case D3D10_DDI_CULL_BACK:
+        pVC4ConfigBits->EnableForwardFacingPrimitive = 1;
+        break;
+    }
 
-	//
-	// It looks like that VC4ConfigBits::ClockwisePrimitives 
-	// matches the D3D11_1_DDI_RASTERIZER_DESC::FrontCounterClockwise.
-	// It must be set in the same way for proper behavior.
-	//
+    //
+    // It looks like that VC4ConfigBits::ClockwisePrimitives 
+    // matches the D3D11_1_DDI_RASTERIZER_DESC::FrontCounterClockwise.
+    // It must be set in the same way for proper behavior.
+    //
 
-	pVC4ConfigBits->ClockwisePrimitives = m_rasterizerState->m_desc.FrontCounterClockwise;
+    pVC4ConfigBits->ClockwisePrimitives = m_rasterizerState->m_desc.FrontCounterClockwise;
 
     //
     // The D3D11 default depth stencil state is DepthEnable of true with
