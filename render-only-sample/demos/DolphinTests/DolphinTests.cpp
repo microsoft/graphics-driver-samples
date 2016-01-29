@@ -122,6 +122,8 @@ static void * MyLoadResource(INT Name, DWORD *pdwSize)
     return (LockResource(hRes));
 }
 
+
+
 int main(int argc, char *argv[])
 {
     BOOL            bPerfMode = false;

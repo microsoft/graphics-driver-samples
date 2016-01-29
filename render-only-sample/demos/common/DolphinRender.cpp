@@ -33,16 +33,151 @@ xTimer AppTimer;
 FLOAT fWaterColor[4] = { 0.0f, 0.5f, 1.0f, 1.0f };
 FLOAT fAmbient[4] = { 0.25f, 0.25f, 0.25f, 0.25f };
 
+class TargetState
+{
+public:
+
+    TargetState()
+    {
+        m_staging = NULL;
+        m_stagingResource = NULL;
+        m_renderTarget = NULL;
+        m_renderTargetResource = NULL;
+        m_renderTargetView = NULL;
+        m_depthStencil = NULL;
+        m_depthStencilView = NULL;
+    }
+
+    HRESULT Init(bool useRosDriver, UINT rtWidth, UINT rtHeight, IDXGIAdapter* pAdapter, ID3D11Device* pDevice)
+    {
+        BOOL bRet = FALSE;
+        HRESULT hr;
+
+        IDXGIOutput*    pOutput = NULL;
+
+        DXGI_FORMAT selectedFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+        DXGI_MODE_DESC ModeToMatch = { 0 };
+        DXGI_MODE_DESC ModeDesc = { 0 };
+
+        if (useRosDriver)
+        {
+            ModeDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+            ModeDesc.Width = rtWidth;
+            ModeDesc.Height = rtHeight;
+        }
+        else
+        {
+            //
+            // Get the current mode information from the output (i.e. as it is
+            // currently being used for the desktop).
+            //
+            CHR(pAdapter->EnumOutputs(0, &pOutput));
+            ZeroMemory(&ModeToMatch, sizeof(ModeToMatch));
+            CHR(pOutput->FindClosestMatchingMode(&ModeToMatch,
+                &ModeDesc,
+                pDevice));
+        }
+
+        m_width = ModeDesc.Width;
+        m_height = ModeDesc.Height;
+
+        {
+            D3D11_TEXTURE2D_DESC desc;
+
+            desc.ArraySize = 1;
+            desc.BindFlags = D3D11_BIND_RENDER_TARGET;
+            desc.CPUAccessFlags = 0;
+            desc.Format = ModeDesc.Format;
+            desc.Width = m_width;
+            desc.Height = m_height;
+            desc.MipLevels = 1;
+            desc.MiscFlags = 0;
+            desc.SampleDesc.Count = 1;
+            desc.SampleDesc.Quality = 0;
+            desc.Usage = D3D11_USAGE_DEFAULT;
+
+            CHR(pDevice->CreateTexture2D(&desc, NULL, &m_renderTarget));
+            m_renderTarget->QueryInterface<ID3D11Resource>(&m_renderTargetResource);
+            CHR(pDevice->CreateRenderTargetView(m_renderTargetResource, NULL, &m_renderTargetView));
+
+            desc.BindFlags = 0;
+            desc.Usage = D3D11_USAGE_STAGING;
+            desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ | D3D11_CPU_ACCESS_WRITE;
+            CHR(pDevice->CreateTexture2D(&desc, NULL, &m_staging));
+            m_staging->QueryInterface<ID3D11Resource>(&m_stagingResource);
+        }
+
+        {
+            // Create depth stencil texture
+            D3D11_TEXTURE2D_DESC descDepth;
+            D3D11_DEPTH_STENCIL_VIEW_DESC descDSV;
+
+            ZeroMemory(&descDepth, sizeof(descDepth));
+            descDepth.Width = ModeDesc.Width;
+            descDepth.Height = ModeDesc.Height;
+            descDepth.MipLevels = 1;
+            descDepth.ArraySize = 1;
+            descDepth.Format = DXGI_FORMAT_D16_UNORM;
+            descDepth.SampleDesc.Count = 1;
+            descDepth.SampleDesc.Quality = 0;
+            descDepth.Usage = D3D11_USAGE_DEFAULT;
+            descDepth.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+            descDepth.CPUAccessFlags = 0;
+            descDepth.MiscFlags = 0;
+
+            CHR(pDevice->CreateTexture2D(&descDepth, NULL, &m_depthStencil));
+
+            // Create the depth stencil view
+            ZeroMemory(&descDSV, sizeof(descDSV));
+            descDSV.Format = descDepth.Format;
+            if (descDepth.SampleDesc.Count > 1)
+            {
+                descDSV.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+                descDSV.Texture2D.MipSlice = 0;
+            }
+            else
+            {
+                descDSV.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DMS;
+            }
+
+            CHR(pDevice->CreateDepthStencilView(m_depthStencil, &descDSV, &m_depthStencilView));
+
+        }
+
+    EXIT_RETURN:
+
+        SAFE_RELEASE(pOutput);
+
+        return hr;
+    }
+
+    void Uninit()
+    {
+        SAFE_RELEASE(m_staging);
+        SAFE_RELEASE(m_stagingResource);
+        SAFE_RELEASE(m_renderTarget);
+        SAFE_RELEASE(m_renderTargetResource);
+        SAFE_RELEASE(m_renderTargetView);
+
+        SAFE_RELEASE(m_depthStencil);
+        SAFE_RELEASE(m_depthStencilView);
+    }
+
+    ID3D11Texture2D*           m_staging;
+    ID3D11Resource*            m_stagingResource;
+    ID3D11Texture2D*           m_renderTarget;
+    ID3D11Resource*            m_renderTargetResource;
+    ID3D11RenderTargetView*    m_renderTargetView;
+    ID3D11Texture2D*           m_depthStencil;
+    ID3D11DepthStencilView*    m_depthStencilView;
+    UINT                       m_width;
+    UINT                       m_height;
+
+};
+
+TargetState g_targetState;
 
 // D3D Variables:
-ID3D11Texture2D*           pStaging = NULL;
-ID3D11Resource*            pStagingResource = NULL;
-ID3D11Texture2D*           pRenderTarget = NULL;
-ID3D11Resource*            pRenderTargetResource = NULL;
-ID3D11RenderTargetView*    pRenderTargetView = NULL;
-ID3D11Texture2D*           pDepthStencil = NULL;
-ID3D11DepthStencilView*    pDepthStencilView = NULL;
-ID3D11RasterizerState*     pDefaultRasterState = NULL;
 
 // Transform matrices
 XMMATRIX                matWorld;
@@ -83,6 +218,7 @@ ID3D11Buffer*       pVSConstantBuffer = NULL;
 ID3D11Buffer*       pPSConstantBuffer = NULL;
 
 // Dolphin RenderState
+ID3D11RasterizerState*   pDefaultRasterState;
 ID3D11BlendState*        pBlendStateNoBlend = NULL;
 ID3D11RasterizerState*   pRasterizerStateNoCull = NULL;
 ID3D11DepthStencilState* pLessEqualDepth = NULL;
@@ -357,15 +493,7 @@ EXIT_RETURN:
 
 void UninitD3D()
 {
-
-    SAFE_RELEASE(pStaging);
-    SAFE_RELEASE(pStagingResource);
-    SAFE_RELEASE(pRenderTarget);
-    SAFE_RELEASE(pRenderTargetResource);
-    SAFE_RELEASE(pRenderTargetView);
-
-    SAFE_RELEASE(pDepthStencil);
-    SAFE_RELEASE(pDepthStencilView);
+    g_targetState.Uninit();
 
     SAFE_RELEASE(pDefaultRasterState);
 }
@@ -375,6 +503,7 @@ bool InitD3D(bool useRosDriver, unsigned int rtWidth, unsigned int rtHeight, IDX
     BOOL bRet = FALSE;
     HRESULT hr;
 
+#if 0
     IDXGIOutput*    pOutput = NULL;
 
     DXGI_FORMAT selectedFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -425,42 +554,15 @@ bool InitD3D(bool useRosDriver, unsigned int rtWidth, unsigned int rtHeight, IDX
         CHR(pDevice->CreateTexture2D(&desc, NULL, &pStaging));
         pStaging->QueryInterface<ID3D11Resource>(&pStagingResource);
     }
+#endif
 
-    {
-        // Create depth stencil texture
-        D3D11_TEXTURE2D_DESC descDepth;
-        D3D11_DEPTH_STENCIL_VIEW_DESC descDSV;
+    CHR(g_targetState.Init(useRosDriver, rtWidth, rtHeight, pAdapter, pDevice));
 
-        ZeroMemory(&descDepth, sizeof(descDepth));
-        descDepth.Width = ModeDesc.Width;
-        descDepth.Height = ModeDesc.Height;
-        descDepth.MipLevels = 1;
-        descDepth.ArraySize = 1;
-        descDepth.Format = DXGI_FORMAT_D16_UNORM;
-        descDepth.SampleDesc.Count = 1;
-        descDepth.SampleDesc.Quality = 0;
-        descDepth.Usage = D3D11_USAGE_DEFAULT;
-        descDepth.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-        descDepth.CPUAccessFlags = 0;
-        descDepth.MiscFlags = 0;
+    UINT actualWidth = g_targetState.m_width;
+    UINT actualHeight = g_targetState.m_height;
 
-        CHR(pDevice->CreateTexture2D(&descDepth, NULL, &pDepthStencil));
-
-        // Create the depth stencil view
-        ZeroMemory(&descDSV, sizeof(descDSV));
-        descDSV.Format = descDepth.Format;
-        if (descDepth.SampleDesc.Count > 1)
-        {
-            descDSV.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-            descDSV.Texture2D.MipSlice = 0;
-        }
-        else
-        {
-            descDSV.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DMS;
-        }
-
-        CHR(pDevice->CreateDepthStencilView(pDepthStencil, &descDSV, &pDepthStencilView));
-    }
+    ID3D11RenderTargetView*    pRenderTargetView = g_targetState.m_renderTargetView;
+    ID3D11DepthStencilView*    pDepthStencilView = g_targetState.m_depthStencilView;
 
     {
         // Create a default rasterizer state
@@ -485,8 +587,8 @@ bool InitD3D(bool useRosDriver, unsigned int rtWidth, unsigned int rtHeight, IDX
         // Setup the viewport
         D3D11_VIEWPORT vp;
         ZeroMemory(&vp, sizeof(vp));
-        vp.Width = (FLOAT)ModeDesc.Width;
-        vp.Height = (FLOAT)ModeDesc.Height;
+        vp.Width = (FLOAT) actualWidth;
+        vp.Height = (FLOAT) actualHeight;
         vp.MinDepth = 0.0f;
         vp.MaxDepth = 1.0f;
         vp.TopLeftX = 0;
@@ -499,8 +601,8 @@ bool InitD3D(bool useRosDriver, unsigned int rtWidth, unsigned int rtHeight, IDX
 
     {
         // Determine the aspect ratio
-        FLOAT fAspectRatio = (FLOAT)ModeDesc.Width / (FLOAT)ModeDesc.Height;
-        if (ModeDesc.Width >= ModeDesc.Height)
+        FLOAT fAspectRatio = (FLOAT) actualWidth / (FLOAT)actualHeight;
+        if (actualWidth >= actualHeight)
         {
             // Set the transform matrices
             XMVECTOR vEyePt = XMVectorSet(0.0f, 0.0f, -5.0f, 0.0f);
@@ -525,12 +627,6 @@ bool InitD3D(bool useRosDriver, unsigned int rtWidth, unsigned int rtHeight, IDX
     bRet = TRUE;
 
 EXIT_RETURN:
-
-    SAFE_RELEASE(pOutput);
-#if 0
-    SAFE_RELEASE(pAdapter);
-    SAFE_RELEASE(pFactory);
-#endif
 
     if (!bRet)
     {
@@ -1030,6 +1126,9 @@ void UpdateDolphin(bool useTweenedNormal, ID3D11DeviceContext * pContext)
 
 void RenderDolphin(bool useTweenedNormal, ID3D11DeviceContext * pContext)
 {
+    ID3D11RenderTargetView*    pRenderTargetView = g_targetState.m_renderTargetView;
+    ID3D11DepthStencilView*    pDepthStencilView = g_targetState.m_depthStencilView;
+
     //
     // Clear the back buffer
     //
@@ -1113,6 +1212,10 @@ void RenderDolphin(bool useTweenedNormal, ID3D11DeviceContext * pContext)
 
 void SaveDolphin(int iFrame, ID3D11Device *pDevice, ID3D11DeviceContext* pContext)
 {
+    ID3D11Resource*            pStagingResource = g_targetState.m_stagingResource;
+    ID3D11Resource*            pRenderTargetResource = g_targetState.m_renderTargetResource;
+    ID3D11Texture2D*           pStaging = g_targetState.m_staging;
+
     char fileName[MAX_PATH];
     sprintf_s(fileName, MAX_PATH, ".\\Dolphin_%d.bmp", iFrame);
     pContext->CopyResource(pStagingResource, pRenderTargetResource);
