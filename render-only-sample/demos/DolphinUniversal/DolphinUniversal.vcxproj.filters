@@ -62,6 +62,9 @@
     <Image Include="Assets\Wide310x150Logo.scale-200.png">
       <Filter>Assets</Filter>
     </Image>
+    <Filter Include="Common Assets">
+      <UniqueIdentifier>{212765b6-d2fa-4556-95de-4529e9522e59}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="App.cpp" />
@@ -86,11 +89,134 @@
     <Image Include="Assets\StoreLogo.png">
       <Filter>Assets</Filter>
     </Image>
+    <Image Include="..\resources\caust00.tga">
+      <Filter>Common Assets</Filter>
+    </Image>
+    <Image Include="..\resources\caust16.tga">
+      <Filter>Common Assets</Filter>
+    </Image>
+    <Image Include="..\resources\dolphin.bmp">
+      <Filter>Common Assets</Filter>
+    </Image>
+    <Image Include="..\resources\seafloor.bmp">
+      <Filter>Common Assets</Filter>
+    </Image>
+    <Image Include="..\resources\caust01.tga">
+      <Filter>Common Assets</Filter>
+    </Image>
+    <Image Include="..\resources\caust02.tga">
+      <Filter>Common Assets</Filter>
+    </Image>
+    <Image Include="..\resources\caust03.tga">
+      <Filter>Common Assets</Filter>
+    </Image>
+    <Image Include="..\resources\caust04.tga">
+      <Filter>Common Assets</Filter>
+    </Image>
+    <Image Include="..\resources\caust05.tga">
+      <Filter>Common Assets</Filter>
+    </Image>
+    <Image Include="..\resources\caust06.tga">
+      <Filter>Common Assets</Filter>
+    </Image>
+    <Image Include="..\resources\caust07.tga">
+      <Filter>Common Assets</Filter>
+    </Image>
+    <Image Include="..\resources\caust08.tga">
+      <Filter>Common Assets</Filter>
+    </Image>
+    <Image Include="..\resources\caust09.tga">
+      <Filter>Common Assets</Filter>
+    </Image>
+    <Image Include="..\resources\caust10.tga">
+      <Filter>Common Assets</Filter>
+    </Image>
+    <Image Include="..\resources\caust11.tga">
+      <Filter>Common Assets</Filter>
+    </Image>
+    <Image Include="..\resources\caust12.tga">
+      <Filter>Common Assets</Filter>
+    </Image>
+    <Image Include="..\resources\caust13.tga">
+      <Filter>Common Assets</Filter>
+    </Image>
+    <Image Include="..\resources\caust14.tga">
+      <Filter>Common Assets</Filter>
+    </Image>
+    <Image Include="..\resources\caust15.tga">
+      <Filter>Common Assets</Filter>
+    </Image>
+    <Image Include="..\resources\caust31.tga">
+      <Filter>Common Assets</Filter>
+    </Image>
+    <Image Include="..\resources\caust17.tga">
+      <Filter>Common Assets</Filter>
+    </Image>
+    <Image Include="..\resources\caust18.tga">
+      <Filter>Common Assets</Filter>
+    </Image>
+    <Image Include="..\resources\caust19.tga">
+      <Filter>Common Assets</Filter>
+    </Image>
+    <Image Include="..\resources\caust20.tga">
+      <Filter>Common Assets</Filter>
+    </Image>
+    <Image Include="..\resources\caust21.tga">
+      <Filter>Common Assets</Filter>
+    </Image>
+    <Image Include="..\resources\caust22.tga">
+      <Filter>Common Assets</Filter>
+    </Image>
+    <Image Include="..\resources\caust23.tga">
+      <Filter>Common Assets</Filter>
+    </Image>
+    <Image Include="..\resources\caust24.tga">
+      <Filter>Common Assets</Filter>
+    </Image>
+    <Image Include="..\resources\caust25.tga">
+      <Filter>Common Assets</Filter>
+    </Image>
+    <Image Include="..\resources\caust26.tga">
+      <Filter>Common Assets</Filter>
+    </Image>
+    <Image Include="..\resources\caust27.tga">
+      <Filter>Common Assets</Filter>
+    </Image>
+    <Image Include="..\resources\caust28.tga">
+      <Filter>Common Assets</Filter>
+    </Image>
+    <Image Include="..\resources\caust29.tga">
+      <Filter>Common Assets</Filter>
+    </Image>
+    <Image Include="..\resources\caust30.tga">
+      <Filter>Common Assets</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest" />
   </ItemGroup>
   <ItemGroup>
     <None Include="DolphinUniversal_TemporaryKey.pfx" />
+    <None Include="..\resources\Dolphin1.sdkmesh">
+      <Filter>Common Assets</Filter>
+    </None>
+    <None Include="..\resources\Dolphin2.sdkmesh">
+      <Filter>Common Assets</Filter>
+    </None>
+    <None Include="..\resources\Dolphin3.sdkmesh">
+      <Filter>Common Assets</Filter>
+    </None>
+    <None Include="..\resources\DolphinTween.xvu">
+      <Filter>Common Assets</Filter>
+    </None>
+    <None Include="..\resources\seafloor.sdkmesh">
+      <Filter>Common Assets</Filter>
+    </None>
+    <None Include="..\resources\SeaFloor.xvu">
+      <Filter>Common Assets</Filter>
+    </None>
+    <None Include="..\resources\ShadeCausticsPixel.xpu">
+      <Filter>Common Assets</Filter>
+    </None>
   </ItemGroup>
 </Project>

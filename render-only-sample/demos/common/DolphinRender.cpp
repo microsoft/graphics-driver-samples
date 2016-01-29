@@ -1,5 +1,3 @@
-#include "DolphinRender.h"
-
 #include <SDKDDKVer.h>
 
 #include <windows.h>
@@ -12,6 +10,7 @@
 #include <malloc.h>
 #include <memory.h>
 
+#include "DolphinRender.h"
 #include "BitmapDecode.h"
 #include "SDKmesh.h"
 #include "xTimer.h"
@@ -145,8 +144,6 @@ ID3D11ShaderResourceView *  pCurrentCausticTextureView = NULL;
 
 IDXGIDevice2*   pDxgiDev2 = NULL;
 HANDLE          hQueueEvent = NULL;
-
-LoadResourceFunc MyLoadResource;
 
 static UINT GetDXGIFormatTexelSize(DXGI_FORMAT Format)
 {
@@ -621,15 +618,10 @@ void UninitDolphin()
     SAFE_RELEASE(pSeaFloorVertexLayout);
 }
 
-
-bool InitDolphin(bool useTweenedNormal, LoadResourceFunc loadResourceFunc)
+bool LoadDeviceDependentDolphinResources(bool useTweenedNormal, LoadResourceFunc loadResourceFunc, ID3D11Device * inDevice, ID3D11DeviceContext * inContext)
 {
     HRESULT hr;
-    BOOL bRet = FALSE;
 
-    MyLoadResource = loadResourceFunc;
-
-    // Create our vertex input layout
     const D3D11_INPUT_ELEMENT_DESC layout[] =
     {
         { "POSITION",  0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0,  D3D11_INPUT_PER_VERTEX_DATA, 0 },
@@ -658,19 +650,19 @@ bool InitDolphin(bool useTweenedNormal, LoadResourceFunc loadResourceFunc)
         cbDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
         cbDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
         cbDesc.MiscFlags = 0;
-        CHR(pd3dDevice->CreateBuffer(&cbDesc, NULL, &pVSConstantBuffer));
+        CHR(inDevice->CreateBuffer(&cbDesc, NULL, &pVSConstantBuffer));
 
         cbDesc.ByteWidth = sizeof(PS_CONSTANT_BUFFER);
-        CHR(pd3dDevice->CreateBuffer(&cbDesc, NULL, &pPSConstantBuffer));
+        CHR(inDevice->CreateBuffer(&cbDesc, NULL, &pPSConstantBuffer));
     }
 
-    // Initialize Dolphin Data.
+    // Load dolphin data
     {
         {
             PBYTE DolphinData;
             ULONG DolphinHeight, DolphinWidth;
             DWORD dwDolphinBitmapSize = 0;
-            PBYTE pDolphinBitmap = (PBYTE)MyLoadResource(IDD_DOLPHIN_BMP, &dwDolphinBitmapSize);
+            PBYTE pDolphinBitmap = (PBYTE)loadResourceFunc(IDD_DOLPHIN_BMP, &dwDolphinBitmapSize);
             if (pDolphinBitmap == NULL)
             {
                 ErrorLine = __LINE__;
@@ -678,7 +670,7 @@ bool InitDolphin(bool useTweenedNormal, LoadResourceFunc loadResourceFunc)
                 goto EXIT_RETURN;
             }
             CHR(LoadBMP(pDolphinBitmap, &DolphinHeight, &DolphinWidth, &DolphinData));
-            if (FAILED(MyCreateShaderResourceViewFromBuffer((PVOID)DolphinData, DolphinWidth, DolphinHeight, DXGI_FORMAT_R8G8B8A8_UNORM, &pDolphinTextureView, pd3dDevice)))
+            if (FAILED(MyCreateShaderResourceViewFromBuffer((PVOID)DolphinData, DolphinWidth, DolphinHeight, DXGI_FORMAT_R8G8B8A8_UNORM, &pDolphinTextureView, inDevice)))
             {
                 free(DolphinData);
                 ErrorLine = __LINE__;
@@ -690,26 +682,27 @@ bool InitDolphin(bool useTweenedNormal, LoadResourceFunc loadResourceFunc)
 
         {
             DWORD dwDolphinMesh1Size = 0;
-            PBYTE pDolphinMesh1 = (PBYTE)MyLoadResource(IDD_DOLPHIN_MESH1, &dwDolphinMesh1Size);
+            PBYTE pDolphinMesh1 = (PBYTE)loadResourceFunc(IDD_DOLPHIN_MESH1, &dwDolphinMesh1Size);
             DWORD dwDolphinMesh2Size = 0;
-            PBYTE pDolphinMesh2 = (PBYTE)MyLoadResource(IDD_DOLPHIN_MESH2, &dwDolphinMesh2Size);
+            PBYTE pDolphinMesh2 = (PBYTE)loadResourceFunc(IDD_DOLPHIN_MESH2, &dwDolphinMesh2Size);
             DWORD dwDolphinMesh3Size = 0;
-            PBYTE pDolphinMesh3 = (PBYTE)MyLoadResource(IDD_DOLPHIN_MESH3, &dwDolphinMesh3Size);
+            PBYTE pDolphinMesh3 = (PBYTE)loadResourceFunc(IDD_DOLPHIN_MESH3, &dwDolphinMesh3Size);
             if (pDolphinMesh1 == NULL || pDolphinMesh2 == NULL || pDolphinMesh3 == NULL)
             {
                 ErrorLine = __LINE__;
                 __debugbreak();
                 goto EXIT_RETURN;
             }
-            CHR(DolphinMesh1.Create(pd3dDevice, pDolphinMesh1, dwDolphinMesh1Size));
-            CHR(DolphinMesh2.Create(pd3dDevice, pDolphinMesh2, dwDolphinMesh2Size));
-            CHR(DolphinMesh3.Create(pd3dDevice, pDolphinMesh3, dwDolphinMesh3Size));
+            CHR(DolphinMesh1.Create(inDevice, pDolphinMesh1, dwDolphinMesh1Size));
+            CHR(DolphinMesh2.Create(inDevice, pDolphinMesh2, dwDolphinMesh2Size));
+            CHR(DolphinMesh3.Create(inDevice, pDolphinMesh3, dwDolphinMesh3Size));
+
+            pDolphinVB1 = DolphinMesh1.GetVB11(0, 0);
+            pDolphinVB2 = DolphinMesh2.GetVB11(0, 0);
+            pDolphinVB3 = DolphinMesh3.GetVB11(0, 0);
+            pDolphinIB = DolphinMesh1.GetIB11(0);
         }
 
-        pDolphinVB1 = DolphinMesh1.GetVB11(0, 0);
-        pDolphinVB2 = DolphinMesh2.GetVB11(0, 0);
-        pDolphinVB3 = DolphinMesh3.GetVB11(0, 0);
-        pDolphinIB = DolphinMesh1.GetIB11(0);
         {
             SDKMESH_SUBSET* pSubset = DolphinMesh1.GetSubset(0, 0);
             if (!pSubset)
@@ -739,22 +732,23 @@ bool InitDolphin(bool useTweenedNormal, LoadResourceFunc loadResourceFunc)
             bufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
             bufferDesc.MiscFlags = 0;
 
-            CHR(pd3dDevice->CreateBuffer(&bufferDesc, NULL, &pDolphinTweenedNormalVB));
+            CHR(inDevice->CreateBuffer(&bufferDesc, NULL, &pDolphinTweenedNormalVB));
         }
 
         {
             DWORD dwDolphinVSSize = 0;
-            PBYTE pDolphinVSData = (PBYTE)MyLoadResource(IDD_DOLPHIN_VS, &dwDolphinVSSize);
+            PBYTE pDolphinVSData = (PBYTE)loadResourceFunc(IDD_DOLPHIN_VS, &dwDolphinVSSize);
             if (pDolphinVSData == NULL)
             {
                 ErrorLine = __LINE__;
                 __debugbreak();
                 goto EXIT_RETURN;
             }
-            CHR(pd3dDevice->CreateVertexShader((DWORD*)pDolphinVSData, dwDolphinVSSize, NULL, &pDolphinVertexShader));
-            CHR(pd3dDevice->CreateInputLayout(layout, layoutLength, pDolphinVSData, dwDolphinVSSize, &pDolphinVertexLayout));
+            CHR(inDevice->CreateVertexShader((DWORD*)pDolphinVSData, dwDolphinVSSize, NULL, &pDolphinVertexShader));
+            CHR(inDevice->CreateInputLayout(layout, layoutLength, pDolphinVSData, dwDolphinVSSize, &pDolphinVertexLayout));
         }
     }
+
 
     // Initialize Seafloor data.
     {
@@ -762,7 +756,7 @@ bool InitDolphin(bool useTweenedNormal, LoadResourceFunc loadResourceFunc)
             PBYTE SeaFloorData;
             ULONG SeaFloorHeight, SeaFloorWidth;
             DWORD dwSeaFloorBitmapSize = 0;
-            PBYTE pSeaFloorBitmap = (PBYTE)MyLoadResource(IDD_SEAFLOOR_BMP, &dwSeaFloorBitmapSize);
+            PBYTE pSeaFloorBitmap = (PBYTE)loadResourceFunc(IDD_SEAFLOOR_BMP, &dwSeaFloorBitmapSize);
             if (pSeaFloorBitmap == NULL)
             {
                 ErrorLine = __LINE__;
@@ -770,7 +764,7 @@ bool InitDolphin(bool useTweenedNormal, LoadResourceFunc loadResourceFunc)
                 goto EXIT_RETURN;
             }
             CHR(LoadBMP(pSeaFloorBitmap, &SeaFloorHeight, &SeaFloorWidth, &SeaFloorData));
-            if (FAILED(MyCreateShaderResourceViewFromBuffer((PVOID)SeaFloorData, SeaFloorWidth, SeaFloorHeight, DXGI_FORMAT_R8G8B8A8_UNORM, &pSeaFloorTextureView, pd3dDevice)))
+            if (FAILED(MyCreateShaderResourceViewFromBuffer((PVOID)SeaFloorData, SeaFloorWidth, SeaFloorHeight, DXGI_FORMAT_R8G8B8A8_UNORM, &pSeaFloorTextureView, inDevice)))
             {
                 free(SeaFloorData);
                 ErrorLine = __LINE__;
@@ -782,14 +776,14 @@ bool InitDolphin(bool useTweenedNormal, LoadResourceFunc loadResourceFunc)
 
         {
             DWORD dwSeaFloorMeshSize = 0;
-            PBYTE pSeaFloorMesh = (PBYTE)MyLoadResource(IDD_SEAFLOOR_MESH, &dwSeaFloorMeshSize);
+            PBYTE pSeaFloorMesh = (PBYTE)loadResourceFunc(IDD_SEAFLOOR_MESH, &dwSeaFloorMeshSize);
             if (pSeaFloorMesh == NULL)
             {
                 ErrorLine = __LINE__;
                 __debugbreak();
                 goto EXIT_RETURN;
             }
-            CHR(SeaFloorMesh.Create(pd3dDevice, pSeaFloorMesh, dwSeaFloorMeshSize));
+            CHR(SeaFloorMesh.Create(inDevice, pSeaFloorMesh, dwSeaFloorMeshSize));
         }
 
         pSeaFloorVB = SeaFloorMesh.GetVB11(0, 0);
@@ -812,7 +806,7 @@ bool InitDolphin(bool useTweenedNormal, LoadResourceFunc loadResourceFunc)
         // Add some bumpiness to the seafloor
         {
             D3D11_MAPPED_SUBRESOURCE mappedResource = { 0 };
-            CHR(pd3dContext->Map(pSeaFloorVB, 0, D3D11_MAP_WRITE_NO_OVERWRITE, 0, &mappedResource));
+            CHR(inContext->Map(pSeaFloorVB, 0, D3D11_MAP_WRITE_NO_OVERWRITE, 0, &mappedResource));
 
             srand(5);
             BYTE* pDst = (BYTE *)mappedResource.pData;
@@ -823,20 +817,20 @@ bool InitDolphin(bool useTweenedNormal, LoadResourceFunc loadResourceFunc)
                 ((XMFLOAT3*)pDst)->y += (rand() / (FLOAT)RAND_MAX);
                 pDst += sizeof(FLOAT) * 8;
             }
-            pd3dContext->Unmap(pSeaFloorVB, 0);
+            inContext->Unmap(pSeaFloorVB, 0);
         }
 
         {
             DWORD dwSeaFloorVSSize = 0;
-            PBYTE pSeaFloorVSData = (PBYTE)MyLoadResource(IDD_SEAFLOOR_VS, &dwSeaFloorVSSize);
+            PBYTE pSeaFloorVSData = (PBYTE)loadResourceFunc(IDD_SEAFLOOR_VS, &dwSeaFloorVSSize);
             if (pSeaFloorVSData == NULL)
             {
                 ErrorLine = __LINE__;
                 __debugbreak();
                 goto EXIT_RETURN;
             }
-            CHR(pd3dDevice->CreateVertexShader((DWORD*)pSeaFloorVSData, dwSeaFloorVSSize, NULL, &pSeaFloorVertexShader));
-            CHR(pd3dDevice->CreateInputLayout(layout, 3, pSeaFloorVSData, dwSeaFloorVSSize, &pSeaFloorVertexLayout));
+            CHR(inDevice->CreateVertexShader((DWORD*)pSeaFloorVSData, dwSeaFloorVSSize, NULL, &pSeaFloorVertexShader));
+            CHR(inDevice->CreateInputLayout(layout, 3, pSeaFloorVSData, dwSeaFloorVSSize, &pSeaFloorVertexLayout));
         }
     }
 
@@ -846,7 +840,7 @@ bool InitDolphin(bool useTweenedNormal, LoadResourceFunc loadResourceFunc)
         PBYTE CaustData;
         ULONG CaustHeight, CaustWidth;
         DWORD dwCaustBitmapSize = 0;
-        PBYTE pCaustBitmap = (PBYTE)MyLoadResource(IDD_CAUST00_TGA + t, &dwCaustBitmapSize);
+        PBYTE pCaustBitmap = (PBYTE)loadResourceFunc(IDD_CAUST00_TGA + t, &dwCaustBitmapSize);
         if (pCaustBitmap == NULL)
         {
             ErrorLine = __LINE__;
@@ -854,7 +848,7 @@ bool InitDolphin(bool useTweenedNormal, LoadResourceFunc loadResourceFunc)
             goto EXIT_RETURN;
         }
         CHR(LoadTGA(pCaustBitmap, &CaustHeight, &CaustWidth, &CaustData));
-        if (FAILED(MyCreateShaderResourceViewFromBuffer((PVOID)CaustData, CaustWidth, CaustHeight, DXGI_FORMAT_R8G8B8A8_UNORM, &pCausticTextureViews[t], pd3dDevice)))
+        if (FAILED(MyCreateShaderResourceViewFromBuffer((PVOID)CaustData, CaustWidth, CaustHeight, DXGI_FORMAT_R8G8B8A8_UNORM, &pCausticTextureViews[t], inDevice)))
         {
             free(CaustData);
             ErrorLine = __LINE__;
@@ -867,14 +861,14 @@ bool InitDolphin(bool useTweenedNormal, LoadResourceFunc loadResourceFunc)
     // Create Commom pixel shader
     {
         DWORD dwPSSize = 0;
-        PBYTE pPSData = (PBYTE)MyLoadResource(IDD_SHADE_PS, &dwPSSize);
+        PBYTE pPSData = (PBYTE)loadResourceFunc(IDD_SHADE_PS, &dwPSSize);
         if (pPSData == NULL)
         {
             ErrorLine = __LINE__;
             __debugbreak();
             goto EXIT_RETURN;
         }
-        CHR(pd3dDevice->CreatePixelShader((DWORD*)pPSData, dwPSSize, NULL, &pPixelShader));
+        CHR(inDevice->CreatePixelShader((DWORD*)pPSData, dwPSSize, NULL, &pPixelShader));
     }
 
     // Create a blend state to disable alpha blending
@@ -883,7 +877,7 @@ bool InitDolphin(bool useTweenedNormal, LoadResourceFunc loadResourceFunc)
         ZeroMemory(&blendState, sizeof(blendState));
         blendState.RenderTarget[0].BlendEnable = FALSE;
         blendState.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-        CHR(pd3dDevice->CreateBlendState(&blendState, &pBlendStateNoBlend));
+        CHR(inDevice->CreateBlendState(&blendState, &pBlendStateNoBlend));
     }
 
     // Create a rasterizer state to disable culling
@@ -900,7 +894,7 @@ bool InitDolphin(bool useTweenedNormal, LoadResourceFunc loadResourceFunc)
         RSDesc.ScissorEnable = FALSE;
         RSDesc.MultisampleEnable = FALSE;
         RSDesc.AntialiasedLineEnable = FALSE;
-        CHR(pd3dDevice->CreateRasterizerState(&RSDesc, &pRasterizerStateNoCull));
+        CHR(inDevice->CreateRasterizerState(&RSDesc, &pRasterizerStateNoCull));
     }
 
     // Create a depth stencil state to enable less-equal depth testing
@@ -910,7 +904,7 @@ bool InitDolphin(bool useTweenedNormal, LoadResourceFunc loadResourceFunc)
         DSDesc.DepthEnable = TRUE;
         DSDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
         DSDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-        CHR(pd3dDevice->CreateDepthStencilState(&DSDesc, &pLessEqualDepth));
+        CHR(inDevice->CreateDepthStencilState(&DSDesc, &pLessEqualDepth));
     }
 
     // Create Mirror Sampler state
@@ -922,7 +916,7 @@ bool InitDolphin(bool useTweenedNormal, LoadResourceFunc loadResourceFunc)
         sampMirror.AddressW = D3D11_TEXTURE_ADDRESS_MIRROR;
         sampMirror.MaxLOD = D3D11_FLOAT32_MAX;
         sampMirror.Filter = D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
-        CHR(pd3dDevice->CreateSamplerState(&sampMirror, &pSamplerMirror));
+        CHR(inDevice->CreateSamplerState(&sampMirror, &pSamplerMirror));
     }
 
     // Create Wrap sampler state
@@ -934,19 +928,24 @@ bool InitDolphin(bool useTweenedNormal, LoadResourceFunc loadResourceFunc)
         sampWrap.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
         sampWrap.MaxLOD = D3D11_FLOAT32_MAX;
         sampWrap.Filter = D3D11_FILTER_MIN_MAG_LINEAR_MIP_POINT;
-        CHR(pd3dDevice->CreateSamplerState(&sampWrap, &pSamplerWrap));
+        CHR(inDevice->CreateSamplerState(&sampWrap, &pSamplerWrap));
     }
-
-    bRet = TRUE;
 
 EXIT_RETURN:
 
-    if (!bRet)
+    return SUCCEEDED(hr);
+}
+
+bool InitDolphin(bool useTweenedNormal, LoadResourceFunc loadResourceFunc)
+{
+    bool success = LoadDeviceDependentDolphinResources(useTweenedNormal, loadResourceFunc, pd3dDevice, pd3dContext);
+
+    if (!success)
     {
         UninitDolphin();
     }
 
-    return bRet != 0;
+    return success;
 }
 
 void UpdateDolphin(bool useTweenedNormal)

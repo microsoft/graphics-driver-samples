@@ -25,6 +25,10 @@ namespace DolphinUniversal
 	private:
 		void Rotate(float radians);
 
+    private:
+        static const wchar_t * ResourceFileName(int id);
+        static void * LoadResource(int id, unsigned long * pdwSize);
+
 	private:
 		// Cached pointer to device resources.
 		std::shared_ptr<DX::DeviceResources> m_deviceResources;
