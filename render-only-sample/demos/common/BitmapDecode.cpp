@@ -1,4 +1,28 @@
-#include "stdafx.h"
+#include <SDKDDKVer.h>
+#include <windows.h>
+#include <d3d11.h>
+#include <dxgi.h>
+#include <dxgi1_2.h>
+#include <stdio.h>
+#include <tchar.h>
+#include <stdlib.h>
+#include <malloc.h>
+#include <memory.h>
+#include <math.h>
+#include <directxmath.h>
+
+#include "BitmapDecode.h"
+
+#if !(WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP))
+typedef struct tagBITMAPFILEHEADER {
+    WORD    bfType;
+    DWORD   bfSize;
+    WORD    bfReserved1;
+    WORD    bfReserved2;
+    DWORD   bfOffBits;
+} BITMAPFILEHEADER, FAR *LPBITMAPFILEHEADER, *PBITMAPFILEHEADER;
+#endif
+
 
 //--------------------------------------------------------------------------------------
 // BitmapDecode.cpp

@@ -19,7 +19,21 @@
 // meets the specific needs of the application.
 //--------------------------------------------------------------------------------------
 
-#include "stdafx.h"
+#include <SDKDDKVer.h>
+#include <windows.h>
+#include <d3d11.h>
+#include <dxgi.h>
+#include <dxgi1_2.h>
+#include <stdio.h>
+#include <tchar.h>
+#include <stdlib.h>
+#include <malloc.h>
+#include <memory.h>
+#include <math.h>
+#include <directxmath.h>
+#include <intrin.h>
+
+#include "SDKMesh.h"
 
 //--------------------------------------------------------------------------------------
 HRESULT CDXUTSDKMesh::CreateVertexBuffer( ID3D11Device* pd3dDevice, SDKMESH_VERTEX_BUFFER_HEADER* pHeader, void* pVertices )
@@ -31,7 +45,7 @@ HRESULT CDXUTSDKMesh::CreateVertexBuffer( ID3D11Device* pd3dDevice, SDKMESH_VERT
     bufferDesc.ByteWidth = ( UINT )( pHeader->SizeBytes );
     bufferDesc.Usage = D3D11_USAGE_DYNAMIC;
     bufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-    bufferDesc.CPUAccessFlags =  D3D10_CPU_ACCESS_WRITE;
+    bufferDesc.CPUAccessFlags =  D3D11_CPU_ACCESS_WRITE;
     bufferDesc.MiscFlags = 0;
 
     D3D11_SUBRESOURCE_DATA InitData;
@@ -67,7 +81,7 @@ HRESULT CDXUTSDKMesh::CreateIndexBuffer( ID3D11Device* pd3dDevice, SDKMESH_INDEX
         {
             if (pOrgIndices[i] & 0xFFFF0000)
             {
-                DebugBreak();
+                __debugbreak();
             }
             ((USHORT*)pMyIndices)[i] = (USHORT)(pOrgIndices[i] & 0x0000FFFF);
         }
