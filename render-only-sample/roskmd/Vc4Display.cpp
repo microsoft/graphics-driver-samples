@@ -8,6 +8,9 @@
 #include "Vc4Display.tmh"
 
 #include "RosKmdGlobal.h"
+#include "RosKmdAllocation.h"
+
+#include "Vc4Hw.h"
 #include "Vc4Common.h"
 #include "Vc4Debug.h"
 #include "Vc4Display.h"
@@ -112,7 +115,20 @@ NTSTATUS VC4_DISPLAY::SetVidPnSourceAddress (
         ROS_LOG_ASSERTION("What do we do here?");
     }
 
-    ULONG physicAddress = RosKmdGlobal::s_videoMemoryPhysicalAddress.LowPart + 
+    // Verify memory is in range
+    NT_ASSERT(Args->PrimarySegment == ROSD_SEGMENT_VIDEO_MEMORY);
+    NT_ASSERT(Args->PrimaryAddress.LowPart < RosKmdGlobal::s_videoMemorySize);
+    if (Args->hAllocation) {
+        const auto rosKmdAllocation = 
+            static_cast<RosKmdAllocation*>(Args->hAllocation);
+        NT_ASSERT(
+            (Args->PrimaryAddress.LowPart + rosKmdAllocation->m_hwSizeBytes) <=
+            RosKmdGlobal::s_videoMemorySize);
+    }
+    
+    ULONG physicAddress = 
+        RosKmdGlobal::s_videoMemoryPhysicalAddress.LowPart + 
+        VC4_BUS_ADDRESS_ALIAS_UNCACHED +
         Args->PrimaryAddress.LowPart;
 
     // PrimaryAddress is actually a virtual address

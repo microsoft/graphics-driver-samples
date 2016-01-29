@@ -430,8 +430,7 @@ bool RosUmdResource::CanRotateFrom(const RosUmdResource* Other) const
            (m_hwWidthTilePixels == Other->m_hwWidthTilePixels) &&
            (m_hwHeightTilePixels == Other->m_hwHeightTilePixels) &&
            (m_hwWidthTiles == Other->m_hwWidthTiles) &&
-           (m_hwHeightTiles == Other->m_hwHeightTiles) &&
-           (m_allocationListIndex == Other->m_allocationListIndex);
+           (m_hwHeightTiles == Other->m_hwHeightTiles);
 }
 
 void RosUmdResource::RotateFrom(const RosUmdResource* Other)
