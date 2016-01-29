@@ -125,13 +125,13 @@ NTSTATUS VC4_DISPLAY::SetVidPnSourceAddress (
             (Args->PrimaryAddress.LowPart + rosKmdAllocation->m_hwSizeBytes) <=
             RosKmdGlobal::s_videoMemorySize);
     }
-    
+
+    // PrimaryAddress is an offset into the memory segment
     ULONG physicAddress = 
         RosKmdGlobal::s_videoMemoryPhysicalAddress.LowPart + 
         VC4_BUS_ADDRESS_ALIAS_UNCACHED +
         Args->PrimaryAddress.LowPart;
 
-    // PrimaryAddress is actually a virtual address
     // Update the source address in the display list
     WRITE_REGISTER_NOFENCE_ULONG(
         &this->displayListPtr->PointerWord0,
