@@ -108,7 +108,7 @@ NTSTATUS VC4_DISPLAY::SetVidPnSourceAddress (
     NT_ASSERT(Args->Flags.FlipOnNextVSync);
 
     if (Args->Flags.SharedPrimaryTransition) {
-        ROS_LOG_ASSERTION("What do we do here?");
+        ROS_LOG_WARNING("What do we do here?");
     }
 
     if (Args->Flags.IndependentFlipExclusive) {
@@ -285,19 +285,20 @@ NTSTATUS VC4_DISPLAY::StartDevice (
         ObDereferenceObjectWithTag(localHpdFileObjectPtr, VC4_ALLOC_TAG::DEVICE);
     }, true);   // DoNot by default
     status = this->registerHotplugNotification(&localHpdFileObjectPtr);
-    switch (status) {
-    case STATUS_SUCCESS:
+    if (NT_SUCCESS(status)) {
         dereferenceHpdFileObject.DoNot(false);
-        break;
-    case STATUS_OBJECT_NAME_NOT_FOUND:
-        ROS_LOG_WARNING("Hotplug detection device was not found. Hotplug will not be supported.");
-        this->hdmiConnected = TRUE;
-        break;
-    default:
-        ROS_LOG_ERROR(
-            "Failed to register hotplug notification. (status=%!STATUS!)",
-            status);
-        return status;
+    } else {
+        switch (status) {
+        case STATUS_OBJECT_NAME_NOT_FOUND:
+            ROS_LOG_WARNING("Hotplug detection device was not found. Hotplug will not be supported.");
+            this->hdmiConnected = TRUE;
+            break;
+        default:
+            ROS_LOG_ERROR(
+                "Failed to register hotplug notification. (status=%!STATUS!)",
+                status);
+            return status;
+        }
     }
 
     // Find and validate hardware resources
