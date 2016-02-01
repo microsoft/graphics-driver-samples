@@ -27,7 +27,9 @@ namespace DolphinUniversal
 
 		// TODO: Replace with your own content renderers.
 		std::unique_ptr<Sample3DSceneRenderer> m_sceneRenderer;
+#ifdef USE_FPS
 		std::unique_ptr<SampleFpsTextRenderer> m_fpsTextRenderer;
+#endif
 
 		// Rendering loop timer.
 		DX::StepTimer m_timer;
