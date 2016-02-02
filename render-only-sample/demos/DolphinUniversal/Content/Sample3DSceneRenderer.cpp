@@ -46,12 +46,12 @@ void Sample3DSceneRenderer::Update(DX::StepTimer const& timer)
 }
 
 // Renders one frame using the vertex and pixel shaders.
-void Sample3DSceneRenderer::Render()
+bool Sample3DSceneRenderer::Render()
 {
 	// Loading is asynchronous. Only draw geometry after it's loaded.
 	if (!m_loadingComplete)
 	{
-		return;
+        return false;
 	}
 
     auto context = m_deviceResources->GetD3DDeviceContext();
@@ -60,6 +60,7 @@ void Sample3DSceneRenderer::Render()
 
     RenderDolphin(true, context, renderTargetView, depthStencilView);
 
+    return true;
 }
 
 const wchar_t *  Sample3DSceneRenderer::ResourceFileName(int id)

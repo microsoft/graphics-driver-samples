@@ -947,12 +947,10 @@ void RosUmdDevice::DrawIndexed(UINT indexCount, UINT startIndexLocation, INT bas
 
 void RosUmdDevice::ClearRenderTargetView(RosUmdRenderTargetView * pRenderTargetView, FLOAT clearColor[4])
 {
-    // TODO[indyz]: Use format from pRenderTargetView to decide if
-    //              VC4ClearColors::ClearColor16 should be used
-    pRenderTargetView; // unused
-
 #if VC4
 
+    RosUmdResource * pRenderTarget = RosUmdResource::CastFrom(pRenderTargetView->m_create.hDrvResource);
+        
     //
     // KMD issumes Clear Colors command before Draw call
     //
@@ -963,7 +961,7 @@ void RosUmdDevice::ClearRenderTargetView(RosUmdRenderTargetView * pRenderTargetV
     }
 
     // Set clear color into command buffer header for KMD to generate Rendering Control List
-    m_commandBuffer.UpdateClearColor(ConvertFloatColor(clearColor));
+    m_commandBuffer.UpdateClearColor(ConvertFloatColor(pRenderTarget->m_format, clearColor));
 
 #endif
 }

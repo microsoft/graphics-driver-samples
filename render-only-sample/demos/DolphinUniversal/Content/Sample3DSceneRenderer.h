@@ -15,7 +15,7 @@ namespace DolphinUniversal
 		void CreateWindowSizeDependentResources();
 		void ReleaseDeviceDependentResources();
 		void Update(DX::StepTimer const& timer);
-		void Render();
+		bool Render();
 
     private:
         static const wchar_t * ResourceFileName(int id);

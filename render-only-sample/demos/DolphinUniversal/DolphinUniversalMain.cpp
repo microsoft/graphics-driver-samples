@@ -61,14 +61,17 @@ bool DolphinUniversalMain::Render()
 		return false;
 	}
 
+    bool bRendered;
+
 	// Render the scene objects.
-	m_sceneRenderer->Render();
+	bRendered = m_sceneRenderer->Render();
 
 #ifdef USE_FPS
-	m_fpsTextRenderer->Render();
+    if (bRendered)
+        m_fpsTextRenderer->Render();
 #endif
 
-	return true;
+	return bRendered;
 }
 
 // Notifies renderers that device resources need to be released.

@@ -26,6 +26,7 @@ AlignValue(
 
 UINT
 ConvertFloatColor(
+    DXGI_FORMAT Format,
     FLOAT * pColor);
 
 #if VC4
