@@ -525,7 +525,10 @@ RosKmdRapAdapter::GenerateRenderingControlList(
     tileRenderingModeConfig.HeightInPixels = (USHORT)pRenderTarget->m_mip0Info.TexelHeight;
 
     NT_ASSERT(pRenderTarget->m_hwFormat == X8888);
-    tileRenderingModeConfig.NonHDRFrameBufferColorFormat = 1;
+    tileRenderingModeConfig.NonHDRFrameBufferColorFormat = 1; // rgba8888
+
+    NT_ASSERT(pRenderTarget->m_hwLayout == Linear);
+    tileRenderingModeConfig.MemoryFormat = 0; // linear
 
     *pVC4TileRenderingModeConfig = tileRenderingModeConfig;
 
