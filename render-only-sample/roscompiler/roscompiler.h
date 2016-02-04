@@ -1,16 +1,23 @@
 #pragma once
 
 #include "d3dumddi_.h"
+
 #include "roscompilerdebug.h"
 #include "DisasmBase.hpp"
 #include "HLSLBinary.hpp"
 #include "HLSLDisasm.hpp"
+
 #if VC4
 #include "..\roscommon\Vc4Qpu.h"
 #include "Vc4Disasm.hpp"
 #include "Vc4Emit.hpp"
 #include "Vc4Shader.hpp"
 #endif // VC4
+
+class RosUmdDevice;
+#include "..\rosumd\RosUmdResource.h"
+#include "..\rosumd\RosUmdRenderTargetView.h"
+#include "..\rosumd\RosUmdShaderResourceView.h"
 
 // Vertex shader
 //   0 - h/w vertex shader code.
@@ -41,6 +48,8 @@ public:
         const D3D11_1_DDI_BLEND_DESC* pBlendState,
         const D3D10_DDI_DEPTH_STENCIL_DESC* pDepthState,
         const D3D11_1_DDI_RASTERIZER_DESC* pRasterState,
+        const RosUmdRenderTargetView** m_ppRenderTargetView,
+        const RosUmdShaderResourceView** m_ppShaderResouceView,
         UINT numInputSignatureEntries,
         const D3D11_1DDIARG_SIGNATURE_ENTRY *pInputSignatureEntries,
         UINT numOutputSignatureEntries,
@@ -143,7 +152,6 @@ public:
         *pUniformFormatEntries = m_Storage[Type].GetUsedSize<VC4_UNIFORM_FORMAT>();
         return m_Storage[Type].GetStorage<VC4_UNIFORM_FORMAT>();
 #endif // VC4
-
     }
 
     const D3D11_1_DDI_BLEND_DESC* GetBlendState()
@@ -159,6 +167,18 @@ public:
     const D3D11_1_DDI_RASTERIZER_DESC* GetRasterState()
     {
         return m_pRasterState;
+    }
+
+    const DXGI_FORMAT GetRenderTargetFormat(uint8_t i)
+    {
+        RosUmdResource *pResource = RosUmdResource::CastFrom(m_ppRenderTargetView[i]->m_create.hDrvResource);
+        return pResource->m_format;
+    }
+
+    const DXGI_FORMAT GetShaderResourceFormat(uint8_t i)
+    {
+        RosUmdResource *pResource = RosUmdResource::CastFrom(m_ppShaderResouceView[i]->m_create.hDrvResource);
+        return pResource->m_format;
     }
 
     UINT GetInputSignature(D3D11_1DDIARG_SIGNATURE_ENTRY ** ppInputSignatureEntries)
@@ -227,6 +247,12 @@ private:
     const D3D11_1_DDI_RASTERIZER_DESC* m_pRasterState;
 
     //
+    // Resource binding
+    //
+    const RosUmdRenderTargetView** m_ppRenderTargetView; // point array, size of D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT.
+    const RosUmdShaderResourceView** m_ppShaderResouceView; // point array, size of  D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT.
+    
+    //
     // I/O signature(s).
     //
     UINT m_numInputSignatureEntries;
@@ -255,6 +281,8 @@ RosCompiler* RosCompilerCreate(D3D10_SB_TOKENIZED_PROGRAM_TYPE ProgramType,
                                const D3D11_1_DDI_BLEND_DESC* pBlendState,
                                const D3D10_DDI_DEPTH_STENCIL_DESC* pDepthState,
                                const D3D11_1_DDI_RASTERIZER_DESC* pRasterState,
+                               const RosUmdRenderTargetView** m_ppRenderTargetView,
+                               const RosUmdShaderResourceView** m_ppShaderResouceView,
                                UINT numInputSignatureEntries,
                                const D3D11_1DDIARG_SIGNATURE_ENTRY *pInputSignatureEntries,
                                UINT numOutputSignatureEntries,

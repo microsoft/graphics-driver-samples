@@ -5,6 +5,7 @@
 class RosUmdRenderTargetView
 {
 friend class RosUmdDevice;
+friend class RosCompiler;
 
 public:
 

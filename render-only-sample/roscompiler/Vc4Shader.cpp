@@ -331,14 +331,8 @@ void Vc4Shader::Emit_Mad(CInstruction &Inst)
         {
             if (Inst.m_Operands[0].m_WriteMask & aCurrent)
             {
-                Vc4Register dst = Find_Vc4Register_M(Inst.m_Operands[0], aCurrent);
-                uint8_t pack = VC4_QPU_PACK_A_32;
-                if (dst.GetFlags().packed)
-                {
-                    pack = VC4_QPU_PACK_MUL_8a + i;
-                }
-
                 Vc4Register accum(VC4_QPU_ALU_R3, VC4_QPU_WADDR_ACC3);
+                Vc4Register dst = Find_Vc4Register_M(Inst.m_Operands[0], aCurrent);
 
                 // perform mul first 2 operands
                 {
@@ -381,7 +375,7 @@ void Vc4Shader::Emit_Mad(CInstruction &Inst)
                 {
                     Vc4Instruction Vc4Inst;
                     Vc4Inst.Vc4_m_MOV(dst, accum);
-                    Vc4Inst.Vc4_m_Pack(pack);
+                    Vc4Inst.Vc4_m_Pack(dst.GetPack(i));
                     Vc4Inst.Emit(CurrentStorage);
                 }
             }
@@ -409,19 +403,13 @@ void Vc4Shader::Emit_Mov(CInstruction &Inst)
             if (Inst.m_Operands[0].m_WriteMask & aCurrent)
             {
                 Vc4Register dst = Find_Vc4Register_M(Inst.m_Operands[0], aCurrent);
-                uint8_t pack = VC4_QPU_PACK_A_32;
-                if (dst.GetFlags().packed)
-                {
-                    pack = VC4_QPU_PACK_MUL_8a + i;
-                }
-
                 Vc4Register src[1];
                 Setup_SourceRegisters(Inst, 1, ARRAYSIZE(src), i , src);
 
                 {
                     Vc4Instruction Vc4Inst;
                     Vc4Inst.Vc4_m_MOV(dst, src[0]);
-                    Vc4Inst.Vc4_m_Pack(pack);
+                    Vc4Inst.Vc4_m_Pack(dst.GetPack(i));
                     Vc4Inst.Emit(CurrentStorage);
                 }
             }
@@ -489,18 +477,10 @@ void Vc4Shader::Emit_DPx(CInstruction &Inst)
             if (Inst.m_Operands[0].m_WriteMask & aCurrent)
             {
                 Vc4Register dst = Find_Vc4Register_M(Inst.m_Operands[0], aCurrent);
-                uint8_t pack = VC4_QPU_PACK_A_32;
-                if (dst.GetFlags().packed)
-                {
-                    pack = VC4_QPU_PACK_MUL_8a + i;
-                }
-
-                {
-                    Vc4Instruction Vc4Inst;
-                    Vc4Inst.Vc4_m_MOV(dst, accum);
-                    Vc4Inst.Vc4_m_Pack(pack);
-                    Vc4Inst.Emit(CurrentStorage);
-                }
+                Vc4Instruction Vc4Inst;
+                Vc4Inst.Vc4_m_MOV(dst, accum);
+                Vc4Inst.Vc4_m_Pack(dst.GetPack(i));
+                Vc4Inst.Emit(CurrentStorage);
             }
      
             aCurrent <<= 1;
@@ -526,11 +506,6 @@ void Vc4Shader::Emit_with_Add_pipe(CInstruction &Inst)
             if (Inst.m_Operands[0].m_WriteMask & aCurrent)
             {
                 Vc4Register dst = Find_Vc4Register_M(Inst.m_Operands[0], aCurrent);
-                uint8_t pack = VC4_QPU_PACK_A_32;
-                if (dst.GetFlags().packed)
-                {
-                    pack = VC4_QPU_PACK_MUL_8a + i;
-                }
 
                 Vc4Register src[2];
                 this->Setup_SourceRegisters(Inst, 1, ARRAYSIZE(src), i, src);
@@ -571,7 +546,7 @@ void Vc4Shader::Emit_with_Add_pipe(CInstruction &Inst)
                 {
                     Vc4Instruction Vc4Inst;
                     Vc4Inst.Vc4_m_MOV(dst, _dst);
-                    Vc4Inst.Vc4_m_Pack(pack);
+                    Vc4Inst.Vc4_m_Pack(dst.GetPack(i));
                     Vc4Inst.Emit(CurrentStorage);
                 }
             }
@@ -599,11 +574,6 @@ void Vc4Shader::Emit_with_Mul_pipe(CInstruction &Inst)
             if (Inst.m_Operands[0].m_WriteMask & aCurrent)
             {
                 Vc4Register dst = Find_Vc4Register_M(Inst.m_Operands[0], aCurrent);
-                uint8_t pack = VC4_QPU_PACK_A_32;
-                if (dst.GetFlags().packed)
-                {
-                    pack = VC4_QPU_PACK_MUL_8a + i;
-                }
 
                 Vc4Register src[2];
                 this->Setup_SourceRegisters(Inst, 1, ARRAYSIZE(src), i, src);
@@ -618,7 +588,7 @@ void Vc4Shader::Emit_with_Mul_pipe(CInstruction &Inst)
                     default:
                         VC4_ASSERT(false);
                     }
-                    Vc4Inst.Vc4_m_Pack(pack);
+                    Vc4Inst.Vc4_m_Pack(dst.GetPack(i));
                     Vc4Inst.Emit(CurrentStorage);
                 }
             }
@@ -677,6 +647,12 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
     uint32_t resourceIndex = Inst.m_Operands[2].m_Index[0].m_RegIndex;
     uint32_t texDimension = this->ResourceDimension[resourceIndex];
 
+    DXGI_FORMAT texFormat = UmdCompiler->GetShaderResourceFormat((uint8_t)resourceIndex);
+    VC4_ASSERT((texFormat == DXGI_FORMAT_B8G8R8A8_UNORM) || (texFormat == DXGI_FORMAT_R8G8B8A8_UNORM));
+        
+    // TODO: more generic color channel swizzle support.
+    boolean bSwapColorChannel = (texFormat != DXGI_FORMAT_R8G8B8A8_UNORM);
+    
     // Texture coordinate
     VC4_ASSERT(Inst.m_Operands[1].m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
     VC4_ASSERT(Inst.m_Operands[1].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
@@ -776,34 +752,64 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
         Vc4Inst.Emit(CurrentStorage);
     }
 
-    // TODO: Swizzle texture channel when texture format and RT format are different.
+    // Sample result is now at r4.
     Vc4Register r4(VC4_QPU_ALU_R4);
 
     // Move result at r4 to output register.
     if (Inst.m_Operands[0].m_Type == D3D10_SB_OPERAND_TYPE_OUTPUT)
     {
-        Vc4Instruction Vc4Inst;
-        Vc4Inst.Vc4_a_MOV(o[0], r4);
-        Vc4Inst.Emit(CurrentStorage);
-    }
-    else if (Inst.m_Operands[0].m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_MASK_MODE)
-    {
-        assert(bUnpack);
-        // Move each color channel at r4 to o[4].
-        for (uint8_t i = 0; i < 4; i++)
+        if (bSwapColorChannel == o[0].GetFlags().swap_color_channel)
         {
-            if (o[i].GetFlags().valid)
+            Vc4Instruction Vc4Inst;
+            Vc4Inst.Vc4_a_MOV(o[0], r4);
+            Vc4Inst.Emit(CurrentStorage);
+        }
+        else
+        {
+            // R, G, B channel
+            for (uint8_t i = 0; i < 3; i++)
             {
                 Vc4Instruction Vc4Inst;
-                Vc4Inst.Vc4_m_MOV(o[i], r4);
+                Vc4Inst.Vc4_m_MOV(o[0], r4);
+                Vc4Inst.Vc4_m_Pack(VC4_QPU_PACK_MUL_8c - i);
                 Vc4Inst.Vc4_m_Unpack(VC4_QPU_UNPACK_8a + i, true); // Use R4 unpack.
+                Vc4Inst.Emit(CurrentStorage);
+            }
+
+            // A channel
+            {
+                Vc4Instruction Vc4Inst;
+                Vc4Inst.Vc4_m_MOV(o[0], r4);
+                Vc4Inst.Vc4_m_Pack(VC4_QPU_PACK_MUL_8d);
+                Vc4Inst.Vc4_m_Unpack(VC4_QPU_UNPACK_8d, true); // Use R4 unpack.
                 Vc4Inst.Emit(CurrentStorage);
             }
         }
     }
     else
     {
-        VC4_ASSERT(false);
+        // Move each color channel at r4 to o[i].
+        // R, G, B channel
+        for (uint8_t i = 0; i < 3; i++)
+        {
+            Vc4Register out = bSwapColorChannel ? o[2 - i] : o[i];
+            if (out.GetFlags().valid)
+            {
+                Vc4Instruction Vc4Inst;
+                Vc4Inst.Vc4_m_MOV(out, r4);
+                Vc4Inst.Vc4_m_Unpack(VC4_QPU_UNPACK_8a + i, true); // Use R4 unpack.
+                Vc4Inst.Emit(CurrentStorage);
+            }
+        }
+
+        // A channel
+        if (o[3].GetFlags().valid)
+        {
+            Vc4Instruction Vc4Inst;
+            Vc4Inst.Vc4_m_MOV(o[3], r4);
+            Vc4Inst.Vc4_m_Unpack(VC4_QPU_UNPACK_8d, true); // Use R4 unpack.
+            Vc4Inst.Emit(CurrentStorage);
+        }
     }
 
     { // Emit a NOP
@@ -885,6 +891,10 @@ void Vc4Shader::HLSL_ParseDecl()
                 this->OutputRegister[0][0].addr = ROS_VC4_OUTPUT_REGISTER_FILE_START;
                 this->OutputRegister[0][0].mux = ROS_VC4_OUTPUT_REGISTER_FILE;
                 this->OutputRegister[0][0].swizzleMask = (uint8_t)(Inst.m_Operands[0].m_WriteMask & D3D10_SB_OPERAND_4_COMPONENT_MASK_MASK);
+                // TODO: more generic color channel swizzle support.
+                DXGI_FORMAT texFormat = UmdCompiler->GetRenderTargetFormat(0);
+                VC4_ASSERT((texFormat == DXGI_FORMAT_B8G8R8A8_UNORM) || (texFormat == DXGI_FORMAT_R8G8B8A8_UNORM));
+                this->OutputRegister[0][0].flags.swap_color_channel = (texFormat != DXGI_FORMAT_R8G8B8A8_UNORM);
                 cOutput++;
             }
             else
