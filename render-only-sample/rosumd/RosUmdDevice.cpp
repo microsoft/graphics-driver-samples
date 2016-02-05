@@ -211,6 +211,121 @@ RosUmdDevice::~RosUmdDevice()
     // do nothing
 }
 
+// Form 1k sub-tile block
+BYTE *RosUmdDevice::Form1kSubTileBlock(BYTE *pInputBuffer, BYTE *pOutBuffer, UINT rowStride)
+{
+    // 1k sub-tile block (16 x 16 pixels) is formed from micro-tiles
+    for (UINT h = 0; h < 16; h += 4)
+    {
+        BYTE *currentBufferPos = pInputBuffer + h*rowStride;
+
+        for (UINT w = 0; w < 4; w++)
+        {
+            BYTE *microTileOffset = currentBufferPos + w * 16;
+
+            // Process micro-tile block (64 bytes)
+            for (int t = 0; t < 4; t++)
+            {
+                memcpy(pOutBuffer, microTileOffset, 16);
+                pOutBuffer += 16;
+                microTileOffset += rowStride;
+            }
+        }
+    }
+
+    return pOutBuffer;
+}
+
+// Form one 4k tile block from pInputBuffer and store in pOutBuffer
+BYTE *RosUmdDevice::Form4kTileBlock(BYTE *pInputBuffer, BYTE *pOutBuffer, UINT rowStride, BOOLEAN OddRow)
+{
+    BYTE *currentTileOffset = NULL;
+
+    if (OddRow)
+    {
+        // For even rows, process sub-tile blocks in ABCD order, where
+        // each sub-tile is stored in memory as follows:
+        //
+        //  [C  B]   
+        //  [D  A]
+        //                  
+
+        // Get A block
+        currentTileOffset = pInputBuffer + rowStride * 16 + 64;
+        pOutBuffer = Form1kSubTileBlock(currentTileOffset, pOutBuffer, rowStride);
+
+        // Get B block
+        currentTileOffset = pInputBuffer + 64;
+
+        pOutBuffer = Form1kSubTileBlock(currentTileOffset, pOutBuffer, rowStride);
+
+        // Get C block
+        pOutBuffer = Form1kSubTileBlock(pInputBuffer, pOutBuffer, rowStride);
+
+        // Get D block
+        currentTileOffset = pInputBuffer + rowStride * 16;
+        pOutBuffer = Form1kSubTileBlock(currentTileOffset, pOutBuffer, rowStride);
+
+        // return current position in out buffer
+        return pOutBuffer;
+
+    }
+    else
+    {
+        // For even rows, process sub-tile blocks in ABCD order, where
+        // each sub-tile is stored in memory as follows:
+        // 
+        //  [A  D]    
+        //  [B  C] 
+        //
+
+        // Get A block
+        pOutBuffer = Form1kSubTileBlock(pInputBuffer, pOutBuffer, rowStride);
+
+        /// Get B block
+        currentTileOffset = pInputBuffer + rowStride * 16;
+        pOutBuffer = Form1kSubTileBlock(currentTileOffset, pOutBuffer, rowStride);
+
+        // Get C Block
+        currentTileOffset = pInputBuffer + rowStride * 16 + 64;
+        pOutBuffer = Form1kSubTileBlock(currentTileOffset, pOutBuffer, rowStride);
+
+        // Get D block
+        currentTileOffset = pInputBuffer + 64;
+        pOutBuffer = Form1kSubTileBlock(currentTileOffset, pOutBuffer, rowStride);
+
+        // return current position in out buffer
+        return pOutBuffer;
+    }
+}
+
+// Form (CountX * CountY) tile blocks from InputBuffer and store them in OutBuffer
+void RosUmdDevice::ConvertBitmapTo4kTileBlocks(BYTE *InputBuffer, BYTE *OutBuffer, UINT rowStride, UINT CountX, UINT CountY)
+{
+    for (UINT k = 0; k < CountY; k++)
+    {
+        BOOLEAN oddRow = k & 1;
+        if (oddRow)
+        {
+            // Build 4k blocks from right to left for odd rows
+            for (int i = CountX - 1; i >= 0; i--)
+            {
+                BYTE *blockStartOffset = InputBuffer + k * rowStride * 32 + i * 128;
+                OutBuffer = Form4kTileBlock(blockStartOffset, OutBuffer, rowStride, oddRow);
+            }
+        }
+        else
+        {
+            // Build 4k blocks from left to right for even rows
+            for (UINT i = 0; i < CountX; i++)
+            {
+                BYTE *blockStartOffset = InputBuffer + k * rowStride * 32 + i * 128;
+                OutBuffer = Form4kTileBlock(blockStartOffset, OutBuffer, rowStride, oddRow);
+            }
+        }
+    }
+}
+
 //
 // Device resource handling
 //
@@ -284,7 +399,42 @@ void RosUmdDevice::CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResou
 
         Lock(&lock);
 
-        memcpy(lock.pData, pCreateResource->pInitialDataUP[0].pSysMem, pResource->m_hwSizeBytes);
+        if (pResource->m_resourceDimension == D3D10DDIRESOURCE_BUFFER)
+        {
+            memcpy(lock.pData, pCreateResource->pInitialDataUP[0].pSysMem, pResource->m_mip0Info.PhysicalWidth);
+        }
+        else if (pResource->m_resourceDimension == D3D10DDIRESOURCE_TEXTURE2D)
+        {
+            if (pResource->m_hwLayout == RosHwLayout::Linear)
+            {
+                BYTE *  pSrc = (BYTE *)pCreateResource->pInitialDataUP[0].pSysMem;
+                BYTE *  pDst = (BYTE *)lock.pData;
+
+                for (UINT i = 0; i < pResource->m_mip0Info.TexelHeight; i++)
+                {
+                    memcpy(pDst, pSrc, pCreateResource->pInitialDataUP[0].SysMemPitch);
+
+                    pSrc += pCreateResource->pInitialDataUP[0].SysMemPitch;
+                    pDst += pResource->m_hwPitchBytes;
+                }
+            }
+            else
+            {
+                // Texture tiled mode support
+                BYTE * pSrc = (BYTE *)pCreateResource->pInitialDataUP[0].pSysMem;
+                BYTE * pDst = (BYTE *)lock.pData;
+                UINT  rowStride = pCreateResource->pInitialDataUP[0].SysMemPitch;
+                UINT  w = pResource->m_hwWidthTiles;
+                UINT  h = pResource->m_hwHeightTiles;
+
+                // Swizzle texture to HW format
+                ConvertBitmapTo4kTileBlocks(pSrc, pDst, rowStride, w, h);
+            }
+        }
+        else
+        {
+            assert(false);
+        }
 
         D3DDDICB_UNLOCK unlock;
         memset(&unlock, 0, sizeof(unlock));
@@ -1847,11 +1997,17 @@ void RosUmdDevice::WriteUniforms(
                 //
 
                 assert(pTexture->m_hwFormat == RosHwFormat::X8888);
-                assert(pTexture->m_hwLayout == RosHwLayout::Linear);
 
                 VC4TextureType  vc4TextureType;
 
-                vc4TextureType.TextureType = VC4_TEX_RGBA32R;
+                if (pTexture->m_hwLayout == RosHwLayout::Tiled)
+                {
+                    vc4TextureType.TextureType = VC4_TEX_RGBX8888;
+                }
+                else
+                {
+                    vc4TextureType.TextureType = VC4_TEX_RGBA32R;
+                }
 
                 pVC4TexConfigParam0->TYPE = vc4TextureType.TYPE;
 
@@ -1883,7 +2039,14 @@ void RosUmdDevice::WriteUniforms(
 
                 VC4TextureType  vc4TextureType;
 
-                vc4TextureType.TextureType = VC4_TEX_RGBA32R;
+                if (pTexture->m_hwLayout == RosHwLayout::Tiled)
+                {
+                    vc4TextureType.TextureType = VC4_TEX_RGBX8888;
+                }
+                else
+                {
+                    vc4TextureType.TextureType = VC4_TEX_RGBA32R;
+                }
 
                 RosUmdSampler * pSampler = m_pixelSamplers[pCurUniformEntry->samplerConfiguration.samplerIndex];
                 D3D10_DDI_SAMPLER_DESC * pSamplerDesc = &pSampler->m_desc;

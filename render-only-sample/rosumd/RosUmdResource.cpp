@@ -298,16 +298,23 @@ RosUmdResource::CalculateMemoryLayout(
                 m_hwFormat = RosHwFormat::X8888;
             }
 
+            // Force tiled layout for given configuration
+            if ((m_usage == D3D10_DDI_USAGE_DEFAULT) &&
+                (m_bindFlags == D3D10_DDI_BIND_SHADER_RESOURCE))
+            {
+                m_hwLayout = RosHwLayout::Tiled;
+            }
+
             // Using system memory linear MipMap as example
             m_hwWidthPixels = m_mip0Info.TexelWidth;
             m_hwHeightPixels = m_mip0Info.TexelHeight;
 
 #if VC4
-            // Align width and height to VC4_BINNING_TILE_PIXELS for binning
+            // Align width and height to VC4_T_TEXTURE_TILE_PIXELS
 #endif
 
-            m_hwWidthTilePixels = VC4_BINNING_TILE_PIXELS;
-            m_hwHeightTilePixels = VC4_BINNING_TILE_PIXELS;
+            m_hwWidthTilePixels = VC4_T_TEXTURE_TILE_PIXELS;
+            m_hwHeightTilePixels = VC4_T_TEXTURE_TILE_PIXELS;
             m_hwWidthTiles = (m_hwWidthPixels + m_hwWidthTilePixels - 1) / m_hwWidthTilePixels;
             m_hwHeightTiles = (m_hwHeightPixels + m_hwHeightTilePixels - 1) / m_hwHeightTilePixels;
             m_hwWidthPixels = m_hwWidthTiles*m_hwWidthTilePixels;
@@ -331,7 +338,7 @@ RosUmdResource::CalculateMemoryLayout(
                 assert(m_mipLevels == 1);
 
                 assert((m_hwFormat == RosHwFormat::X8888) || (m_hwFormat == RosHwFormat::D24S8));
-                UINT sizeTileBytes = 64 * 64 * 4;
+                UINT sizeTileBytes = VC4_T_TEXTURE_TILE_PIXELS * VC4_T_TEXTURE_TILE_PIXELS * 4;
 
                 m_hwSizeBytes = m_hwWidthTiles * m_hwHeightTiles * sizeTileBytes;
                 m_hwPitchBytes = 0;

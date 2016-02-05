@@ -987,7 +987,9 @@ typedef enum _VC4TextureMinFilter
 // Constants
 //
 
-const UINT VC4_BINNING_TILE_PIXELS  = 64;
+const UINT VC4_BINNING_TILE_PIXELS	    = 64;
+
+const UINT VC4_T_TEXTURE_TILE_PIXELS    = 64;
 
 //
 // VC4 bus address alias
