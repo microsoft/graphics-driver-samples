@@ -424,8 +424,10 @@ void RosUmdDevice::CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResou
                 BYTE * pSrc = (BYTE *)pCreateResource->pInitialDataUP[0].pSysMem;
                 BYTE * pDst = (BYTE *)lock.pData;
                 UINT  rowStride = pCreateResource->pInitialDataUP[0].SysMemPitch;
-                UINT  w = pResource->m_hwWidthTiles;
-                UINT  h = pResource->m_hwHeightTiles;
+                
+                // Calculate width and height in tiles
+                UINT  w = pResource->m_hwWidthPixels/32;
+                UINT  h = pResource->m_hwHeightPixels/32;
 
                 // Swizzle texture to HW format
                 ConvertBitmapTo4kTileBlocks(pSrc, pDst, rowStride, w, h);
