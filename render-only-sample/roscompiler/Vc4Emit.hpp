@@ -31,6 +31,7 @@ struct Vc4RegisterFlags
             uint32_t position : 1;
             uint32_t temp : 1;
             uint32_t color : 1;
+            uint32_t swap_color_channel : 1;
             uint32_t packed : 1;
             uint32_t immediate : 1;
             uint32_t uniform : 1;
@@ -116,6 +117,33 @@ struct Vc4Register
     {
         assert(this->flags.immediate == false);
         return this->swizzleMask;
+    }
+
+    uint8_t GetPack(uint8_t swizzleIndex)
+    {
+        if (this->flags.packed)
+        {
+            if (this->flags.swap_color_channel)
+            {
+                assert(this->flags.color);
+                if (swizzleIndex == 3) // keep alpha at 8d.
+                {
+                    return VC4_QPU_PACK_MUL_8d;
+                }
+                else
+                {
+                    return VC4_QPU_PACK_MUL_8c - swizzleIndex;
+                }
+            }
+            else
+            {
+                return VC4_QPU_PACK_MUL_8a + swizzleIndex;
+            }
+        }
+        else
+        {
+            return VC4_QPU_PACK_A_32;
+        }
     }
 
 private:
@@ -322,7 +350,7 @@ public:
         {
         case vc4_alu:
         case vc4_alu_small_immediate:
-            assert(this->ALU.pack == 0);
+            assert(this->ALU.unpack == 0);
             this->ALU.unpack = unpack;
             this->ALU.pm = pm;
             break;
@@ -449,7 +477,7 @@ public:
         {
         case vc4_alu:
         case vc4_alu_small_immediate:
-            assert(this->ALU.pack == 0);
+            assert(this->ALU.unpack == 0);
             this->ALU.unpack = unpack;
             this->ALU.pm = pm;
             break;

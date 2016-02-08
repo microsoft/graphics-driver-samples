@@ -1,7 +1,6 @@
 ﻿#include "pch.h"
 #include "DeviceResources.h"
 #include "DirectXHelper.h"
-#include <tchar.h>
 
 using namespace D2D1;
 using namespace DirectX;
@@ -124,55 +123,19 @@ void DX::DeviceResources::CreateDeviceIndependentResources()
 		);
 }
 
-IDXGIAdapter* DX::DeviceResources::FindRosAdapter()
-{
-    IDXGIAdapter* adapter = nullptr;
-    ComPtr<IDXGIFactory> factory;
-
-    HRESULT hr = CreateDXGIFactory1(__uuidof(IDXGIFactory), (void**)&factory);
-
-    if (SUCCEEDED(hr))
-    {
-        for (UINT i = 0; ; i++)
-        {
-            DXGI_ADAPTER_DESC adapterDesc = { 0 };
-            if (FAILED(factory->EnumAdapters(i, &adapter)))
-            {
-                adapter = nullptr;
-                break;
-            }
-
-            adapter->GetDesc(&adapterDesc);
-            if (_tcsicmp(adapterDesc.Description, TEXT("Render Only Sample Driver")) == 0)
-            {
-                break;
-            }
-            adapter->Release();
-        }
-    }
-
-    return adapter;
-}
-
 // Configures the Direct3D device, and stores handles to it and the device context.
 void DX::DeviceResources::CreateDeviceResources() 
 {
-    bool useRosDriver = false;
-
-#if defined(_M_ARM)
-    useRosDriver = true;    // we assume we will run demo on RosDriver on ARM
-#endif
-
 	// This flag adds support for surfaces with a different color channel ordering
 	// than the API default. It is required for compatibility with Direct2D.
 	UINT creationFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
 
 #if defined(_DEBUG)
-	if (DX::SdkLayersAvailable())
-	{
-		// If the project is in a debug build, enable debugging via SDK Layers with this flag.
-		creationFlags |= D3D11_CREATE_DEVICE_DEBUG;
-	}
+	// if (DX::SdkLayersAvailable())
+	// {
+		// // If the project is in a debug build, enable debugging via SDK Layers with this flag.
+		// creationFlags |= D3D11_CREATE_DEVICE_DEBUG;
+	// }
 #endif
 
 	// This array defines the set of DirectX hardware feature levels this app will support.
@@ -181,40 +144,30 @@ void DX::DeviceResources::CreateDeviceResources()
 	// description.  All applications are assumed to support 9.1 unless otherwise stated.
 	D3D_FEATURE_LEVEL featureLevels[] =
 	{
-		D3D_FEATURE_LEVEL_12_1,
-		D3D_FEATURE_LEVEL_12_0,
-		D3D_FEATURE_LEVEL_11_1,
-		D3D_FEATURE_LEVEL_11_0,
-		D3D_FEATURE_LEVEL_10_1,
-		D3D_FEATURE_LEVEL_10_0,
-		D3D_FEATURE_LEVEL_9_3,
-		D3D_FEATURE_LEVEL_9_2,
+		// D3D_FEATURE_LEVEL_12_1,
+		// D3D_FEATURE_LEVEL_12_0,
+		// D3D_FEATURE_LEVEL_11_1,
+		// D3D_FEATURE_LEVEL_11_0,
+		// D3D_FEATURE_LEVEL_10_1,
+		// D3D_FEATURE_LEVEL_10_0,
+		// D3D_FEATURE_LEVEL_9_3,
+		// D3D_FEATURE_LEVEL_9_2,
 		D3D_FEATURE_LEVEL_9_1
 	};
-
-    UINT featureLevelsCount = ARRAYSIZE(featureLevels);
-
-    if (useRosDriver)
-    {
-        featureLevels[0] = D3D_FEATURE_LEVEL_9_1;
-        featureLevelsCount = 1;
-    }
-
-    ComPtr<IDXGIAdapter> adapter;
-
-    adapter = FindRosAdapter();
 
 	// Create the Direct3D 11 API device object and a corresponding context.
 	ComPtr<ID3D11Device> device;
 	ComPtr<ID3D11DeviceContext> context;
 
+    Sleep(10000);
+    
 	HRESULT hr = D3D11CreateDevice(
-		adapter.Get(),		        // Use the adapter we found (could be nullptr to use default).
+		nullptr,					// Specify nullptr to use the default adapter.
 		D3D_DRIVER_TYPE_HARDWARE,	// Create a device using the hardware graphics driver.
 		0,							// Should be 0 unless the driver is D3D_DRIVER_TYPE_SOFTWARE.
 		creationFlags,				// Set debug and Direct2D compatibility flags.
 		featureLevels,				// List of feature levels this app can support.
-        featureLevelsCount,	        // Number of feature levels in list to consider.
+		ARRAYSIZE(featureLevels),	// Size of the list above.
 		D3D11_SDK_VERSION,			// Always set this to D3D11_SDK_VERSION for Windows Store apps.
 		&device,					// Returns the Direct3D device created.
 		&m_d3dFeatureLevel,			// Returns feature level of device created.
@@ -299,7 +252,7 @@ void DX::DeviceResources::CreateWindowSizeDependentResources()
 			2, // Double-buffered swap chain.
 			lround(m_d3dRenderTargetSize.Width),
 			lround(m_d3dRenderTargetSize.Height),
-			DXGI_FORMAT_B8G8R8A8_UNORM,
+			DXGI_FORMAT_R8G8B8A8_UNORM,
 			0
 			);
 
@@ -325,7 +278,7 @@ void DX::DeviceResources::CreateWindowSizeDependentResources()
 
 		swapChainDesc.Width = lround(m_d3dRenderTargetSize.Width);		// Match the size of the window.
 		swapChainDesc.Height = lround(m_d3dRenderTargetSize.Height);
-		swapChainDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;				// This is the most common swap chain format.
+		swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;				// This is the most common swap chain format.
 		swapChainDesc.Stereo = false;
 		swapChainDesc.SampleDesc.Count = 1;								// Don't use multi-sampling.
 		swapChainDesc.SampleDesc.Quality = 0;
@@ -472,7 +425,7 @@ void DX::DeviceResources::CreateWindowSizeDependentResources()
 	D2D1_BITMAP_PROPERTIES1 bitmapProperties = 
 		D2D1::BitmapProperties1(
 			D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
-			D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED),
+			D2D1::PixelFormat(DXGI_FORMAT_R8G8B8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED),
 			m_dpi,
 			m_dpi
 			);

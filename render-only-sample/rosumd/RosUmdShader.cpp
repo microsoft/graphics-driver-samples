@@ -106,6 +106,8 @@ RosUmdPipelineShader::Update()
                                     m_pDevice->m_blendState->GetDesc(),
                                     m_pDevice->m_depthStencilState->GetDesc(),
                                     m_pDevice->m_rasterizerState->GetDesc(),
+                                    (const RosUmdRenderTargetView **)&m_pDevice->m_renderTargetViews[0],
+                                    (const RosUmdShaderResourceView **)&m_pDevice->m_psResourceViews[0],
                                     m_numInputSignatureEntries,
                                     m_pInputSignatureEntries,
                                     m_numOutputSignatureEntries,

@@ -6,13 +6,13 @@
 #include "Content\SampleFpsTextRenderer.h"
 
 // Renders Direct2D and 3D content on the screen.
-namespace DolphinUniversal
+namespace CubeTestUwp
 {
-	class DolphinUniversalMain : public DX::IDeviceNotify
+	class CubeTestUwpMain : public DX::IDeviceNotify
 	{
 	public:
-		DolphinUniversalMain(const std::shared_ptr<DX::DeviceResources>& deviceResources);
-		~DolphinUniversalMain();
+		CubeTestUwpMain(const std::shared_ptr<DX::DeviceResources>& deviceResources);
+		~CubeTestUwpMain();
 		void CreateWindowSizeDependentResources();
 		void Update();
 		bool Render();
@@ -27,9 +27,7 @@ namespace DolphinUniversal
 
 		// TODO: Replace with your own content renderers.
 		std::unique_ptr<Sample3DSceneRenderer> m_sceneRenderer;
-#ifdef USE_FPS
 		std::unique_ptr<SampleFpsTextRenderer> m_fpsTextRenderer;
-#endif
 
 		// Rendering loop timer.
 		DX::StepTimer m_timer;

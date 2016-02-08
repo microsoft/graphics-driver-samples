@@ -34,16 +34,6 @@ FLOAT fWaterColor[4] = { 0.0f, 0.5f, 1.0f, 1.0f };
 FLOAT fAmbient[4] = { 0.25f, 0.25f, 0.25f, 0.25f };
 
 // D3D Variables:
-ID3D11Device*              pd3dDevice = NULL;
-ID3D11DeviceContext*       pd3dContext = NULL;
-ID3D11Texture2D*           pStaging = NULL;
-ID3D11Resource*            pStagingResource = NULL;
-ID3D11Texture2D*           pRenderTarget = NULL;
-ID3D11Resource*            pRenderTargetResource = NULL;
-ID3D11RenderTargetView*    pRenderTargetView = NULL;
-ID3D11Texture2D*           pDepthStencil = NULL;
-ID3D11DepthStencilView*    pDepthStencilView = NULL;
-ID3D11RasterizerState*     pDefaultRasterState = NULL;
 
 // Transform matrices
 XMMATRIX                matWorld;
@@ -84,6 +74,7 @@ ID3D11Buffer*       pVSConstantBuffer = NULL;
 ID3D11Buffer*       pPSConstantBuffer = NULL;
 
 // Dolphin RenderState
+ID3D11RasterizerState*   pDefaultRasterState;
 ID3D11BlendState*        pBlendStateNoBlend = NULL;
 ID3D11RasterizerState*   pRasterizerStateNoCull = NULL;
 ID3D11DepthStencilState* pLessEqualDepth = NULL;
@@ -141,9 +132,6 @@ ID3D11PixelShader*          pPixelShader = NULL;
 // Water caustics
 ID3D11ShaderResourceView *  pCausticTextureViews[32] = { NULL };
 ID3D11ShaderResourceView *  pCurrentCausticTextureView = NULL;
-
-IDXGIDevice2*   pDxgiDev2 = NULL;
-HANDLE          hQueueEvent = NULL;
 
 static UINT GetDXGIFormatTexelSize(DXGI_FORMAT Format)
 {
@@ -359,154 +347,21 @@ EXIT_RETURN:
     return hr;
 }
 
-void UninitD3D()
+void UninitTargetSizeDependentDolphinResources()
 {
-    SAFE_RELEASE(pd3dDevice);
-    SAFE_RELEASE(pd3dContext);
-
-    SAFE_RELEASE(pStaging);
-    SAFE_RELEASE(pStagingResource);
-    SAFE_RELEASE(pRenderTarget);
-    SAFE_RELEASE(pRenderTargetResource);
-    SAFE_RELEASE(pRenderTargetView);
-
-    SAFE_RELEASE(pDepthStencil);
-    SAFE_RELEASE(pDepthStencilView);
-
     SAFE_RELEASE(pDefaultRasterState);
 }
 
-bool InitD3D(bool useRosDriver, unsigned int rtWidth, unsigned int rtHeight)
+bool InitTargetSizeDependentDolphinResources(
+    UINT actualWidth, 
+    UINT actualHeight, 
+    ID3D11Device* pDevice, 
+    ID3D11DeviceContext * pContext,
+    ID3D11RenderTargetView* pRenderTargetView, 
+    ID3D11DepthStencilView* pDepthStencilView)
 {
     BOOL bRet = FALSE;
     HRESULT hr;
-
-    IDXGIFactory*   pFactory = NULL;
-    IDXGIAdapter*   pAdapter = NULL;
-    IDXGIOutput*    pOutput = NULL;
-
-    DXGI_FORMAT selectedFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
-    DXGI_MODE_DESC ModeToMatch = { 0 };
-    DXGI_MODE_DESC ModeDesc = { 0 };
-
-    CHR(CreateDXGIFactory1(__uuidof(IDXGIFactory), (void**)&pFactory));
-
-    for (UINT i = 0; ; i++)
-    {
-        DXGI_ADAPTER_DESC adapterDesc = { 0 };
-        CHR(pFactory->EnumAdapters(i, &pAdapter));
-        if (!useRosDriver) break;
-        pAdapter->GetDesc(&adapterDesc);
-        if (_tcsicmp(adapterDesc.Description, TEXT("Render Only Sample Driver")) == 0)
-        {
-            break;
-        }
-        SAFE_RELEASE(pAdapter);
-    }
-
-    {
-        // Create Direct3D
-        D3D_FEATURE_LEVEL  FeatureLevelsRequested[] = { D3D_FEATURE_LEVEL_11_0 };
-        D3D_FEATURE_LEVEL  FeatureLevelsSupported = D3D_FEATURE_LEVEL_11_0;
-
-        if (useRosDriver)
-        {
-            FeatureLevelsRequested[0] = D3D_FEATURE_LEVEL_9_1;
-            FeatureLevelsSupported = D3D_FEATURE_LEVEL_9_1;
-        }
-
-        CHR(D3D11CreateDevice(pAdapter,
-            D3D_DRIVER_TYPE_UNKNOWN,
-            NULL,
-            D3D11_CREATE_DEVICE_SINGLETHREADED /*| D3D11_CREATE_DEVICE_DEBUG*/,
-            FeatureLevelsRequested,
-            RTL_NUMBER_OF(FeatureLevelsRequested),
-            D3D11_SDK_VERSION,
-            &pd3dDevice,
-            &FeatureLevelsSupported,
-            &pd3dContext));
-    }
-
-    if (useRosDriver)
-    {
-        ModeDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-        ModeDesc.Width = rtWidth;
-        ModeDesc.Height = rtHeight;
-    }
-    else
-    {
-        //
-        // Get the current mode information from the output (i.e. as it is
-        // currently being used for the desktop).
-        //
-        CHR(pAdapter->EnumOutputs(0, &pOutput));
-        ZeroMemory(&ModeToMatch, sizeof(ModeToMatch));
-        CHR(pOutput->FindClosestMatchingMode(&ModeToMatch,
-            &ModeDesc,
-            pd3dDevice));
-    }
-
-    {
-        D3D11_TEXTURE2D_DESC desc;
-
-        desc.ArraySize = 1;
-        desc.BindFlags = D3D11_BIND_RENDER_TARGET;
-        desc.CPUAccessFlags = 0;
-        desc.Format = ModeDesc.Format;
-        desc.Width = ModeDesc.Width;
-        desc.Height = ModeDesc.Height;
-        desc.MipLevels = 1;
-        desc.MiscFlags = 0;
-        desc.SampleDesc.Count = 1;
-        desc.SampleDesc.Quality = 0;
-        desc.Usage = D3D11_USAGE_DEFAULT;
-
-        CHR(pd3dDevice->CreateTexture2D(&desc, NULL, &pRenderTarget));
-        pRenderTarget->QueryInterface<ID3D11Resource>(&pRenderTargetResource);
-        CHR(pd3dDevice->CreateRenderTargetView(pRenderTargetResource, NULL, &pRenderTargetView));
-
-        desc.BindFlags = 0;
-        desc.Usage = D3D11_USAGE_STAGING;
-        desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ | D3D11_CPU_ACCESS_WRITE;
-        CHR(pd3dDevice->CreateTexture2D(&desc, NULL, &pStaging));
-        pStaging->QueryInterface<ID3D11Resource>(&pStagingResource);
-    }
-
-    {
-        // Create depth stencil texture
-        D3D11_TEXTURE2D_DESC descDepth;
-        D3D11_DEPTH_STENCIL_VIEW_DESC descDSV;
-
-        ZeroMemory(&descDepth, sizeof(descDepth));
-        descDepth.Width = ModeDesc.Width;
-        descDepth.Height = ModeDesc.Height;
-        descDepth.MipLevels = 1;
-        descDepth.ArraySize = 1;
-        descDepth.Format = DXGI_FORMAT_D16_UNORM;
-        descDepth.SampleDesc.Count = 1;
-        descDepth.SampleDesc.Quality = 0;
-        descDepth.Usage = D3D11_USAGE_DEFAULT;
-        descDepth.BindFlags = D3D11_BIND_DEPTH_STENCIL;
-        descDepth.CPUAccessFlags = 0;
-        descDepth.MiscFlags = 0;
-
-        CHR(pd3dDevice->CreateTexture2D(&descDepth, NULL, &pDepthStencil));
-
-        // Create the depth stencil view
-        ZeroMemory(&descDSV, sizeof(descDSV));
-        descDSV.Format = descDepth.Format;
-        if (descDepth.SampleDesc.Count > 1)
-        {
-            descDSV.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
-            descDSV.Texture2D.MipSlice = 0;
-        }
-        else
-        {
-            descDSV.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2DMS;
-        }
-
-        CHR(pd3dDevice->CreateDepthStencilView(pDepthStencil, &descDSV, &pDepthStencilView));
-    }
 
     {
         // Create a default rasterizer state
@@ -522,31 +377,33 @@ bool InitD3D(bool useRosDriver, unsigned int rtWidth, unsigned int rtHeight)
         RSDesc.ScissorEnable = FALSE;
         RSDesc.MultisampleEnable = FALSE;
         RSDesc.AntialiasedLineEnable = FALSE;
-        CHR(pd3dDevice->CreateRasterizerState(&RSDesc, &pDefaultRasterState));
 
-        pd3dContext->RSSetState(pDefaultRasterState);
+        // TODO: This is device dependent state (not based on size)
+        CHR(pDevice->CreateRasterizerState(&RSDesc, &pDefaultRasterState));
+
+        pContext->RSSetState(pDefaultRasterState);
     }
 
     {
         // Setup the viewport
         D3D11_VIEWPORT vp;
         ZeroMemory(&vp, sizeof(vp));
-        vp.Width = (FLOAT)ModeDesc.Width;
-        vp.Height = (FLOAT)ModeDesc.Height;
+        vp.Width = (FLOAT) actualWidth;
+        vp.Height = (FLOAT) actualHeight;
         vp.MinDepth = 0.0f;
         vp.MaxDepth = 1.0f;
         vp.TopLeftX = 0;
         vp.TopLeftY = 0;
-        pd3dContext->RSSetViewports(1, &vp);
+        pContext->RSSetViewports(1, &vp);
     }
 
     // Set RenderTarget.
-    pd3dContext->OMSetRenderTargets(1, &pRenderTargetView, pDepthStencilView);
+    pContext->OMSetRenderTargets(1, &pRenderTargetView, pDepthStencilView);
 
     {
         // Determine the aspect ratio
-        FLOAT fAspectRatio = (FLOAT)ModeDesc.Width / (FLOAT)ModeDesc.Height;
-        if (ModeDesc.Width >= ModeDesc.Height)
+        FLOAT fAspectRatio = (FLOAT) actualWidth / (FLOAT)actualHeight;
+        if (actualWidth >= actualHeight)
         {
             // Set the transform matrices
             XMVECTOR vEyePt = XMVectorSet(0.0f, 0.0f, -5.0f, 0.0f);
@@ -572,19 +429,15 @@ bool InitD3D(bool useRosDriver, unsigned int rtWidth, unsigned int rtHeight)
 
 EXIT_RETURN:
 
-    SAFE_RELEASE(pOutput);
-    SAFE_RELEASE(pAdapter);
-    SAFE_RELEASE(pFactory);
-
     if (!bRet)
     {
-        UninitD3D();
+        UninitTargetSizeDependentDolphinResources();
     }
 
     return bRet != 0;
 }
 
-void UninitDolphin()
+void UninitDeviceDependentDolphinResources()
 {
     for (UINT t = 0; t < 32; t++)
     {
@@ -936,19 +789,19 @@ EXIT_RETURN:
     return SUCCEEDED(hr);
 }
 
-bool InitDolphin(bool useTweenedNormal, LoadResourceFunc loadResourceFunc)
+bool InitDeviceDependentDolphinResources(bool useTweenedNormal, LoadResourceFunc loadResourceFunc, ID3D11Device* pDevice, ID3D11DeviceContext * pContext)
 {
-    bool success = LoadDeviceDependentDolphinResources(useTweenedNormal, loadResourceFunc, pd3dDevice, pd3dContext);
+    bool success = LoadDeviceDependentDolphinResources(useTweenedNormal, loadResourceFunc, pDevice, pContext);
 
     if (!success)
     {
-        UninitDolphin();
+        UninitDeviceDependentDolphinResources();
     }
 
     return success;
 }
 
-void UpdateDolphin(bool useTweenedNormal)
+void UpdateDolphin(bool useTweenedNormal, ID3D11DeviceContext * pContext)
 {
     /*
     static float deg = 0;
@@ -999,7 +852,7 @@ void UpdateDolphin(bool useTweenedNormal)
 
     if (useTweenedNormal)
     {
-        pd3dContext->Map(pDolphinTweenedNormalVB, 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource);
+        pContext->Map(pDolphinTweenedNormalVB, 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource);
         {
             XMFLOAT3* pTweenedNormal = (XMFLOAT3*)MappedResource.pData;
 
@@ -1027,10 +880,10 @@ void UpdateDolphin(bool useTweenedNormal)
                 XMStoreFloat3(&pTweenedNormal[n], vNormal);
             }
         }
-        pd3dContext->Unmap(pDolphinTweenedNormalVB, 0);
+        pContext->Unmap(pDolphinTweenedNormalVB, 0);
     }
 
-    pd3dContext->Map(pVSConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource);
+    pContext->Map(pVSConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource);
     {
         VS_CONSTANT_BUFFER* pVsConstData = (VS_CONSTANT_BUFFER*)MappedResource.pData;
 
@@ -1061,36 +914,36 @@ void UpdateDolphin(bool useTweenedNormal)
         pVsConstData->matViewTranspose = XMMatrixTranspose(matView);
         pVsConstData->matProjTranspose = XMMatrixTranspose(matProj);
     }
-    pd3dContext->Unmap(pVSConstantBuffer, 0);
+    pContext->Unmap(pVSConstantBuffer, 0);
 
-    pd3dContext->Map(pPSConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource);
+    pContext->Map(pPSConstantBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &MappedResource);
     {
         PS_CONSTANT_BUFFER* pPsConstData = (PS_CONSTANT_BUFFER*)MappedResource.pData;
         memcpy(pPsConstData->fAmbient, fAmbient, sizeof(fAmbient));
         memcpy(pPsConstData->fFogColor, fWaterColor, sizeof(fWaterColor));
     }
-    pd3dContext->Unmap(pPSConstantBuffer, 0);
+    pContext->Unmap(pPSConstantBuffer, 0);
 }
 
-void RenderDolphin(bool useTweenedNormal)
+void RenderDolphin(bool useTweenedNormal, ID3D11DeviceContext * pContext, ID3D11RenderTargetView* pRenderTargetView, ID3D11DepthStencilView* pDepthStencilView)
 {
     //
     // Clear the back buffer
     //
-    pd3dContext->ClearRenderTargetView(pRenderTargetView, fWaterColor);
-    pd3dContext->ClearDepthStencilView(pDepthStencilView, D3D11_CLEAR_DEPTH, 1.0, 0);
+    pContext->ClearRenderTargetView(pRenderTargetView, fWaterColor);
+    pContext->ClearDepthStencilView(pDepthStencilView, D3D11_CLEAR_DEPTH, 1.0, 0);
 
     // Set state
-    pd3dContext->OMSetRenderTargets(1, &pRenderTargetView, pDepthStencilView); // MPO: reset at every frame due to swapeffect
-    pd3dContext->OMSetBlendState(pBlendStateNoBlend, 0, 0xffffffff);
-    pd3dContext->RSSetState(pRasterizerStateNoCull);
-    pd3dContext->OMSetDepthStencilState(pLessEqualDepth, 0);
+    pContext->OMSetRenderTargets(1, &pRenderTargetView, pDepthStencilView); // MPO: reset at every frame due to swapeffect
+    pContext->OMSetBlendState(pBlendStateNoBlend, 0, 0xffffffff);
+    pContext->RSSetState(pRasterizerStateNoCull);
+    pContext->OMSetDepthStencilState(pLessEqualDepth, 0);
 
     ID3D11SamplerState* pSamplers[] = { pSamplerMirror, pSamplerWrap };
-    pd3dContext->PSSetSamplers(0, 2, pSamplers);
+    pContext->PSSetSamplers(0, 2, pSamplers);
 
-    pd3dContext->VSSetConstantBuffers(0, 1, &pVSConstantBuffer);
-    pd3dContext->PSSetConstantBuffers(0, 1, &pPSConstantBuffer);
+    pContext->VSSetConstantBuffers(0, 1, &pVSConstantBuffer);
+    pContext->PSSetConstantBuffers(0, 1, &pPSConstantBuffer);
 
     /////////////////////////////////////////////////////
     //
@@ -1098,20 +951,20 @@ void RenderDolphin(bool useTweenedNormal)
     //
     ////////////////////////////////////////////////////
 
-    pd3dContext->IASetInputLayout(pSeaFloorVertexLayout);
+    pContext->IASetInputLayout(pSeaFloorVertexLayout);
     UINT SeaFloorStrides[1];
     UINT SeaFloorOffsets[1];
     SeaFloorStrides[0] = (UINT)dwSeaFloorVertexStride;
     SeaFloorOffsets[0] = 0;
-    pd3dContext->IASetVertexBuffers(0, 1, &pSeaFloorVB, SeaFloorStrides, SeaFloorOffsets);
-    pd3dContext->IASetIndexBuffer(pSeaFloorIB, SeaFloorVertexFormat, 0);
-    pd3dContext->IASetPrimitiveTopology(SeaFloorPrimType);
-    pd3dContext->VSSetShader(pSeaFloorVertexShader, NULL, 0);
-    pd3dContext->GSSetShader(NULL, NULL, 0);
-    pd3dContext->PSSetShader(pPixelShader, NULL, 0);
-    pd3dContext->PSSetShaderResources(0, 1, &pSeaFloorTextureView);
-    pd3dContext->PSSetShaderResources(1, 1, &pCurrentCausticTextureView);
-    pd3dContext->DrawIndexed((UINT)dwNumSeaFloorIndices, 0, 0);
+    pContext->IASetVertexBuffers(0, 1, &pSeaFloorVB, SeaFloorStrides, SeaFloorOffsets);
+    pContext->IASetIndexBuffer(pSeaFloorIB, SeaFloorVertexFormat, 0);
+    pContext->IASetPrimitiveTopology(SeaFloorPrimType);
+    pContext->VSSetShader(pSeaFloorVertexShader, NULL, 0);
+    pContext->GSSetShader(NULL, NULL, 0);
+    pContext->PSSetShader(pPixelShader, NULL, 0);
+    pContext->PSSetShaderResources(0, 1, &pSeaFloorTextureView);
+    pContext->PSSetShaderResources(1, 1, &pCurrentCausticTextureView);
+    pContext->DrawIndexed((UINT)dwNumSeaFloorIndices, 0, 0);
 
     ////////////////////////////////////////////////////
     //
@@ -1119,7 +972,7 @@ void RenderDolphin(bool useTweenedNormal)
     //
     ////////////////////////////////////////////////////
 
-    pd3dContext->IASetInputLayout(pDolphinVertexLayout);
+    pContext->IASetInputLayout(pDolphinVertexLayout);
     UINT DolphinStrides[4];
     UINT DolphinOffsets[4];
     ID3D11Buffer* pDolphinVB[4];
@@ -1138,78 +991,19 @@ void RenderDolphin(bool useTweenedNormal)
         pDolphinVB[3] = pDolphinTweenedNormalVB;
         DolphinStrides[3] = sizeof(XMFLOAT3);
         DolphinOffsets[3] = 0;
-        pd3dContext->IASetVertexBuffers(0, 4, pDolphinVB, DolphinStrides, DolphinOffsets);
+        pContext->IASetVertexBuffers(0, 4, pDolphinVB, DolphinStrides, DolphinOffsets);
     }
     else
     {
-        pd3dContext->IASetVertexBuffers(0, 3, pDolphinVB, DolphinStrides, DolphinOffsets);
+        pContext->IASetVertexBuffers(0, 3, pDolphinVB, DolphinStrides, DolphinOffsets);
     }
 
-    pd3dContext->IASetIndexBuffer(pDolphinIB, DolphinVertexFormat, 0);
-    pd3dContext->IASetPrimitiveTopology(DolphinPrimType);
-    pd3dContext->VSSetShader(pDolphinVertexShader, NULL, 0);
-    pd3dContext->GSSetShader(NULL, NULL, 0);
-    pd3dContext->PSSetShader(pPixelShader, NULL, 0);
-    pd3dContext->PSSetShaderResources(0, 1, &pDolphinTextureView);
-    pd3dContext->PSSetShaderResources(1, 1, &pCurrentCausticTextureView);
-    pd3dContext->DrawIndexed((UINT)dwNumDolphinIndices, 0, 0);
-}
-
-void SaveDolphin(int iFrame)
-{
-    char fileName[MAX_PATH];
-    sprintf_s(fileName, MAX_PATH, ".\\Dolphin_%d.bmp", iFrame);
-    pd3dContext->CopyResource(pStagingResource, pRenderTargetResource);
-    SaveBMP(fileName, pd3dDevice, pStaging);
-}
-
-void UninitPerf()
-{
-    SAFE_RELEASE(pDxgiDev2);
-
-    if (hQueueEvent)
-    {
-        CloseHandle(hQueueEvent);
-    }
-}
-
-bool InitPerf()
-{
-    pd3dDevice->QueryInterface<IDXGIDevice2>(&pDxgiDev2);
-
-    // Create a manual-reset event object. 
-    hQueueEvent = CreateEvent(
-        NULL,               // default security attributes
-        TRUE,               // manual-reset event
-        FALSE,              // initial state is nonsignaled
-        FALSE
-        );
-
-    return hQueueEvent ? true : false;
-}
-
-void EnqueueRenderEvent()
-{
-    pDxgiDev2->EnqueueSetEvent(hQueueEvent);
-}
-
-unsigned long WaitForRenderEvent()
-{
-    DWORD dwWaitResult;
-
-    dwWaitResult = WaitForSingleObject(
-        hQueueEvent,    // event handle
-        INFINITE);      // indefinite wait
-
-    return dwWaitResult;
-}
-
-void ResetRenderEvent()
-{
-    ResetEvent(hQueueEvent);
-}
-
-void FlushRender()
-{
-    pd3dContext->Flush();
+    pContext->IASetIndexBuffer(pDolphinIB, DolphinVertexFormat, 0);
+    pContext->IASetPrimitiveTopology(DolphinPrimType);
+    pContext->VSSetShader(pDolphinVertexShader, NULL, 0);
+    pContext->GSSetShader(NULL, NULL, 0);
+    pContext->PSSetShader(pPixelShader, NULL, 0);
+    pContext->PSSetShaderResources(0, 1, &pDolphinTextureView);
+    pContext->PSSetShaderResources(1, 1, &pCurrentCausticTextureView);
+    pContext->DrawIndexed((UINT)dwNumDolphinIndices, 0, 0);
 }
