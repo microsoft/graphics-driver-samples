@@ -284,11 +284,6 @@ private:
         BYTE *                     &pCurCommand,
         UINT                       &curCommandOffset,
         D3DDDI_PATCHLOCATIONLIST * &pCurPatchLocation);
-    
-    // Tiled textures support
-    BYTE *Form1kSubTileBlock(BYTE *pInputBuffer, BYTE *pOutBuffer, UINT rowStride);
-    BYTE *Form4kTileBlock(BYTE *pInputBuffer, BYTE *pOutBuffer, UINT rowStride, BOOLEAN OddRow);
-    void ConvertBitmapTo4kTileBlocks(BYTE *InputBuffer, BYTE *OutBuffer, UINT rowStride, UINT CountX, UINT CountY);
 
 #endif
 

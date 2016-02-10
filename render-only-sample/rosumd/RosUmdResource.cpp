@@ -313,15 +313,15 @@ RosUmdResource::CalculateMemoryLayout(
             // Align width and height to VC4_BINNING_TILE_PIXELS for binning
 #endif
 
-            m_hwWidthTilePixels = VC4_BINNING_TILE_PIXELS;
-            m_hwHeightTilePixels = VC4_BINNING_TILE_PIXELS;
-            m_hwWidthTiles = (m_hwWidthPixels + m_hwWidthTilePixels - 1) / m_hwWidthTilePixels;
-            m_hwHeightTiles = (m_hwHeightPixels + m_hwHeightTilePixels - 1) / m_hwHeightTilePixels;
-            m_hwWidthPixels = m_hwWidthTiles*m_hwWidthTilePixels;
-            m_hwHeightPixels = m_hwHeightTiles*m_hwHeightTilePixels;
-
             if (m_hwLayout == RosHwLayout::Linear)
             {
+                m_hwWidthTilePixels = VC4_BINNING_TILE_PIXELS;
+                m_hwHeightTilePixels = VC4_BINNING_TILE_PIXELS;
+                m_hwWidthTiles = (m_hwWidthPixels + m_hwWidthTilePixels - 1) / m_hwWidthTilePixels;
+                m_hwHeightTiles = (m_hwHeightPixels + m_hwHeightTilePixels - 1) / m_hwHeightTilePixels;
+                m_hwWidthPixels = m_hwWidthTiles*m_hwWidthTilePixels;
+                m_hwHeightPixels = m_hwHeightTiles*m_hwHeightTilePixels;
+
                 m_hwSizeBytes = CPixel::ComputeMipMapSize(
                     m_hwWidthPixels,
                     m_hwHeightPixels,
@@ -338,7 +338,16 @@ RosUmdResource::CalculateMemoryLayout(
                 assert(m_mipLevels == 1);
 
                 assert((m_hwFormat == RosHwFormat::X8888) || (m_hwFormat == RosHwFormat::D24S8));
-                UINT sizeTileBytes = VC4_BINNING_TILE_PIXELS * VC4_BINNING_TILE_PIXELS * 4;
+                
+                // Values are hardocded - we are using RosHwFormat::X8888 format
+                m_hwWidthTilePixels = 32;
+                m_hwHeightTilePixels = 32;
+                m_hwWidthTiles = (m_hwWidthPixels + m_hwWidthTilePixels - 1) / m_hwWidthTilePixels;
+                m_hwHeightTiles = (m_hwHeightPixels + m_hwHeightTilePixels - 1) / m_hwHeightTilePixels;
+                m_hwWidthPixels = m_hwWidthTiles*m_hwWidthTilePixels;
+                m_hwHeightPixels = m_hwHeightTiles*m_hwHeightTilePixels;
+
+                UINT sizeTileBytes = m_hwWidthTilePixels * m_hwHeightTilePixels * 4;
 
                 m_hwSizeBytes = m_hwWidthTiles * m_hwHeightTiles * sizeTileBytes;
                 m_hwPitchBytes = 0;
@@ -384,4 +393,124 @@ void RosUmdResource::GetAllocationExchange(
 #endif
 
     pOutAllocationExchange->m_hwSizeBytes = m_hwSizeBytes;
+}
+
+// Form 1k sub-tile block
+BYTE *RosUmdResource::Form1kSubTileBlock(BYTE *pInputBuffer, BYTE *pOutBuffer, UINT rowStride)
+{    
+    // 1k sub-tile block is formed from micro-tiles blocks
+    for (UINT h = 0; h < VC4_1KBLOCK_HEIGHT; h += 4)
+    {
+        BYTE *currentBufferPos = pInputBuffer + h*rowStride;
+
+        // Process row of 4 micro-tiles blocks
+        for (UINT w = 0; w < VC4_1KBLOCK_WIDTH; w+= VC4_MICRO_TILE_WIDTH)
+        {
+            BYTE *microTileOffset = currentBufferPos + w;
+
+            // Process micro-tile block (4x16 bytes)
+            for (int t = 0; t < 4; t++)
+            {
+                memcpy(pOutBuffer, microTileOffset, VC4_MICRO_TILE_WIDTH);
+                pOutBuffer += VC4_MICRO_TILE_WIDTH;
+                microTileOffset += rowStride;
+            }
+        }
+    }
+    return pOutBuffer;
+}
+
+// Form one 4k tile block from pInputBuffer and store in pOutBuffer
+BYTE *RosUmdResource::Form4kTileBlock(BYTE *pInputBuffer, BYTE *pOutBuffer, UINT rowStride, BOOLEAN OddRow)
+{
+    BYTE *currentTileOffset = NULL;
+
+    if (OddRow)
+    {
+        // For even rows, process sub-tile blocks in ABCD order, where
+        // each sub-tile is stored in memory as follows:
+        //
+        //  [C  B]   
+        //  [D  A]
+        //                  
+
+        // Get A block
+        currentTileOffset = pInputBuffer + rowStride * VC4_1KBLOCK_HEIGHT + VC4_1KBLOCK_WIDTH;
+        pOutBuffer = Form1kSubTileBlock(currentTileOffset, pOutBuffer, rowStride);
+
+        // Get B block
+        currentTileOffset = pInputBuffer + VC4_1KBLOCK_WIDTH;
+
+        pOutBuffer = Form1kSubTileBlock(currentTileOffset, pOutBuffer, rowStride);
+
+        // Get C block
+        pOutBuffer = Form1kSubTileBlock(pInputBuffer, pOutBuffer, rowStride);
+
+        // Get D block
+        currentTileOffset = pInputBuffer + rowStride * VC4_1KBLOCK_HEIGHT;
+        pOutBuffer = Form1kSubTileBlock(currentTileOffset, pOutBuffer, rowStride);
+
+        // return current position in out buffer
+        return pOutBuffer;
+
+    }
+    else
+    {
+        // For even rows, process sub-tile blocks in ABCD order, where
+        // each sub-tile is stored in memory as follows:
+        // 
+        //  [A  D]    
+        //  [B  C] 
+        //
+
+        // Get A block
+        pOutBuffer = Form1kSubTileBlock(pInputBuffer, pOutBuffer, rowStride);
+
+        /// Get B block
+        currentTileOffset = pInputBuffer + rowStride * VC4_1KBLOCK_HEIGHT;
+        pOutBuffer = Form1kSubTileBlock(currentTileOffset, pOutBuffer, rowStride);
+
+        // Get C Block
+        currentTileOffset = pInputBuffer + rowStride * VC4_1KBLOCK_HEIGHT + VC4_1KBLOCK_WIDTH;
+        pOutBuffer = Form1kSubTileBlock(currentTileOffset, pOutBuffer, rowStride);
+
+        // Get D block
+        currentTileOffset = pInputBuffer + VC4_1KBLOCK_WIDTH;
+        pOutBuffer = Form1kSubTileBlock(currentTileOffset, pOutBuffer, rowStride);
+
+        // return current position in out buffer
+        return pOutBuffer;
+    }
+}
+
+// Form (CountX * CountY) tile blocks from InputBuffer and store them in OutBuffer
+void RosUmdResource::ConvertBitmapTo4kTileBlocks(BYTE *InputBuffer, BYTE *OutBuffer, UINT rowStride)
+{
+    // [todo] Currently only 32bpp mode is supported
+
+    UINT CountX = m_hwWidthTiles;
+    UINT CountY = m_hwHeightTiles;
+
+    for (UINT k = 0; k < CountY; k++)
+    {
+        BOOLEAN oddRow = k & 1;
+        if (oddRow)
+        {
+            // Build 4k blocks from right to left for odd rows
+            for (int i = CountX - 1; i >= 0; i--)
+            {
+                BYTE *blockStartOffset = InputBuffer + k * rowStride * VC4_4KBLOCK_HEIGHT + i * VC4_4KBLOCK_WIDTH;
+                OutBuffer = Form4kTileBlock(blockStartOffset, OutBuffer, rowStride, oddRow);
+            }
+        }
+        else
+        {
+            // Build 4k blocks from left to right for even rows
+            for (UINT i = 0; i < CountX; i++)
+            {
+                BYTE *blockStartOffset = InputBuffer + k * rowStride * VC4_4KBLOCK_HEIGHT + i * VC4_4KBLOCK_WIDTH;
+                OutBuffer = Form4kTileBlock(blockStartOffset, OutBuffer, rowStride, oddRow);
+            }
+        }
+    }
 }
