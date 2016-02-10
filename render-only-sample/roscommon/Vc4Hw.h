@@ -990,19 +990,22 @@ typedef enum _VC4TextureMinFilter
 const UINT VC4_BINNING_TILE_PIXELS  = 64;
 
 //
-// Constants related to tiled textures. Values are measured in bytes.
+// Constants related to tiled textures
 //
 
-const UINT VC4_1KBLOCK_WIDTH    = 64;
-const UINT VC4_1KBLOCK_HEIGHT   = 16;
-const UINT VC4_1KBLOCK_SIZE     = (VC4_1KBLOCK_WIDTH * VC4_1KBLOCK_HEIGHT);
+const UINT VC4_1KB_SUB_TILE_WIDTH       = 16;
+const UINT VC4_1KB_SUB_TILE_HEIGHT      = 16;
+const UINT VC4_1KB_SUB_TILE_WIDTH_BYTES = 64;
+const UINT VC4_1K_SUB_TILE_SIZE_BYTES   = 1024;
 
-const UINT VC4_4KBLOCK_WIDTH    = 128;
-const UINT VC4_4KBLOCK_HEIGHT   = 32;
-const UINT VC4_4KBLOCK_SIZE     = (VC4_4KBLOCK_WIDTH * VC4_4KBLOCK_HEIGHT);
+const UINT VC4_4KB_TILE_WIDTH           = 32;
+const UINT VC4_4KB_TILE_HEIGHT          = 32;
+const UINT VC4_4KB_TILE_WIDTH_BYTES     = 128;
+const UINT VC4_4KB_TILE_SIZE_BYTES      = 4096;
 
-const UINT VC4_MICRO_TILE_SIZE  = 64;
-const UINT VC4_MICRO_TILE_WIDTH = 16;
+const UINT VC4_MICRO_TILE_WIDTH_BYTES   = 16;
+const UINT VC4_MICRO_TILE_HEIGHT        = 4;
+const UINT VC4_MICRO_TILE_SIZE_BYTES    = 64;
 
 //
 // VC4 bus address alias

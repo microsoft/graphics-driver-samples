@@ -340,8 +340,8 @@ RosUmdResource::CalculateMemoryLayout(
                 assert((m_hwFormat == RosHwFormat::X8888) || (m_hwFormat == RosHwFormat::D24S8));
                 
                 // Values are hardocded - we are using RosHwFormat::X8888 format
-                m_hwWidthTilePixels = 32;
-                m_hwHeightTilePixels = 32;
+                m_hwWidthTilePixels = VC4_4KB_TILE_WIDTH;
+                m_hwHeightTilePixels = VC4_4KB_TILE_HEIGHT;
                 m_hwWidthTiles = (m_hwWidthPixels + m_hwWidthTilePixels - 1) / m_hwWidthTilePixels;
                 m_hwHeightTiles = (m_hwHeightPixels + m_hwHeightTilePixels - 1) / m_hwHeightTilePixels;
                 m_hwWidthPixels = m_hwWidthTiles*m_hwWidthTilePixels;
@@ -399,20 +399,20 @@ void RosUmdResource::GetAllocationExchange(
 BYTE *RosUmdResource::Form1kSubTileBlock(BYTE *pInputBuffer, BYTE *pOutBuffer, UINT rowStride)
 {    
     // 1k sub-tile block is formed from micro-tiles blocks
-    for (UINT h = 0; h < VC4_1KBLOCK_HEIGHT; h += 4)
+    for (UINT h = 0; h < VC4_1KB_SUB_TILE_HEIGHT; h += 4)
     {
         BYTE *currentBufferPos = pInputBuffer + h*rowStride;
 
         // Process row of 4 micro-tiles blocks
-        for (UINT w = 0; w < VC4_1KBLOCK_WIDTH; w+= VC4_MICRO_TILE_WIDTH)
+        for (UINT w = 0; w < VC4_1KB_SUB_TILE_WIDTH_BYTES; w+= VC4_MICRO_TILE_WIDTH_BYTES)
         {
             BYTE *microTileOffset = currentBufferPos + w;
 
             // Process micro-tile block (4x16 bytes)
-            for (int t = 0; t < 4; t++)
+            for (int t = 0; t < VC4_MICRO_TILE_HEIGHT; t++)
             {
-                memcpy(pOutBuffer, microTileOffset, VC4_MICRO_TILE_WIDTH);
-                pOutBuffer += VC4_MICRO_TILE_WIDTH;
+                memcpy(pOutBuffer, microTileOffset, VC4_MICRO_TILE_WIDTH_BYTES);
+                pOutBuffer += VC4_MICRO_TILE_WIDTH_BYTES;
                 microTileOffset += rowStride;
             }
         }
@@ -435,11 +435,11 @@ BYTE *RosUmdResource::Form4kTileBlock(BYTE *pInputBuffer, BYTE *pOutBuffer, UINT
         //                  
 
         // Get A block
-        currentTileOffset = pInputBuffer + rowStride * VC4_1KBLOCK_HEIGHT + VC4_1KBLOCK_WIDTH;
+        currentTileOffset = pInputBuffer + rowStride * VC4_1KB_SUB_TILE_HEIGHT + VC4_1KB_SUB_TILE_WIDTH_BYTES;
         pOutBuffer = Form1kSubTileBlock(currentTileOffset, pOutBuffer, rowStride);
 
         // Get B block
-        currentTileOffset = pInputBuffer + VC4_1KBLOCK_WIDTH;
+        currentTileOffset = pInputBuffer + VC4_1KB_SUB_TILE_WIDTH_BYTES;
 
         pOutBuffer = Form1kSubTileBlock(currentTileOffset, pOutBuffer, rowStride);
 
@@ -447,7 +447,7 @@ BYTE *RosUmdResource::Form4kTileBlock(BYTE *pInputBuffer, BYTE *pOutBuffer, UINT
         pOutBuffer = Form1kSubTileBlock(pInputBuffer, pOutBuffer, rowStride);
 
         // Get D block
-        currentTileOffset = pInputBuffer + rowStride * VC4_1KBLOCK_HEIGHT;
+        currentTileOffset = pInputBuffer + rowStride * VC4_1KB_SUB_TILE_HEIGHT;
         pOutBuffer = Form1kSubTileBlock(currentTileOffset, pOutBuffer, rowStride);
 
         // return current position in out buffer
@@ -467,15 +467,15 @@ BYTE *RosUmdResource::Form4kTileBlock(BYTE *pInputBuffer, BYTE *pOutBuffer, UINT
         pOutBuffer = Form1kSubTileBlock(pInputBuffer, pOutBuffer, rowStride);
 
         /// Get B block
-        currentTileOffset = pInputBuffer + rowStride * VC4_1KBLOCK_HEIGHT;
+        currentTileOffset = pInputBuffer + rowStride * VC4_1KB_SUB_TILE_HEIGHT;
         pOutBuffer = Form1kSubTileBlock(currentTileOffset, pOutBuffer, rowStride);
 
         // Get C Block
-        currentTileOffset = pInputBuffer + rowStride * VC4_1KBLOCK_HEIGHT + VC4_1KBLOCK_WIDTH;
+        currentTileOffset = pInputBuffer + rowStride * VC4_1KB_SUB_TILE_HEIGHT + VC4_1KB_SUB_TILE_WIDTH_BYTES;
         pOutBuffer = Form1kSubTileBlock(currentTileOffset, pOutBuffer, rowStride);
 
         // Get D block
-        currentTileOffset = pInputBuffer + VC4_1KBLOCK_WIDTH;
+        currentTileOffset = pInputBuffer + VC4_1KB_SUB_TILE_WIDTH_BYTES;
         pOutBuffer = Form1kSubTileBlock(currentTileOffset, pOutBuffer, rowStride);
 
         // return current position in out buffer
@@ -499,7 +499,7 @@ void RosUmdResource::ConvertBitmapTo4kTileBlocks(BYTE *InputBuffer, BYTE *OutBuf
             // Build 4k blocks from right to left for odd rows
             for (int i = CountX - 1; i >= 0; i--)
             {
-                BYTE *blockStartOffset = InputBuffer + k * rowStride * VC4_4KBLOCK_HEIGHT + i * VC4_4KBLOCK_WIDTH;
+                BYTE *blockStartOffset = InputBuffer + k * rowStride * VC4_4KB_TILE_HEIGHT + i * VC4_4KB_TILE_WIDTH_BYTES;
                 OutBuffer = Form4kTileBlock(blockStartOffset, OutBuffer, rowStride, oddRow);
             }
         }
@@ -508,7 +508,7 @@ void RosUmdResource::ConvertBitmapTo4kTileBlocks(BYTE *InputBuffer, BYTE *OutBuf
             // Build 4k blocks from left to right for even rows
             for (UINT i = 0; i < CountX; i++)
             {
-                BYTE *blockStartOffset = InputBuffer + k * rowStride * VC4_4KBLOCK_HEIGHT + i * VC4_4KBLOCK_WIDTH;
+                BYTE *blockStartOffset = InputBuffer + k * rowStride * VC4_4KB_TILE_HEIGHT + i * VC4_4KB_TILE_WIDTH_BYTES;
                 OutBuffer = Form4kTileBlock(blockStartOffset, OutBuffer, rowStride, oddRow);
             }
         }
