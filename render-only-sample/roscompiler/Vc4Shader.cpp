@@ -267,7 +267,6 @@ void Vc4Shader::Emit_ShaderOutput_VS(boolean bVS)
 
 void Vc4Shader::Emit_Blending_PS()
 {
-    // Issue #29
     assert(false);
 }
 
@@ -1029,7 +1028,6 @@ HRESULT Vc4Shader::Translate_VS()
         assert(Inst.m_bSaturate == false); // saturate is not supported.
         while (HLSL_GetShaderInstruction(this->HLSLParser, Inst))
         {
-            // Need to add support for D3D10_SB_OPCODE_IADD - Issue #38
             switch (Inst.m_OpCode)
             {
             case D3D10_SB_OPCODE_ADD:
