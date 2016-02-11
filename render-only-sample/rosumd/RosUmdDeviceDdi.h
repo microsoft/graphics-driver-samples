@@ -88,6 +88,7 @@ public:
     static void APIENTRY DdiStagingResourceUnmap(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT);
     static void APIENTRY ResourceMap_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT, D3D10_DDI_MAP, UINT, D3D10DDI_MAPPED_SUBRESOURCE*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY ResourceUnmap_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
+    // ShaderResourceViewReadAfterWriteHazard - Issue #34
     static void APIENTRY ShaderResourceViewReadAfterWriteHazard_Default(D3D10DDI_HDEVICE, D3D10DDI_HSHADERRESOURCEVIEW, D3D10DDI_HRESOURCE) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY ResourceReadAfterWriteHazard_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY ResourceWriteAfterWriteHazard_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
@@ -98,6 +99,7 @@ public:
     static void APIENTRY DefaultConstantBufferUpdateSubresourceUP_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT, const D3D10_DDI_BOX*, const VOID*, UINT, UINT) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY DdiConstantBufferUpdateSubresourceUP11_1(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT, const D3D10_DDI_BOX*, const VOID*, UINT, UINT, UINT);
     static void APIENTRY ResourceUpdateSubresourceUP_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT, const D3D10_DDI_BOX*, const VOID*, UINT, UINT) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
+    // ResourceUpdateSubresource - Issue #31
     static void APIENTRY ResourceUpdateSubresourceUP11_1_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT, const D3D10_DDI_BOX*, const VOID*, UINT, UINT, UINT) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY CopyStructureCount_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT, D3D11DDI_HUNORDEREDACCESSVIEW) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY CommandListExecute_Default(D3D10DDI_HDEVICE, D3D11DDI_HCOMMANDLIST) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
@@ -105,7 +107,8 @@ public:
     static void APIENTRY RelocateDeviceFuncs_Default(D3D10DDI_HDEVICE, D3D10DDI_DEVICEFUNCS*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY RelocateDeviceFuncs1_Default(D3D10DDI_HDEVICE, D3D10_1DDI_DEVICEFUNCS*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY RelocateDeviceFuncs11_Default(D3D10DDI_HDEVICE, D3D11DDI_DEVICEFUNCS*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
-    static void APIENTRY RelocateDeviceFuncs11_1_Default(D3D10DDI_HDEVICE, D3DWDDM1_3DDI_DEVICEFUNCS*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
+    // RelocateDeviceFuncs(11_1) - Issue #35
+    static void APIENTRY RelocateDeviceFuncs11_1_Default(D3D10DDI_HDEVICE, D3D11_1DDI_DEVICEFUNCS*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY RelocateDeviceFuncsWDDM1_3_Default(D3D10DDI_HDEVICE, D3DWDDM1_3DDI_DEVICEFUNCS*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY RelocateDeviceFuncsWDDM2_0_Default(D3D10DDI_HDEVICE, D3DWDDM2_0DDI_DEVICEFUNCS*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static BOOL APIENTRY ResourceIsStagingBusy_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE) { RosUmdLogging::Call(__FUNCTION__); __debugbreak();  return 0; }
@@ -264,6 +267,7 @@ public:
     static void APIENTRY AssignDebugBinary_Default(D3D10DDI_HDEVICE, D3D10DDI_HSHADER, UINT, CONST VOID*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY DynamicConstantBufferMapNoOverwrite_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT, D3D10_DDI_MAP, UINT, D3D10DDI_MAPPED_SUBRESOURCE*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
 
+    // ClearView - Issue #33
     static void APIENTRY ClearView_Default(D3D10DDI_HDEVICE, D3D11DDI_HANDLETYPE, VOID*, const FLOAT Color[4], const D3D10_DDI_RECT*, UINT) { Color; RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
 
     static const D3DWDDM1_3DDI_DEVICEFUNCS s_deviceFuncsWDDM1_3;
