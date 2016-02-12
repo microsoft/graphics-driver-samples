@@ -658,7 +658,7 @@ typedef struct _VC4ConfigBits
         {
             USHORT  EnableForwardFacingPrimitive    : 1;
             USHORT  EnableReverseFacingPrimitive    : 1;
-            USHORT  ClosewisePrimitives             : 1;
+            USHORT  ClockwisePrimitives             : 1;
             USHORT  EnableDepthOffset               : 1;
             USHORT  AntialisedPointsAndLines        : 1;    // Not actually supported
             USHORT  CoverageReadType                : 1;    // (0 = 4*8-bit level, 1 = 16-bit mask)
@@ -988,6 +988,24 @@ typedef enum _VC4TextureMinFilter
 //
 
 const UINT VC4_BINNING_TILE_PIXELS  = 64;
+
+//
+// Constants related to tiled textures
+//
+
+const UINT VC4_1KB_SUB_TILE_WIDTH       = 16;
+const UINT VC4_1KB_SUB_TILE_HEIGHT      = 16;
+const UINT VC4_1KB_SUB_TILE_WIDTH_BYTES = 64;
+const UINT VC4_1KB_SUB_TILE_SIZE_BYTES  = 1024;
+
+const UINT VC4_4KB_TILE_WIDTH           = 32;
+const UINT VC4_4KB_TILE_HEIGHT          = 32;
+const UINT VC4_4KB_TILE_WIDTH_BYTES     = 128;
+const UINT VC4_4KB_TILE_SIZE_BYTES      = 4096;
+
+const UINT VC4_MICRO_TILE_WIDTH_BYTES   = 16;
+const UINT VC4_MICRO_TILE_HEIGHT        = 4;
+const UINT VC4_MICRO_TILE_SIZE_BYTES    = 64;
 
 //
 // VC4 bus address alias

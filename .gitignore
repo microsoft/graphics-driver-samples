@@ -8,3 +8,4 @@ Release
 *.vcxproj.user
 *.suo
 *.ipch
+*.opendb

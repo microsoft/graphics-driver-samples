@@ -5,6 +5,7 @@
 class RosUmdShaderResourceView
 {
 friend class RosUmdDevice;
+friend class RosCompiler;
 
 public:
 

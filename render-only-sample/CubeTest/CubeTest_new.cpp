@@ -16,11 +16,12 @@ using namespace DirectX;
 
 #define USE_VC4 VC4
 
-#define ANIMATION_COUNT 8
 //#define NO_TRANSFORM 1
 //#define USE_QUAD 1
 #define USE_TEX 1
 #define USE_BITMAP_TEX 1
+
+//#define USE_BGRA_RT 1
 
 //#define USE_SCISSOR 1
 
@@ -50,17 +51,9 @@ struct PSConstantBuffer
     XMFLOAT4 Ambient;
 };
 
-#if 0
-
-static const int kWidth = 1920;
-static const int kHeight = 1080;
-
-#else
-
-static const int kWidth = 800;
-static const int kHeight = 600;
-
-#endif
+int kWidth = 800;
+int kHeight = 600;
+UINT frames = 8;
 
 static const int kTexWidth = 64;
 static const int kTexHeight = 64;
@@ -193,18 +186,22 @@ private:
 
 };
 
-class D3DTexture
+class D3DStagingTexture
 {
 public:
 
-    D3DTexture(std::shared_ptr<D3DDevice> & inDevice, int inWidth, int inHeight)
+    D3DStagingTexture(std::shared_ptr<D3DDevice> & inDevice, int inWidth, int inHeight)
     {
         D3D11_TEXTURE2D_DESC desc;
 
         desc.ArraySize = 1;
         desc.BindFlags = 0;
         desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ | D3D11_CPU_ACCESS_WRITE;
+#if USE_BGRA_RT
+        desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+#else
         desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+#endif // USE_BGRA_RT
         desc.Height = inHeight;
         desc.MipLevels = 1;
         desc.MiscFlags = 0;
@@ -222,7 +219,7 @@ public:
         m_pDevice = inDevice;
     }
 
-    ~D3DTexture()
+    ~D3DStagingTexture()
     {
         // do nothing
     }
@@ -262,6 +259,8 @@ public:
             UINT32  m_importantColors;
         };
 
+        UINT32  colorMasks[3];
+
 #pragma pack(pop)
 
         D3D11_TEXTURE2D_DESC desc;
@@ -269,7 +268,7 @@ public:
 
         UINT32 pixelWidth = desc.Width;
         UINT32 pixelHeight = desc.Height;
-        UINT32 byteWidthNoPadding = pixelWidth * 3;
+        UINT32 byteWidthNoPadding = pixelWidth * 4; // 32bpp
         UINT32 byteWidth = (byteWidthNoPadding + 3) & ~3;
         UINT32 bytePadding = byteWidth - byteWidthNoPadding;
         UINT32 pixelDataSize = byteWidth * pixelHeight;
@@ -277,15 +276,15 @@ public:
         BMPHeader bmpHeader;
 
         bmpHeader.m_id = 0x4D42;
-        bmpHeader.m_fileSize = sizeof(BMPHeader) + sizeof(DIBHeader) + pixelDataSize;
-        bmpHeader.m_pixelArrayOffset = sizeof(BMPHeader) + sizeof(DIBHeader);
+        bmpHeader.m_fileSize = sizeof(BMPHeader) + sizeof(DIBHeader) + sizeof(colorMasks) + pixelDataSize;
+        bmpHeader.m_pixelArrayOffset = sizeof(BMPHeader) + sizeof(DIBHeader) + sizeof(colorMasks);
         bmpHeader.m_unused = 0;
 
         DIBHeader dibHeader;
 
-        dibHeader.m_bitsPerPixel = 24;
+        dibHeader.m_bitsPerPixel = 32;
         dibHeader.m_colorsInPalette = 0;
-        dibHeader.m_compressionMethod = 0;
+        dibHeader.m_compressionMethod = BI_BITFIELDS;
         dibHeader.m_dibHeaderSize = sizeof(DIBHeader);
         dibHeader.m_heightPixels = pixelHeight;
         dibHeader.m_importantColors = 0;
@@ -295,8 +294,19 @@ public:
         dibHeader.m_pixelsPerMeterVertical = 2835;
         dibHeader.m_widthPixels = pixelWidth;
 
+#if USE_BGRA_RT
+        colorMasks[0] = 0xFF0000; // R
+        colorMasks[1] = 0xFF00;   // G
+        colorMasks[2] = 0xFF;     // B
+#else
+        colorMasks[0] = 0xFF;     // R
+        colorMasks[1] = 0xFF00;   // G
+        colorMasks[2] = 0xFF0000; // B
+#endif // USE_BGRA_RT
+
         fwrite(&bmpHeader, sizeof(bmpHeader), 1, fp);
         fwrite(&dibHeader, sizeof(dibHeader), 1, fp);
+        fwrite(&colorMasks[0], sizeof(colorMasks), 1, fp);
 
         D3D11_MAPPED_SUBRESOURCE mappedSubresource;
         HRESULT hr = m_pDevice->GetContext()->Map(m_pTexture, 0, D3D11_MAP_READ, 0, &mappedSubresource);
@@ -311,10 +321,7 @@ public:
 
             for (UINT32 col = 0; col < pixelWidth; col++)
             {
-                fwrite(pRow + 2, 1, 1, fp);
-                fwrite(pRow + 1, 1, 1, fp);
-                fwrite(pRow + 0, 1, 1, fp);
-
+                fwrite(pRow, 4, 1, fp);
                 pRow += 4;
             }
             if (bytePadding) fwrite(&padding, 1, bytePadding, fp);
@@ -523,8 +530,13 @@ public:
         desc.ArraySize = 1;
         desc.BindFlags = D3D11_BIND_RENDER_TARGET;
         desc.CPUAccessFlags = 0;
+#if USE_BGRA_RT
+        desc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
+#else
         desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+#endif // USE_BGRA_RT
         desc.Height = inHeight;
+
         desc.MipLevels = 1;
         desc.MiscFlags = 0;
         desc.SampleDesc.Count = 1;
@@ -1273,7 +1285,7 @@ public:
         // Set depth stencil state
         m_pDevice->GetContext()->OMSetDepthStencilState(m_pDepthStencilState->GetDepthStencilState(), 0);
 
-        m_pTexture = std::unique_ptr<D3DTexture>(new D3DTexture(m_pDevice, kWidth, kHeight));
+        m_pStagingTexture = std::unique_ptr<D3DStagingTexture>(new D3DStagingTexture(m_pDevice, kWidth, kHeight));
 
         // Set sampler state
         ID3D11SamplerState *    pSamplerState = m_pSamplerState->GetSamplerState();
@@ -1301,7 +1313,7 @@ public:
         m_pDevice->GetContext()->PSSetConstantBuffers(0, 1, &pPSConstantBuffer);
     }
 
-    void Render(UINT iFrame, float fAngle)
+    void Render(UINT iFrame, float fAngle, BOOL bPerfMode)
     {
         // Clear
         m_pDevice->GetContext()->ClearRenderTargetView(
@@ -1342,16 +1354,19 @@ public:
         m_pDevice->GetContext()->DrawIndexed(36, 0, 0);
 #endif // USE_QUAD
 
-        // Save frame.
-        m_pDevice->GetContext()->CopyResource(m_pTexture->GetTexture(), m_pRenderTarget->GetRenderTarget());
+        if (! bPerfMode)
         {
-            char fileName[MAX_PATH];
+            // Save frame.
+            m_pDevice->GetContext()->CopyResource(m_pStagingTexture->GetTexture(), m_pRenderTarget->GetRenderTarget());
+            {
+                char fileName[MAX_PATH];
 #if USE_VC4
-            sprintf_s(fileName, MAX_PATH, "c:\\temp\\image_%d_vc4.bmp", iFrame);
+                sprintf_s(fileName, MAX_PATH, "c:\\temp\\image_%d_vc4.bmp", iFrame);
 #else
-            sprintf_s(fileName, MAX_PATH, "c:\\temp\\image_%d_warp.bmp", iFrame);
+                sprintf_s(fileName, MAX_PATH, "c:\\temp\\image_%d_warp.bmp", iFrame);
 #endif // USE_VC4
-            m_pTexture->WriteToBmp(fileName);
+                m_pStagingTexture->WriteToBmp(fileName);
+            }
         }
     }
 
@@ -1360,7 +1375,10 @@ public:
         // do nothing
     }
 
-    std::unique_ptr<D3DTexture> & GetTexture() { return m_pTexture; }
+    std::unique_ptr<D3DStagingTexture> & GetTexture() { return m_pStagingTexture; }
+
+    ID3D11Device* GetDevice() { return m_pDevice->GetDevice(); }
+    ID3D11DeviceContext* GetContext() { return m_pDevice->GetContext(); }
 
 private:
 
@@ -1371,7 +1389,7 @@ private:
     std::unique_ptr<D3DPixelShader>         m_pPixelShader;
     std::unique_ptr<D3DVertexBuffer>        m_pVertexBuffer;
     std::unique_ptr<D3DIndexBuffer>         m_pIndexBuffer;
-    std::unique_ptr<D3DTexture>             m_pTexture;
+    std::unique_ptr<D3DStagingTexture>      m_pStagingTexture;
     std::unique_ptr<D3DDepthStencilState>   m_pDepthStencilState;
     std::unique_ptr<D3DRasterizerState>     m_pRasterizerState;
     std::unique_ptr<D3DSamplerState>        m_pSamplerState;
@@ -1384,17 +1402,156 @@ private:
 #endif // USE_BITMAP_TEX
 };
 
-int main()
+#define SAFE_RELEASE(x) { if (x) { (x)->Release(); (x) = NULL; } }
+
+ID3D11Device*           pd3dDevice = NULL;
+ID3D11DeviceContext*    pd3dContext = NULL;
+IDXGIDevice2*           pDxgiDev2 = NULL;
+HANDLE                  hQueueEvent = NULL;
+
+void UninitPerf()
+{
+    SAFE_RELEASE(pDxgiDev2);
+
+    if (hQueueEvent)
+    {
+        CloseHandle(hQueueEvent);
+    }
+}
+
+BOOL InitPerf()
+{
+    pd3dDevice->QueryInterface<IDXGIDevice2>(&pDxgiDev2);
+
+    // Create a manual-reset event object.
+    hQueueEvent = CreateEvent(
+        NULL,               // default security attributes
+        TRUE,               // manual-reset event
+        FALSE,              // initial state is nonsignaled
+        FALSE
+        );
+
+    return hQueueEvent ? true : false;
+}
+
+int main(int argc, char* argv[])
 {
     try
     {
+        BOOL bPerfMode = false;
+
+        LARGE_INTEGER   framesStart;
+        LARGE_INTEGER   framesEnd;
+
+        LARGE_INTEGER   frequenceStart;
+        LARGE_INTEGER   frequenceEnd;
+
+        if (argc >= 3)
+        {
+            bPerfMode = true;
+        }
+
+        if (bPerfMode)
+        {
+            sscanf_s(argv[1], "%d", &kWidth);
+            sscanf_s(argv[2], "%d", &kHeight);
+
+            if (argc > 3)
+            {
+                sscanf_s(argv[3], "%d", &frames);
+
+                if (frames < 20)
+                {
+                    frames = 20;
+                }
+            }
+            else
+            {
+                frames = 20;
+            }
+        }
+
         D3DEngine engine;
 
-        float t = 0.0f;
-        for (UINT i = 0; i < ANIMATION_COUNT; i++)
+        if (bPerfMode)
         {
+            pd3dDevice = engine.GetDevice();
+            pd3dContext = engine.GetContext();
+
+            InitPerf();
+        }
+
+        float t = 0.0f;
+        for (UINT i = 0; i < frames; i++)
+        {
+            // Skip the 1st frame for shader compilation time
+            if (bPerfMode && (i == 1))
+            {
+                QueryPerformanceCounter(&framesStart);
+                QueryPerformanceFrequency(&frequenceStart);
+            }
+
             t += (float)XM_PI * 0.125f;
-            engine.Render(i, t);
+            engine.Render(i, t, bPerfMode);
+
+            if (bPerfMode)
+            {
+                if (i == 0)
+                {
+                    //
+                    // Wait for the 1st frame to finish to account for the GPU paging cost
+                    //
+
+                    DWORD dwWaitResult;
+
+                    pDxgiDev2->EnqueueSetEvent(hQueueEvent);
+
+                    dwWaitResult = WaitForSingleObject(
+                        hQueueEvent,    // event handle
+                        INFINITE);      // indefinite wait
+
+                    ResetEvent(hQueueEvent);
+                }
+                else if (i < (frames - 1))
+                {
+                    pd3dContext->Flush();
+                }
+                else
+                {
+                    pDxgiDev2->EnqueueSetEvent(hQueueEvent);
+                }
+            }
+        }
+
+        if (bPerfMode)
+        {
+            DWORD dwWaitResult;
+
+            dwWaitResult = WaitForSingleObject(
+                hQueueEvent,    // event handle
+                INFINITE);      // indefinite wait
+
+            if (dwWaitResult == WAIT_OBJECT_0)
+            {
+                QueryPerformanceCounter(&framesEnd);
+                QueryPerformanceFrequency(&frequenceEnd);
+
+                UINT measuredFrames = frames - 1;
+
+                if (frequenceStart.QuadPart != frequenceEnd.QuadPart)
+                {
+                    printf("Perf frequence changed during %d frames of rendering", measuredFrames);
+                }
+
+                printf(
+                    "Average rendering time for (%d x %d) from %d frames: %I64d ms\n",
+                    kWidth,
+                    kHeight,
+                    measuredFrames,
+                    ((framesEnd.QuadPart - framesStart.QuadPart) * 1000) / (measuredFrames*frequenceEnd.QuadPart));
+            }
+
+            UninitPerf();
         }
 
         printf("Success\n");

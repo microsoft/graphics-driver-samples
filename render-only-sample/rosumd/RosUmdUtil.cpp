@@ -18,6 +18,7 @@
 
 UINT
 ConvertFloatColor(
+    DXGI_FORMAT format,
     FLOAT * pColor)
 {
     BYTE    red, green, blue, alpha;
@@ -27,7 +28,18 @@ ConvertFloatColor(
     blue  = (BYTE)round(pColor[2] * 255.0);
     alpha = (BYTE)round(pColor[3] * 255.0);
 
-    return (alpha << 24) | (blue << 16) | (green << 8) | red;
+    // TODO: define channel mapping for each supported DXGI_FORMAT.
+
+    switch (format)
+    {
+    case DXGI_FORMAT_R8G8B8A8_UNORM:
+        return (alpha << 24) | (blue << 16) | (green << 8) | red;
+    case DXGI_FORMAT_B8G8R8A8_UNORM:
+        return (alpha << 24) | (red << 16)  | (green << 8) | blue;
+    default:
+        __debugbreak();
+        return 0;
+    }
 }
 
 #if VC4
