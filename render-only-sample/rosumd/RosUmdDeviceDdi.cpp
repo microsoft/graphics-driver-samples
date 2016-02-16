@@ -277,7 +277,7 @@ void APIENTRY RosUmdDeviceDdi::DdiOpenResource(
         pRosUmdDevice->OpenResource(Args, hResource, hRTResource);
     }
 
-    catch (std::exception & e)
+    catch (const std::exception & e)
     {
         pRosUmdDevice->SetException(e);
     }

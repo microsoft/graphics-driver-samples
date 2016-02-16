@@ -107,10 +107,10 @@ public:
     void Render(D3DDDICB_RENDER * pRender);
     void DestroyContext(D3DDDICB_DESTROYCONTEXT * pDestroyContext);
 
-    HRESULT Present(DXGI_DDI_ARG_PRESENT* pPresentData);
+    HRESULT Present(DXGI_DDI_ARG_PRESENT* Args);
     HRESULT RotateResourceIdentities(DXGI_DDI_ARG_ROTATE_RESOURCE_IDENTITIES* Args);
-    HRESULT SetDisplayMode(DXGI_DDI_ARG_SETDISPLAYMODE* pDisplayModeData);
-    HRESULT Present1(DXGI_DDI_ARG_PRESENT1* pPresentData);
+    HRESULT SetDisplayMode(DXGI_DDI_ARG_SETDISPLAYMODE* Args);
+    HRESULT Present1(DXGI_DDI_ARG_PRESENT1* Args);
 
     //
     // User mode call backs
@@ -120,8 +120,8 @@ public:
 
 public:
 
-    void SetException(std::exception & e);
-    void SetException(RosUmdException & e);
+    void SetException(const std::exception & e);
+    void SetException(const RosUmdException & e);
 
 public:
     HANDLE                          m_hContext;

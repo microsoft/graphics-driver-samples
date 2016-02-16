@@ -63,7 +63,7 @@ public:
     static void APIENTRY DdiSetViewports(D3D10DDI_HDEVICE, UINT, UINT, const D3D10_DDI_VIEWPORT*);
     static void APIENTRY DdiIaSetTopology(D3D10DDI_HDEVICE, D3D10_DDI_PRIMITIVE_TOPOLOGY);
 
-    static void APIENTRY SetPredication_Default(D3D10DDI_HDEVICE, D3D10DDI_HQUERY, BOOL) { RosUmdLogging::Call(__FUNCTION__); /*__debugbreak();*/ }
+    static void APIENTRY SetPredication_Default(D3D10DDI_HDEVICE, D3D10DDI_HQUERY, BOOL) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY SetTextFilter_Default(D3D10DDI_HDEVICE, UINT, UINT) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY ClearUnorderedAccessViewUint_Default(D3D10DDI_HDEVICE, D3D11DDI_HUNORDEREDACCESSVIEW, const UINT[4]) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY ClearUnorderedAccessViewFloat_Default(D3D10DDI_HDEVICE, D3D11DDI_HUNORDEREDACCESSVIEW, const FLOAT[4]) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
