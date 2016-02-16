@@ -78,9 +78,9 @@ private: // NONPAGED
 
     VC4_DISPLAY (const VC4_DISPLAY&) = delete;
     VC4_DISPLAY& operator= (const VC4_DISPLAY&) = delete;
+    
+    static ULONG Vc4PhysicalAddressFromVirtual (VOID* Address);
 
-    // store references to objects that are common between all display
-    // components to avoid wasting memory
     const DEVICE_OBJECT* const physicalDeviceObjectPtr;
     const DXGKRNL_INTERFACE& dxgkInterface;
     const DXGK_START_INFO& dxgkStartInfo;

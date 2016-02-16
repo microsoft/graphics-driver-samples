@@ -160,6 +160,11 @@ BOOLEAN VC4_DISPLAY::InterruptRoutine (
     return TRUE;
 }
 
+ULONG VC4_DISPLAY::Vc4PhysicalAddressFromVirtual (VOID* Address)
+{
+    return MmGetPhysicalAddress(Address).LowPart + VC4_BUS_ADDRESS_ALIAS_UNCACHED;
+}
+
 ROS_NONPAGED_SEGMENT_END; //==================================================
 ROS_PAGED_SEGMENT_BEGIN; //===================================================
 
