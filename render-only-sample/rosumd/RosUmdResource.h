@@ -105,6 +105,27 @@ public:
         }
         return m_isPrimary;
     }
+
+    // Tiled textures support
+    void ConvertBitmapTo4kTileBlocks(
+        BYTE *InputBuffer, 
+        BYTE *OutBuffer, 
+        UINT rowStride);
+
+private:
+
+    // Tiled textures support
+    BYTE *Form1kSubTileBlock(
+        BYTE *pInputBuffer, 
+        BYTE *pOutBuffer, 
+        UINT rowStride);
+
+    BYTE *Form4kTileBlock(
+        BYTE *pInputBuffer, 
+        BYTE *pOutBuffer, 
+        UINT rowStride, 
+        BOOLEAN OddRow);
+
 };
 
 inline RosUmdResource* RosUmdResource::CastFrom(D3D10DDI_HRESOURCE hResource)

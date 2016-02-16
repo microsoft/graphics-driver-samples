@@ -291,15 +291,28 @@ void RosUmdDevice::CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResou
         }
         else if (pResource->m_resourceDimension == D3D10DDIRESOURCE_TEXTURE2D)
         {
-            BYTE *  pSrc = (BYTE *)pCreateResource->pInitialDataUP[0].pSysMem;
-            BYTE *  pDst = (BYTE *)lock.pData;
-
-            for (UINT i = 0; i < pResource->m_mip0Info.TexelHeight; i++)
+            if (pResource->m_hwLayout == RosHwLayout::Linear)
             {
-                memcpy(pDst, pSrc, pCreateResource->pInitialDataUP[0].SysMemPitch);
+                BYTE *  pSrc = (BYTE *)pCreateResource->pInitialDataUP[0].pSysMem;
+                BYTE *  pDst = (BYTE *)lock.pData;
 
-                pSrc += pCreateResource->pInitialDataUP[0].SysMemPitch;
-                pDst += pResource->m_hwPitchBytes;
+                for (UINT i = 0; i < pResource->m_mip0Info.TexelHeight; i++)
+                {
+                    memcpy(pDst, pSrc, pCreateResource->pInitialDataUP[0].SysMemPitch);
+
+                    pSrc += pCreateResource->pInitialDataUP[0].SysMemPitch;
+                    pDst += pResource->m_hwPitchBytes;
+                }
+            }
+            else
+            {
+                // Texture tiled mode support
+                BYTE * pSrc = (BYTE *)pCreateResource->pInitialDataUP[0].pSysMem;
+                BYTE * pDst = (BYTE *)lock.pData;
+                UINT  rowStride = pCreateResource->pInitialDataUP[0].SysMemPitch;
+                
+                // Swizzle texture to HW format
+                pResource->ConvertBitmapTo4kTileBlocks(pSrc, pDst, rowStride);
             }
         }
         else
@@ -1229,7 +1242,8 @@ void RosUmdDevice::SetRasterizerState(RosUmdRasterizerState * pRasterizerState)
 
 void RosUmdDevice::SetScissorRects(UINT NumScissorRects, UINT ClearScissorRects, const D3D10_DDI_RECT *pRects)
 {
-    assert((NumScissorRects + ClearScissorRects) <= 1);
+    // Issue #36
+    assert((NumScissorRects + ClearScissorRects) == 1);
     if (NumScissorRects)
     {
         m_scissorRectSet = true;
@@ -2100,11 +2114,17 @@ void RosUmdDevice::WriteUniforms(
                 //
 
                 assert(pTexture->m_hwFormat == RosHwFormat::X8888);
-                assert(pTexture->m_hwLayout == RosHwLayout::Linear);
 
                 VC4TextureType  vc4TextureType;
 
-                vc4TextureType.TextureType = VC4_TEX_RGBA32R;
+                if (pTexture->m_hwLayout == RosHwLayout::Tiled)
+                {
+                    vc4TextureType.TextureType = VC4_TEX_RGBX8888;
+                }
+                else
+                {
+                    vc4TextureType.TextureType = VC4_TEX_RGBA32R;
+                }
 
                 pVC4TexConfigParam0->TYPE = vc4TextureType.TYPE;
 
@@ -2136,7 +2156,14 @@ void RosUmdDevice::WriteUniforms(
 
                 VC4TextureType  vc4TextureType;
 
-                vc4TextureType.TextureType = VC4_TEX_RGBA32R;
+                if (pTexture->m_hwLayout == RosHwLayout::Tiled)
+                {
+                    vc4TextureType.TextureType = VC4_TEX_RGBX8888;
+                }
+                else
+                {
+                    vc4TextureType.TextureType = VC4_TEX_RGBA32R;
+                }
 
                 RosUmdSampler * pSampler = m_pixelSamplers[pCurUniformEntry->samplerConfiguration.samplerIndex];
                 D3D10_DDI_SAMPLER_DESC * pSamplerDesc = &pSampler->m_desc;

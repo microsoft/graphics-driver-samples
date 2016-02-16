@@ -366,6 +366,8 @@ private:
 
     Vc4Register Find_Vc4Register_I(COperandBase c, uint8_t swizzleIndex)
     {
+        // Need to add dynamic index support for constant buffer - Issue #37
+
         Vc4Register ret;
 
         switch (c.m_Type)
