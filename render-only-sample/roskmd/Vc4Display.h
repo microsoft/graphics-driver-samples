@@ -22,10 +22,6 @@
 //        when the current frame buffer is no longer needed
 //      - HDMI - receives output from the pixelvalve, participates in mode
 //        setting
-//      - Hot plug detection (HPD) - a GPIO pin is used to detect when the HDMI
-//        cable is plugged and unplugged. A separate driver - gpiohpd -
-//        registers for the interrupt, and calls us at DISPATCH_LEVEL whenever
-//        a hotplug event occurs.
 //      - I2C Display Data Channel (DDC) - allows us to read the monitor's
 //        EDID which contains the list of supported modes. The I2C controller
 //        is the same IP as the other BCM2836 I2C controllers, so we leverage
@@ -81,8 +77,6 @@ public: // NONPAGED
     _IRQL_requires_(HIGH_LEVEL)
     BOOLEAN InterruptRoutine (IN_ULONG MessageNumber);
 
-    static EVT_GPIOHPD_HOTPLUG_NOTIFICATION EvtHotplugNotification;
-
 private: // NONPAGED
 
     typedef LONG FRAME_BUFFER_ID;
@@ -104,27 +98,18 @@ private: // NONPAGED
     const DXGKRNL_INTERFACE& dxgkInterface;
     const DXGK_START_INFO& dxgkStartInfo;
     const DXGK_DEVICE_INFO& dxgkDeviceInfo;
-
     VC4_DEBUG dbgHelper;
     DXGK_DISPLAY_INFORMATION dxgkDisplayInfo;
     D3DKMDT_VIDEO_SIGNAL_INFO dxgkVideoSignalInfo;
     D3DKMDT_VIDPN_SOURCE_MODE dxgkCurrentSourceMode;
-
-    FILE_OBJECT* hpdFileObjectPtr;
-    BOOLEAN hdmiConnected;
     FILE_OBJECT* i2cFileObjectPtrs[I2C_CHANNEL_INDEX_COUNT];
-
     VC4HVS_REGISTERS* hvsRegistersPtr;
     VC4PIXELVALVE_REGISTERS* pvRegistersPtr;
-
     VC4PIXELVALVE_INTERRUPT pixelValveIntEn;
-
     SIZE_T frameBufferLength;
     VOID* biosFrameBufferPtr;       // must be freed with MmUnmapIoSpace
-
     VC4HVS_DLIST_ENTRY_UNITY* displayListPtr;
     VC4HVS_DLIST_CONTROL_WORD_0 displayListControlWord0;
-
     PHYSICAL_ADDRESS currentVidPnSourceAddress;
 
 public: // PAGED
@@ -294,11 +279,6 @@ private: // PAGED
         const D3DKMDT_VIDPN_PRESENT_PATH* PathPtr
         );
         
-    _Check_return_
-    _IRQL_requires_max_(PASSIVE_LEVEL)
-    NTSTATUS registerHotplugNotification (
-        _Outptr_ FILE_OBJECT** FileObjectPPtr
-        );
 };
 
 #endif // _VC4DISPLAY_HPP_

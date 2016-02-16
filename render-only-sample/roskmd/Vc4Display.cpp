@@ -189,36 +189,6 @@ BOOLEAN VC4_DISPLAY::InterruptRoutine (
     return TRUE;
 }
 
-_Use_decl_annotations_
-VOID VC4_DISPLAY::EvtHotplugNotification (PVOID ContextPtr, BOOLEAN Connected)
-{
-    NT_ASSERT(KeGetCurrentIrql() == DISPATCH_LEVEL);
-
-    ROS_LOG_INFORMATION(
-        "Received hotplug notification. (Connected=%d)",
-        Connected);
-
-    auto thisPtr = static_cast<VC4_DISPLAY*>(ContextPtr);
-
-    thisPtr->hdmiConnected = Connected;
-
-    auto childStatus = DXGK_CHILD_STATUS();
-    childStatus.Type = StatusConnection;
-    childStatus.ChildUid = 0;
-    childStatus.HotPlug.Connected = Connected;
-
-    NTSTATUS status = thisPtr->dxgkInterface.DxgkCbIndicateChildStatus(
-            thisPtr->dxgkInterface.DeviceHandle,
-            &childStatus);
-
-    if (!NT_SUCCESS(status)) {
-        ROS_LOG_ASSERTION(
-            "DxgkCbIndicateChildStatus(...) failed! (status=%!STATUS!, Connected=%d)",
-            status,
-            Connected);
-    }
-}
-
 VC4_NONPAGED_SEGMENT_END; //==================================================
 VC4_PAGED_SEGMENT_BEGIN; //===================================================
 
@@ -233,25 +203,19 @@ VC4_DISPLAY::VC4_DISPLAY (
     dxgkInterface(DxgkInterface),
     dxgkStartInfo(DxgkStartInfo),
     dxgkDeviceInfo(DxgkDeviceInfo),
-
     dbgHelper(this->dxgkInterface),
     dxgkDisplayInfo(),
     dxgkVideoSignalInfo(),
     dxgkCurrentSourceMode(),
-
-    hpdFileObjectPtr(),
-    hdmiConnected(),
     i2cFileObjectPtrs(),
-
     hvsRegistersPtr(),
     pvRegistersPtr(),
     pixelValveIntEn(),
-
     frameBufferLength(0),
     biosFrameBufferPtr(),
-
     displayListPtr(),
-    displayListControlWord0()
+    displayListControlWord0(),
+    currentVidPnSourceAddress()
 {
     PAGED_CODE();
     VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
@@ -277,29 +241,6 @@ NTSTATUS VC4_DISPLAY::StartDevice (
     // Precondition: the caller is responsible to set up common device information
     NT_ASSERT(this->dxgkInterface.DeviceHandle);
     NT_ASSERT(this->dxgkDeviceInfo.PhysicalDeviceObject == this->physicalDeviceObjectPtr);
-
-    // Open handle to HPD driver and register notification
-    FILE_OBJECT* localHpdFileObjectPtr;
-    auto dereferenceHpdFileObject = VC4_FINALLY::DoUnless([&] {
-        PAGED_CODE();
-        ObDereferenceObjectWithTag(localHpdFileObjectPtr, VC4_ALLOC_TAG::DEVICE);
-    }, true);   // DoNot by default
-    status = this->registerHotplugNotification(&localHpdFileObjectPtr);
-    if (NT_SUCCESS(status)) {
-        dereferenceHpdFileObject.DoNot(false);
-    } else {
-        switch (status) {
-        case STATUS_OBJECT_NAME_NOT_FOUND:
-            ROS_LOG_WARNING("Hotplug detection device was not found. Hotplug will not be supported.");
-            this->hdmiConnected = TRUE;
-            break;
-        default:
-            ROS_LOG_ERROR(
-                "Failed to register hotplug notification. (status=%!STATUS!)",
-                status);
-            return status;
-        }
-    }
 
     // Find and validate hardware resources
     const CM_PARTIAL_RESOURCE_DESCRIPTOR* hvsMemoryResourcePtr = nullptr;
@@ -701,9 +642,6 @@ NTSTATUS VC4_DISPLAY::StartDevice (
 
     // All resources have been acquired. Save them in the device context
 
-    dereferenceHpdFileObject.DoNot();
-    this->hpdFileObjectPtr = localHpdFileObjectPtr;
-
     dereferenceI2cFileObjects.DoNot();
 
     unmapHvsRegisters.DoNot();
@@ -729,12 +667,6 @@ void VC4_DISPLAY::StopDevice ()
 {
     PAGED_CODE();
     VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-
-    // Close HPD notification handle
-    if (this->hpdFileObjectPtr) {
-        ObDereferenceObjectWithTag(this->hpdFileObjectPtr, VC4_ALLOC_TAG::DEVICE);
-        this->hpdFileObjectPtr = nullptr;
-    }
 
     // Close I2C handles
     for (auto& fileObjectPtr : this->i2cFileObjectPtrs) {
@@ -845,7 +777,7 @@ NTSTATUS VC4_DISPLAY::QueryChildStatus (
 
     switch (ChildStatusPtr->Type) {
     case StatusConnection:
-        ChildStatusPtr->HotPlug.Connected = this->hdmiConnected;
+        ChildStatusPtr->HotPlug.Connected = TRUE;
         break;
     case StatusRotation:
         ROS_LOG_ERROR("Received StatusRotation query even though D3DKMDT_MOA_NONE was reported.");
@@ -2245,64 +2177,6 @@ NTSTATUS VC4_DISPLAY::IsVidPnPathFieldsValid (
         return STATUS_GRAPHICS_INVALID_VIDEO_PRESENT_SOURCE_MODE;
     }
 
-    return STATUS_SUCCESS;
-}
-
-_Use_decl_annotations_
-NTSTATUS VC4_DISPLAY::registerHotplugNotification (FILE_OBJECT** FileObjectPPtr)
-{
-    PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-
-    DECLARE_CONST_UNICODE_STRING(hpdDeviceName, GPIOHPD_DEVICE_OBJECT_NAME_WSZ);
-    FILE_OBJECT* fileObjectPtr;
-    NTSTATUS status = Vc4OpenDevice(
-            const_cast<UNICODE_STRING*>(&hpdDeviceName),
-            GENERIC_READ | GENERIC_WRITE,
-            0,
-            &fileObjectPtr);
-    if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
-            "Failed to open handle to hotplug detection device.. (status=%!STATUS!, hpdDeviceName=%wZ)",
-            status,
-            &hpdDeviceName);
-        return status;
-    }
-    auto dereferenceHpdFileObject = VC4_FINALLY::DoUnless([&] {
-        PAGED_CODE();
-        ObDereferenceObjectWithTag(fileObjectPtr, VC4_ALLOC_TAG::DEVICE);
-    });
-
-    // Register for hotplug notification
-    {
-        auto inputBuffer = GPIOHPD_REGISTER_NOTIFICATION_INPUT();
-        inputBuffer.EvtHotplugNotificationFunc = EvtHotplugNotification;
-        inputBuffer.ContextPtr = this;
-        GPIOHPD_REGISTER_NOTIFICATION_OUTPUT outputBuffer;
-        ULONG information;
-        status = Vc4SendIoctlSynchronously(
-                fileObjectPtr,
-                IOCTL_GPIOHPD_REGISTER_NOTIFICATION,
-                &inputBuffer,
-                sizeof(inputBuffer),
-                &outputBuffer,
-                sizeof(outputBuffer),
-                TRUE,                       // InternalDeviceIoControl
-                &information);
-        if (!NT_SUCCESS(status)) {
-            ROS_LOG_ERROR(
-                "Vc4SendIoctlSynchronously(...IOCTL_GPIOHPD_REGISTER_NOTIFICATION...) failed. (status=%!STATUS!, fileObjectPtr=%p)",
-                status,
-                fileObjectPtr);
-            return status;
-        }
-        this->hdmiConnected = outputBuffer.Connected;
-    }
-
-    dereferenceHpdFileObject.DoNot();
-    *FileObjectPPtr = fileObjectPtr;
-
-    NT_ASSERT(NT_SUCCESS(status));
     return STATUS_SUCCESS;
 }
 

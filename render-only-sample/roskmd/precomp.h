@@ -16,5 +16,3 @@
 extern "C" {
 #include <dispmprt.h>
 }; // extern "C"
-
-#include <gpiohpd.h>

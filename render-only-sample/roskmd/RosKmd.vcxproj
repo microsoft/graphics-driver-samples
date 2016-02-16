@@ -138,7 +138,7 @@
   <PropertyGroup />
   <PropertyGroup>
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
-    <IncludePath>$(UM_IncludePath);..\roscommon;..\gpiohpd\inc;$(IncludePath)</IncludePath>
+    <IncludePath>$(UM_IncludePath);..\roscommon;$(IncludePath)</IncludePath>
     <ApiValidator_Enable>false</ApiValidator_Enable>
   </PropertyGroup>
   <!-- Settings in the following ItemDefinitionGroup are inherited by all configurations -->
