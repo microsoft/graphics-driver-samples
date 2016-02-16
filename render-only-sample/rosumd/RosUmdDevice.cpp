@@ -1243,7 +1243,7 @@ void RosUmdDevice::SetRasterizerState(RosUmdRasterizerState * pRasterizerState)
 void RosUmdDevice::SetScissorRects(UINT NumScissorRects, UINT ClearScissorRects, const D3D10_DDI_RECT *pRects)
 {
     // Issue #36
-    assert((NumScissorRects + ClearScissorRects) == 1);
+    assert((NumScissorRects + ClearScissorRects) <= 1);
     if (NumScissorRects)
     {
         m_scissorRectSet = true;
