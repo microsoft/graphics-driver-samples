@@ -317,7 +317,7 @@ NTSTATUS RosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
 
 
     //
-    // Register VidPn and display DDIs
+    // Register display subsystem DDIS.
     // Refer to adapterdisplay.cxx:ADAPTER_DISPLAY::CreateDisplayCore() for
     // required DDIs.
     //

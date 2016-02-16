@@ -38,6 +38,8 @@ RosKmDevice::RosKmDevice(IN_CONST_HANDLE hAdapter, INOUT_PDXGKARG_CREATEDEVICE p
     m_hRTDevice = pCreateDevice->hDevice;
     m_pRosKmAdapter = (RosKmAdapter *)hAdapter;
     m_Flags = pCreateDevice->Flags;
+    
+    pCreateDevice->hDevice = this;
 }
 
 RosKmDevice::~RosKmDevice()
@@ -61,7 +63,7 @@ RosKmDevice::DdiCloseAllocation(
 
     RosKmdDeviceAllocation * pRosKmdDeviceAllocation = (RosKmdDeviceAllocation *)pCloseAllocation->pOpenHandleList[0];
 
-    ExFreePoolWithTag(pRosKmdDeviceAllocation, 'ROSD');
+    ExFreePoolWithTag(pRosKmdDeviceAllocation, ROS_ALLOC_TAG::DEVICE);
 
     return STATUS_SUCCESS;
 }
@@ -110,12 +112,6 @@ NTSTATUS RosKmDevice::OpenAllocation (const DXGKARG_OPENALLOCATION* ArgsPtr)
         // Return the per process allocation info
         openAllocInfoPtr->hDeviceSpecificAllocation = rosKmdDeviceAllocationPtr;
     }
-
-    const_cast<DXGKARG_OPENALLOCATION*>(ArgsPtr)->SubresourceOffset = 0;
-
-    // TODO[jordanrh] set ArgsPtr->Pitch
-    // NT_ASSERT(ArgsPtr->NumAllocations > 0);
-    // const_cast<DXGKARG_OPENALLOCATION*>(ArgsPtr)->Pitch = pitch;
 
     ROS_LOG_TRACE(
         "Successfully opened allocation. (Flags.Create=%d, Flags.ReadOnly=%d)",

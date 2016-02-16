@@ -14,15 +14,6 @@
 
 ROS_NONPAGED_SEGMENT_BEGIN; //================================================
 
-namespace { // static
-
-ULONG UlongFromRational (const D3DDDI_RATIONAL& Rational)
-{
-    return Rational.Numerator / Rational.Denominator;
-}
-
-} // namespace "static"
-
 ROS_NONPAGED_SEGMENT_END; //==================================================
 ROS_PAGED_SEGMENT_BEGIN; //===================================================
 
@@ -286,8 +277,10 @@ void VC4_DEBUG::DumpTargetModeSet (
             modeInfo->VideoSignalInfo.TotalSize.cy,
             modeInfo->VideoSignalInfo.ActiveSize.cx,
             modeInfo->VideoSignalInfo.ActiveSize.cy,
-            UlongFromRational(modeInfo->VideoSignalInfo.VSyncFreq),
-            UlongFromRational(modeInfo->VideoSignalInfo.HSyncFreq),
+            modeInfo->VideoSignalInfo.VSyncFreq.Numerator /
+                modeInfo->VideoSignalInfo.VSyncFreq.Denominator,
+            modeInfo->VideoSignalInfo.HSyncFreq.Numerator /
+                modeInfo->VideoSignalInfo.HSyncFreq.Denominator,
             modeInfo->VideoSignalInfo.PixelRate);
 
         const D3DKMDT_VIDPN_TARGET_MODE* nextModeInfo;

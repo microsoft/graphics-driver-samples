@@ -17,38 +17,6 @@
 
 ROS_NONPAGED_SEGMENT_BEGIN; //================================================
 
-void BltBits (
-    const void *SourceBitsPtr,
-    void *DestBitsPtr,
-    ULONG Pitch,
-    _In_reads_(RectCount) const RECT* RectsPtr,
-    ULONG RectCount
-    )
-{
-    for (UINT i = 0; i < RectCount; ++i) {
-        const RECT* rectPtr = &RectsPtr[i];
-
-        NT_ASSERT(rectPtr->right >= rectPtr->left);
-        NT_ASSERT(rectPtr->bottom >= rectPtr->top);
-
-        const UINT numPixels = rectPtr->right - rectPtr->left;
-        const UINT numRows = rectPtr->bottom - rectPtr->top;
-        const UINT bytesToCopy = numPixels * 4;
-        BYTE* dstStartPtr = ((BYTE*)DestBitsPtr +
-                          rectPtr->top * Pitch +
-                          rectPtr->left * 4);
-        const BYTE* srcStartPtr = ((BYTE*)SourceBitsPtr +
-                                rectPtr->top * Pitch +
-                                rectPtr->left * 4);
-
-        for (UINT row = 0; row < numRows; ++row) {
-            RtlCopyMemory(dstStartPtr, srcStartPtr, bytesToCopy);
-            dstStartPtr += Pitch;
-            srcStartPtr += Pitch;
-        }
-    }
-}
-
 _Use_decl_annotations_
 void VC4_DISPLAY::ResetDevice ()
 {
@@ -113,12 +81,17 @@ NTSTATUS VC4_DISPLAY::SetVidPnSourceAddress (
         ROS_LOG_ASSERTION("What do we do here?");
     }
 
+    NT_ASSERT(
+        (RosKmdGlobal::s_videoMemoryPhysicalAddress.HighPart == 0) &&
+        (Args->PrimaryAddress.HighPart == 0));
+
     // Verify memory is in range
     NT_ASSERT(Args->PrimarySegment == ROSD_SEGMENT_VIDEO_MEMORY);
     NT_ASSERT(Args->PrimaryAddress.LowPart < RosKmdGlobal::s_videoMemorySize);
     if (Args->hAllocation) {
         const auto rosKmdAllocation =
             static_cast<RosKmdAllocation*>(Args->hAllocation);
+        UNREFERENCED_PARAMETER(rosKmdAllocation);
         NT_ASSERT(
             (Args->PrimaryAddress.LowPart + rosKmdAllocation->m_hwSizeBytes) <=
             RosKmdGlobal::s_videoMemorySize);
@@ -205,10 +178,8 @@ VC4_DISPLAY::VC4_DISPLAY (
     dxgkDisplayInfo(),
     dxgkVideoSignalInfo(),
     dxgkCurrentSourceMode(),
-    i2cFileObjectPtrs(),
     hvsRegistersPtr(),
     pvRegistersPtr(),
-    pixelValveIntEn(),
     frameBufferLength(0),
     biosFrameBufferPtr(),
     displayListPtr(),
@@ -244,8 +215,6 @@ NTSTATUS VC4_DISPLAY::StartDevice (
     const CM_PARTIAL_RESOURCE_DESCRIPTOR* hvsMemoryResourcePtr = nullptr;
     const CM_PARTIAL_RESOURCE_DESCRIPTOR* pvMemoryResourcePtr = nullptr;
     const CM_PARTIAL_RESOURCE_DESCRIPTOR* pvInterruptResourcePtr = nullptr;
-    const CM_PARTIAL_RESOURCE_DESCRIPTOR*
-        i2cResourcePtrs[ARRAYSIZE(this->i2cFileObjectPtrs)] = {0};
     {
         const CM_RESOURCE_LIST* resourceListPtr =
             this->dxgkDeviceInfo.TranslatedResourceList;
@@ -299,15 +268,11 @@ NTSTATUS VC4_DISPLAY::StartDevice (
                 case CM_RESOURCE_CONNECTION_CLASS_SERIAL:
                     switch (resourcePtr->u.Connection.Type) {
                     case CM_RESOURCE_CONNECTION_TYPE_SERIAL_I2C:
-                        if (i2cResourceCount < ARRAYSIZE(i2cResourcePtrs)) {
-                            i2cResourcePtrs[i2cResourceCount] = resourcePtr;
-                        } else {
-                            ROS_LOG_WARNING(
-                                "Received unexpected I2C resource. (i2cResourceCount=%d, resourcePtr=%p, FirstResourceIndex=%d)",
-                                i2cResourceCount,
-                                resourcePtr,
-                                FirstResourceIndex);
-                        }
+                        ROS_LOG_TRACE(
+                            "Received I2C resource. (i2cResourceCount=%d, resourcePtr=%p, FirstResourceIndex=%d)",
+                            i2cResourceCount,
+                            resourcePtr,
+                            FirstResourceIndex);
                         ++i2cResourceCount;
                     }
                 }
@@ -317,8 +282,7 @@ NTSTATUS VC4_DISPLAY::StartDevice (
 
         if (!hvsMemoryResourcePtr ||
             !pvMemoryResourcePtr ||
-            !pvInterruptResourcePtr ||
-            (i2cResourceCount < ARRAYSIZE(i2cResourcePtrs))) {
+            !pvInterruptResourcePtr) {
 
             ROS_LOG_ERROR(
                 "Did not find required resources. (TranslatedResourceList=%p, FirstResourceIndex=%d, hvsMemoryResourcePtr=%p, pvMemoryResourcePtr=%p, pvInterruptResourcePtr=%p, i2cResourceCount=%d)",
@@ -408,48 +372,6 @@ NTSTATUS VC4_DISPLAY::StartDevice (
         NT_ASSERT(NT_SUCCESS(unmapStatus));
     });
 
-    // Open I2C connections
-    auto dereferenceI2cFileObjects = ROS_FINALLY::DoUnless([&] {
-        PAGED_CODE();
-        for (auto& fileObjectPtr : this->i2cFileObjectPtrs) {
-            if (!fileObjectPtr) break;
-            ObDereferenceObjectWithTag(fileObjectPtr, ROS_ALLOC_TAG::DEVICE);
-            fileObjectPtr = nullptr;
-        }
-    });
-    for (ULONG i = 0; i < ARRAYSIZE(i2cResourcePtrs); ++i) {
-        static_assert(
-            ARRAYSIZE(i2cResourcePtrs) == ARRAYSIZE(this->i2cFileObjectPtrs),
-            "Sanity check on size of I2C channel array");
-
-        DECLARE_UNICODE_STRING_SIZE(deviceName, RESOURCE_HUB_PATH_CHARS);
-
-        status = RESOURCE_HUB_CREATE_PATH_FROM_ID(
-                &deviceName,
-                i2cResourcePtrs[i]->u.Connection.IdLowPart,
-                i2cResourcePtrs[i]->u.Connection.IdHighPart);
-        if (!NT_SUCCESS(status)) {
-            ROS_LOG_ERROR(
-                "RESOURCE_HUB_CREATE_PATH_FROM_ID() failed. (status = %!STATUS!)",
-                status);
-            return RosSanitizeNtstatus(status);
-        } // if
-
-        NT_ASSERT(!this->i2cFileObjectPtrs[i]);
-        status = RosOpenDevice(
-                &deviceName,
-                GENERIC_READ | GENERIC_WRITE,
-                0,                                  // ShareAccess
-                &(this->i2cFileObjectPtrs[i]));
-        if (!NT_SUCCESS(status)) {
-            ROS_LOG_ERROR(
-                "Failed to open I2C connection. (status=%!STATUS!, deviceName=%wZ)",
-                status,
-                &deviceName);
-            return status;
-        }
-    }
-
     // Ensure HVS register block is enabled
     {
         VC4HVS_DISPCTRL dispCtrl =
@@ -513,7 +435,6 @@ NTSTATUS VC4_DISPLAY::StartDevice (
 #endif
 
         // Ensure interrupts are disabled
-        this->pixelValveIntEn.AsUlong = 0;
         WRITE_REGISTER_NOFENCE_ULONG(&_pvRegistersPtr->IntEn, 0);
     }
 
@@ -546,12 +467,13 @@ NTSTATUS VC4_DISPLAY::StartDevice (
     this->dxgkVideoSignalInfo.TotalSize.cy = this->dxgkDisplayInfo.Height;
     this->dxgkVideoSignalInfo.ActiveSize = this->dxgkVideoSignalInfo.TotalSize;
 
-    // Settings taken on my ASUS 1080p monitor (60Hz)
-    this->dxgkVideoSignalInfo.VSyncFreq.Numerator = 148500000; // D3DKMDT_FREQUENCY_NOTSPECIFIED;
-    this->dxgkVideoSignalInfo.VSyncFreq.Denominator = 2475000; // D3DKMDT_FREQUENCY_NOTSPECIFIED;
-    this->dxgkVideoSignalInfo.HSyncFreq.Numerator = 67500; // D3DKMDT_FREQUENCY_NOTSPECIFIED;
-    this->dxgkVideoSignalInfo.HSyncFreq.Denominator = 1; //D3DKMDT_FREQUENCY_NOTSPECIFIED;
-    this->dxgkVideoSignalInfo.PixelRate = 148500000; // D3DKMDT_FREQUENCY_NOTSPECIFIED;
+    // If Vsync interrupts are enabled, cannot use D3DKMDT_FREQUENCY_NOTSPECIFIED.
+    // Settings taken from ASUS 1080p monitor at 60Hz.
+    this->dxgkVideoSignalInfo.VSyncFreq.Numerator = 148500000;
+    this->dxgkVideoSignalInfo.VSyncFreq.Denominator = 2475000;
+    this->dxgkVideoSignalInfo.HSyncFreq.Numerator = 67500;
+    this->dxgkVideoSignalInfo.HSyncFreq.Denominator = 1;
+    this->dxgkVideoSignalInfo.PixelRate = 148500000;
     this->dxgkVideoSignalInfo.ScanLineOrdering = D3DDDI_VSSLO_PROGRESSIVE;
 
     ROS_LOG_TRACE(
@@ -640,8 +562,6 @@ NTSTATUS VC4_DISPLAY::StartDevice (
 
     // All resources have been acquired. Save them in the device context
 
-    dereferenceI2cFileObjects.DoNot();
-
     unmapHvsRegisters.DoNot();
     this->hvsRegistersPtr = _hvsRegistersPtr;
 
@@ -665,13 +585,6 @@ void VC4_DISPLAY::StopDevice ()
 {
     PAGED_CODE();
     ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-
-    // Close I2C handles
-    for (auto& fileObjectPtr : this->i2cFileObjectPtrs) {
-        NT_ASSERT(fileObjectPtr);
-        ObDereferenceObjectWithTag(fileObjectPtr, ROS_ALLOC_TAG::DEVICE);
-        fileObjectPtr = nullptr;
-    }
 
     // Disable interrupts
     WRITE_REGISTER_NOFENCE_ULONG(&this->pvRegistersPtr->IntEn, 0);
@@ -799,110 +712,14 @@ NTSTATUS VC4_DISPLAY::QueryChildStatus (
 
 _Use_decl_annotations_
 NTSTATUS VC4_DISPLAY::QueryDeviceDescriptor (
-    ULONG ChildUid,
-    DXGK_DEVICE_DESCRIPTOR* DeviceDescriptorPtr
+    ULONG /*ChildUid*/,
+    DXGK_DEVICE_DESCRIPTOR* /*DeviceDescriptorPtr*/
     )
 {
     PAGED_CODE();
     ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
-    UNREFERENCED_PARAMETER(ChildUid);
-    UNREFERENCED_PARAMETER(DeviceDescriptorPtr);
     return STATUS_GRAPHICS_CHILD_DESCRIPTOR_NOT_SUPPORTED;
-
-#if 0
-    UNREFERENCED_PARAMETER(ChildUid);
-    NT_ASSERT(ChildUid == 0);
-
-    ROS_LOG_TRACE(
-        "Querying EDID from monitor over DDC I2C channel. (DescriptorOffset=%d, DescriptorLength=%d)",
-        DeviceDescriptorPtr->DescriptorOffset,
-        DeviceDescriptorPtr->DescriptorLength);
-
-    if (!this->hdmiConnected) {
-        ROS_LOG_WARNING("The HDMI connector is disconnected.");
-    }
-
-    NTSTATUS status;
-
-    // Write segment register
-    // XXX only do this if segmentNumber is nonzero
-    {
-        ULONG segmentNumber = DeviceDescriptorPtr->DescriptorOffset / 256;
-        if (segmentNumber > BYTE_MAX) {
-            ROS_LOG_ERROR(
-                "Invalid EDID offset! (DescriptorOffset=%d, segmentNumber=%d)",
-                DeviceDescriptorPtr->DescriptorOffset,
-                segmentNumber);
-            return STATUS_INVALID_PARAMETER;
-        }
-
-        BYTE writeBuf[] = { static_cast<BYTE>(segmentNumber) };
-        ULONG information;
-        status = RosSendWriteSynchronously (
-                this->i2cFileObjectPtrs[I2C_CHANNEL_INDEX_EDDC],
-                writeBuf,
-                sizeof(writeBuf),
-                &information);
-        if (!NT_SUCCESS(status)) {
-            ROS_LOG_ERROR(
-                "Failed to write segment address to I2C channel. (status=%!STATUS!, this->i2cFileObjectPtr2=%p, segmentNumber=%d)",
-                status,
-                this->i2cFileObjectPtrs[I2C_CHANNEL_INDEX_EDDC],
-                segmentNumber);
-        }
-    }
-
-    SPB_TRANSFER_LIST_AND_ENTRIES(2) inputBuffer;
-    SPB_TRANSFER_LIST_INIT(&inputBuffer.List, 2);
-
-    ULONG offsetWithinSegment = DeviceDescriptorPtr->DescriptorOffset % 256;
-    BYTE writeBuf[] = { static_cast<BYTE>(offsetWithinSegment) };
-    inputBuffer.List.Transfers[0] = SPB_TRANSFER_LIST_ENTRY_INIT_SIMPLE(
-        SpbTransferDirectionToDevice,
-        0,
-        writeBuf,
-        sizeof(writeBuf));
-
-#pragma warning(suppress: 26000) // Supress OACR buffer overflow warning
-#pragma warning(suppress: 6201)  // Suppress OACR index out of range warning
-    inputBuffer.List.Transfers[1] = SPB_TRANSFER_LIST_ENTRY_INIT_SIMPLE(
-        SpbTransferDirectionFromDevice,
-        0,
-        DeviceDescriptorPtr->DescriptorBuffer,
-        DeviceDescriptorPtr->DescriptorLength);
-
-    ULONG bytesTransferred;
-    status = RosSendIoctlSynchronously(
-            this->i2cFileObjectPtrs[I2C_CHANNEL_INDEX_DDC],
-            IOCTL_SPB_EXECUTE_SEQUENCE,
-            &inputBuffer,
-            sizeof(inputBuffer),
-            nullptr,
-            0,
-            FALSE,                      // InternalDeviceIoControl
-            &bytesTransferred);
-
-    if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
-            "Failed to query EDID from monitor. (status=%!STATUS!, DescriptorOffset=%d, DescriptorLength=%d)",
-            status,
-            DeviceDescriptorPtr->DescriptorOffset,
-            DeviceDescriptorPtr->DescriptorLength);
-        return RosSanitizeNtstatus(status);
-    }
-
-    if (bytesTransferred != (1 + DeviceDescriptorPtr->DescriptorLength)) {
-        ROS_LOG_ERROR(
-            "An unexpected number of bytes was transferred. (bytesTransferred=%d, expected=%d)",
-            bytesTransferred,
-            1 + DeviceDescriptorPtr->DescriptorLength);
-        return STATUS_UNSUCCESSFUL;
-    }
-
-    NT_ASSERT(status == STATUS_SUCCESS);
-    return status;
-#endif // 0
 }
 
 _Use_decl_annotations_
@@ -915,11 +732,16 @@ NTSTATUS VC4_DISPLAY::SetPowerState (
     PAGED_CODE();
     ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
-    if (DeviceUid == DISPLAY_ADAPTER_HW_ID) {
-        // TODO put the adapter into a low power state
-    } else {
-        NT_ASSERT(DeviceUid == 0);
+    switch (DeviceUid) {
+    case 0:
         // TODO put the attached monitor into the specified power state
+        break;
+    case DISPLAY_ADAPTER_HW_ID:
+        // TODO put the adapter into a low power state
+        break;
+    default:
+        ROS_LOG_ASSERTION("Invalid DeviceUid. (DeviceUid = %d)", DeviceUid);
+        return STATUS_INVALID_PARAMETER;
     }
 
     ROS_LOG_TRACE(
@@ -1238,8 +1060,6 @@ NTSTATUS VC4_DISPLAY::EnumVidPnCofuncModality (
             if (presentPathPtr->ContentTransformation.Scaling == D3DKMDT_VPPS_UNPINNED)
             {
                 // Identity and centered scaling are supported, but not any stretch modes
-                ROS_LOG_TRACE("Setting scaling support to Identity.");
-
                 modifiedPresentPath.ContentTransformation.ScalingSupport =
                     D3DKMDT_VIDPN_PRESENT_PATH_SCALING_SUPPORT();
 
@@ -1258,8 +1078,6 @@ NTSTATUS VC4_DISPLAY::EnumVidPnCofuncModality (
             // If the rotation is unpinned, then modify the rotation support field
             if (presentPathPtr->ContentTransformation.Rotation == D3DKMDT_VPPR_UNPINNED)
             {
-                ROS_LOG_TRACE("Setting rotation support to Identity.");
-
                 modifiedPresentPath.ContentTransformation.RotationSupport =
                     D3DKMDT_VIDPN_PRESENT_PATH_ROTATION_SUPPORT();
 
@@ -1612,15 +1430,15 @@ NTSTATUS VC4_DISPLAY::RecommendMonitorModes (
             monitorModePtr);
     if (!NT_SUCCESS(status)) {
         if (status == STATUS_GRAPHICS_MODE_ALREADY_IN_MODESET) {
-            status = STATUS_SUCCESS;
+            return STATUS_SUCCESS;
         } else {
             ROS_LOG_ERROR(
                 "pfnAddMode failed. (status = %!STATUS!, RecommendMonitorModesPtr->hMonitorSourceModeSet = %p, monitorModePtr = %p)",
                 status,
                 RecommendMonitorModesPtr->hMonitorSourceModeSet,
                 monitorModePtr);
+            return status;
         }
-        return status;
     }
     releaseMonitorMode.DoNot();
 
@@ -1653,18 +1471,14 @@ NTSTATUS VC4_DISPLAY::ControlInterrupt (
                 intStat.AsUlong);
 
             // enable interrupt
-            this->pixelValveIntEn.VfpStart = TRUE;
             WRITE_REGISTER_NOFENCE_ULONG(
                 &this->pvRegistersPtr->IntEn,
-                this->pixelValveIntEn.AsUlong);
+                intStat.AsUlong);
         } else {
             ROS_LOG_TRACE("Disabling CRTC_VSYNC interrupt");
 
             // disable interrupt
-            this->pixelValveIntEn.VfpStart = FALSE;
-            WRITE_REGISTER_NOFENCE_ULONG(
-                &this->pvRegistersPtr->IntEn,
-                this->pixelValveIntEn.AsUlong);
+            WRITE_REGISTER_NOFENCE_ULONG(&this->pvRegistersPtr->IntEn, 0);
 
             // clear interrupt flag
             auto intStat = VC4PIXELVALVE_INTERRUPT();

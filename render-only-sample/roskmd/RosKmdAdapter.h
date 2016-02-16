@@ -422,7 +422,7 @@ protected:
     UINT                        m_tileStatePoolPhysicalAddress;
 
     // Firmware device RPIQ
-    PFILE_OBJECT              m_pRpiqDevice;
+    PFILE_OBJECT                m_pRpiqDevice;
 
 #if GPU_CACHE_WORKAROUND
 

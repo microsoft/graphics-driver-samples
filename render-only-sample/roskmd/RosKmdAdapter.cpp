@@ -1811,8 +1811,6 @@ NTSTATUS RosKmAdapter::SetVidPnSourceAddress (
 ROS_NONPAGED_SEGMENT_END; //==================================================
 ROS_PAGED_SEGMENT_BEGIN; //===================================================
 
-
-
 _Use_decl_annotations_
 NTSTATUS RosKmAdapter::QueryInterface (QUERY_INTERFACE* Args)
 {
@@ -1857,7 +1855,6 @@ NTSTATUS RosKmAdapter::GetStandardAllocationDriverData (
     new (Args->pResourcePrivateDriverData) RosAllocationGroupExchange();
     auto allocParams = new (Args->pAllocationPrivateDriverData) RosAllocationExchange();
 
-    // Not sure what we're supposed to do with this information yet; just trace it
     switch (Args->StandardAllocationType)
     {
     case D3DKMDT_STANDARDALLOCATION_SHAREDPRIMARYSURFACE:

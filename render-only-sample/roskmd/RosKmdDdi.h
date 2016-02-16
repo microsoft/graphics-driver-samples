@@ -121,7 +121,7 @@ public:
             IN_CONST_HANDLE                 hAdapter,
             IN_CONST_DXGK_INTERRUPT_TYPE    InterruptType,
             IN_BOOLEAN                      EnableInterrupt);
-            
+
     static NTSTATUS
         __stdcall
         DdiCollectDbgInfo(
@@ -231,18 +231,16 @@ public:
             IN_PVOID            Argument,
             OUT_PULONG          AcpiFlags);
 
-    
-            
     static void
         DdiResetDevice(
             IN_CONST_PVOID  MiniportDeviceContext);
 
-            
+
 public: // PAGED
 
     static DXGKDDI_OPENALLOCATIONINFO DdiOpenAllocation;
     static DXGKDDI_QUERYDEPENDENTENGINEGROUP DdiQueryDependentEngineGroup;
-    
+
 };
 
 //

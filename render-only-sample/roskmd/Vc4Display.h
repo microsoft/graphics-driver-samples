@@ -22,11 +22,6 @@
 //        when the current frame buffer is no longer needed
 //      - HDMI - receives output from the pixelvalve, participates in mode
 //        setting
-//      - I2C Display Data Channel (DDC) - allows us to read the monitor's
-//        EDID which contains the list of supported modes. The I2C controller
-//        is the same IP as the other BCM2836 I2C controllers, so we leverage
-//        bcmi2c to drive the I2C controller, and we interact with it through
-//        an SPB connection.
 //
 //
 // Author:
@@ -79,15 +74,7 @@ public: // NONPAGED
 
 private: // NONPAGED
 
-    typedef LONG FRAME_BUFFER_ID;
-
     enum : ULONG { CHILD_COUNT = 1 };
-
-    enum I2C_CHANNEL_INDEX {
-        I2C_CHANNEL_INDEX_DDC,      // address 0x50 (for reading EDID blocks)
-        I2C_CHANNEL_INDEX_EDDC,     // address 0x30 (for writing segment number)
-        I2C_CHANNEL_INDEX_COUNT,
-    };
 
     VC4_DISPLAY (const VC4_DISPLAY&) = delete;
     VC4_DISPLAY& operator= (const VC4_DISPLAY&) = delete;
@@ -102,10 +89,8 @@ private: // NONPAGED
     DXGK_DISPLAY_INFORMATION dxgkDisplayInfo;
     D3DKMDT_VIDEO_SIGNAL_INFO dxgkVideoSignalInfo;
     D3DKMDT_VIDPN_SOURCE_MODE dxgkCurrentSourceMode;
-    FILE_OBJECT* i2cFileObjectPtrs[I2C_CHANNEL_INDEX_COUNT];
     VC4HVS_REGISTERS* hvsRegistersPtr;
     VC4PIXELVALVE_REGISTERS* pvRegistersPtr;
-    VC4PIXELVALVE_INTERRUPT pixelValveIntEn;
     SIZE_T frameBufferLength;
     VOID* biosFrameBufferPtr;       // must be freed with MmUnmapIoSpace
     VC4HVS_DLIST_ENTRY_UNITY* displayListPtr;
@@ -216,7 +201,7 @@ public: // PAGED
     NTSTATUS RecommendMonitorModes (
         IN_CONST_PDXGKARG_RECOMMENDMONITORMODES_CONST RecommendMonitorModesPtr
         );
-        
+
     _Check_return_
     _IRQL_requires_(PASSIVE_LEVEL)
     NTSTATUS ControlInterrupt (
@@ -278,7 +263,7 @@ private: // PAGED
     static NTSTATUS IsVidPnPathFieldsValid (
         const D3DKMDT_VIDPN_PRESENT_PATH* PathPtr
         );
-        
+
 };
 
 #endif // _VC4DISPLAY_HPP_
