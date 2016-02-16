@@ -15,10 +15,10 @@
 #include "RosKmdUtil.h"
 #include "RosGpuCommand.h"
 #include "RosKmdAcpi.h"
+#include "RosKmdUtil.h"
 #include "Vc4Hw.h"
 #include "Vc4Ddi.h"
 #include "Vc4Mailbox.h"
-#include "Vc4Common.h"
 
 void * RosKmAdapter::operator new(size_t size)
 {
@@ -93,7 +93,7 @@ RosKmAdapter::AddAdapter(
     {
         pRosKmAdapter = new RosKmdRapAdapter(PhysicalDeviceObject, MiniportDeviceContext);
         if (!pRosKmAdapter) {
-            ROS_LOG_LOW_MEMORY("Failed to allocated RosKmdRapAdapter.");
+            ROS_LOG_LOW_MEMORY("Failed to allocate RosKmdRapAdapter.");
             return STATUS_NO_MEMORY;
         }
     }
@@ -101,7 +101,7 @@ RosKmAdapter::AddAdapter(
     {
         pRosKmAdapter = new RosKmdSoftAdapter(PhysicalDeviceObject, MiniportDeviceContext);
         if (!pRosKmAdapter) {
-            ROS_LOG_LOW_MEMORY("Failed to allocated RosKmdSoftAdapter.");
+            ROS_LOG_LOW_MEMORY("Failed to allocate RosKmdSoftAdapter.");
             return STATUS_NO_MEMORY;
         }
     }
@@ -410,7 +410,7 @@ RosKmAdapter::Start(
     if (status != STATUS_SUCCESS)
     {
         ROS_LOG_ERROR(
-            "PsCreateSystemThread(...) failed for RosKmAdapter::WorkerThread. (status=%!STATUS!",
+            "PsCreateSystemThread(...) failed for RosKmAdapter::WorkerThread. (status=%!STATUS!)",
             status);
         return status;
     }
@@ -876,7 +876,7 @@ RosKmAdapter::CreateAllocation(
     }
 
     ROS_LOG_TRACE(
-        "Created allocation. (Flags.CpuVisible=%d, Flags.Cacheable=%d, Size=%d",
+        "Created allocation. (Flags.CpuVisible=%d, Flags.Cacheable=%d, Size=%d)",
         pAllocationInfo->Flags.CpuVisible,
         pAllocationInfo->Flags.Cached,
         pAllocationInfo->Size);
@@ -1022,7 +1022,6 @@ RosKmAdapter::QueryAdapterInfo(
         //
         pDriverCaps->FlipCaps.FlipOnVSyncMmIo = TRUE;
 
-        // TODO[jordanrh] Do these need to be inside an IsRenderOnly check?
         if (!RosKmdGlobal::IsRenderOnly())
         {
             //
@@ -1223,9 +1222,7 @@ RosKmAdapter::QueryAdapterInfo(
             //
             // Our fake apperture is not really visible and doesn't need to be.  We
             // still need to lie that it is visible reporting a bad physical address
-            // that will never be used.
-            //
-            // TODO[bhouse] Investigate why we have to lie.
+            // that will never be used. This is a legacy requirement of the DX stack.
             //
 
             pSegmentDesc[0].CpuTranslatedAddress.QuadPart = 0xFFFFFFFE00000000;
@@ -1245,7 +1242,7 @@ RosKmAdapter::QueryAdapterInfo(
             pSegmentDesc[1].Flags.CacheCoherent = true;
             pSegmentDesc[1].Flags.DirectFlip = true;
             pSegmentDesc[1].CpuTranslatedAddress = RosKmdGlobal::s_videoMemoryPhysicalAddress; // cpu base physical address
-            pSegmentDesc[1].Size = m_localVidMemSegmentSize; // RosKmdGlobal::s_videoMemorySize;
+            pSegmentDesc[1].Size = m_localVidMemSegmentSize;
 
         }
     }
@@ -1256,16 +1253,16 @@ RosKmAdapter::QueryAdapterInfo(
         if (pQueryAdapterInfo->OutputDataSize != sizeof(UINT))
         {
             ROS_LOG_ASSERTION(
-                "Output buffer is too small. (pQueryAdapterInfo->OutputDataSize=%d, sizeof(UINT)=%d)",
+                "Output buffer is unexpected size. (pQueryAdapterInfo->OutputDataSize=%d, sizeof(UINT)=%d)",
                 pQueryAdapterInfo->OutputDataSize,
                 sizeof(UINT));
-            return STATUS_BUFFER_TOO_SMALL;
+            return STATUS_INVALID_PARAMETER;
         }
 
         //
         // Support only one 3D engine(s).
         //
-        *(reinterpret_cast<UINT*>(pQueryAdapterInfo->pOutputData)) = GetNumPowerComponents();
+        *(static_cast<UINT*>(pQueryAdapterInfo->pOutputData)) = GetNumPowerComponents();
     }
     break;
 
@@ -1406,10 +1403,10 @@ RosKmAdapter::QueryCurrentFence(
     INOUT_PDXGKARG_QUERYCURRENTFENCE pCurrentFence)
 {
     ROS_LOG_WARNING("Not implemented");
-    
+
     NT_ASSERT(pCurrentFence->NodeOrdinal == 0);
     NT_ASSERT(pCurrentFence->EngineOrdinal == 0);
-    
+
     pCurrentFence->CurrentFence = 0;
     return STATUS_SUCCESS;
 }
@@ -1478,7 +1475,7 @@ RosKmAdapter::Escape(
             "PrivateDriverDataSize is too small. (pEscape->PrivateDriverDataSize=%d, sizeof(UINT)=%d)",
             pEscape->PrivateDriverDataSize,
             sizeof(UINT));
-        return STATUS_INVALID_PARAMETER;
+        return STATUS_BUFFER_TOO_SMALL;
     }
 
     UINT    EscapeId = *((UINT *)pEscape->pPrivateDriverData);
@@ -1800,7 +1797,7 @@ RosKmAdapter::HwDmaBufCompletionDpcRoutine(
     KeSetEvent(&pRosKmAdapter->m_hwDmaBufCompletionEvent, 0, FALSE);
 }
 
-VC4_NONPAGED_SEGMENT_BEGIN; //================================================
+ROS_NONPAGED_SEGMENT_BEGIN; //================================================
 
 _Use_decl_annotations_
 NTSTATUS RosKmAdapter::SetVidPnSourceAddress (
@@ -1811,8 +1808,8 @@ NTSTATUS RosKmAdapter::SetVidPnSourceAddress (
     return m_display.SetVidPnSourceAddress(SetVidPnSourceAddressPtr);
 }
 
-VC4_NONPAGED_SEGMENT_END; //==================================================
-VC4_PAGED_SEGMENT_BEGIN; //===================================================
+ROS_NONPAGED_SEGMENT_END; //==================================================
+ROS_PAGED_SEGMENT_BEGIN; //===================================================
 
 
 
@@ -1831,7 +1828,7 @@ NTSTATUS RosKmAdapter::GetStandardAllocationDriverData (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     //
     // ResourcePrivateDriverDataSize gets passed to CreateAllocation as
@@ -1996,7 +1993,7 @@ _Use_decl_annotations_
 NTSTATUS RosKmAdapter::SetPalette (const DXGKARG_SETPALETTE* /*SetPalettePtr*/)
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     ROS_LOG_ASSERTION("Not implemented.");
     return STATUS_NOT_IMPLEMENTED;
@@ -2008,7 +2005,7 @@ NTSTATUS RosKmAdapter::SetPointerPosition (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
     return m_display.SetPointerPosition(SetPointerPositionPtr);
@@ -2020,7 +2017,7 @@ NTSTATUS RosKmAdapter::SetPointerShape (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
     return m_display.SetPointerShape(SetPointerShapePtr);
@@ -2032,7 +2029,7 @@ NTSTATUS RosKmAdapter::IsSupportedVidPn (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
     return m_display.IsSupportedVidPn(IsSupportedVidPnPtr);
@@ -2044,7 +2041,7 @@ NTSTATUS RosKmAdapter::RecommendFunctionalVidPn (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
     return m_display.RecommendFunctionalVidPn(RecommendFunctionalVidPnPtr);
@@ -2056,7 +2053,7 @@ NTSTATUS RosKmAdapter::EnumVidPnCofuncModality (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
     return m_display.EnumVidPnCofuncModality(EnumCofuncModalityPtr);
@@ -2068,7 +2065,7 @@ NTSTATUS RosKmAdapter::SetVidPnSourceVisibility (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
     return m_display.SetVidPnSourceVisibility(SetVidPnSourceVisibilityPtr);
@@ -2080,7 +2077,7 @@ NTSTATUS RosKmAdapter::CommitVidPn (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
     return m_display.CommitVidPn(CommitVidPnPtr);
@@ -2092,7 +2089,7 @@ NTSTATUS RosKmAdapter::UpdateActiveVidPnPresentPath (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
     return m_display.UpdateActiveVidPnPresentPath(UpdateActiveVidPnPresentPathPtr);
@@ -2104,7 +2101,7 @@ NTSTATUS RosKmAdapter::RecommendMonitorModes (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
     return m_display.RecommendMonitorModes(RecommendMonitorModesPtr);
@@ -2114,7 +2111,7 @@ _Use_decl_annotations_
 NTSTATUS RosKmAdapter::GetScanLine (DXGKARG_GETSCANLINE* /*GetScanLinePtr*/)
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     ROS_LOG_ASSERTION("Not implemented");
     return STATUS_NOT_IMPLEMENTED;
@@ -2127,7 +2124,7 @@ NTSTATUS RosKmAdapter::ControlInterrupt (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
     return m_display.ControlInterrupt(InterruptType, EnableInterrupt);
@@ -2139,7 +2136,7 @@ NTSTATUS RosKmAdapter::QueryVidPnHWCapability (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
     return m_display.QueryVidPnHWCapability(VidPnHWCapsPtr);
@@ -2151,7 +2148,7 @@ NTSTATUS RosKmAdapter::QueryDependentEngineGroup (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     NT_ASSERT(ArgsPtr->NodeOrdinal == 0);
     NT_ASSERT(ArgsPtr->EngineOrdinal == 0);
@@ -2167,7 +2164,7 @@ NTSTATUS RosKmAdapter::StopDeviceAndReleasePostDisplayOwnership (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
     return m_display.StopDeviceAndReleasePostDisplayOwnership(
@@ -2176,4 +2173,4 @@ NTSTATUS RosKmAdapter::StopDeviceAndReleasePostDisplayOwnership (
 }
 
 
-VC4_PAGED_SEGMENT_END; //=====================================================
+ROS_PAGED_SEGMENT_END; //=====================================================

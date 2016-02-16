@@ -6,13 +6,13 @@
 #include "RosKmdAdapter.h"
 #include "RosKmdDevice.h"
 #include "RosKmdAllocation.h"
-#include "Vc4Common.h"
+#include "RosKmdUtil.h"
 
 NTSTATUS __stdcall RosKmDevice::DdiCreateDevice(
     IN_CONST_HANDLE hAdapter,
     INOUT_PDXGKARG_CREATEDEVICE pCreateDevice)
 {
-    pCreateDevice->hDevice = new (NonPagedPoolNx, VC4_ALLOC_TAG::DEVICE)
+    pCreateDevice->hDevice = new (NonPagedPoolNx, ROS_ALLOC_TAG::DEVICE)
         RosKmDevice(hAdapter, pCreateDevice);
     if (!pCreateDevice->hDevice)
     {
@@ -66,13 +66,13 @@ RosKmDevice::DdiCloseAllocation(
     return STATUS_SUCCESS;
 }
 
-VC4_PAGED_SEGMENT_BEGIN; //===================================================
+ROS_PAGED_SEGMENT_BEGIN; //===================================================
 
 _Use_decl_annotations_
 NTSTATUS RosKmDevice::OpenAllocation (const DXGKARG_OPENALLOCATION* ArgsPtr)
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     const DXGKRNL_INTERFACE& dxgkInterface = *m_pRosKmAdapter->GetDxgkInterface();
 
@@ -93,7 +93,7 @@ NTSTATUS RosKmDevice::OpenAllocation (const DXGKARG_OPENALLOCATION* ArgsPtr)
         RosKmdDeviceAllocation* rosKmdDeviceAllocationPtr;
         {
             // TODO[jordanrh] this structure can probably be paged
-            rosKmdDeviceAllocationPtr = new (NonPagedPoolNx, VC4_ALLOC_TAG::DEVICE)
+            rosKmdDeviceAllocationPtr = new (NonPagedPoolNx, ROS_ALLOC_TAG::DEVICE)
                     RosKmdDeviceAllocation();
             if (!rosKmdDeviceAllocationPtr)
             {
@@ -125,4 +125,4 @@ NTSTATUS RosKmDevice::OpenAllocation (const DXGKARG_OPENALLOCATION* ArgsPtr)
     return STATUS_SUCCESS;
 }
 
-VC4_PAGED_SEGMENT_END; //=====================================================
+ROS_PAGED_SEGMENT_END; //=====================================================

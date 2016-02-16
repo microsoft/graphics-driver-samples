@@ -3,11 +3,11 @@
 #include "RosKmdLogging.h"
 #include "RosKmdRapAdapter.tmh"
 
-#include "Vc4Common.h"              // VC4_FINALLY
 #include "RosKmdRapAdapter.h"
 #include "RosGpuCommand.h"
-
+#include "RosKmdUtil.h"
 #include "Vc4Mailbox.h"
+
 
 #if USE_SIMPENROSE
 
@@ -59,7 +59,7 @@ RosKmdRapAdapter::Start(
             status);
         return status;
     }
-    auto stopKmAdapter = VC4_FINALLY::DoUnless([&]
+    auto stopKmAdapter = ROS_FINALLY::DoUnless([&]
     {
         PAGED_CODE();
         NTSTATUS tempStatus = RosKmAdapter::Stop();
@@ -79,7 +79,7 @@ RosKmdRapAdapter::Start(
 
 #if VC4
 
-    auto unmapVc4Registers = VC4_FINALLY::DoUnless([&] {
+    auto unmapVc4Registers = ROS_FINALLY::DoUnless([&] {
         PAGED_CODE();
         NTSTATUS tempStatus = m_DxgkInterface.DxgkCbUnmapMemory(
                 m_DxgkInterface.DeviceHandle,
@@ -88,13 +88,13 @@ RosKmdRapAdapter::Start(
         NT_ASSERT(NT_SUCCESS(tempStatus));
     }, true);   // DoNot by default
 
-    auto closeRpiq = VC4_FINALLY::DoUnless([&]
+    auto closeRpiq = ROS_FINALLY::DoUnless([&]
     {
         PAGED_CODE();
-        ObDereferenceObjectWithTag(m_pRpiqDevice, VC4_ALLOC_TAG::DEVICE);
+        ObDereferenceObjectWithTag(m_pRpiqDevice, ROS_ALLOC_TAG::DEVICE);
     }, true);   // DoNot by default
 
-    auto powerDownVc4 = VC4_FINALLY::DoUnless([&]
+    auto powerDownVc4 = ROS_FINALLY::DoUnless([&]
     {
         PAGED_CODE();
         NTSTATUS tempStatus = SetVC4Power(false);
@@ -127,12 +127,12 @@ RosKmdRapAdapter::Start(
         // TODO[jordanrh]: get device path from rpiq.h
         DECLARE_CONST_UNICODE_STRING(rpiqDeviceName, L"\\DosDevices\\RPIQ");
 
-        status = Vc4OpenDevice(
+        status = RosOpenDevice(
                 const_cast<UNICODE_STRING*>(&rpiqDeviceName),
                 FILE_ALL_ACCESS,
                 FILE_SHARE_READ | FILE_SHARE_WRITE,
                 &m_pRpiqDevice,
-                VC4_ALLOC_TAG::DEVICE);
+                ROS_ALLOC_TAG::DEVICE);
         if (!NT_SUCCESS(status))
         {
             ROS_LOG_ERROR(
@@ -211,7 +211,7 @@ RosKmdRapAdapter::Start(
 
 #endif // VC4
 
-    auto disableInterrupt = VC4_FINALLY::DoUnless([&] {
+    auto disableInterrupt = ROS_FINALLY::DoUnless([&] {
         PAGED_CODE();
         m_bReadyToHandleInterrupt = FALSE;
         WRITE_REGISTER_ULONG(reinterpret_cast<volatile ULONG*>(
@@ -239,7 +239,7 @@ RosKmdRapAdapter::Start(
     }
 
     // Initialize display subsystem
-    auto stopDisplay = VC4_FINALLY::DoUnless([&]
+    auto stopDisplay = ROS_FINALLY::DoUnless([&]
     {
         PAGED_CODE();
         m_display.StopDevice();
@@ -312,7 +312,7 @@ NTSTATUS RosKmdRapAdapter::Stop ()
 
         // close RPIQ file handle
         NT_ASSERT(m_pRpiqDevice);
-        ObDereferenceObjectWithTag(m_pRpiqDevice, VC4_ALLOC_TAG::DEVICE);
+        ObDereferenceObjectWithTag(m_pRpiqDevice, ROS_ALLOC_TAG::DEVICE);
         m_pRpiqDevice = nullptr;
 
         // unmap memory
@@ -795,7 +795,7 @@ RosKmdRapAdapter::SetVC4Power(
     INIT_MAILBOX_SET_POWER_VC4(&setPowerVC4, bOn);
 
     ULONG information;
-    NTSTATUS status = Vc4SendIoctlSynchronously(
+    NTSTATUS status = RosSendIoctlSynchronously(
             m_pRpiqDevice,
             IOCTL_MAILBOX_PROPERTY,
             &setPowerVC4,
@@ -825,7 +825,7 @@ RosKmdRapAdapter::SetVC4Power(
     }
 }
 
-VC4_NONPAGED_SEGMENT_BEGIN; //================================================
+ROS_NONPAGED_SEGMENT_BEGIN; //================================================
 
 _Use_decl_annotations_
 BOOLEAN RosKmdRapAdapter::InterruptRoutine(ULONG MessageNumber)
@@ -869,5 +869,5 @@ BOOLEAN RosKmdRapAdapter::RendererInterruptRoutine (ULONG /*MessageNumber*/)
     return FALSE;
 }
 
-VC4_NONPAGED_SEGMENT_END; //==================================================
+ROS_NONPAGED_SEGMENT_END; //==================================================
 

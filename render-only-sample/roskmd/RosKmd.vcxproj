@@ -49,7 +49,6 @@
     <ClCompile Include="RosKmdUtil.cpp" />
     <ClCompile Include="RosKmdPower.cpp" />
     <ClCompile Include="RosKmdLogging.cpp" />
-    <ClCompile Include="Vc4Common.cpp" />
     <ClCompile Include="Vc4Debug.cpp" />
     <ClCompile Include="Vc4Display.cpp" />
   </ItemGroup>
@@ -72,7 +71,6 @@
     <ClInclude Include="RosKmdSoftAdapter.h" />
     <ClInclude Include="RosKmdUtil.h" />
     <ClInclude Include="RosKmdLogging.h" />
-    <ClInclude Include="Vc4Common.h" />
     <ClInclude Include="Vc4Debug.h" />
     <ClInclude Include="Vc4Display.h" />
     <ClInclude Include="Vc4Hvs.h" />

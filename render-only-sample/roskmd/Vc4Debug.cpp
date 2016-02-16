@@ -7,12 +7,12 @@
 #include "RosKmdLogging.h"
 #include "Vc4Debug.tmh"
 
-#include "Vc4Common.h"
+#include "RosKmdUtil.h"
 #include "Vc4Hvs.h"
 #include "Vc4PixelValve.h"
 #include "Vc4Debug.h"
 
-VC4_NONPAGED_SEGMENT_BEGIN; //================================================
+ROS_NONPAGED_SEGMENT_BEGIN; //================================================
 
 namespace { // static
 
@@ -23,8 +23,8 @@ ULONG UlongFromRational (const D3DDDI_RATIONAL& Rational)
 
 } // namespace "static"
 
-VC4_NONPAGED_SEGMENT_END; //==================================================
-VC4_PAGED_SEGMENT_BEGIN; //===================================================
+ROS_NONPAGED_SEGMENT_END; //==================================================
+ROS_PAGED_SEGMENT_BEGIN; //===================================================
 
 _Use_decl_annotations_
 void VC4_DEBUG::DumpMonitorModes (
@@ -103,7 +103,7 @@ void VC4_DEBUG::DumpSourceModeSet (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     // Get source mode set handle
     D3DKMDT_HVIDPNSOURCEMODESET sourceModeSetHandle;
@@ -119,7 +119,7 @@ void VC4_DEBUG::DumpSourceModeSet (
             status);
         return;
     }
-    auto releaseSms = VC4_FINALLY::Do([&] () {
+    auto releaseSms = ROS_FINALLY::Do([&] () {
         PAGED_CODE();
         NTSTATUS releaseStatus =
             VidPnInterfacePtr->pfnReleaseSourceModeSet(
@@ -147,7 +147,7 @@ void VC4_DEBUG::DumpSourceModeSet (
         Id);
     while (status == STATUS_SUCCESS) {
         NT_ASSERT(modeInfo);
-        auto releaseModeInfo = VC4_FINALLY::Do([&, modeInfo] () {
+        auto releaseModeInfo = ROS_FINALLY::Do([&, modeInfo] () {
             PAGED_CODE();
             NTSTATUS releaseStatus =
                 smsInterfacePtr->pfnReleaseModeInfo(
@@ -215,7 +215,7 @@ void VC4_DEBUG::DumpTargetModeSet (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     // Get source mode set handle
     D3DKMDT_HVIDPNTARGETMODESET targetModeSetHandle;
@@ -231,7 +231,7 @@ void VC4_DEBUG::DumpTargetModeSet (
             status);
         return;
     }
-    auto releaseTms = VC4_FINALLY::Do([&] () {
+    auto releaseTms = ROS_FINALLY::Do([&] () {
         PAGED_CODE();
         NTSTATUS releaseStatus =
             VidPnInterfacePtr->pfnReleaseTargetModeSet(
@@ -259,7 +259,7 @@ void VC4_DEBUG::DumpTargetModeSet (
         Id);
     while (status == STATUS_SUCCESS) {
         NT_ASSERT(modeInfo);
-        auto releaseModeInfo = VC4_FINALLY::Do([&, modeInfo] () {
+        auto releaseModeInfo = ROS_FINALLY::Do([&, modeInfo] () {
             PAGED_CODE();
             NTSTATUS releaseStatus =
                 tmsInterfacePtr->pfnReleaseModeInfo(
@@ -314,7 +314,7 @@ _Use_decl_annotations_
 void VC4_DEBUG::DumpVidPn (D3DKMDT_HVIDPN VidPnHandle)
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     //
     // a VidPnHandle has exactly one topology
@@ -374,7 +374,7 @@ void VC4_DEBUG::DumpVidPn (D3DKMDT_HVIDPN VidPnHandle)
     ULONG pathIndex = 0;
     while (status == STATUS_SUCCESS) {
         NT_ASSERT(presentPathPtr);
-        auto releasePathInfo = VC4_FINALLY::Do([&, presentPathPtr] () {
+        auto releasePathInfo = ROS_FINALLY::Do([&, presentPathPtr] () {
             PAGED_CODE();
             NTSTATUS releaseStatus = topologyInterfacePtr->pfnReleasePathInfo(
                     vidPnTopologyHandle,
@@ -453,7 +453,7 @@ _Use_decl_annotations_
 void VC4_DEBUG::DumpHvsRegisters (VC4HVS_REGISTERS* RegistersPtr)
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     // Read the registers into a local copy and use the debugger
     // to interpret the bitfields
@@ -518,11 +518,11 @@ void VC4_DEBUG::DumpHvsRegisters (VC4HVS_REGISTERS* RegistersPtr)
     registers.GAMADDR.AsUlong = READ_REGISTER_NOFENCE_ULONG(&RegistersPtr->GAMADDR);
 
     // Read context memory into local variable
-    ULONG* contextMem = new (PagedPool, VC4_ALLOC_TAG::TEMP) ULONG[0x1000];
+    ULONG* contextMem = new (PagedPool, ROS_ALLOC_TAG::TEMP) ULONG[0x1000];
     for (ULONG i = 0; i < ARRAYSIZE(RegistersPtr->DLISTMEM); ++i) {
         contextMem[i] = READ_REGISTER_NOFENCE_ULONG(&RegistersPtr->DLISTMEM[i]);
     }
-    auto freeContextMem = VC4_FINALLY::Do([&] {
+    auto freeContextMem = ROS_FINALLY::Do([&] {
         PAGED_CODE();
         delete[] contextMem;
     });
@@ -536,7 +536,7 @@ _Use_decl_annotations_
 void VC4_DEBUG::DumpPixelValveRegisters (VC4PIXELVALVE_REGISTERS* RegistersPtr)
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     // Read the registers into a local copy and use the debugger
     // to interpret the bitfields
@@ -571,4 +571,4 @@ void VC4_DEBUG::DumpPixelValveRegisters (VC4PIXELVALVE_REGISTERS* RegistersPtr)
     registers.HactAct = READ_REGISTER_NOFENCE_ULONG(&RegistersPtr->HactAct);
 }
 
-VC4_PAGED_SEGMENT_END; //=====================================================
+ROS_PAGED_SEGMENT_END; //=====================================================

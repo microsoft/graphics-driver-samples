@@ -131,11 +131,11 @@ void DX::DeviceResources::CreateDeviceResources()
 	UINT creationFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
     
 #if defined(_DEBUG)
-	// if (DX::SdkLayersAvailable())
-	// {
-		// // If the project is in a debug build, enable debugging via SDK Layers with this flag.
-		// creationFlags |= D3D11_CREATE_DEVICE_DEBUG;
-	// }
+	if (DX::SdkLayersAvailable())
+	{
+		// If the project is in a debug build, enable debugging via SDK Layers with this flag.
+		creationFlags |= D3D11_CREATE_DEVICE_DEBUG;
+	}
 #endif
 
 	// This array defines the set of DirectX hardware feature levels this app will support.

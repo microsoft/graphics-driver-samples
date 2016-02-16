@@ -3,12 +3,12 @@
 #include "RosKmdLogging.h"
 #include "RosKmdGlobal.tmh"
 
-#include "Vc4Common.h"
 #include "RosKmdGlobal.h"
 #include "RosKmdDevice.h"
 #include "RosKmdAdapter.h"
 #include "RosKmdContext.h"
 #include "RosKmdDdi.h"
+#include "RosKmdUtil.h"
 
 #include <ntverp.h>
 
@@ -162,7 +162,7 @@ NTSTATUS RosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
                 pDriverObject);
             return Status;
         }
-        auto closeRegKey = VC4_FINALLY::Do([&]
+        auto closeRegKey = ROS_FINALLY::Do([&]
         {
             PAGED_CODE();
             NTSTATUS tempStatus = ZwClose(keyHandle);

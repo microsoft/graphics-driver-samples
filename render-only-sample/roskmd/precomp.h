@@ -15,4 +15,5 @@
 
 extern "C" {
 #include <dispmprt.h>
+#include <dxgiformat.h>
 }; // extern "C"
