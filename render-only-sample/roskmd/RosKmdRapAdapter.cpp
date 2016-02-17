@@ -792,7 +792,7 @@ RosKmdRapAdapter::SetVC4Power(
     MAILBOX_SET_POWER_VC4 setPowerVC4;
     INIT_MAILBOX_SET_POWER_VC4(&setPowerVC4, bOn);
 
-    ULONG information;
+    ULONG_PTR information;
     NTSTATUS status = RosSendIoctlSynchronously(
             m_pRpiqDevice,
             IOCTL_MAILBOX_PROPERTY,
@@ -805,7 +805,7 @@ RosKmdRapAdapter::SetVC4Power(
     if (!NT_SUCCESS(status) || (information != sizeof(setPowerVC4)))
     {
         ROS_LOG_ERROR(
-            "Failed to send IOCTL_MAILBOX_PROPERTY to rpiq. (status=%!STATUS!, information=%d, sizeof(setPowerVC4)=%d, m_pRpiqDevice=0x%p)",
+            "Failed to send IOCTL_MAILBOX_PROPERTY to rpiq. (status=%!STATUS!, information=%Id, sizeof(setPowerVC4)=%d, m_pRpiqDevice=0x%p)",
             status,
             information,
             sizeof(setPowerVC4),

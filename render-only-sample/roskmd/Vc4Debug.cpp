@@ -46,7 +46,7 @@ void VC4_DEBUG::DumpMonitorModes (
             sourceModePtr->Preference);
 
         ROS_LOG_TRACE(
-            "VideoSignalInfo: VideoStandard = %d, TotalSize = (%d,%d), ActiveSize = (%d,%d), VSyncFreq = %d, HSyncFreq = %d, PixelRate = %d",
+            "VideoSignalInfo: VideoStandard = %d, TotalSize = (%d,%d), ActiveSize = (%d,%d), VSyncFreq = %d, HSyncFreq = %d, PixelRate = %Id",
             sourceModePtr->VideoSignalInfo.VideoStandard,
             sourceModePtr->VideoSignalInfo.TotalSize.cx,
             sourceModePtr->VideoSignalInfo.TotalSize.cy,
@@ -270,7 +270,7 @@ void VC4_DEBUG::DumpTargetModeSet (
             "    VideoSignalInfo.ActiveSize = %d, %d\n"
             "    VideoSignalInfo.VSyncFreq = %d\n"
             "    VideoSignalInfo.HSyncFreq = %d\n"
-            "    VideoSignalInfo.PixelRate = %d\n",
+            "    VideoSignalInfo.PixelRate = %Id\n",
             modeInfo->Id,
             modeInfo->VideoSignalInfo.VideoStandard,
             modeInfo->VideoSignalInfo.TotalSize.cx,

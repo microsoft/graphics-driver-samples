@@ -393,7 +393,7 @@ NTSTATUS RosSendWriteSynchronously (
     FILE_OBJECT* FileObjectPtr,
     void* InputBufferPtr,
     ULONG InputBufferLength,
-    ULONG* InformationPtr
+    ULONG_PTR* InformationPtr
     )
 {
     PAGED_CODE();
@@ -451,7 +451,7 @@ NTSTATUS RosSendIoctlSynchronously (
     void* OutputBufferPtr,
     ULONG OutputBufferLength,
     BOOLEAN InternalDeviceIoControl,
-    ULONG* InformationPtr
+    ULONG_PTR* InformationPtr
     )
 {
     PAGED_CODE();

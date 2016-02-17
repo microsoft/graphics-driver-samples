@@ -199,7 +199,7 @@ NTSTATUS RosSendWriteSynchronously (
     _In_ FILE_OBJECT* FileObjectPtr,
     _In_reads_bytes_opt_(InputBufferLength) void* InputBufferPtr,
     ULONG InputBufferLength,
-    _Out_ ULONG* InformationPtr
+    _Out_ ULONG_PTR* InformationPtr
     );
 
 _IRQL_requires_max_(PASSIVE_LEVEL)
@@ -211,14 +211,48 @@ NTSTATUS RosSendIoctlSynchronously (
     _Out_writes_bytes_opt_(OutputBufferLength) void* OutputBufferPtr,
     ULONG OutputBufferLength,
     BOOLEAN InternalDeviceIoControl,
-    _Out_ ULONG* InformationPtr
+    _Out_ ULONG_PTR* InformationPtr
     );
 
 _IRQL_requires_max_(PASSIVE_LEVEL)
 DXGI_FORMAT DxgiFormatFromD3dDdiFormat (D3DDDIFORMAT Format);
 
-_IRQL_requires_max_(PASSIVE_LEVEL)    
+_IRQL_requires_max_(PASSIVE_LEVEL)
 D3DDDIFORMAT
 TranslateDxgiFormat (DXGI_FORMAT dxgiFormat);
-    
+
+#if (defined(_X86_) || defined(_AMD64_))
+__forceinline
+VOID
+WRITE_REGISTER_NOFENCE_ULONG (
+    _In_ _Notliteral_ volatile ULONG *Register,
+    _In_ ULONG Value
+    )
+{
+    WRITE_REGISTER_ULONG(Register, Value);
+}
+
+__forceinline
+ULONG
+READ_REGISTER_NOFENCE_ULONG (
+    _In_ _Notliteral_ volatile ULONG *Register
+    )
+{
+
+    return READ_REGISTER_ULONG(Register);
+}
+
+__forceinline
+VOID
+READ_REGISTER_NOFENCE_BUFFER_ULONG (
+    _In_reads_(Count) _Notliteral_ volatile ULONG *Register,
+    _Out_writes_all_(Count) PULONG Buffer,
+    _In_ ULONG Count
+    )
+{
+    READ_REGISTER_BUFFER_ULONG(Register, Buffer, Count);
+}
+
+#endif // (defined(_X86_) || defined(_AMD64_))
+
 #endif // _ROSKMDUTIL_H_

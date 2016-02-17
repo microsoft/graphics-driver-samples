@@ -870,7 +870,7 @@ NTSTATUS VC4_DISPLAY::IsSupportedVidPn (
         ROS_TRACE_EVENTS(
             TRACE_LEVEL_ERROR,
             ROS_TRACING_VIDPN,
-            "Returning 'not supported' for a topology that does not contain exactly 1 path. (numPaths = %d, vidPnTopologyHandle = %p)",
+            "Returning 'not supported' for a topology that does not contain exactly 1 path. (numPaths = %Id, vidPnTopologyHandle = %p)",
             numPaths,
             vidPnTopologyHandle);
         NT_ASSERT(!IsSupportedVidPnPtr->IsVidPnSupported);

@@ -597,7 +597,7 @@ RosKmAdapter::BuildPagingBuffer(
         pRosKmdAllocation;
 
         ROS_LOG_TRACE(
-            "Filling DMA buffer. (Destination.SegmentAddress=0x%I64x, FillPattern=0x%lx, FillSize=%d)",
+            "Filling DMA buffer. (Destination.SegmentAddress=0x%I64x, FillPattern=0x%lx, FillSize=%Id)",
             pArgs->Fill.Destination.SegmentAddress.QuadPart,
             pArgs->Fill.FillPattern,
             pArgs->Fill.FillSize);
@@ -876,7 +876,7 @@ RosKmAdapter::CreateAllocation(
     }
 
     ROS_LOG_TRACE(
-        "Created allocation. (Flags.CpuVisible=%d, Flags.Cacheable=%d, Size=%d)",
+        "Created allocation. (Flags.CpuVisible=%d, Flags.Cacheable=%d, Size=%Id)",
         pAllocationInfo->Flags.CpuVisible,
         pAllocationInfo->Flags.Cached,
         pAllocationInfo->Size);
