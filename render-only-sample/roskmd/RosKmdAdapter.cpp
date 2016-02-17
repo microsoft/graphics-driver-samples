@@ -1871,6 +1871,7 @@ NTSTATUS RosKmAdapter::GetStandardAllocationDriverData (
             surfData->RefreshRate.Denominator,
             surfData->VidPnSourceId);
 
+        allocParams->m_resourceDimension = D3D10DDIRESOURCE_TEXTURE2D;
         allocParams->m_mip0Info.TexelWidth = surfData->Width;
         allocParams->m_mip0Info.TexelHeight = surfData->Height;
         allocParams->m_mip0Info.TexelDepth = 0;
@@ -1878,21 +1879,25 @@ NTSTATUS RosKmAdapter::GetStandardAllocationDriverData (
         allocParams->m_mip0Info.PhysicalHeight = surfData->Height;
         allocParams->m_mip0Info.PhysicalDepth = 0;
 
-        // The shared primary allocation is shared by definition
-        allocParams->m_miscFlags = D3D10_DDI_RESOURCE_MISC_SHARED;
+        allocParams->m_usage = D3D10_DDI_USAGE_IMMUTABLE;
 
         // We must ensure that the D3D10_DDI_BIND_PRESENT is set so that
         // CreateAllocation() creates an allocation that is suitable
         // for the primary, which must be flippable.
         // The primary cannot be cached.
-        static_assert(
-            D3D10_DDI_BIND_MASK & D3D10_DDI_BIND_PRESENT,
-            "BIND_PRESENT must be a member of BIND_MASK");
-        allocParams->m_bindFlags = D3D10_DDI_BIND_MASK;
+        allocParams->m_bindFlags = D3D10_DDI_BIND_RENDER_TARGET | D3D10_DDI_BIND_PRESENT;
+
+        allocParams->m_mapFlags = 0;
+
+        // The shared primary allocation is shared by definition
+        allocParams->m_miscFlags = D3D10_DDI_RESOURCE_MISC_SHARED;
 
         allocParams->m_format = DxgiFormatFromD3dDdiFormat(surfData->Format);
         allocParams->m_sampleDesc.Count = 1;
         allocParams->m_sampleDesc.Quality = 0;
+        allocParams->m_mipLevels = 1;
+        allocParams->m_arraySize = 1;
+        allocParams->m_isPrimary = true;
         allocParams->m_primaryDesc.Flags = 0;
         allocParams->m_primaryDesc.VidPnSourceId = surfData->VidPnSourceId;
         allocParams->m_primaryDesc.ModeDesc.Width = surfData->Width;
@@ -1904,13 +1909,15 @@ NTSTATUS RosKmAdapter::GetStandardAllocationDriverData (
         allocParams->m_primaryDesc.ModeDesc.Rotation = DXGI_DDI_MODE_ROTATION_UNSPECIFIED;
         allocParams->m_primaryDesc.ModeDesc.Scaling = DXGI_DDI_MODE_SCALING_UNSPECIFIED;
         allocParams->m_primaryDesc.DriverFlags = 0;
+
         allocParams->m_hwLayout = RosHwLayout::Linear;
         allocParams->m_hwWidthPixels = surfData->Width;
         allocParams->m_hwHeightPixels = surfData->Height;
 
         NT_ASSERT(surfData->Format == D3DDDIFMT_A8R8G8B8);
         allocParams->m_hwFormat = RosHwFormat::X8888;
-        allocParams->m_hwSizeBytes = surfData->Width * surfData->Height * 4;
+        allocParams->m_hwPitchBytes = surfData->Width * 4;
+        allocParams->m_hwSizeBytes = allocParams->m_hwPitchBytes * surfData->Height;
 
         return STATUS_SUCCESS;
     }
@@ -1923,12 +1930,14 @@ NTSTATUS RosKmAdapter::GetStandardAllocationDriverData (
             surfData->Height,
             surfData->Format);
 
+        allocParams->m_resourceDimension = D3D10DDIRESOURCE_TEXTURE2D;
         allocParams->m_mip0Info.TexelWidth = surfData->Width;
         allocParams->m_mip0Info.TexelHeight = surfData->Height;
         allocParams->m_mip0Info.TexelDepth = 0;
         allocParams->m_mip0Info.PhysicalWidth = surfData->Width;
         allocParams->m_mip0Info.PhysicalHeight = surfData->Height;
         allocParams->m_mip0Info.PhysicalDepth = 0;
+        allocParams->m_usage = D3D10_DDI_USAGE_DEFAULT;
 
         // The shadow allocation does not get flipped directly
         static_assert(
@@ -1936,9 +1945,15 @@ NTSTATUS RosKmAdapter::GetStandardAllocationDriverData (
             "BIND_PRESENT must not be part of BIND_MASK");
         allocParams->m_bindFlags = D3D10_DDI_BIND_PIPELINE_MASK;
 
+        allocParams->m_mapFlags = D3D10_DDI_MAP_READWRITE;
+        allocParams->m_miscFlags = D3D10_DDI_RESOURCE_MISC_SHARED;
+
         allocParams->m_format = DxgiFormatFromD3dDdiFormat(surfData->Format);
         allocParams->m_sampleDesc.Count = 1;
         allocParams->m_sampleDesc.Quality = 0;
+        allocParams->m_mipLevels = 1;
+        allocParams->m_arraySize = 1;
+        allocParams->m_isPrimary = true;
         allocParams->m_primaryDesc.Flags = 0;
         allocParams->m_primaryDesc.ModeDesc.Width = surfData->Width;
         allocParams->m_primaryDesc.ModeDesc.Height = surfData->Height;
@@ -1950,9 +1965,10 @@ NTSTATUS RosKmAdapter::GetStandardAllocationDriverData (
 
         NT_ASSERT(surfData->Format == D3DDDIFMT_A8R8G8B8);
         allocParams->m_hwFormat = RosHwFormat::X8888;
-        allocParams->m_hwSizeBytes = surfData->Width * surfData->Height * 4;
+        allocParams->m_hwPitchBytes = surfData->Width * 4;
+        allocParams->m_hwSizeBytes = allocParams->m_hwPitchBytes * surfData->Height;
 
-        Args->pCreateShadowSurfaceData->Pitch = surfData->Width * 4;
+        Args->pCreateShadowSurfaceData->Pitch = allocParams->m_hwPitchBytes;
         return STATUS_SUCCESS;
     }
     case D3DKMDT_STANDARDALLOCATION_STAGINGSURFACE:
