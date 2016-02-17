@@ -677,18 +677,32 @@ HRESULT RosUmdDevice::RotateResourceIdentities(
     assert(RosUmdDevice::CastFrom(Args->hDevice) == this);
 
     assert(Args->Resources != 0);
-    RosUmdResource firstResourceCopy = *RosUmdResource::CastFrom(Args->pResources[0]);
+    
+    // Save the handles from the first resource
+    const RosUmdResource* const firstResource = RosUmdResource::CastFrom(
+            Args->pResources[0]);
+    RosUmdResource* const lastResource = RosUmdResource::CastFrom(
+            Args->pResources[Args->Resources - 1]);
+    assert(lastResource->CanRotateFrom(firstResource));
+            
+    D3DKMT_HANDLE firstResourceKMResource = firstResource->m_hKMResource;
+    D3DKMT_HANDLE firstResourceKMAllocation = firstResource->m_hKMAllocation;
+    
     for (UINT i = 0; i < (Args->Resources - 1); ++i)
     {
         RosUmdResource* rotateTo = RosUmdResource::CastFrom(Args->pResources[i]);
-        RosUmdResource* rotateFrom = RosUmdResource::CastFrom(Args->pResources[i + 1]);
+        const RosUmdResource* rotateFrom = RosUmdResource::CastFrom(
+                Args->pResources[i + 1]);
 
-        rotateTo->RotateFrom(rotateFrom);
+        assert(rotateTo->CanRotateFrom(rotateFrom));
+        
+        rotateTo->m_hKMResource = rotateFrom->m_hKMResource;
+        rotateTo->m_hKMAllocation = rotateFrom->m_hKMAllocation;
     }
 
-    RosUmdResource* lastResource = RosUmdResource::CastFrom(
-            Args->pResources[Args->Resources - 1]);
-    lastResource->RotateFrom(&firstResourceCopy);
+    // Replace the last resource's handles with those from the first resource
+    lastResource->m_hKMResource = firstResourceKMResource;
+    lastResource->m_hKMAllocation = firstResourceKMAllocation;
 
     return S_OK;
 }

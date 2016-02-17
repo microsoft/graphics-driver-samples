@@ -449,16 +449,6 @@ bool RosUmdResource::CanRotateFrom(const RosUmdResource* Other) const
            (m_hwHeightTiles == Other->m_hwHeightTiles);
 }
 
-void RosUmdResource::RotateFrom(const RosUmdResource* Other)
-{
-    assert(this->CanRotateFrom(Other));
-
-    // Replace our kernel mode allocation handles with the ones from
-    // the supplied object
-    m_hKMResource = Other->m_hKMResource;
-    m_hKMAllocation = Other->m_hKMAllocation;
-}
-
 // Form 1k sub-tile block
 BYTE *RosUmdResource::Form1kSubTileBlock(BYTE *pInputBuffer, BYTE *pOutBuffer, UINT rowStride)
 {    

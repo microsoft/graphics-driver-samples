@@ -89,9 +89,6 @@ public:
     // Determines whether the supplied resource can be rotated into this one.
     // Resources must have equivalent dimensions and flags to rotate.
     bool CanRotateFrom(const RosUmdResource* Other) const;
-    
-    // Rotates the supplied resource into this resource.
-    void RotateFrom(const RosUmdResource* Other);
 
     bool IsPrimary()
     {
