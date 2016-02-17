@@ -335,9 +335,7 @@ NTSTATUS RosKmdRapAdapter::Stop ()
 void
 RosKmdRapAdapter::ProcessRenderBuffer(
     ROSDMABUFSUBMISSION * pDmaBufSubmission)
-{
-    ROS_LOG_TRACE("Processing render buffer");
-    
+{   
     ROSDMABUFINFO * pDmaBufInfo = pDmaBufSubmission->m_pDmaBufInfo;
 
     if (pDmaBufInfo->m_DmaBufState.m_bSwCommandBuffer)

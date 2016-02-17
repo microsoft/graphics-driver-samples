@@ -110,7 +110,9 @@ NTSTATUS VC4_DISPLAY::SetVidPnSourceAddress (
 
     this->currentVidPnSourceAddress = Args->PrimaryAddress;
 
-    ROS_LOG_TRACE(
+    ROS_TRACE_EVENTS(
+        TRACE_LEVEL_VERBOSE,
+        ROS_TRACING_PRESENT,
         "Successfully programmed VidPn source address. (PrimaryAddress.LowPart=0x%lx, physicAddress=0x%lx)",
         Args->PrimaryAddress.LowPart,
         physicAddress);
@@ -808,7 +810,10 @@ NTSTATUS VC4_DISPLAY::IsSupportedVidPn (
 
     if (IsSupportedVidPnPtr->hDesiredVidPn == 0) {
         IsSupportedVidPnPtr->IsVidPnSupported = TRUE;
-        ROS_LOG_TRACE("Returning IsVidPnSupported=TRUE for hDesiredVidPn=0.");
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_VERBOSE,
+            ROS_TRACING_VIDPN,
+            "Returning IsVidPnSupported=TRUE for hDesiredVidPn=0.");
         return STATUS_SUCCESS;
     }
 
@@ -819,7 +824,9 @@ NTSTATUS VC4_DISPLAY::IsSupportedVidPn (
             DXGK_VIDPN_INTERFACE_VERSION_V1,
             &vidPnInterfacePtr);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "DxgkCbQueryVidPnInterface() failed. (status = %!STATUS!, IsSupportedVidPnPtr->hDesiredVidPn = %p, this = %p)",
             status,
             IsSupportedVidPnPtr->hDesiredVidPn,
@@ -834,7 +841,9 @@ NTSTATUS VC4_DISPLAY::IsSupportedVidPn (
         &vidPnTopologyHandle,
         &topologyInterfacePtr);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "pfnGetTopology() failed. (status = %!STATUS!, IsSupportedVidPnPtr->hDesiredVidPn = %p, vidPnInterfacePtr = %p)",
             status,
             IsSupportedVidPnPtr->hDesiredVidPn,
@@ -848,7 +857,9 @@ NTSTATUS VC4_DISPLAY::IsSupportedVidPn (
             vidPnTopologyHandle,
             &numPaths);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "Failed to get number of paths in topology. (status = %!STATUS!, vidPnTopologyHandle = %p)",
             status,
             vidPnTopologyHandle);
@@ -856,7 +867,9 @@ NTSTATUS VC4_DISPLAY::IsSupportedVidPn (
     }
 
     if (numPaths != 1) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "Returning 'not supported' for a topology that does not contain exactly 1 path. (numPaths = %d, vidPnTopologyHandle = %p)",
             numPaths,
             vidPnTopologyHandle);
@@ -870,7 +883,9 @@ NTSTATUS VC4_DISPLAY::IsSupportedVidPn (
             vidPnTopologyHandle,
             &presentPathPtr);
     if (status != STATUS_SUCCESS) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "Failed to get first path info from vidpn topology. (status = %!STATUS!, IsSupportedVidPnPtr->hDesiredVidPn = %p, vidPnTopologyHandle = %p)",
             status,
             IsSupportedVidPnPtr->hDesiredVidPn,
@@ -891,7 +906,9 @@ NTSTATUS VC4_DISPLAY::IsSupportedVidPn (
     if (!((presentPathPtr->VidPnSourceId == 0) &&
           (presentPathPtr->VidPnTargetId == 0)))
     {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "Returning 'not supported' for out of range source or target id. (presentPathPtr->VidPnSourceId = %d, presentPathPtr->VidPnTargetId = %d)",
             presentPathPtr->VidPnSourceId,
             presentPathPtr->VidPnTargetId);
@@ -899,7 +916,9 @@ NTSTATUS VC4_DISPLAY::IsSupportedVidPn (
         return STATUS_SUCCESS;
     }
 
-    ROS_LOG_TRACE(
+    ROS_TRACE_EVENTS(
+        TRACE_LEVEL_VERBOSE,
+        ROS_TRACING_VIDPN,
         "Returning 'supported' for vidpn. (IsSupportedVidPnPtr->hDesiredVidPn = %p)",
         IsSupportedVidPnPtr->hDesiredVidPn);
 
@@ -934,7 +953,9 @@ NTSTATUS VC4_DISPLAY::EnumVidPnCofuncModality (
             DXGK_VIDPN_INTERFACE_VERSION_V1,
             &vidPnInterfacePtr);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "DxgkCbQueryVidPnInterface() failed. (status = %!STATUS!, EnumCofuncModalityPtr->hConstrainingVidPn, = %p, this = %p)",
             status,
             EnumCofuncModalityPtr->hConstrainingVidPn,
@@ -950,7 +971,9 @@ NTSTATUS VC4_DISPLAY::EnumVidPnCofuncModality (
         &vidPnTopologyHandle,
         &topologyInterfacePtr);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "pfnGetTopology() failed. (status = %!STATUS!, EnumCofuncModalityPtr->hConstrainingVidPn, = %p, vidPnInterfacePtr = %p)",
             status,
             EnumCofuncModalityPtr->hConstrainingVidPn,
@@ -964,7 +987,9 @@ NTSTATUS VC4_DISPLAY::EnumVidPnCofuncModality (
             vidPnTopologyHandle,
             &presentPathPtr);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "Failed to get first path info from vidpn topology. (status = %!STATUS!, EnumCofuncModalityPtr->hConstrainingVidPn, = %p, vidPnTopologyHandle = %p)",
             status,
             EnumCofuncModalityPtr->hConstrainingVidPn,
@@ -998,7 +1023,9 @@ NTSTATUS VC4_DISPLAY::EnumVidPnCofuncModality (
             {
                 // This source does not have a pinned mode.
                 // Create a new source mode set
-                ROS_LOG_TRACE(
+                ROS_TRACE_EVENTS(
+                    TRACE_LEVEL_VERBOSE,
+                    ROS_TRACING_VIDPN,
                     "This source does not have a pinned mode. Creating a new source mode set. (presentPathPtr->VidPnSourceId = %d)",
                     presentPathPtr->VidPnSourceId);
 
@@ -1033,7 +1060,9 @@ NTSTATUS VC4_DISPLAY::EnumVidPnCofuncModality (
             {
                 // This target does not have a pinned mode.
                 // Create a new target mode set
-                ROS_LOG_TRACE(
+                ROS_TRACE_EVENTS(
+                    TRACE_LEVEL_VERBOSE,
+                    ROS_TRACING_VIDPN,
                     "This target does not have a pinned mode. Creating a new target mode set. (presentPathPtr->VidPnTargetId = %d)",
                     presentPathPtr->VidPnTargetId);
 
@@ -1101,7 +1130,9 @@ NTSTATUS VC4_DISPLAY::EnumVidPnCofuncModality (
                     vidPnTopologyHandle,
                     &modifiedPresentPath);
             if (!NT_SUCCESS(status)) {
-                ROS_LOG_ERROR(
+                ROS_TRACE_EVENTS(
+                    TRACE_LEVEL_ERROR,
+                    ROS_TRACING_VIDPN,
                     "DXGK_VIDPNTOPOLOGY_INTERFACE::pfnUpdatePathSupportInfo() failed. (status = %!STATUS!)",
                     status);
                 return status;
@@ -1115,7 +1146,9 @@ NTSTATUS VC4_DISPLAY::EnumVidPnCofuncModality (
             presentPathPtr,
             &nextPresentPathPtr);
         if (!NT_SUCCESS(status)) {
-            ROS_LOG_ERROR(
+            ROS_TRACE_EVENTS(
+                TRACE_LEVEL_ERROR,
+                ROS_TRACING_VIDPN,
                 "pfnAcquireNextPathInfo() failed. (status = %!STATUS!, EnumCofuncModalityPtr->hConstrainingVidPn, = %p, vidPnTopologyHandle = %p)",
                 status,
                 EnumCofuncModalityPtr->hConstrainingVidPn,
@@ -1137,7 +1170,9 @@ NTSTATUS VC4_DISPLAY::SetVidPnSourceVisibility (
     PAGED_CODE();
     ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
-    ROS_LOG_TRACE(
+    ROS_TRACE_EVENTS(
+        TRACE_LEVEL_VERBOSE,
+        ROS_TRACING_VIDPN,
         "Received request to set visibility. (VidPnSourceId = %d, Visible = %d)",
         SetVidPnSourceVisibilityPtr->VidPnSourceId,
         SetVidPnSourceVisibilityPtr->Visible);
@@ -1153,7 +1188,9 @@ NTSTATUS VC4_DISPLAY::CommitVidPn (
     PAGED_CODE();
     ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
-    ROS_LOG_TRACE(
+    ROS_TRACE_EVENTS(
+        TRACE_LEVEL_VERBOSE,
+        ROS_TRACING_VIDPN,
         "DdiCommitVidPn() was called. (hFunctionalVidPn = %p, AffectedVidPnSourceId = %d, MonitorConnectivityChecks = %d, hPrimaryAllocation = %p, Flags.PathPowerTransition = %d, Flags.PathPoweredOff = %d)",
         CommitVidPnPtr->hFunctionalVidPn,
         CommitVidPnPtr->AffectedVidPnSourceId,
@@ -1173,7 +1210,9 @@ NTSTATUS VC4_DISPLAY::CommitVidPn (
             DXGK_VIDPN_INTERFACE_VERSION_V1,
             &vidPnInterfacePtr);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "DxgkCbQueryVidPnInterface() failed. (status = %!STATUS!, CommitVidPnPtr->hFunctionalVidPn, = %p, this = %p)",
             status,
             CommitVidPnPtr->hFunctionalVidPn,
@@ -1189,7 +1228,9 @@ NTSTATUS VC4_DISPLAY::CommitVidPn (
         &vidPnTopologyHandle,
         &topologyInterfacePtr);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "pfnGetTopology() failed. (status = %!STATUS!, CommitVidPnPtr->hFunctionalVidPn, = %p, vidPnInterfacePtr = %p)",
             status,
             CommitVidPnPtr->hFunctionalVidPn,
@@ -1204,14 +1245,19 @@ NTSTATUS VC4_DISPLAY::CommitVidPn (
             vidPnTopologyHandle,
             &numPaths);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "DXGK_VIDPNTOPOLOGY_INTERFACE::pfnGetNumPaths() failed. (status = %!STATUS!)",
             status);
         return status;
     }
 
     if (numPaths == 0) {
-        ROS_LOG_INFORMATION(L"There are no paths in this topology.");
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_VERBOSE,
+            ROS_TRACING_VIDPN,
+            L"There are no paths in this topology.");
         return STATUS_SUCCESS;
     }
 
@@ -1224,7 +1270,9 @@ NTSTATUS VC4_DISPLAY::CommitVidPn (
             &sourceModeSetHandle,
             &smsInterfacePtr);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "DXGK_VIDPN_INTERFACE::pfnAcquireSourceModeSet() failed. (status = %!STATUS!)",
             status);
         return status;
@@ -1245,7 +1293,9 @@ NTSTATUS VC4_DISPLAY::CommitVidPn (
             sourceModeSetHandle,
             &pinnedSourceModeInfoPtr);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "DXGK_VIDPNSOURCEMODESET_INTERFACE::pfnAcquirePinnedModeInfo() failed. (status = %!STATUS!, sourceModeSetHandle = %p)",
             status,
             sourceModeSetHandle);
@@ -1280,7 +1330,9 @@ NTSTATUS VC4_DISPLAY::CommitVidPn (
         (pinnedSourceModeInfoPtr->Format.Graphics.PrimSurfSize.cy !=
          this->dxgkVideoSignalInfo.TotalSize.cy))
     {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "VidPn source has different size than monitor. (pinnedSourceModeInfoPtr->Format.Graphics.PrimSurfSize = %d,%d, this->dxgkVideoSignalInfo.TotalSize = %d, %d)",
             pinnedSourceModeInfoPtr->Format.Graphics.PrimSurfSize.cx,
             pinnedSourceModeInfoPtr->Format.Graphics.PrimSurfSize.cy,
@@ -1296,7 +1348,9 @@ NTSTATUS VC4_DISPLAY::CommitVidPn (
             CommitVidPnPtr->AffectedVidPnSourceId,
             &numPathsFromSource);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "DXGK_VIDPNTOPOLOGY_INTERFACE::pfnGetNumPathsFromSource() failed. (status = %!STATUS!)",
             status);
         return status;
@@ -1312,7 +1366,9 @@ NTSTATUS VC4_DISPLAY::CommitVidPn (
                 pathIndex,
                 &targetId);
         if (!NT_SUCCESS(status)) {
-            ROS_LOG_ERROR(
+            ROS_TRACE_EVENTS(
+                TRACE_LEVEL_ERROR,
+                ROS_TRACING_VIDPN,
                 "DXGK_VIDPNTOPOLOGY_INTERFACE::pfnEnumPathTargetsFromSource() failed. (status = %!STATUS!)",
                 status);
             return status;
@@ -1326,7 +1382,9 @@ NTSTATUS VC4_DISPLAY::CommitVidPn (
                 targetId,
                 &presentPathPtr);
         if (!NT_SUCCESS(status)) {
-            ROS_LOG_ERROR(
+            ROS_TRACE_EVENTS(
+                TRACE_LEVEL_ERROR,
+                ROS_TRACING_VIDPN,
                 "DXGK_VIDPNTOPOLOGY_INTERFACE::pfnAcquirePathInfo() failed. (status = %!STATUS!, AffectedVidPnSourceId = %d, targetId = %d)",
                 status,
                 CommitVidPnPtr->AffectedVidPnSourceId,
@@ -1352,7 +1410,9 @@ NTSTATUS VC4_DISPLAY::CommitVidPn (
 
     this->dxgkCurrentSourceMode = *pinnedSourceModeInfoPtr;
 
-    ROS_LOG_TRACE(
+    ROS_TRACE_EVENTS(
+        TRACE_LEVEL_INFORMATION,
+        ROS_TRACING_VIDPN,
         "Successfully committed VidPn. (hFunctionalVidPn = %p, PrimSurfSize = %d, %d, VisibleRegionSize = %d,%d, Stride = %d, PixelFormat = %d, ColorBasis = %d, PixelValueAccessMode = %d)",
         CommitVidPnPtr->hFunctionalVidPn,
         pinnedSourceModeInfoPtr->Format.Graphics.PrimSurfSize.cx,
@@ -1404,7 +1464,9 @@ NTSTATUS VC4_DISPLAY::RecommendMonitorModes (
             RecommendMonitorModesPtr->hMonitorSourceModeSet,
             &monitorModePtr);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "pfnCreateNewModeInfo() failed. (status = %!STATUS!)",
             status);
         return status;
@@ -1437,7 +1499,9 @@ NTSTATUS VC4_DISPLAY::RecommendMonitorModes (
         if (status == STATUS_GRAPHICS_MODE_ALREADY_IN_MODESET) {
             return STATUS_SUCCESS;
         } else {
-            ROS_LOG_ERROR(
+            ROS_TRACE_EVENTS(
+                TRACE_LEVEL_ERROR,
+                ROS_TRACING_VIDPN,
                 "pfnAddMode failed. (status = %!STATUS!, RecommendMonitorModesPtr->hMonitorSourceModeSet = %p, monitorModePtr = %p)",
                 status,
                 RecommendMonitorModesPtr->hMonitorSourceModeSet,
@@ -1519,7 +1583,9 @@ NTSTATUS VC4_DISPLAY::QueryVidPnHWCapability (
     PAGED_CODE();
     ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
-    ROS_LOG_TRACE(
+    ROS_TRACE_EVENTS(
+        TRACE_LEVEL_VERBOSE,
+        ROS_TRACING_VIDPN,
         "DdiQueryVidPnHWCapability() was called. (hFunctionalVidPn = %p, SourceId = %d, TargetId = %d)",
         VidPnHWCapsPtr->hFunctionalVidPn,
         VidPnHWCapsPtr->SourceId,
@@ -1575,7 +1641,9 @@ NTSTATUS VC4_DISPLAY::SourceHasPinnedMode (
             &sourceModeSetHandle,
             &smsInterfacePtr);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "DXGK_VIDPN_INTERFACE::pfnAcquireSourceModeSet() failed. (status = %!STATUS!)",
             status);
         return RosSanitizeNtstatus(status);
@@ -1596,7 +1664,9 @@ NTSTATUS VC4_DISPLAY::SourceHasPinnedMode (
             sourceModeSetHandle,
             &pinnedSourceModeInfoPtr);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "DXGK_VIDPNSOURCEMODESET_INTERFACE::pfnAcquirePinnedModeInfo() failed. (status = %!STATUS!, sourceModeSetHandle = %p)",
             status,
             sourceModeSetHandle);
@@ -1644,7 +1714,9 @@ NTSTATUS VC4_DISPLAY::CreateAndAssignSourceModeSet (
             &sourceModeSetHandle,
             &smsInterfacePtr);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "DXGK_VIDPN_INTERFACE::pfnCreateNewSourceModeSet failed. (status = %!STATUS!)",
             status);
         return status;
@@ -1666,7 +1738,9 @@ NTSTATUS VC4_DISPLAY::CreateAndAssignSourceModeSet (
                 sourceModeSetHandle,
                 &sourceModeInfoPtr);
         if (!NT_SUCCESS(status)) {
-            ROS_LOG_ERROR(
+            ROS_TRACE_EVENTS(
+                TRACE_LEVEL_ERROR,
+                ROS_TRACING_VIDPN,
                 "DXGK_VIDPNSOURCEMODESET_INTERFACE::pfnCreateNewModeInfo() failed. (status = %!STATUS!)",
                 status);
             return status;
@@ -1693,7 +1767,9 @@ NTSTATUS VC4_DISPLAY::CreateAndAssignSourceModeSet (
         sourceModeInfoPtr->Format.Graphics.ColorBasis = D3DKMDT_CB_SCRGB;
         sourceModeInfoPtr->Format.Graphics.PixelValueAccessMode = D3DKMDT_PVAM_DIRECT;
 
-        ROS_LOG_TRACE(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_VERBOSE,
+            ROS_TRACING_VIDPN,
             "Adding source mode. (PrimSurfSize = %d,%d, Stride = %d, PixelFormat = %d, ColorBasis = %d, PixelValueAccessMode = %d)",
             sourceModeInfoPtr->Format.Graphics.PrimSurfSize.cx,
             sourceModeInfoPtr->Format.Graphics.PrimSurfSize.cy,
@@ -1707,7 +1783,9 @@ NTSTATUS VC4_DISPLAY::CreateAndAssignSourceModeSet (
                 sourceModeSetHandle,
                 sourceModeInfoPtr);
         if (!NT_SUCCESS(status)) {
-            ROS_LOG_ERROR(
+            ROS_TRACE_EVENTS(
+                TRACE_LEVEL_ERROR,
+                ROS_TRACING_VIDPN,
                 "DXGK_VIDPNSOURCEMODESET_INTERFACE::pfnAddMode() failed. (status = %!STATUS!)",
                 status);
             return status;
@@ -1721,7 +1799,9 @@ NTSTATUS VC4_DISPLAY::CreateAndAssignSourceModeSet (
             SourceId,
             sourceModeSetHandle);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "DXGK_VIDPN_INTERFACE::pfnAssignSourceModeSet() failed. (status = %!STATUS!)",
             status);
         return status;
@@ -1754,7 +1834,9 @@ NTSTATUS VC4_DISPLAY::TargetHasPinnedMode (
             &targetModeSetHandle,
             &tmsInterfacePtr);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "DXGK_VIDPN_INTERFACE::pfnAcquireTargetModeSet() failed. (status = %!STATUS!)",
             status);
         return RosSanitizeNtstatus(status);
@@ -1775,7 +1857,9 @@ NTSTATUS VC4_DISPLAY::TargetHasPinnedMode (
             targetModeSetHandle,
             &pinnedTargetModeInfoPtr);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "DXGK_VIDPNTARGETMODESET_INTERFACE::pfnAcquirePinnedModeInfo() failed. (status = %!STATUS!, targetModeSetHandle = %p)",
             status,
             targetModeSetHandle);
@@ -1822,7 +1906,9 @@ NTSTATUS VC4_DISPLAY::CreateAndAssignTargetModeSet (
             &targetModeSetHandle,
             &tmsInterfacePtr);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "DXGK_VIDPN_INTERFACE::pfnCreateNewTargetModeSet failed. (status = %!STATUS!)",
             status);
         return status;
@@ -1844,7 +1930,9 @@ NTSTATUS VC4_DISPLAY::CreateAndAssignTargetModeSet (
                 targetModeSetHandle,
                 &targetModeInfoPtr);
         if (!NT_SUCCESS(status)) {
-            ROS_LOG_ERROR(
+            ROS_TRACE_EVENTS(
+                TRACE_LEVEL_ERROR,
+                ROS_TRACING_VIDPN,
                 "DXGK_VIDPNTARGETMODESET_INTERFACE::pfnCreateNewModeInfo() failed. (status = %!STATUS!)",
                 status);
             return status;
@@ -1869,7 +1957,9 @@ NTSTATUS VC4_DISPLAY::CreateAndAssignTargetModeSet (
                 targetModeSetHandle,
                 targetModeInfoPtr);
         if (!NT_SUCCESS(status)) {
-            ROS_LOG_ERROR(
+            ROS_TRACE_EVENTS(
+                TRACE_LEVEL_ERROR,
+                ROS_TRACING_VIDPN,
                 "DXGK_VIDPNTARGETMODESET_INTERFACE::pfnAddMode() failed. (status = %!STATUS!)",
                 status);
             return status;
@@ -1883,7 +1973,9 @@ NTSTATUS VC4_DISPLAY::CreateAndAssignTargetModeSet (
             TargetId,
             targetModeSetHandle);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "DXGK_VIDPN_INTERFACE::pfnAssignTargetModeSet() failed. (status = %!STATUS!)",
             status);
         return status;
@@ -1902,7 +1994,9 @@ NTSTATUS VC4_DISPLAY::IsVidPnSourceModeFieldsValid (
     ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     if (SourceModePtr->Type != D3DKMDT_RMT_GRAPHICS) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "Pinned source mode is not a graphics mode. (SourceModePtr->Type = %d)",
             SourceModePtr->Type);
         return STATUS_GRAPHICS_INVALID_VIDEO_PRESENT_SOURCE_MODE;
@@ -1911,21 +2005,27 @@ NTSTATUS VC4_DISPLAY::IsVidPnSourceModeFieldsValid (
     if ((SourceModePtr->Format.Graphics.ColorBasis != D3DKMDT_CB_SCRGB) &&
         (SourceModePtr->Format.Graphics.ColorBasis != D3DKMDT_CB_UNINITIALIZED))
     {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "Pinned source mode has a non-linear RGB color basis (ColorBasis = %d)",
             SourceModePtr->Format.Graphics.ColorBasis);
         return STATUS_GRAPHICS_INVALID_VIDEO_PRESENT_SOURCE_MODE;
     }
 
     if (SourceModePtr->Format.Graphics.PixelValueAccessMode != D3DKMDT_PVAM_DIRECT) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "Pinned source mode has a palettized access mode. (PixelValueAccessMode = %d)",
             SourceModePtr->Format.Graphics.PixelValueAccessMode);
         return STATUS_GRAPHICS_INVALID_VIDEO_PRESENT_SOURCE_MODE;
     }
 
     if (SourceModePtr->Format.Graphics.PixelFormat != D3DDDIFMT_A8R8G8B8) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "Pinned source mode has invalid pixel format. (SourceModePtr->Format.Graphics.PixelFormat = %d, D3DDDIFMT_A8R8G8B8 = %d)",
             SourceModePtr->Format.Graphics.PixelFormat,
             D3DDDIFMT_A8R8G8B8);
@@ -1944,14 +2044,18 @@ NTSTATUS VC4_DISPLAY::IsVidPnPathFieldsValid (
     ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     if (PathPtr->VidPnSourceId != 0) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "Path contains invalid source id. (VidPnSourceId = %d)",
             PathPtr->VidPnSourceId);
         return STATUS_GRAPHICS_INVALID_VIDEO_PRESENT_SOURCE;
     }
 
     if (PathPtr->VidPnTargetId != 0) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "Path contains invalid target id. (VidPnTargetId = %d)",
             PathPtr->VidPnTargetId);
         return STATUS_GRAPHICS_INVALID_VIDEO_PRESENT_TARGET;
@@ -1959,7 +2063,9 @@ NTSTATUS VC4_DISPLAY::IsVidPnPathFieldsValid (
 
     if (PathPtr->GammaRamp.Type != D3DDDI_GAMMARAMP_DEFAULT)
     {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "Path contains a gamma ramp. (GammaRamp.Type = %d)",
             PathPtr->GammaRamp.Type);
         return STATUS_GRAPHICS_GAMMA_RAMP_NOT_SUPPORTED;
@@ -1969,7 +2075,9 @@ NTSTATUS VC4_DISPLAY::IsVidPnPathFieldsValid (
         (PathPtr->ContentTransformation.Scaling != D3DKMDT_VPPS_NOTSPECIFIED) &&
         (PathPtr->ContentTransformation.Scaling != D3DKMDT_VPPS_UNINITIALIZED))
     {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "Path contains a non-identity scaling. (ContentTransformation.Scaling = %d)",
             PathPtr->ContentTransformation.Scaling);
         return STATUS_GRAPHICS_VIDPN_MODALITY_NOT_SUPPORTED;
@@ -1979,7 +2087,9 @@ NTSTATUS VC4_DISPLAY::IsVidPnPathFieldsValid (
         (PathPtr->ContentTransformation.Rotation != D3DKMDT_VPPR_NOTSPECIFIED) &&
         (PathPtr->ContentTransformation.Rotation != D3DKMDT_VPPR_UNINITIALIZED))
     {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "Path contains a not-identity rotation (ContentTransformation.Rotation = %d)",
             PathPtr->ContentTransformation.Rotation);
         return STATUS_GRAPHICS_VIDPN_MODALITY_NOT_SUPPORTED;
@@ -1988,7 +2098,9 @@ NTSTATUS VC4_DISPLAY::IsVidPnPathFieldsValid (
     if ((PathPtr->VidPnTargetColorBasis != D3DKMDT_CB_SCRGB) &&
         (PathPtr->VidPnTargetColorBasis != D3DKMDT_CB_UNINITIALIZED))
     {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "Path has a non-linear RGB color basis. (VidPnTargetColorBasis = %d)",
             PathPtr->VidPnTargetColorBasis);
         return STATUS_GRAPHICS_INVALID_VIDEO_PRESENT_SOURCE_MODE;
