@@ -10,6 +10,9 @@
 #include "RosKmdDdi.h"
 #include "RosKmdContext.h"
 #include "RosKmdResource.h"
+#include "RosKmdUtil.h"
+
+
 
 // TODO(bhouse) RosKmdPnpDispatch appears to be unused
 NTSTATUS
@@ -310,32 +313,6 @@ RosKmdDdi::DdiQueryEngineStatus(
 }
 
 
-NTSTATUS
-__stdcall
-RosKmdDdi::DdiQueryDependentEngineGroup(
-    IN_CONST_HANDLE                             hAdapter,
-    INOUT_DXGKARG_QUERYDEPENDENTENGINEGROUP     pQueryDependentEngineGroup)
-{
-    RosKmAdapter  *pRosKmdAdapter = RosKmAdapter::Cast(hAdapter);
-
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n", __FUNCTION__, hAdapter);
-
-    return pRosKmdAdapter->QueryDependentEngineGroup(pQueryDependentEngineGroup);
-}
-
-
-NTSTATUS
-__stdcall
-RosKmdDdi::DdiGetScanLine(
-    IN_CONST_HANDLE             hAdapter,
-    INOUT_PDXGKARG_GETSCANLINE  pGetScanLine)
-{
-    RosKmAdapter  *pRosKmdAdapter = RosKmAdapter::Cast(hAdapter);
-
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n", __FUNCTION__, hAdapter);
-
-    return pRosKmdAdapter->GetScanLine(pGetScanLine);
-}
 
 
 NTSTATUS
@@ -465,49 +442,6 @@ RosKmdDdi::DdiEscape(
 
     return pRosKmdAdapter->Escape(pEscape);
 }
-
-
-NTSTATUS
-__stdcall
-RosKmdDdi::DdiSetPalette(
-    IN_CONST_HANDLE                 hAdapter,
-    IN_CONST_PDXGKARG_SETPALETTE    pSetPalette)
-{
-    RosKmAdapter  *pRosKmdAdapter = RosKmAdapter::Cast(hAdapter);
-
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n", __FUNCTION__, hAdapter);
-
-    return pRosKmdAdapter->SetPalette(pSetPalette);
-}
-
-
-NTSTATUS
-__stdcall
-RosKmdDdi::DdiSetPointerPosition(
-    IN_CONST_HANDLE                         hAdapter,
-    IN_CONST_PDXGKARG_SETPOINTERPOSITION    pSetPointerPosition)
-{
-    RosKmAdapter  *pRosKmdAdapter = RosKmAdapter::Cast(hAdapter);
-
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n", __FUNCTION__, hAdapter);
-
-    return pRosKmdAdapter->SetPointerPosition(pSetPointerPosition);
-}
-
-
-NTSTATUS
-__stdcall
-RosKmdDdi::DdiSetPointerShape(
-    IN_CONST_HANDLE                     hAdapter,
-    IN_CONST_PDXGKARG_SETPOINTERSHAPE   pSetPointerShape)
-{
-    RosKmAdapter  *pRosKmdAdapter = RosKmAdapter::Cast(hAdapter);
-
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n", __FUNCTION__, hAdapter);
-
-    return pRosKmdAdapter->SetPointerShape(pSetPointerShape);
-}
-
 
 NTSTATUS
 __stdcall
@@ -649,3 +583,220 @@ RosKmdDdi::DdiResetDevice(
     return pRosKmdAdapter->ResetDevice();
 }
 
+ROS_NONPAGED_SEGMENT_BEGIN; //================================================
+
+_Use_decl_annotations_
+NTSTATUS RosKmdDisplayDdi::DdiSetVidPnSourceAddress (
+    HANDLE const hAdapter,
+    const DXGKARG_SETVIDPNSOURCEADDRESS* SetVidPnSourceAddressPtr
+    )
+{
+    return RosKmAdapter::Cast(hAdapter)->SetVidPnSourceAddress(
+            SetVidPnSourceAddressPtr);
+}
+
+ROS_NONPAGED_SEGMENT_END; //==================================================
+ROS_PAGED_SEGMENT_BEGIN; //===================================================
+// TODO[jordanh] put PASSIVE_LEVEL DDIs in the paged section
+
+//
+// RosKmdDdi
+//
+
+_Use_decl_annotations_
+NTSTATUS RosKmdDdi::DdiOpenAllocation (
+    HANDLE const hDevice,
+    const DXGKARG_OPENALLOCATION* ArgsPtr
+    )
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    return RosKmDevice::Cast(hDevice)->OpenAllocation(ArgsPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmdDdi::DdiQueryDependentEngineGroup (
+    HANDLE const hAdapter,
+    DXGKARG_QUERYDEPENDENTENGINEGROUP* ArgsPtr
+    )
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    return RosKmAdapter::Cast(hAdapter)->QueryDependentEngineGroup(ArgsPtr);
+}
+
+//
+// RosKmdDisplayDdi
+//
+
+_Use_decl_annotations_
+NTSTATUS RosKmdDisplayDdi::DdiSetPalette (
+    HANDLE const AdapterPtr,
+    const DXGKARG_SETPALETTE* SetPalettePtr
+    )
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    return RosKmAdapter::Cast(AdapterPtr)->SetPalette(SetPalettePtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmdDisplayDdi::DdiSetPointerPosition (
+    HANDLE const AdapterPtr,
+    const DXGKARG_SETPOINTERPOSITION* SetPointerPositionPtr
+    )
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    return RosKmAdapter::Cast(AdapterPtr)->SetPointerPosition(
+        SetPointerPositionPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmdDisplayDdi::DdiSetPointerShape (
+    HANDLE const AdapterPtr,
+    const DXGKARG_SETPOINTERSHAPE* SetPointerShapePtr
+    )
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    return RosKmAdapter::Cast(AdapterPtr)->SetPointerShape(SetPointerShapePtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmdDisplayDdi::DdiIsSupportedVidPn (
+    VOID* const MiniportDeviceContextPtr,
+    DXGKARG_ISSUPPORTEDVIDPN* IsSupportedVidPnPtr
+    )
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    return RosKmAdapter::Cast(MiniportDeviceContextPtr)->IsSupportedVidPn(
+            IsSupportedVidPnPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmdDisplayDdi::DdiRecommendFunctionalVidPn (
+    VOID* const MiniportDeviceContextPtr,
+    const DXGKARG_RECOMMENDFUNCTIONALVIDPN* const RecommendFunctionalVidPnPtr
+    )
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    return RosKmAdapter::Cast(MiniportDeviceContextPtr)->RecommendFunctionalVidPn(
+            RecommendFunctionalVidPnPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmdDisplayDdi::DdiEnumVidPnCofuncModality (
+    VOID* const MiniportDeviceContextPtr,
+    const DXGKARG_ENUMVIDPNCOFUNCMODALITY* const EnumCofuncModalityPtr
+    )
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    return RosKmAdapter::Cast(MiniportDeviceContextPtr)->EnumVidPnCofuncModality(
+            EnumCofuncModalityPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmdDisplayDdi::DdiSetVidPnSourceVisibility (
+    VOID* const MiniportDeviceContextPtr,
+    const DXGKARG_SETVIDPNSOURCEVISIBILITY* SetVidPnSourceVisibilityPtr
+    )
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    return RosKmAdapter::Cast(MiniportDeviceContextPtr)->SetVidPnSourceVisibility(
+            SetVidPnSourceVisibilityPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmdDisplayDdi::DdiCommitVidPn (
+    VOID* const MiniportDeviceContextPtr,
+    const DXGKARG_COMMITVIDPN* const CommitVidPnPtr
+    )
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    return RosKmAdapter::Cast(MiniportDeviceContextPtr)->CommitVidPn(
+            CommitVidPnPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmdDisplayDdi::DdiUpdateActiveVidPnPresentPath (
+    VOID* const MiniportDeviceContextPtr,
+    const DXGKARG_UPDATEACTIVEVIDPNPRESENTPATH* const UpdateActiveVidPnPresentPathPtr
+    )
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    return RosKmAdapter::Cast(MiniportDeviceContextPtr)->UpdateActiveVidPnPresentPath(
+            UpdateActiveVidPnPresentPathPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmdDisplayDdi::DdiRecommendMonitorModes (
+    VOID* const MiniportDeviceContextPtr,
+    const DXGKARG_RECOMMENDMONITORMODES* const RecommendMonitorModesPtr
+    )
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    return RosKmAdapter::Cast(MiniportDeviceContextPtr)->RecommendMonitorModes(
+            RecommendMonitorModesPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmdDisplayDdi::DdiGetScanLine (
+    HANDLE const AdapterPtr,
+    DXGKARG_GETSCANLINE*  GetScanLinePtr
+    )
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    return RosKmAdapter::Cast(AdapterPtr)->GetScanLine(GetScanLinePtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmdDisplayDdi::DdiQueryVidPnHWCapability (
+    VOID* const MiniportDeviceContextPtr,
+    DXGKARG_QUERYVIDPNHWCAPABILITY* VidPnHWCapsPtr
+    )
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    return RosKmAdapter::Cast(MiniportDeviceContextPtr)->QueryVidPnHWCapability(
+            VidPnHWCapsPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmdDisplayDdi::DdiStopDeviceAndReleasePostDisplayOwnership (
+    VOID* const MiniportDeviceContextPtr,
+    D3DDDI_VIDEO_PRESENT_TARGET_ID TargetId,
+    DXGK_DISPLAY_INFORMATION* DisplayInfoPtr
+    )
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    return RosKmAdapter::Cast(MiniportDeviceContextPtr)->StopDeviceAndReleasePostDisplayOwnership(
+            TargetId,
+            DisplayInfoPtr);
+}
+
+ROS_PAGED_SEGMENT_END; //=====================================================

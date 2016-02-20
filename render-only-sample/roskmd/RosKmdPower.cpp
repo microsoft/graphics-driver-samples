@@ -19,14 +19,18 @@ RosKmAdapter::SetPowerState(
     IN_DEVICE_POWER_STATE   DevicePowerState,
     IN_POWER_ACTION         ActionType)
 {
-    ActionType;
-
     if (DeviceUid == DISPLAY_ADAPTER_HW_ID)
     {
         m_AdapterPowerDState = DevicePowerState;
     }
 
-    return STATUS_SUCCESS;
+    if (RosKmdGlobal::IsRenderOnly())
+    {
+        ROS_LOG_WARNING("SetPowerState() is not implemented by render side.");
+        return STATUS_SUCCESS;
+    }
+
+    return m_display.SetPowerState(DeviceUid, DevicePowerState, ActionType);
 }
 
 NTSTATUS

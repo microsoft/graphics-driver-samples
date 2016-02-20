@@ -49,6 +49,8 @@
     <ClCompile Include="RosKmdUtil.cpp" />
     <ClCompile Include="RosKmdPower.cpp" />
     <ClCompile Include="RosKmdLogging.cpp" />
+    <ClCompile Include="Vc4Debug.cpp" />
+    <ClCompile Include="Vc4Display.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\roscommon\RosAllocation.h" />
@@ -69,6 +71,10 @@
     <ClInclude Include="RosKmdSoftAdapter.h" />
     <ClInclude Include="RosKmdUtil.h" />
     <ClInclude Include="RosKmdLogging.h" />
+    <ClInclude Include="Vc4Debug.h" />
+    <ClInclude Include="Vc4Display.h" />
+    <ClInclude Include="Vc4Hvs.h" />
+    <ClInclude Include="Vc4PixelValve.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{65CF1498-21A7-4356-8C3A-3642958DEF34}</ProjectGuid>
@@ -128,42 +134,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
-    <IncludePath>$(UM_IncludePath);..\roscommon;$(IncludePath)</IncludePath>
-    <ApiValidator_Enable>false</ApiValidator_Enable>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
-    <IncludePath>$(UM_IncludePath);..\roscommon;$(IncludePath)</IncludePath>
-    <ApiValidator_Enable>false</ApiValidator_Enable>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
-    <IncludePath>$(UM_IncludePath);..\roscommon;$(IncludePath)</IncludePath>
-    <ApiValidator_Enable>false</ApiValidator_Enable>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
-    <IncludePath>$(UM_IncludePath);..\roscommon;$(IncludePath)</IncludePath>
-    <ApiValidator_Enable>false</ApiValidator_Enable>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
-    <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
-    <IncludePath>$(UM_IncludePath);..\roscommon;$(IncludePath)</IncludePath>
-    <ApiValidator_Enable>false</ApiValidator_Enable>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
-    <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
-    <IncludePath>$(UM_IncludePath);..\roscommon;$(IncludePath)</IncludePath>
-    <ApiValidator_Enable>false</ApiValidator_Enable>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'">
-    <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
-    <IncludePath>$(UM_IncludePath);..\roscommon;$(IncludePath)</IncludePath>
-    <ApiValidator_Enable>false</ApiValidator_Enable>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
+  <PropertyGroup>
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
     <IncludePath>$(UM_IncludePath);..\roscommon;$(IncludePath)</IncludePath>
     <ApiValidator_Enable>false</ApiValidator_Enable>

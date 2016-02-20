@@ -53,7 +53,6 @@ rosumd.dll,,,0x4000
 
 [RenderOnlySample_AddReg]
 HKR,,UserModeDriverName,%REG_MULTI_SZ%,rosumd.dll,rosumd.dll,rosumd.dll,rosumd.dll
-HKLM,"SYSTEM\CurrentControlSet\Control\GraphicsDrivers",DisableAutoAcpiPostDeivce,%REG_DWORD%,1
 
 ; Service Installation
 

@@ -22,10 +22,16 @@ protected:
         IN_PDXGK_START_INFO     DxgkStartInfo,
         IN_PDXGKRNL_INTERFACE   DxgkInterface,
         OUT_PULONG              NumberOfVideoPresentSources,
-        OUT_PULONG              NumberOfChildren);
+        OUT_PULONG              NumberOfChildren
+        ) override;
 
+    virtual NTSTATUS Stop () override;
+
+    _Check_return_
+    _IRQL_requires_(HIGH_LEVEL)
     virtual BOOLEAN InterruptRoutine(
-        IN_ULONG        MessageNumber);
+        IN_ULONG MessageNumber
+        ) override;
 
 private:
 
@@ -67,5 +73,11 @@ private:
 
 #endif
     }
-
+    
+private: // NONPAGED
+    
+    _Check_return_
+    _IRQL_requires_(HIGH_LEVEL)
+    BOOLEAN RendererInterruptRoutine (IN_ULONG MessageNumber);
+    
 };

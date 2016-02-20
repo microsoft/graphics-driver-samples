@@ -2,40 +2,24 @@
 
 #include "RosAllocation.h"
 #include "Pixel.hpp"
+#include "RosUmdDebug.h"
 
-class RosUmdResource
-{
+class RosUmdResource : public RosAllocationExchange
+{    
+    enum class _SIGNATURE {
+        CONSTRUCTED = 'Ures',
+        INITIALIZED = 'URES',
+        DESTRUCTED = 'ures',
+    } m_signature;
+    
 public:
 
     RosUmdResource();
     ~RosUmdResource();
 
     static RosUmdResource* CastFrom(D3D10DDI_HRESOURCE);
+    static RosUmdResource* CastFrom(DXGI_DDI_HRESOURCE);
     D3D10DDI_HRESOURCE CastTo() const;
-
-    // Input from UMD CreateResource DDI
-    D3D10DDIRESOURCE_TYPE   m_resourceDimension;
-
-    D3D10DDI_MIPINFO        m_mip0Info;
-    UINT                    m_usage;        // D3D10_DDI_RESOURCE_USAGE
-    UINT                    m_bindFlags;    // D3D10_DDI_RESOURCE_BIND_FLAG
-    UINT                    m_mapFlags;     // D3D10_DDI_MAP
-    UINT                    m_miscFlags;    // D3D10_DDI_RESOURCE_MISC_FLAG
-    DXGI_FORMAT             m_format;
-    DXGI_SAMPLE_DESC        m_sampleDesc;
-    UINT                    m_mipLevels;
-    UINT                    m_arraySize;
-
-    DXGI_DDI_PRIMARY_DESC   m_primaryDesc;
-
-    // HW specific information calculated based on the fields above
-    RosHwLayout             m_hwLayout;
-
-    UINT                    m_hwWidthPixels;
-    UINT                    m_hwHeightPixels;
-    RosHwFormat             m_hwFormat;
-    UINT                    m_hwPitchBytes;
-    UINT                    m_hwSizeBytes;
 
     UINT                    m_hwWidthTilePixels;
     UINT                    m_hwHeightTilePixels;
@@ -43,8 +27,8 @@ public:
     UINT                    m_hwHeightTiles;
 
     D3D10DDI_HRTRESOURCE    m_hRTResource;
-    D3DKMT_HANDLE           m_hKMResource;
-    D3DKMT_HANDLE           m_hKMAllocation;
+    D3DKMT_HANDLE           m_hKMResource;      // can this be a D3D10DDI_HKMRESOURCE?
+    D3DKMT_HANDLE           m_hKMAllocation;    // can this be a D3D10DDI_HKMALLOCATION?
 
     ULONGLONG               m_mostRecentFence;
     UINT                    m_allocationListIndex;
@@ -61,6 +45,13 @@ public:
         const D3D11DDIARG_CREATERESOURCE* pCreateResource,
         D3D10DDI_HRTRESOURCE hRTResource);
 
+    void InitSharedResourceFromExistingAllocation (
+        const RosAllocationExchange* ExistingAllocationPtr,
+        D3D10DDI_HKMRESOURCE hKMResource,
+        D3DKMT_HANDLE hKMAllocation,        // can this be a D3D10DDI_HKMALLOCATION?
+        D3D10DDI_HRTRESOURCE hRTResource
+        );
+        
     void Teardown(void);
 
     void
@@ -95,8 +86,20 @@ public:
     CalculateMemoryLayout(
         void);
 
-    void GetAllocationExchange(
-        RosAllocationExchange * pOutAllocationExchange);
+    // Determines whether the supplied resource can be rotated into this one.
+    // Resources must have equivalent dimensions and flags to rotate.
+    bool CanRotateFrom(const RosUmdResource* Other) const;
+
+    bool IsPrimary()
+    {
+        if (m_isPrimary)
+        {
+            assert(m_miscFlags & D3DWDDM2_0DDI_RESOURCE_MISC_DISPLAYABLE_SURFACE);
+            assert(m_bindFlags & D3D10_DDI_BIND_PRESENT);
+            assert(m_primaryDesc.ModeDesc.Width != 0);
+        }
+        return m_isPrimary;
+    }
 
     // Tiled textures support
     void ConvertBitmapTo4kTileBlocks(
@@ -118,12 +121,23 @@ private:
         UINT rowStride, 
         BOOLEAN OddRow);
 
-
 };
 
 inline RosUmdResource* RosUmdResource::CastFrom(D3D10DDI_HRESOURCE hResource)
 {
-    return static_cast< RosUmdResource* >(hResource.pDrvPrivate);
+    auto thisPtr = static_cast< RosUmdResource* >(hResource.pDrvPrivate);
+    if (thisPtr) { assert(thisPtr->m_signature == _SIGNATURE::INITIALIZED); }
+    return thisPtr;
+}
+
+inline RosUmdResource* RosUmdResource::CastFrom(DXGI_DDI_HRESOURCE hResource)
+{
+    static_assert(
+        sizeof(hResource) == sizeof(RosUmdResource*),
+        "Sanity check on cast compatibility");
+    auto thisPtr = reinterpret_cast<RosUmdResource*>(hResource);
+    if (thisPtr) { assert(thisPtr->m_signature == _SIGNATURE::INITIALIZED); }
+    return thisPtr;
 }
 
 inline D3D10DDI_HRESOURCE RosUmdResource::CastTo() const

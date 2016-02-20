@@ -15,6 +15,7 @@
 #include "Vc4Hw.h"
 
 RosUmdResource::RosUmdResource() :
+    m_signature(_SIGNATURE::CONSTRUCTED),
     m_hKMAllocation(NULL)
 {
     // do nothing
@@ -22,6 +23,9 @@ RosUmdResource::RosUmdResource() :
 
 RosUmdResource::~RosUmdResource()
 {
+    assert(
+        (m_signature == _SIGNATURE::CONSTRUCTED) ||
+        (m_signature == _SIGNATURE::INITIALIZED));
     // do nothing
 }
 
@@ -32,6 +36,8 @@ RosUmdResource::Standup(
     D3D10DDI_HRTRESOURCE hRTResource)
 {
     UNREFERENCED_PARAMETER(pUmdDevice);
+    
+    assert(m_signature == _SIGNATURE::CONSTRUCTED);
 
     m_resourceDimension = pCreateResource->ResourceDimension;
     m_mip0Info = *pCreateResource->pMipInfoList;
@@ -46,10 +52,17 @@ RosUmdResource::Standup(
 
     if (pCreateResource->pPrimaryDesc)
     {
+        assert(
+            (pCreateResource->MiscFlags & D3DWDDM2_0DDI_RESOURCE_MISC_DISPLAYABLE_SURFACE) &&
+            (pCreateResource->BindFlags & D3D10_DDI_BIND_PRESENT) &&
+            (pCreateResource->pPrimaryDesc->ModeDesc.Width != 0));
+        
+        m_isPrimary = true;
         m_primaryDesc = *pCreateResource->pPrimaryDesc;
     }
     else
     {
+        m_isPrimary = false;
         ZeroMemory(&m_primaryDesc, sizeof(m_primaryDesc));
     }
 
@@ -66,12 +79,44 @@ RosUmdResource::Standup(
 
     m_allocationListIndex = 0;
 
-    m_pSysMemCopy = NULL;
+    m_pData = nullptr;
+    m_pSysMemCopy = nullptr;
+    m_signature = _SIGNATURE::INITIALIZED;
+}
+
+void RosUmdResource::InitSharedResourceFromExistingAllocation (
+    const RosAllocationExchange* ExistingAllocationPtr,
+    D3D10DDI_HKMRESOURCE hKMResource,
+    D3DKMT_HANDLE hKMAllocation,        // can this be a D3D10DDI_HKMALLOCATION?
+    D3D10DDI_HRTRESOURCE hRTResource
+    )
+{
+    assert(m_signature == _SIGNATURE::CONSTRUCTED);
+    
+    // copy members from the existing allocation into this object
+    RosAllocationExchange* basePtr = this;
+    *basePtr = *ExistingAllocationPtr;
+
+    // HW specific information calculated based on the fields above
+    CalculateMemoryLayout();
+    
+    m_hRTResource = hRTResource;
+    m_hKMResource = hKMResource.handle;
+    m_hKMAllocation = hKMAllocation;
+
+    m_mostRecentFence = RosUmdCommandBuffer::s_nullFence;
+    m_allocationListIndex = 0;
+
+    m_pData = nullptr;
+    m_pSysMemCopy = nullptr;
+    
+    m_signature = _SIGNATURE::INITIALIZED;
 }
 
 void
 RosUmdResource::Teardown(void)
 {
+    m_signature = _SIGNATURE::CONSTRUCTED;
     // TODO[indyz]: Implement
 }
 
@@ -94,7 +139,7 @@ RosUmdResource::ConstantBufferUpdateSubresourceUP(
     UINT BytesToCopy = RowPitch;
     if (pDstBox)
     {
-        if (pDstBox->left < 0 || 
+        if (pDstBox->left < 0 ||
             pDstBox->left > (INT)m_hwSizeBytes ||
             pDstBox->left > pDstBox->right ||
             pDstBox->right > (INT)m_hwSizeBytes)
@@ -364,35 +409,44 @@ RosUmdResource::CalculateMemoryLayout(
     }
 }
 
-void RosUmdResource::GetAllocationExchange(
-    RosAllocationExchange * pOutAllocationExchange)
+bool RosUmdResource::CanRotateFrom(const RosUmdResource* Other) const
 {
-#if 0
-    pOutAllocationExchange->m_resourceDimension = m_resourceDimension;
-#endif
-    pOutAllocationExchange->m_mip0Info = m_mip0Info;
-#if 0
-    pOutAllocationExchange->m_usage = m_usage;
-    pOutAllocationExchange->m_mapFlags = m_mapFlags;
-    pOutAllocationExchange->m_miscFlags = m_miscFlags;
-#endif
-    pOutAllocationExchange->m_bindFlags = m_bindFlags;
-    pOutAllocationExchange->m_format = m_format;
-    pOutAllocationExchange->m_sampleDesc = m_sampleDesc;
-#if 0
-    pOutAllocationExchange->m_mipLevels = m_mipLevels;
-    pOutAllocationExchange->m_arraySize = m_arraySize;
-#endif
-    pOutAllocationExchange->m_primaryDesc = m_primaryDesc;
-    pOutAllocationExchange->m_hwLayout = m_hwLayout;
-    pOutAllocationExchange->m_hwWidthPixels = m_hwWidthPixels;
-    pOutAllocationExchange->m_hwHeightPixels = m_hwHeightPixels;
-    pOutAllocationExchange->m_hwFormat = m_hwFormat;
-#if 0
-    pOutAllocationExchange->m_hwPitch = m_hwPitch;
-#endif
-
-    pOutAllocationExchange->m_hwSizeBytes = m_hwSizeBytes;
+    // Make sure we're not rotating from ourself and that the resources
+    // are compatible (e.g. size, flags, ...)
+    
+    return (this != Other) &&
+           (!m_pData && !Other->m_pData) &&
+           (!m_pSysMemCopy && !Other->m_pSysMemCopy) &&
+           (m_hRTResource != Other->m_hRTResource) &&
+           ((m_hKMAllocation != Other->m_hKMAllocation) || !m_hKMAllocation) &&
+           ((m_hKMResource != Other->m_hKMResource) || !m_hKMResource) &&
+           (m_resourceDimension == Other->m_resourceDimension) &&
+           (m_mip0Info == Other->m_mip0Info) &&
+           (m_usage == Other->m_usage) &&
+           (m_bindFlags == Other->m_bindFlags) &&
+           (m_bindFlags & D3D10_DDI_BIND_PRESENT) &&
+           (m_mapFlags == Other->m_mapFlags) &&
+           (m_miscFlags == Other->m_miscFlags) &&
+           (m_format == Other->m_format) &&
+           (m_sampleDesc == Other->m_sampleDesc) &&
+           (m_mipLevels == Other->m_mipLevels) &&
+           (m_arraySize == Other->m_arraySize) &&
+           (m_isPrimary == Other->m_isPrimary) &&
+           ((m_primaryDesc.Flags & ~DXGI_DDI_PRIMARY_OPTIONAL) ==
+            (Other->m_primaryDesc.Flags & ~DXGI_DDI_PRIMARY_OPTIONAL)) &&
+           (m_primaryDesc.VidPnSourceId == Other->m_primaryDesc.VidPnSourceId) &&
+           (m_primaryDesc.ModeDesc == Other->m_primaryDesc.ModeDesc) &&
+           (m_primaryDesc.DriverFlags == Other->m_primaryDesc.DriverFlags) &&
+           (m_hwLayout == Other->m_hwLayout) &&
+           (m_hwWidthPixels == Other->m_hwWidthPixels) &&
+           (m_hwHeightPixels == Other->m_hwHeightPixels) &&
+           (m_hwFormat == Other->m_hwFormat) &&
+           (m_hwPitchBytes == Other->m_hwPitchBytes) &&
+           (m_hwSizeBytes == Other->m_hwSizeBytes) &&
+           (m_hwWidthTilePixels == Other->m_hwWidthTilePixels) &&
+           (m_hwHeightTilePixels == Other->m_hwHeightTilePixels) &&
+           (m_hwWidthTiles == Other->m_hwWidthTiles) &&
+           (m_hwHeightTiles == Other->m_hwHeightTiles);
 }
 
 // Form 1k sub-tile block

@@ -11,6 +11,9 @@
 
 #include "RosKmdAllocation.h"
 #include "RosKmdGlobal.h"
+#include "Vc4Display.h"
+
+#pragma warning(disable:4201)   // nameless struct/union
 
 typedef struct __ROSKMERRORCONDITION
 {
@@ -93,11 +96,13 @@ typedef union _RosKmAdapterFlags
 {
     struct
     {
-        UINT    m_isVC4     : 1;
+        UINT    m_isVC4      : 1;
     };
 
     UINT        m_value;
 } RosKmAdapterFlags;
+
+#pragma warning(default:4201) // nameless struct/union
 
 class RosKmdDdi;
 
@@ -115,10 +120,10 @@ public:
     NTSTATUS DispatchIoRequest(
         IN_ULONG                    VidPnSourceId,
         IN_PVIDEO_REQUEST_PACKET    VideoRequestPacket);
-        
+
     virtual BOOLEAN InterruptRoutine(
         IN_ULONG        MessageNumber) = NULL;
-        
+
     NTSTATUS Patch(
         IN_CONST_PDXGKARG_PATCH     pPatch);
 
@@ -160,26 +165,15 @@ public:
         QueryCurrentFence(
             INOUT_PDXGKARG_QUERYCURRENTFENCE   pCurrentFence);
 
-    NTSTATUS
-        ResetEngine(
-            INOUT_PDXGKARG_RESETENGINE  pResetEngine);
 
     NTSTATUS
         QueryEngineStatus(
             INOUT_PDXGKARG_QUERYENGINESTATUS    pQueryEngineStatus);
 
     NTSTATUS
-        QueryDependentEngineGroup(
-            INOUT_DXGKARG_QUERYDEPENDENTENGINEGROUP     pQueryDependentEngineGroup);
+        ResetEngine(
+            INOUT_PDXGKARG_RESETENGINE  pResetEngine);
 
-    NTSTATUS
-        GetScanLine(
-            INOUT_PDXGKARG_GETSCANLINE  pGetScanLine);
-
-    NTSTATUS
-        ControlInterrupt(
-            IN_CONST_DXGK_INTERRUPT_TYPE    InterruptType,
-            IN_BOOLEAN                      EnableInterrupt);
 
     NTSTATUS
         CollectDbgInfo(
@@ -207,18 +201,6 @@ public:
     NTSTATUS
         Escape(
             IN_CONST_PDXGKARG_ESCAPE        pEscape);
-
-    NTSTATUS
-        SetPalette(
-            IN_CONST_PDXGKARG_SETPALETTE    pSetPalette);
-
-    NTSTATUS
-        SetPointerPosition(
-            IN_CONST_PDXGKARG_SETPOINTERPOSITION    pSetPointerPosition);
-
-    NTSTATUS
-        SetPointerShape(
-            IN_CONST_PDXGKARG_SETPOINTERSHAPE   pSetPointerShape);
 
     NTSTATUS
         ResetFromTimeout();
@@ -282,7 +264,7 @@ public:
 
     static RosKmAdapter * Cast(void * ptr)
     {
-        RosKmAdapter * rosKmAdapter = reinterpret_cast<RosKmAdapter *>(ptr);
+        RosKmAdapter * rosKmAdapter = static_cast<RosKmAdapter *>(ptr);
 
         NT_ASSERT(rosKmAdapter->m_magic == RosKmAdapter::kMagic);
 
@@ -316,13 +298,19 @@ protected:
 
     friend class RosKmdDdi;
 
+    //
+    // If Start() succeeds, then Stop() must be called to clean up. For example,
+    // if a subclass first calls Start() and then does controller-specific
+    // stuff that fails, it needs to call Stop() before returning failure
+    // to the framework.
+    //
     virtual NTSTATUS Start(
         IN_PDXGK_START_INFO     DxgkStartInfo,
         IN_PDXGKRNL_INTERFACE   DxgkInterface,
         OUT_PULONG              NumberOfVideoPresentSources,
         OUT_PULONG              NumberOfChildren);
 
-    NTSTATUS Stop();
+    virtual NTSTATUS Stop();
 
     NTSTATUS BuildPagingBuffer(
         IN_PDXGKARG_BUILDPAGINGBUFFER   pArgs);
@@ -367,6 +355,16 @@ protected:
 
     RosKmAdapterFlags           m_flags;
 
+    //
+    // Indexes of hardware resources expected by the render subsystem.
+    // Hardware resources for the display subsystem follow those for the renderer.
+    //
+    enum _RENDERER_CM_RESOURCE_INDEX : ULONG {
+        _RENDERER_CM_RESOURCE_INDEX_MEMORY,
+        _RENDERER_CM_RESOURCE_INDEX_INTERRUPT,
+        _RENDERER_CM_RESOURCE_COUNT,
+    };
+
 private:
 
     static const UINT32 kMagic = 'ADPT';
@@ -407,6 +405,8 @@ protected:
     BYTE                        m_deviceId[MAX_DEVICE_ID_LENGTH];
     ULONG                       m_deviceIdLength;
 
+    VC4_DISPLAY                 m_display;
+
 #if VC4
 
     UINT                        m_localVidMemSegmentSize;
@@ -422,7 +422,7 @@ protected:
     UINT                        m_tileStatePoolPhysicalAddress;
 
     // Firmware device RPIQ
-    PDEVICE_OBJECT              m_pRpiqDevice;
+    PFILE_OBJECT                m_pRpiqDevice;
 
 #if GPU_CACHE_WORKAROUND
 
@@ -441,7 +441,7 @@ public:
     UINT                        m_NumPowerComponents;
     DXGK_POWER_RUNTIME_COMPONENT m_PowerComponents[C_ROSD_GPU_ENGINE_COUNT];
     UINT                         m_EnginePowerFState[C_ROSD_GPU_ENGINE_COUNT];
-    
+
     UINT                        m_NumNodes;
     DXGK_WDDMVERSION            m_WDDMVersion;
 
@@ -449,8 +449,8 @@ public:
 
     NTSTATUS
         InitializePowerComponentInfo();
-        
-    NTSTATUS 
+
+    NTSTATUS
         GetNumPowerComponents();
 
     NTSTATUS
@@ -458,6 +458,128 @@ public:
             IN UINT ComponentIndex,
             OUT DXGK_POWER_RUNTIME_COMPONENT* pPowerComponent);
 
+    //
+    // Display-only DDIs
+    //
+
+public: // NONPAGED
+
+    _Check_return_
+    _Function_class_DXGK_(DXGKDDI_SETVIDPNSOURCEADDRESS)
+    _IRQL_requires_min_(PASSIVE_LEVEL)
+    _IRQL_requires_max_(PROFILE_LEVEL  - 1)
+    NTSTATUS SetVidPnSourceAddress (
+        IN_CONST_PDXGKARG_SETVIDPNSOURCEADDRESS pSetVidPnSourceAddress
+        );
+
+public: // PAGED
+
+    _Check_return_
+    _Function_class_DXGK_(DXGKDDI_SETPALETTE)
+    _IRQL_requires_(PASSIVE_LEVEL)
+    NTSTATUS SetPalette (
+        IN_CONST_PDXGKARG_SETPALETTE pSetPalette
+        );
+
+    _Check_return_
+    _Function_class_DXGK_(DXGKDDI_SETPOINTERPOSITION)
+    _IRQL_requires_(PASSIVE_LEVEL)
+    NTSTATUS SetPointerPosition (
+        IN_CONST_PDXGKARG_SETPOINTERPOSITION SetPointerPositionPtr
+        );
+
+    _Check_return_
+    _Function_class_DXGK_(DXGKDDI_SETPOINTERSHAPE)
+    _IRQL_requires_(PASSIVE_LEVEL)
+    NTSTATUS SetPointerShape (
+        IN_CONST_PDXGKARG_SETPOINTERSHAPE SetPointerShapePtr
+        );
+
+    _Check_return_
+    _Function_class_DXGK_(DXGKDDI_ISSUPPORTEDVIDPN)
+    _IRQL_requires_(PASSIVE_LEVEL)
+    NTSTATUS IsSupportedVidPn (
+        INOUT_PDXGKARG_ISSUPPORTEDVIDPN pIsSupportedVidPn
+        );
+
+    _Check_return_
+    _Function_class_DXGK_(DXGKDDI_RECOMMENDFUNCTIONALVIDPN)
+    _IRQL_requires_(PASSIVE_LEVEL)
+    NTSTATUS RecommendFunctionalVidPn (
+        IN_CONST_PDXGKARG_RECOMMENDFUNCTIONALVIDPN_CONST pRecommendFunctionalVidPn
+        );
+
+    _Check_return_
+    _Function_class_DXGK_(DXGKDDI_ENUMVIDPNCOFUNCMODALITY)
+    _IRQL_requires_(PASSIVE_LEVEL)
+    NTSTATUS EnumVidPnCofuncModality (
+        IN_CONST_PDXGKARG_ENUMVIDPNCOFUNCMODALITY_CONST pEnumCofuncModality
+        );
+
+    _Check_return_
+    _Function_class_DXGK_(DXGKDDI_SETVIDPNSOURCEVISIBILITY)
+    _IRQL_requires_(PASSIVE_LEVEL)
+    NTSTATUS SetVidPnSourceVisibility (
+        IN_CONST_PDXGKARG_SETVIDPNSOURCEVISIBILITY pSetVidPnSourceVisibility
+        );
+
+    _Check_return_
+    _Function_class_DXGK_(DXGKDDI_COMMITVIDPN)
+    _IRQL_requires_(PASSIVE_LEVEL)
+    NTSTATUS CommitVidPn (
+        IN_CONST_PDXGKARG_COMMITVIDPN_CONST pCommitVidPn
+        );
+
+    _Check_return_
+    _Function_class_DXGK_(DXGKDDI_UPDATEACTIVEVIDPNPRESENTPATH)
+    _IRQL_requires_(PASSIVE_LEVEL)
+    NTSTATUS UpdateActiveVidPnPresentPath (
+        IN_CONST_PDXGKARG_UPDATEACTIVEVIDPNPRESENTPATH_CONST pUpdateActiveVidPnPresentPath
+        );
+
+    _Check_return_
+    _Function_class_DXGK_(DXGKDDI_RECOMMENDMONITORMODES)
+    _IRQL_requires_(PASSIVE_LEVEL)
+    NTSTATUS RecommendMonitorModes (
+        IN_CONST_PDXGKARG_RECOMMENDMONITORMODES_CONST pRecommendMonitorModes
+        );
+
+    _Check_return_
+    _Function_class_DXGK_(DXGKDDI_GETSCANLINE)
+    _IRQL_requires_(PASSIVE_LEVEL)
+    NTSTATUS GetScanLine (
+        INOUT_PDXGKARG_GETSCANLINE pGetScanLine
+        );
+
+    _Check_return_
+    _Function_class_DXGK_(DXGKDDI_CONTROLINTERRUPT)
+    _IRQL_requires_(PASSIVE_LEVEL)
+    NTSTATUS ControlInterrupt (
+        IN_CONST_DXGK_INTERRUPT_TYPE InterruptType,
+        IN_BOOLEAN EnableInterrupt
+        );
+
+    _Check_return_
+    _Function_class_DXGK_(DXGKDDI_QUERYVIDPNHWCAPABILITY)
+    _IRQL_requires_(PASSIVE_LEVEL)
+    NTSTATUS QueryVidPnHWCapability (
+        INOUT_PDXGKARG_QUERYVIDPNHWCAPABILITY io_pVidPnHWCaps
+        );
+
+    _Check_return_
+    _Function_class_DXGK_(DXGKDDI_QUERYDEPENDENTENGINEGROUP)
+    _IRQL_requires_(PASSIVE_LEVEL)
+    NTSTATUS QueryDependentEngineGroup (
+        INOUT_DXGKARG_QUERYDEPENDENTENGINEGROUP Args
+        );
+
+    _Check_return_
+    _Function_class_DXGK_(DXGKDDI_STOP_DEVICE_AND_RELEASE_POST_DISPLAY_OWNERSHIP)
+    _IRQL_requires_DXGK_(PASSIVE_LEVEL)
+    NTSTATUS StopDeviceAndReleasePostDisplayOwnership (
+        _In_ D3DDDI_VIDEO_PRESENT_TARGET_ID TargetId,
+        _Out_ PDXGK_DISPLAY_INFORMATION DisplayInfo
+        );
 };
 
 template<typename TypeCur, typename TypeNext>

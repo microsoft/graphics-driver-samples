@@ -42,6 +42,7 @@ RosKmContext::DdiRender(
 #endif
     __except (EXCEPTION_EXECUTE_HANDLER)
     {
+        ROS_LOG_ERROR("Caught structured exception while copying usermode buffer.");
         return STATUS_INVALID_PARAMETER;
     }
 
@@ -49,6 +50,10 @@ RosKmContext::DdiRender(
     GpuCommand *    pCmdBufHeader = (GpuCommand *)pRender->pDmaBuffer;
     if (pCmdBufHeader->m_commandId != Header)
     {
+        ROS_LOG_ERROR(
+            "Invalid command buffer header. (pCmdBufHeader->m_commandId=0x%x, Header=0x%x)",
+            pCmdBufHeader->m_commandId,
+            Header);
         return STATUS_ILLEGAL_INSTRUCTION;
     }
 
@@ -65,6 +70,7 @@ RosKmContext::DdiRender(
     }
     __except (EXCEPTION_EXECUTE_HANDLER)
     {
+        ROS_LOG_ERROR("Caught structured exception while copying usermode buffer.");
         return STATUS_INVALID_PARAMETER;
     }
 
@@ -96,6 +102,7 @@ RosKmContext::DdiRender(
 
     if (! isValidDmaBuffer)
     {
+        ROS_LOG_ERROR("DMA buffer is not valid. (pDmaBufInfo=0x%p)", pDmaBufInfo);
         return STATUS_INVALID_PARAMETER;
     }
 
@@ -187,15 +194,6 @@ RosKmContext::DdiDestroyContext(
 }
 
 NTSTATUS
-RosKmContext::Present(
-    INOUT_PDXGKARG_PRESENT  pPresent)
-{
-    pPresent;
-
-    return STATUS_SUCCESS;
-}
-
-NTSTATUS
 RosKmContext::RenderKm(
     INOUT_PDXGKARG_RENDER   pRender)
 {
@@ -204,3 +202,27 @@ RosKmContext::RenderKm(
     NT_ASSERT(FALSE);
     return STATUS_SUCCESS;
 }
+
+ROS_PAGED_SEGMENT_BEGIN; //===================================================
+
+_Use_decl_annotations_
+NTSTATUS RosKmContext::Present (DXGKARG_PRESENT* Args)
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    ROS_LOG_WARNING(
+        "Kernel-mode DxgkDdiPresent should not be called in direct-flip case! (Flags=%s %s %s %s %s %s %s %s)",
+        Args->Flags.Blt ? "Blt" : "",
+        Args->Flags.ColorFill ? "ColorFill" : "",
+        Args->Flags.Flip ? "Flip" : "",
+        Args->Flags.FlipWithNoWait ? "FlipWithNoWait" : "",
+        Args->Flags.SrcColorKey ? "SrcColorKey" : "",
+        Args->Flags.DstColorKey ? "DstColorKey" : "",
+        Args->Flags.LinearToSrgb ? "LinearToSrgb" : "",
+        Args->Flags.Rotate ? "Rotate" : "");
+
+    return STATUS_SUCCESS;
+}
+
+ROS_PAGED_SEGMENT_END; //=====================================================
