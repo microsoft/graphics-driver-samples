@@ -57,7 +57,7 @@ typedef union _RosUmdDeviceFlags
 // RosUmdDevice
 //
 //==================================================================================================================================
-class RosUmdDevice 
+class RosUmdDevice
 {
 public:
     explicit RosUmdDevice( RosUmdAdapter*, const D3D10DDIARG_CREATEDEVICE* );
@@ -67,15 +67,17 @@ public:
     void Teardown();
 
     static RosUmdDevice* CastFrom( D3D10DDI_HDEVICE );
+    static RosUmdDevice* CastFrom( DXGI_DDI_HDEVICE );
     D3D10DDI_HDEVICE CastTo() const;
 
 public:
 
     void CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResource, D3D10DDI_HRESOURCE hResource, D3D10DDI_HRTRESOURCE hRTResource);
+    void OpenResource(const D3D10DDIARG_OPENRESOURCE*, D3D10DDI_HRESOURCE, D3D10DDI_HRTRESOURCE);
     void DestroyResource(RosUmdResource * pResource);
     void ResourceCopy(RosUmdResource *pDestinationResource, RosUmdResource * pSourceResource);
     void ConstantBufferUpdateSubresourceUP(RosUmdResource *pDestinationResource, UINT DstSubresource, _In_opt_ const D3D10_DDI_BOX *pDstBox, _In_ const VOID *pSysMemUP, UINT RowPitch, UINT DepthPitch, UINT CopyFlags);
-    
+
     void CreatePixelShader(const UINT* pCode, D3D10DDI_HSHADER hShader, D3D10DDI_HRTSHADER hRTShader, const D3D11_1DDIARG_STAGE_IO_SIGNATURES* pSignatures);
     void CreateVertexShader(const UINT* pCode, D3D10DDI_HSHADER hShader, D3D10DDI_HRTSHADER hRTShader, const D3D11_1DDIARG_STAGE_IO_SIGNATURES* pSignatures);
     void CreateGeometryShader(const UINT* pCode, D3D10DDI_HSHADER hShader, D3D10DDI_HRTSHADER hRTShader, const D3D11_1DDIARG_STAGE_IO_SIGNATURES* pSignatures);
@@ -105,6 +107,11 @@ public:
     void Render(D3DDDICB_RENDER * pRender);
     void DestroyContext(D3DDDICB_DESTROYCONTEXT * pDestroyContext);
 
+    HRESULT Present(DXGI_DDI_ARG_PRESENT* Args);
+    HRESULT RotateResourceIdentities(DXGI_DDI_ARG_ROTATE_RESOURCE_IDENTITIES* Args);
+    HRESULT SetDisplayMode(DXGI_DDI_ARG_SETDISPLAYMODE* Args);
+    HRESULT Present1(DXGI_DDI_ARG_PRESENT1* Args);
+
     //
     // User mode call backs
     //
@@ -113,8 +120,8 @@ public:
 
 public:
 
-    void SetException(std::exception & e);
-    void SetException(RosUmdException & e);
+    void SetException(const std::exception & e);
+    void SetException(const RosUmdException & e);
 
 public:
     HANDLE                          m_hContext;
@@ -294,6 +301,11 @@ public:
 inline RosUmdDevice* RosUmdDevice::CastFrom(D3D10DDI_HDEVICE hDevice)
 {
     return static_cast< RosUmdDevice* >(hDevice.pDrvPrivate);
+}
+
+inline RosUmdDevice* RosUmdDevice::CastFrom(DXGI_DDI_HDEVICE hDevice)
+{
+    return reinterpret_cast< RosUmdDevice* >(hDevice);
 }
 
 inline D3D10DDI_HDEVICE RosUmdDevice::CastTo() const

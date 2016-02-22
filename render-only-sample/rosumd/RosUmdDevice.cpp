@@ -155,7 +155,7 @@ void RosUmdDevice::Standup()
     memset(m_vsConstantBuffer, 0, sizeof(m_vsConstantBuffer));
     memset(m_vs1stConstant, 0, sizeof(m_vs1stConstant));
     memset(m_vsNumberContants, 0, sizeof(m_vsNumberContants));
-        
+
     memset(m_renderTargetViews, 0, sizeof(m_renderTargetViews));
 
     m_blendState = nullptr;
@@ -242,36 +242,37 @@ void RosUmdDevice::CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResou
         return;
     }
 
-    RosAllocationExchange rosAllocationExchange;
+    // Call kernel mode allocation routine
+    {
+        RosAllocationExchange* rosAllocationExchange = pResource;
 
-    pResource->GetAllocationExchange(&rosAllocationExchange);
+        auto allocate = D3DDDICB_ALLOCATE{};
+        auto allocationInfo = D3DDDI_ALLOCATIONINFO{};
+        {
+            // allocationInfo.hAllocation - out: Private driver data for allocation
+            allocationInfo.pSystemMem = nullptr;
+            allocationInfo.pPrivateDriverData = rosAllocationExchange;
+            allocationInfo.PrivateDriverDataSize = sizeof(*rosAllocationExchange);
+            allocationInfo.VidPnSourceId = 0;
+            allocationInfo.Flags.Primary = pCreateResource->pPrimaryDesc != nullptr;
+        }
 
-    D3DDDI_ALLOCATIONINFO allocationInfo;
+        auto rosAllocationGroupExchange = RosAllocationGroupExchange{};
 
-    allocationInfo.Flags.Value = 0;
-    allocationInfo.hAllocation = NULL;
-    allocationInfo.pPrivateDriverData = &rosAllocationExchange;
-    allocationInfo.PrivateDriverDataSize = sizeof(rosAllocationExchange);
-    allocationInfo.pSystemMem = NULL;
-    allocationInfo.VidPnSourceId = 0;
+        allocate.pPrivateDriverData = &rosAllocationGroupExchange;
+        allocate.PrivateDriverDataSize = sizeof(rosAllocationGroupExchange);
+        allocate.hResource = hRTResource.handle;
+        // allocate.hKMResource - out: kernel resource handle
+        allocate.NumAllocations = 1;
+        allocate.pAllocationInfo = &allocationInfo;
 
-    RosAllocationGroupExchange rosAllocationGroupExchange;
+        HRESULT hr = m_pMSKTCallbacks->pfnAllocateCb(m_hRTDevice.handle, &allocate);
+        if (FAILED(hr))
+            throw RosUmdException(hr);
 
-    rosAllocationGroupExchange.m_dummy = 0;
-
-    D3DDDICB_ALLOCATE allocate;
-
-    allocate.pPrivateDriverData = &rosAllocationGroupExchange;
-    allocate.PrivateDriverDataSize = sizeof(rosAllocationGroupExchange);
-    allocate.hResource = hRTResource.handle;
-    allocate.hKMResource = NULL;
-    allocate.NumAllocations = 1;
-    allocate.pAllocationInfo = &allocationInfo;
-
-    Allocate(&allocate);
-
-    pResource->m_hKMResource = allocate.hKMResource;
-    pResource->m_hKMAllocation = allocationInfo.hAllocation;
+        pResource->m_hKMResource = allocate.hKMResource;
+        pResource->m_hKMAllocation = allocationInfo.hAllocation;
+    }
 
     if (pCreateResource->pInitialDataUP != NULL && pCreateResource->pInitialDataUP[0].pSysMem != NULL)
     {
@@ -309,7 +310,7 @@ void RosUmdDevice::CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResou
                 BYTE * pSrc = (BYTE *)pCreateResource->pInitialDataUP[0].pSysMem;
                 BYTE * pDst = (BYTE *)lock.pData;
                 UINT  rowStride = pCreateResource->pInitialDataUP[0].SysMemPitch;
-                
+
                 // Swizzle texture to HW format
                 pResource->ConvertBitmapTo4kTileBlocks(pSrc, pDst, rowStride);
             }
@@ -327,6 +328,40 @@ void RosUmdDevice::CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResou
 
         Unlock(&unlock);
     }
+}
+
+//
+// Need to instantiate a new RosUmdResource object in the memory
+// pointed to by hResource.pDrvPrivate and initialize it according to
+// the existing RosAllocationExchange object pointed to by the pPrivateDriverData
+// member of D3DDDI_OPENALLOCATIONINFO.
+//
+void RosUmdDevice::OpenResource(
+    const D3D10DDIARG_OPENRESOURCE* Args,
+    D3D10DDI_HRESOURCE hResource,
+    D3D10DDI_HRTRESOURCE hRTResource)
+{
+    assert(Args->PrivateDriverDataSize == sizeof(RosAllocationGroupExchange));
+
+    if (Args->NumAllocations != 1)
+        throw RosUmdException(E_INVALIDARG);
+
+    D3DDDI_OPENALLOCATIONINFO* openAllocationInfoPtr = &Args->pOpenAllocationInfo[0];
+    assert(
+        openAllocationInfoPtr->PrivateDriverDataSize ==
+        sizeof(RosAllocationExchange));
+
+    auto rosAllocationExchangePtr = static_cast<const RosAllocationExchange*>(
+            openAllocationInfoPtr->pPrivateDriverData);
+
+    // Instantiate the new resource in the memory provided to us by the framework
+    auto rosUmdResourcePtr = new (hResource.pDrvPrivate) RosUmdResource();
+
+    rosUmdResourcePtr->InitSharedResourceFromExistingAllocation(
+            rosAllocationExchangePtr,
+            Args->hKMResource,
+            openAllocationInfoPtr->hAllocation,
+            hRTResource);
 }
 
 void RosUmdDevice::DestroyResource(
@@ -348,7 +383,7 @@ void RosUmdDevice::ResourceCopy(
     }
     else
     {
-        // Before accessing the resources on CPU, flush if there is pending 
+        // Before accessing the resources on CPU, flush if there is pending
         // GPU operation
         m_commandBuffer.FlushIfMatching(pDestinationResource->m_mostRecentFence);
         m_commandBuffer.FlushIfMatching(pSourceResource->m_mostRecentFence);
@@ -547,13 +582,6 @@ void RosUmdDevice::CheckMultisampleQualityLevels(
 // Kernel mode callbacks
 //
 
-void RosUmdDevice::Allocate(D3DDDICB_ALLOCATE * pAllocate)
-{
-    HRESULT hr = m_pMSKTCallbacks->pfnAllocateCb(m_hRTDevice.handle, pAllocate);
-
-    if (hr != S_OK) throw RosUmdException(hr);
-}
-
 void RosUmdDevice::Lock(D3DDDICB_LOCK * pLock)
 {
     HRESULT hr = m_pMSKTCallbacks->pfnLockCb(m_hRTDevice.handle, pLock);
@@ -587,6 +615,203 @@ void RosUmdDevice::DestroyContext(D3DDDICB_DESTROYCONTEXT * pDestroyContext)
     if (hr != S_OK) throw RosUmdException(hr);
 }
 
+HRESULT RosUmdDevice::Present(DXGI_DDI_ARG_PRESENT* Args)
+{
+    assert(this == CastFrom(Args->hDevice));
+
+    if (Args->Flags.Flip)
+    {
+        if (Args->FlipInterval != DXGI_DDI_FLIP_INTERVAL_ONE)
+        {
+            assert(!"The only supported flip interval is 1.");
+            return E_INVALIDARG;
+        }
+    }
+    
+    // Get the allocation for the source resource
+    auto pSrcResource = RosUmdResource::CastFrom(Args->hSurfaceToPresent);
+
+    // we only handle a single subresource for now
+    if (Args->SrcSubResourceIndex != 0)
+    {
+        assert(!"Only a single subresource is supported currently");
+        return E_NOTIMPL;
+    }
+
+    if (!pSrcResource->IsPrimary())
+    {
+        assert(!"Only primaries may be flipped");
+        return E_INVALIDARG;
+    }
+
+    assert(pSrcResource->m_hKMAllocation);
+
+    // hDstResource can be null
+    D3DKMT_HANDLE hDstAllocation = {};
+    if (Args->hDstResource)
+    {
+        auto pDstResource = RosUmdResource::CastFrom(Args->hDstResource);
+
+        // we only handle a single subresource for now
+        if (Args->DstSubResourceIndex != 0)
+        {
+            assert(!"Only a single subresource is support right now");
+            return E_NOTIMPL;
+        }
+        assert(pDstResource->m_hKMAllocation);
+        hDstAllocation = pDstResource->m_hKMAllocation;
+    }
+
+    DXGIDDICB_PRESENT args = {};
+    args.hSrcAllocation = pSrcResource->m_hKMAllocation;
+    args.hDstAllocation = hDstAllocation;
+    args.pDXGIContext = Args->pDXGIContext;
+    args.hContext = m_hContext;
+
+    return m_pDXGICallbacks->pfnPresentCb(m_hRTDevice.handle, &args);
+}
+
+HRESULT RosUmdDevice::RotateResourceIdentities(
+    DXGI_DDI_ARG_ROTATE_RESOURCE_IDENTITIES* Args)
+{
+    assert(RosUmdDevice::CastFrom(Args->hDevice) == this);
+
+    assert(Args->Resources != 0);
+    
+    // Save the handles from the first resource
+    const RosUmdResource* const firstResource = RosUmdResource::CastFrom(
+            Args->pResources[0]);
+    RosUmdResource* const lastResource = RosUmdResource::CastFrom(
+            Args->pResources[Args->Resources - 1]);
+    assert(lastResource->CanRotateFrom(firstResource));
+            
+    D3DKMT_HANDLE firstResourceKMResource = firstResource->m_hKMResource;
+    D3DKMT_HANDLE firstResourceKMAllocation = firstResource->m_hKMAllocation;
+    
+    for (UINT i = 0; i < (Args->Resources - 1); ++i)
+    {
+        RosUmdResource* rotateTo = RosUmdResource::CastFrom(Args->pResources[i]);
+        const RosUmdResource* rotateFrom = RosUmdResource::CastFrom(
+                Args->pResources[i + 1]);
+
+        assert(rotateTo->CanRotateFrom(rotateFrom));
+        
+        rotateTo->m_hKMResource = rotateFrom->m_hKMResource;
+        rotateTo->m_hKMAllocation = rotateFrom->m_hKMAllocation;
+    }
+
+    // Replace the last resource's handles with those from the first resource
+    lastResource->m_hKMResource = firstResourceKMResource;
+    lastResource->m_hKMAllocation = firstResourceKMAllocation;
+
+    return S_OK;
+}
+
+HRESULT RosUmdDevice::SetDisplayMode(DXGI_DDI_ARG_SETDISPLAYMODE* Args)
+{
+    assert(RosUmdDevice::CastFrom(Args->hDevice) == this);
+
+    // Translate hResource and SubResourceIndex to a primary allocation handle
+    auto pResource = reinterpret_cast<RosUmdResource*>(Args->hResource);
+
+    if (Args->SubResourceIndex != 0)
+    {
+        assert(!"Only a single subresource is supported right now");
+        return E_NOTIMPL;
+    }
+
+    // We are expecting the resource to represent a primary allocation
+    assert(pResource->IsPrimary());
+
+    // XXX Do we need to flush all rendering tasks before calling kernel side?
+
+    D3DDDICB_SETDISPLAYMODE args = {};
+    args.hPrimaryAllocation = pResource->m_hKMAllocation;
+
+    HRESULT hr = m_pMSKTCallbacks->pfnSetDisplayModeCb(m_hRTDevice.handle, &args);
+    if (FAILED(hr)) {
+        switch (hr) {
+        case D3DDDIERR_INCOMPATIBLEPRIVATEFORMAT:
+            // TODO[jordanrh] Use args.PrivateDriverFormatAttribute to convert the
+            // primary surface
+            assert(args.PrivateDriverFormatAttribute != 0);
+        default:
+            return hr;
+        }
+    }
+
+    assert(SUCCEEDED(hr));
+    return S_OK;
+}
+
+HRESULT RosUmdDevice::Present1(DXGI_DDI_ARG_PRESENT1* Args)
+{
+    assert(this == CastFrom(Args->hDevice));
+
+    if (Args->Flags.Flip)
+    {
+        if (Args->FlipInterval != DXGI_DDI_FLIP_INTERVAL_ONE)
+        {
+            assert(!"The only supported flip interval is 1.");
+            return E_INVALIDARG;
+        }
+    }
+
+    // TODO[jordanrh]: Ensure all rendering commands are flushed
+
+    // Call pfnPresentCb for each source surface
+    for (UINT i = 0; i < Args->SurfacesToPresent; ++i)
+    {
+        // Get the allocation for the source resource
+        auto pSrcResource = RosUmdResource::CastFrom(
+                Args->phSurfacesToPresent[i].hSurface);
+
+        // we only handle a single subresource for now
+        if (Args->phSurfacesToPresent[i].SubResourceIndex != 0)
+        {
+            assert(!"Only a single subresource is supported right now");
+            return E_NOTIMPL;
+        }
+
+        if (Args->Flags.Flip && !pSrcResource->IsPrimary())
+        {
+            assert(!"Only primaries may be flipped");
+            return E_INVALIDARG;
+        }
+
+        assert(pSrcResource->m_hKMAllocation);
+
+        // hDstResource can be null
+        D3DKMT_HANDLE hDstAllocation = {};
+        if (Args->hDstResource)
+        {
+            auto pDstResource = RosUmdResource::CastFrom(
+                    Args->hDstResource);
+
+            // we only handle a single subresource for now
+            if (Args->DstSubResourceIndex != 0)
+            {
+                assert(!"Only a single subresource is supported right now");
+                return E_NOTIMPL;
+            }
+            assert(pDstResource->m_hKMAllocation);
+            hDstAllocation = pDstResource->m_hKMAllocation;
+        }
+
+        DXGIDDICB_PRESENT args = {};
+        args.hSrcAllocation = pSrcResource->m_hKMAllocation;
+        args.hDstAllocation = hDstAllocation;
+        args.pDXGIContext = Args->pDXGIContext;
+        args.hContext = m_hContext;
+
+        HRESULT hr = m_pDXGICallbacks->pfnPresentCb(m_hRTDevice.handle, &args);
+        if (FAILED(hr))
+            return hr;
+    }
+
+    return S_OK;
+}
+
 //
 // User mode call backs
 //
@@ -602,18 +827,17 @@ void RosUmdDevice::SetError(HRESULT hr)
 // Excepton handling support
 //
 
-void RosUmdDevice::SetException(RosUmdException & e)
+void RosUmdDevice::SetException(const RosUmdException & e)
 {
     SetError(e.m_hr);
 }
 
-void RosUmdDevice::SetException(std::exception & e)
+void RosUmdDevice::SetException(const std::exception & e)
 {
-    if (typeid(e) == typeid(RosUmdException))
+    auto rosUmdException = dynamic_cast<const RosUmdException*>(&e);
+    if (rosUmdException)
     {
-        RosUmdException & rosUmdException = dynamic_cast<RosUmdException &>(e);
-
-        SetError(rosUmdException.m_hr);
+        SetError(rosUmdException->m_hr);
     }
     else
     {
@@ -713,7 +937,7 @@ void RosUmdDevice::DrawIndexed(UINT indexCount, UINT startIndexLocation, INT bas
         0,
         startIndexLocation*indexSize + m_indexOffset);
 
-    pVC4IndexedPrimitiveList->MaximumIndex = 0xffff;    // Maximal USHORT 
+    pVC4IndexedPrimitiveList->MaximumIndex = 0xffff;    // Maximal USHORT
 
 #endif
 
@@ -728,7 +952,7 @@ void RosUmdDevice::ClearRenderTargetView(RosUmdRenderTargetView * pRenderTargetV
 #if VC4
 
     RosUmdResource * pRenderTarget = RosUmdResource::CastFrom(pRenderTargetView->m_create.hDrvResource);
-        
+
     //
     // KMD issumes Clear Colors command before Draw call
     //
@@ -798,7 +1022,7 @@ void RosUmdDevice::VsSetConstantBuffers11_1(
     const UINT *    pNumberConstants)
 {
     UINT bufIndex;
-    
+
     bufIndex = startBuffer;
     for (UINT i = 0; i < numberBuffers; i++, bufIndex++)
     {
@@ -844,7 +1068,7 @@ void RosUmdDevice::SetRenderTargets(const D3D10DDI_HRENDERTARGETVIEW* phRenderTa
 #if VC4
 
     //
-    // Flush is necessary for tile based render 
+    // Flush is necessary for tile based render
     // if there is Draw command for the previous render target
     //
 
@@ -1008,7 +1232,7 @@ void RosUmdDevice::SetRasterizerState(RosUmdRasterizerState * pRasterizerState)
 void RosUmdDevice::SetScissorRects(UINT NumScissorRects, UINT ClearScissorRects, const D3D10_DDI_RECT *pRects)
 {
     // Issue #36
-    assert((NumScissorRects + ClearScissorRects) == 1);
+    assert((NumScissorRects + ClearScissorRects) <= 1);
     if (NumScissorRects)
     {
         m_scissorRectSet = true;
@@ -1023,7 +1247,7 @@ void RosUmdDevice::SetScissorRects(UINT NumScissorRects, UINT ClearScissorRects,
 
 void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
 {
-    RosUmdResource * pRenderTarget = (RosUmdResource *)m_renderTargetViews[0]->m_create.hDrvResource.pDrvPrivate;
+    RosUmdResource * pRenderTarget = RosUmdResource::CastFrom(m_renderTargetViews[0]->m_create.hDrvResource);
 
     // TODO[indyz] : Update RosHwFormat
     assert(pRenderTarget->m_hwFormat == RosHwFormat::X8888);
@@ -1213,7 +1437,7 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
     if (m_scissorRectSet && m_rasterizerState->GetDesc()->ScissorEnable)
     {
         RECT Intersect;
-        RECT Viewport = { 
+        RECT Viewport = {
             (LONG)round(m_viewports[0].TopLeftX),
             (LONG)round(m_viewports[0].TopLeftY),
             (LONG)round((m_viewports[0].TopLeftX + m_viewports[0].Width)),
@@ -1264,7 +1488,7 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
     }
 
     //
-    // It looks like that VC4ConfigBits::ClockwisePrimitives 
+    // It looks like that VC4ConfigBits::ClockwisePrimitives
     // matches the D3D11_1_DDI_RASTERIZER_DESC::FrontCounterClockwise.
     // It must be set in the same way for proper behavior.
     //
@@ -1351,7 +1575,7 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
 
     // TODO[indyz] : Decide the size of Uniforms by constant buffer bound
     //
-    
+
     pVC4NVShaderStateRecord->FragmentShaderNumberOfUniforms = 0;
 
     // TODO[indyz] : Need to calculate it from Input Layout Elements, etc
@@ -1561,7 +1785,7 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
 
 
     pVC4GLShaderStateRecord->EnableClipping = 1;
-    
+
     pVC4GLShaderStateRecord->FragmentShaderIsSingleThreaded = 1;
 
     UINT numVaryings = m_pixelShader->GetShaderInputCount();
@@ -1642,7 +1866,7 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
             dummyAllocIndex,
             vc4GLShaderStateRecordOffset + offsetof(VC4GLShaderStateRecord, VertexShaderUniformsAddress));
     }
-    
+
 #if DBG
     pVC4GLShaderStateRecord->CoordinateShaderCodeAddress        = 0xDEADBEEF;
     pVC4GLShaderStateRecord->CoordinateShaderUniformsAddress    = 0xDEADBEEF;

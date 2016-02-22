@@ -6,23 +6,17 @@
 #include "RosKmdAdapter.h"
 #include "RosKmdDevice.h"
 #include "RosKmdAllocation.h"
-
-void * RosKmDevice::operator new(size_t size)
-{
-    return ExAllocatePoolWithTag(NonPagedPoolNx, size, 'ROSD');
-}
-
-void RosKmDevice::operator delete(void * ptr)
-{
-    ExFreePool(ptr);
-}
+#include "RosKmdUtil.h"
 
 NTSTATUS __stdcall RosKmDevice::DdiCreateDevice(
     IN_CONST_HANDLE hAdapter,
     INOUT_PDXGKARG_CREATEDEVICE pCreateDevice)
 {
-    if (new RosKmDevice(hAdapter, pCreateDevice) == NULL)
+    pCreateDevice->hDevice = new (NonPagedPoolNx, ROS_ALLOC_TAG::DEVICE)
+        RosKmDevice(hAdapter, pCreateDevice);
+    if (!pCreateDevice->hDevice)
     {
+        ROS_LOG_LOW_MEMORY("Failed to allocate RosKmDevice.");
         return STATUS_NO_MEMORY;
     }
 
@@ -44,69 +38,13 @@ RosKmDevice::RosKmDevice(IN_CONST_HANDLE hAdapter, INOUT_PDXGKARG_CREATEDEVICE p
     m_hRTDevice = pCreateDevice->hDevice;
     m_pRosKmAdapter = (RosKmAdapter *)hAdapter;
     m_Flags = pCreateDevice->Flags;
-
+    
     pCreateDevice->hDevice = this;
 }
 
 RosKmDevice::~RosKmDevice()
 {
     // do nothing
-}
-
-
-NTSTATUS
-__stdcall
-RosKmDevice::DdiOpenAllocation(
-    IN_CONST_HANDLE                         hDevice,
-    IN_CONST_PDXGKARG_OPENALLOCATION        pOpenAllocation)
-{
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hDevice=%lx\n",
-        __FUNCTION__, hDevice);
-
-    RosKmDevice    *pRosKmDevice = (RosKmDevice *)hDevice;
-    RosKmAdapter   *pRosKmAdapter = pRosKmDevice->m_pRosKmAdapter;
-
-    NT_ASSERT(pOpenAllocation->PrivateDriverSize == sizeof(RosAllocationGroupExchange));
-    RosAllocationGroupExchange * pRosAllocationGroupExchange = (RosAllocationGroupExchange *)pOpenAllocation->pPrivateDriverData;
-
-    pRosAllocationGroupExchange;
-    NT_ASSERT(pRosAllocationGroupExchange->m_dummy == 0);
-
-    pOpenAllocation->Pitch;
-
-    NT_ASSERT(pOpenAllocation->Flags.Create == true);
-    NT_ASSERT(pOpenAllocation->Flags.ReadOnly == false);
-
-    NT_ASSERT(pOpenAllocation->NumAllocations == 1);
-
-    DXGK_OPENALLOCATIONINFO * pOpenAllocationInfo = pOpenAllocation->pOpenAllocation;
-
-    NT_ASSERT(pOpenAllocationInfo->PrivateDriverDataSize == sizeof(RosAllocationExchange));
-    RosAllocationExchange * pRosAllocationExchange = (RosAllocationExchange *)pOpenAllocationInfo->pPrivateDriverData;
-    pRosAllocationExchange;
-
-    RosKmdDeviceAllocation * pRosKmdDeviceAllocation = (RosKmdDeviceAllocation *)ExAllocatePoolWithTag(NonPagedPoolNx, sizeof(RosKmdDeviceAllocation), 'ROSD');
-    if (!pRosKmdDeviceAllocation)
-    {
-        ROS_LOG_LOW_MEMORY(
-            "Failed to allocate memory for RosKmdDeviceAllocation structure. (sizeof(RosKmdDeviceAllocation)=%d)",
-            sizeof(RosKmdDeviceAllocation));
-        return STATUS_NO_MEMORY;
-    }
-
-    pRosKmdDeviceAllocation->m_hKMAllocation = pOpenAllocationInfo->hAllocation;
-
-    DXGKARGCB_GETHANDLEDATA getHandleData;
-
-    getHandleData.hObject = pRosKmdDeviceAllocation->m_hKMAllocation;
-    getHandleData.Type = DXGK_HANDLE_ALLOCATION;
-    getHandleData.Flags.DeviceSpecific = 0;
-
-    pRosKmdDeviceAllocation->m_pRosKmdAllocation = (RosKmdAllocation *)pRosKmAdapter->GetDxgkInterface()->DxgkCbGetHandleData(&getHandleData);
-
-    pOpenAllocationInfo->hDeviceSpecificAllocation = pRosKmdDeviceAllocation;
-
-    return STATUS_SUCCESS;
 }
 
 NTSTATUS
@@ -125,7 +63,62 @@ RosKmDevice::DdiCloseAllocation(
 
     RosKmdDeviceAllocation * pRosKmdDeviceAllocation = (RosKmdDeviceAllocation *)pCloseAllocation->pOpenHandleList[0];
 
-    ExFreePoolWithTag(pRosKmdDeviceAllocation, 'ROSD');
+    ExFreePoolWithTag(pRosKmdDeviceAllocation, ROS_ALLOC_TAG::DEVICE);
 
     return STATUS_SUCCESS;
 }
+
+ROS_PAGED_SEGMENT_BEGIN; //===================================================
+
+_Use_decl_annotations_
+NTSTATUS RosKmDevice::OpenAllocation (const DXGKARG_OPENALLOCATION* ArgsPtr)
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    const DXGKRNL_INTERFACE& dxgkInterface = *m_pRosKmAdapter->GetDxgkInterface();
+
+    for (UINT i = 0; i < ArgsPtr->NumAllocations; i++)
+    {
+        DXGK_OPENALLOCATIONINFO* openAllocInfoPtr = ArgsPtr->pOpenAllocation + i;
+
+        RosKmdAllocation* rosKmdAllocationPtr;
+        {
+            DXGKARGCB_GETHANDLEDATA getHandleData;
+            getHandleData.hObject = openAllocInfoPtr->hAllocation;
+            getHandleData.Type = DXGK_HANDLE_ALLOCATION;
+            getHandleData.Flags.DeviceSpecific = 0;
+            rosKmdAllocationPtr = static_cast<RosKmdAllocation*>(
+                dxgkInterface.DxgkCbGetHandleData(&getHandleData));
+        }
+
+        RosKmdDeviceAllocation* rosKmdDeviceAllocationPtr;
+        {
+            // TODO[jordanrh] this structure can probably be paged
+            rosKmdDeviceAllocationPtr = new (NonPagedPoolNx, ROS_ALLOC_TAG::DEVICE)
+                    RosKmdDeviceAllocation();
+            if (!rosKmdDeviceAllocationPtr)
+            {
+                ROS_LOG_LOW_MEMORY(
+                    "Failed to allocate memory for RosKmdDeviceAllocation structure. (sizeof(RosKmdDeviceAllocation)=%d)",
+                    sizeof(RosKmdDeviceAllocation));
+                return STATUS_NO_MEMORY;
+            }
+
+            rosKmdDeviceAllocationPtr->m_hKMAllocation = openAllocInfoPtr->hAllocation;
+            rosKmdDeviceAllocationPtr->m_pRosKmdAllocation = rosKmdAllocationPtr;
+        }
+
+        // Return the per process allocation info
+        openAllocInfoPtr->hDeviceSpecificAllocation = rosKmdDeviceAllocationPtr;
+    }
+
+    ROS_LOG_TRACE(
+        "Successfully opened allocation. (Flags.Create=%d, Flags.ReadOnly=%d)",
+        ArgsPtr->Flags.Create,
+        ArgsPtr->Flags.ReadOnly);
+
+    return STATUS_SUCCESS;
+}
+
+ROS_PAGED_SEGMENT_END; //=====================================================

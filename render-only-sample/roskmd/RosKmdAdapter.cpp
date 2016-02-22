@@ -15,6 +15,7 @@
 #include "RosKmdUtil.h"
 #include "RosGpuCommand.h"
 #include "RosKmdAcpi.h"
+#include "RosKmdUtil.h"
 #include "Vc4Hw.h"
 #include "Vc4Ddi.h"
 #include "Vc4Mailbox.h"
@@ -29,7 +30,8 @@ void RosKmAdapter::operator delete(void * ptr)
     ExFreePool(ptr);
 }
 
-RosKmAdapter::RosKmAdapter(IN_CONST_PDEVICE_OBJECT PhysicalDeviceObject, OUT_PPVOID MiniportDeviceContext)
+RosKmAdapter::RosKmAdapter(IN_CONST_PDEVICE_OBJECT PhysicalDeviceObject, OUT_PPVOID MiniportDeviceContext) :
+    m_display(PhysicalDeviceObject, m_DxgkInterface, m_DxgkStartInfo, m_deviceInfo)
 {
     m_magic = kMagic;
     m_pPhysicalDevice = PhysicalDeviceObject;
@@ -78,23 +80,30 @@ RosKmAdapter::AddAdapter(
     ULONG dataLen;
 
     status = IoGetDeviceProperty(PhysicalDeviceObject, DevicePropertyHardwareID, sizeof(deviceID), deviceID, &dataLen);
-
-    if (status != STATUS_SUCCESS)
+    if (!NT_SUCCESS(status))
+    {
+        ROS_LOG_ERROR(
+            "Failed to get DevicePropertyHardwareID from PDO. (status=%!STATUS!)",
+            status);
         return status;
+    }
 
     RosKmAdapter  *pRosKmAdapter = nullptr;
     if (wcscmp(deviceID, L"ACPI\\VEN_BCM&DEV_2850") == 0)
     {
         pRosKmAdapter = new RosKmdRapAdapter(PhysicalDeviceObject, MiniportDeviceContext);
+        if (!pRosKmAdapter) {
+            ROS_LOG_LOW_MEMORY("Failed to allocate RosKmdRapAdapter.");
+            return STATUS_NO_MEMORY;
+        }
     }
     else
     {
         pRosKmAdapter = new RosKmdSoftAdapter(PhysicalDeviceObject, MiniportDeviceContext);
-    }
-
-    if (!pRosKmAdapter)
-    {
-        return STATUS_NO_MEMORY;
+        if (!pRosKmAdapter) {
+            ROS_LOG_LOW_MEMORY("Failed to allocate RosKmdSoftAdapter.");
+            return STATUS_NO_MEMORY;
+        }
     }
 
     return STATUS_SUCCESS;
@@ -104,8 +113,9 @@ NTSTATUS
 RosKmAdapter::QueryEngineStatus(
     DXGKARG_QUERYENGINESTATUS  *pQueryEngineStatus)
 {
-    pQueryEngineStatus->EngineStatus.Responsive = 1;
+    ROS_LOG_TRACE("QueryEngineStatus was called.");
 
+    pQueryEngineStatus->EngineStatus.Responsive = 1;
     return STATUS_SUCCESS;
 }
 
@@ -363,6 +373,7 @@ RosKmAdapter::Start(
 
     //
     // Render only device has no VidPn source and target
+    // Subclass should overwrite these values if it is not render-only.
     //
     *NumberOfVideoPresentSources = 0;
     *NumberOfChildren = 0;
@@ -398,6 +409,9 @@ RosKmAdapter::Start(
 
     if (status != STATUS_SUCCESS)
     {
+        ROS_LOG_ERROR(
+            "PsCreateSystemThread(...) failed for RosKmAdapter::WorkerThread. (status=%!STATUS!)",
+            status);
         return status;
     }
 
@@ -411,15 +425,25 @@ RosKmAdapter::Start(
 
     ZwClose(hWorkerThread);
 
-    if (status != STATUS_SUCCESS)
+    if (!NT_SUCCESS(status))
     {
+        ROS_LOG_ERROR(
+            "ObReferenceObjectByHandle(...) failed for worker thread. (status=%!STATUS!)",
+            status);
         return status;
     }
 
     status = m_DxgkInterface.DxgkCbGetDeviceInformation(
         m_DxgkInterface.DeviceHandle,
         &m_deviceInfo);
-    NT_ASSERT(status == STATUS_SUCCESS);
+    if (!NT_SUCCESS(status))
+    {
+        ROS_LOG_ERROR(
+            "DxgkCbGetDeviceInformation(...) failed. (status=%!STATUS!, m_DxgkInterface.DeviceHandle=0x%p)",
+            status,
+            m_DxgkInterface.DeviceHandle);
+        return status;
+    }
 
     //
     // Query APCI device ID
@@ -474,6 +498,7 @@ RosKmAdapter::Start(
     KeInitializeEvent(&m_hwDmaBufCompletionEvent, SynchronizationEvent, FALSE);
     KeInitializeDpc(&m_hwDmaBufCompletionDpc, HwDmaBufCompletionDpcRoutine, this);
 
+    ROS_LOG_TRACE("Adapter was successfully started.");
     return STATUS_SUCCESS;
 }
 
@@ -496,6 +521,7 @@ RosKmAdapter::Stop()
 
     ObDereferenceObject(m_pWorkerThread);
 
+    ROS_LOG_TRACE("Adapter was successfully stopped.");
     return STATUS_SUCCESS;
 }
 
@@ -570,13 +596,18 @@ RosKmAdapter::BuildPagingBuffer(
         RosKmdAllocation * pRosKmdAllocation = (RosKmdAllocation *)pArgs->Fill.hAllocation;
         pRosKmdAllocation;
 
-        DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "Filling at %lx with %lx size %lx\n",
-            pArgs->Fill.Destination.SegmentAddress,
+        ROS_LOG_TRACE(
+            "Filling DMA buffer. (Destination.SegmentAddress=0x%I64x, FillPattern=0x%lx, FillSize=%Id)",
+            pArgs->Fill.Destination.SegmentAddress.QuadPart,
             pArgs->Fill.FillPattern,
             pArgs->Fill.FillSize);
 
         if (pArgs->DmaSize < sizeof(DXGKARG_BUILDPAGINGBUFFER))
         {
+            ROS_LOG_ERROR(
+                "DXGK_OPERATION_FILL: DMA buffer size is too small. (pArgs->DmaSize=%d, sizeof(DXGKARG_BUILDPAGINGBUFFER)=%d)",
+                pArgs->DmaSize,
+                sizeof(DXGKARG_BUILDPAGINGBUFFER));
             return STATUS_GRAPHICS_INSUFFICIENT_DMA_BUFFER;
         }
         else
@@ -598,6 +629,10 @@ RosKmAdapter::BuildPagingBuffer(
     {
         if (pArgs->DmaSize < sizeof(DXGKARG_BUILDPAGINGBUFFER))
         {
+            ROS_LOG_ERROR(
+                "DXGK_OPERATION_TRANSFER: DMA buffer is too small. (pArgs->DmaSize=%d, sizeof(DXGKARG_BUILDPAGINGBUFFER)=%d)",
+                pArgs->DmaSize,
+                sizeof(DXGKARG_BUILDPAGINGBUFFER));
             return STATUS_GRAPHICS_INSUFFICIENT_DMA_BUFFER;
         }
         else
@@ -642,11 +677,15 @@ RosKmAdapter::DispatchIoRequest(
     IN_ULONG                    VidPnSourceId,
     IN_PVIDEO_REQUEST_PACKET    VideoRequestPacket)
 {
-    VidPnSourceId;
-    VideoRequestPacket;
+    if (RosKmdGlobal::IsRenderOnly())
+    {
+        ROS_LOG_WARNING(
+            "Unsupported IO Control Code. (VideoRequestPacketPtr->IoControlCode = 0x%lx)",
+            VideoRequestPacket->IoControlCode);
+        return STATUS_NOT_SUPPORTED;
+    }
 
-    NT_ASSERT(FALSE);
-    return STATUS_SUCCESS;
+    return m_display.DispatchIoRequest(VidPnSourceId, VideoRequestPacket);
 }
 
 NTSTATUS
@@ -744,6 +783,9 @@ RosKmAdapter::CreateAllocation(
             pRosKmdResource = (RosKmdResource *)ExAllocatePoolWithTag(NonPagedPoolNx, sizeof(RosKmdResource), 'ROSD');
             if (!pRosKmdResource)
             {
+                ROS_LOG_LOW_MEMORY(
+                    "Failed to allocate nonpaged pool for sizeof(RosKmdResource) structure. (sizeof(RosKmdResource)=%d)",
+                    sizeof(RosKmdResource));
                 return STATUS_NO_MEMORY;
             }
             pRosKmdResource->m_dummy = 0;
@@ -765,6 +807,10 @@ RosKmAdapter::CreateAllocation(
     if (!pRosKmdAllocation)
     {
         if (pRosKmdResource != NULL) ExFreePoolWithTag(pRosKmdResource, 'ROSD');
+
+        ROS_LOG_ERROR(
+            "Failed to allocated nonpaged pool for RosKmdAllocation. (sizeof(RosKmdAllocation)=%d)",
+            sizeof(RosKmdAllocation));
         return STATUS_NO_MEMORY;
     }
 
@@ -777,12 +823,21 @@ RosKmAdapter::CreateAllocation(
     pAllocationInfo->EvictionSegmentSet = 0; // don't use apperture for eviction
 
     pAllocationInfo->Flags.Value = 0;
-    // Allocation cannot be cpu visible as shared resource cannot be cpu visible.
-    // The primary surface is expected to be shared  between DWM and application.
-    // TODO[douglasc]: Attempt to distinguished allocation type sepcify attributes accordingly
-    pAllocationInfo->Flags.CpuVisible = 0;
-    pAllocationInfo->Flags.Cached = 1;
-    
+
+    //
+    // Allocations should be marked CPU visible unless they are shared or
+    // can be flipped.
+    // Shared allocations (including the primary) cannot be CPU visible unless
+    // they are exclusively located in an aperture segment.
+    //
+    pAllocationInfo->Flags.CpuVisible =
+        !((pRosAllocation->m_miscFlags & D3D10_DDI_RESOURCE_MISC_SHARED) ||
+          (pRosAllocation->m_bindFlags & D3D10_DDI_BIND_PRESENT));
+
+    // Allocations that will be flipped, such as the primary allocation,
+    // cannot be cached.
+    pAllocationInfo->Flags.Cached = pAllocationInfo->Flags.CpuVisible;
+
     pAllocationInfo->HintedBank.Value = 0;
     pAllocationInfo->MaximumRenamingListLength = 0;
     pAllocationInfo->pAllocationUsageHint = NULL;
@@ -791,7 +846,11 @@ RosKmAdapter::CreateAllocation(
     pAllocationInfo->PreferredSegment.Value = 0;
     pAllocationInfo->PreferredSegment.SegmentId0 = ROSD_SEGMENT_VIDEO_MEMORY;
     pAllocationInfo->PreferredSegment.Direction0 = 0;
+
+    // zero-size allocations are not allowed
+    NT_ASSERT(pRosAllocation->m_hwSizeBytes != 0);
     pAllocationInfo->Size = pRosAllocation->m_hwSizeBytes;
+
     pAllocationInfo->SupportedReadSegmentSet = 1 << (ROSD_SEGMENT_VIDEO_MEMORY - 1);
     pAllocationInfo->SupportedWriteSegmentSet = 1 << (ROSD_SEGMENT_VIDEO_MEMORY - 1);
 
@@ -815,6 +874,12 @@ RosKmAdapter::CreateAllocation(
     {
         pCreateAllocation->hResource = pRosKmdResource;
     }
+
+    ROS_LOG_TRACE(
+        "Created allocation. (Flags.CpuVisible=%d, Flags.Cacheable=%d, Size=%Id)",
+        pAllocationInfo->Flags.CpuVisible,
+        pAllocationInfo->Flags.Cached,
+        pAllocationInfo->Size);
 
     return STATUS_SUCCESS;
 }
@@ -844,9 +909,8 @@ NTSTATUS
 RosKmAdapter::QueryAdapterInfo(
     IN_CONST_PDXGKARG_QUERYADAPTERINFO      pQueryAdapterInfo)
 {
-    NTSTATUS        Status = STATUS_INVALID_PARAMETER;
-
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "RosKmdQueryAdapterInfo Type=%d\n",
+    ROS_LOG_TRACE(
+        "QueryAdapterInfo was called. (Type=%d)",
         pQueryAdapterInfo->Type);
 
     switch (pQueryAdapterInfo->Type)
@@ -855,8 +919,11 @@ RosKmAdapter::QueryAdapterInfo(
     {
         if (pQueryAdapterInfo->OutputDataSize < sizeof(ROSADAPTERINFO))
         {
-            Status = STATUS_INVALID_PARAMETER;
-            break;
+            ROS_LOG_ERROR(
+                "Output buffer is too small. (pQueryAdapterInfo->OutputDataSize=%d, sizeof(ROSADAPTERINFO)=%d)",
+                pQueryAdapterInfo->OutputDataSize,
+                sizeof(ROSADAPTERINFO));
+            return STATUS_BUFFER_TOO_SMALL;
         }
         ROSADAPTERINFO* pRosAdapterInfo = (ROSADAPTERINFO*)pQueryAdapterInfo->pOutputData;
 
@@ -870,8 +937,6 @@ RosKmAdapter::QueryAdapterInfo(
             pRosAdapterInfo->m_deviceId,
             m_deviceId,
             m_deviceIdLength);
-
-        Status = STATUS_SUCCESS;
     }
     break;
 
@@ -879,8 +944,11 @@ RosKmAdapter::QueryAdapterInfo(
     {
         if (pQueryAdapterInfo->OutputDataSize < sizeof(DXGK_DRIVERCAPS))
         {
-            Status = STATUS_INVALID_PARAMETER;
-            break;
+            ROS_LOG_ASSERTION(
+                "Output buffer is too small. (pQueryAdapterInfo->OutputDataSize=%d, sizeof(DXGK_DRIVERCAPS)=%d)",
+                pQueryAdapterInfo->OutputDataSize,
+                sizeof(DXGK_DRIVERCAPS));
+            return STATUS_BUFFER_TOO_SMALL;
         }
 
         DXGK_DRIVERCAPS    *pDriverCaps = (DXGK_DRIVERCAPS *)pQueryAdapterInfo->pOutputData;
@@ -946,19 +1014,53 @@ RosKmAdapter::QueryAdapterInfo(
         pDriverCaps->PresentationCaps.MaxTextureHeightShift = 3;
 
         //
-        // TODO[bhouse] MaxQueueFlipOnVSync
-        //
-
-        //
-        // TODO[bhouse] FlipCaps
-        //
-
-        //
         // Use SW flip queue for flip with interval of 1 or more
+        //   - we must NOT generate a DMA buffer in DxgkDdiPresent. That is,
+        //     we must set the DXGKARG_PRESENT.pDmaBuffer output parameter
+        //     to NULL.
+        //   - DxgkDdiSetVidPnSourceAddress will be called at DIRQL
         //
-#if 1
-        pDriverCaps->FlipCaps.FlipOnVSyncMmIo = 1;
-#endif
+        pDriverCaps->FlipCaps.FlipOnVSyncMmIo = TRUE;
+
+        if (!RosKmdGlobal::IsRenderOnly())
+        {
+            //
+            // The hardware can store at most one pending flip operation.
+            //
+            pDriverCaps->MaxQueuedFlipOnVSync = 1;
+
+            //
+            // FlipOnVSyncWithNoWait - we don't have to wait for the next VSync
+            // to program in the new source address. We can program in the new
+            // source address and return immediately, and it will take
+            // effect at the next vsync.
+            //
+            pDriverCaps->FlipCaps.FlipOnVSyncWithNoWait = TRUE;
+
+            //
+            // We do not support the scheduling of a flip command to take effect
+            // after two, three, or four vertical syncs.
+            //
+            pDriverCaps->FlipCaps.FlipInterval = FALSE;
+
+            //
+            // The address we program into hardware does not take effect until
+            // the next vsync.
+            //
+            pDriverCaps->FlipCaps.FlipImmediateMmIo = FALSE;
+
+            //
+            // WDDM 1.3 and later drivers must set this to TRUE.
+            // In an independent flip, the DWM user-mode present call is skipped
+            // and DxgkDdiPresent and DxgkDdiSetVidPnSourceAddress are called.
+            //
+            pDriverCaps->FlipCaps.FlipIndependent = TRUE;
+
+            //
+            // TODO[jordanrh] VSyncPowerSaveAware
+            // https://msdn.microsoft.com/en-us/library/windows/hardware/ff569520(v=vs.85).aspx
+            //
+        }
 
         //
         // TODO[bhouse] SchedulingCaps
@@ -1018,12 +1120,14 @@ RosKmAdapter::QueryAdapterInfo(
 #endif
 
         //
-        // TODO[bhouse] SupportNonVGA
+        // Must support DxgkDdiStopDeviceAndReleasePostDisplayOwnership
         //
+        pDriverCaps->SupportNonVGA = TRUE;
 
         //
-        // TODO[bhouse] SupportSmoothRotation
+        // Must support updating path rotation in DxgkDdiUpdateActiveVidPnPresentPath
         //
+        pDriverCaps->SupportSmoothRotation = TRUE;
 
         //
         // TODO[bhouse] SupportPerEngineTDR
@@ -1033,11 +1137,13 @@ RosKmAdapter::QueryAdapterInfo(
 #endif
 
         //
-        // TODO[bhouse] SupportDirectFlip
+        // SupportDirectFlip
+        //   - must not allow video memory to be flipped to an incompatible
+        //     allocation in DxgkDdiSetVidPnSourceAddress
+        //   - the user mode driver must validate Direct Flip resources before
+        //     the DWM uses them
         //
-#if 1
         pDriverCaps->SupportDirectFlip = 1;
-#endif
 
         //
         // TODO[bhouse] SupportMultiPlaneOverlay
@@ -1045,8 +1151,9 @@ RosKmAdapter::QueryAdapterInfo(
 
         //
         // Support SupportRuntimePowerManagement
+        // TODO[jordanrh] setting this to true causes constant power state transitions
         //
-        pDriverCaps->SupportRuntimePowerManagement = 1;
+        pDriverCaps->SupportRuntimePowerManagement = FALSE;
 
         //
         // TODO[bhouse] SupportSurpriseRemovalInHibernation
@@ -1060,8 +1167,6 @@ RosKmAdapter::QueryAdapterInfo(
         // TODO[bhouse] MaxOverlayPlanes
         //
 
-
-        Status = STATUS_SUCCESS;
     }
     break;
 
@@ -1069,13 +1174,14 @@ RosKmAdapter::QueryAdapterInfo(
     {
         if (pQueryAdapterInfo->OutputDataSize < sizeof(DXGK_QUERYSEGMENTOUT3))
         {
-            Status = STATUS_INVALID_PARAMETER;
-            break;
+            ROS_LOG_ASSERTION(
+                "Output buffer is too small. (pQueryAdapterInfo->OutputDataSize=%d, sizeof(DXGK_QUERYSEGMENTOUT3)=%d)",
+                pQueryAdapterInfo->OutputDataSize,
+                sizeof(DXGK_QUERYSEGMENTOUT3));
+            return STATUS_BUFFER_TOO_SMALL;
         }
 
         DXGK_QUERYSEGMENTOUT3   *pSegmentInfo = (DXGK_QUERYSEGMENTOUT3*)pQueryAdapterInfo->pOutputData;
-
-        Status = STATUS_SUCCESS;
 
         if (!pSegmentInfo[0].pSegmentDescriptor)
         {
@@ -1116,9 +1222,7 @@ RosKmAdapter::QueryAdapterInfo(
             //
             // Our fake apperture is not really visible and doesn't need to be.  We
             // still need to lie that it is visible reporting a bad physical address
-            // that will never be used.
-            //
-            // TODO[bhouse] Investigate why we have to lie.
+            // that will never be used. This is a legacy requirement of the DX stack.
             //
 
             pSegmentDesc[0].CpuTranslatedAddress.QuadPart = 0xFFFFFFFE00000000;
@@ -1136,8 +1240,9 @@ RosKmAdapter::QueryAdapterInfo(
             pSegmentDesc[1].BaseAddress.QuadPart = 0LL; // Gpu base physical address
             pSegmentDesc[1].Flags.CpuVisible = true;
             pSegmentDesc[1].Flags.CacheCoherent = true;
+            pSegmentDesc[1].Flags.DirectFlip = true;
             pSegmentDesc[1].CpuTranslatedAddress = RosKmdGlobal::s_videoMemoryPhysicalAddress; // cpu base physical address
-            pSegmentDesc[1].Size = RosKmdGlobal::s_videoMemorySize;
+            pSegmentDesc[1].Size = m_localVidMemSegmentSize;
 
         }
     }
@@ -1147,32 +1252,53 @@ RosKmAdapter::QueryAdapterInfo(
     {
         if (pQueryAdapterInfo->OutputDataSize != sizeof(UINT))
         {
-            Status = STATUS_INVALID_PARAMETER;
-            break;
+            ROS_LOG_ASSERTION(
+                "Output buffer is unexpected size. (pQueryAdapterInfo->OutputDataSize=%d, sizeof(UINT)=%d)",
+                pQueryAdapterInfo->OutputDataSize,
+                sizeof(UINT));
+            return STATUS_INVALID_PARAMETER;
         }
 
         //
         // Support only one 3D engine(s).
         //
-        *(reinterpret_cast<UINT*>(pQueryAdapterInfo->pOutputData)) = GetNumPowerComponents();
-
-        Status = STATUS_SUCCESS;
+        *(static_cast<UINT*>(pQueryAdapterInfo->pOutputData)) = GetNumPowerComponents();
     }
     break;
 
     case DXGKQAITYPE_POWERCOMPONENTINFO:
     {
-        if (pQueryAdapterInfo->InputDataSize != sizeof(UINT) ||
-            pQueryAdapterInfo->OutputDataSize < sizeof(DXGK_POWER_RUNTIME_COMPONENT))
+        if (pQueryAdapterInfo->InputDataSize != sizeof(UINT))
         {
-            Status = STATUS_INVALID_PARAMETER;
-            break;
+            ROS_LOG_ASSERTION(
+                "Input buffer is not of the expected size. (pQueryAdapterInfo->InputDataSize=%d, sizeof(UINT)=%d)",
+                pQueryAdapterInfo->InputDataSize,
+                sizeof(UINT));
+            return STATUS_INVALID_PARAMETER;
+        }
+
+        if (pQueryAdapterInfo->OutputDataSize < sizeof(DXGK_POWER_RUNTIME_COMPONENT))
+        {
+            ROS_LOG_ASSERTION(
+                "Output buffer is too small. (pQueryAdapterInfo->OutputDataSize=%d, sizeof(DXGK_POWER_RUNTIME_COMPONENT)=%d)",
+                pQueryAdapterInfo->OutputDataSize,
+                sizeof(DXGK_POWER_RUNTIME_COMPONENT));
+            return STATUS_BUFFER_TOO_SMALL;
         }
 
         ULONG ComponentIndex = *(reinterpret_cast<UINT*>(pQueryAdapterInfo->pInputData));
         DXGK_POWER_RUNTIME_COMPONENT* pPowerComponent = reinterpret_cast<DXGK_POWER_RUNTIME_COMPONENT*>(pQueryAdapterInfo->pOutputData);
 
-        Status = GetPowerComponentInfo(ComponentIndex, pPowerComponent);
+        NTSTATUS status = GetPowerComponentInfo(ComponentIndex, pPowerComponent);
+        if (!NT_SUCCESS(status))
+        {
+            ROS_LOG_ERROR(
+                "GetPowerComponentInfo(...) failed. (status=%!STATUS!, ComponentIndex=%d, pPowerComponent=0x%p)",
+                status,
+                ComponentIndex,
+                pPowerComponent);
+            return status;
+        }
     }
     break;
 
@@ -1187,23 +1313,25 @@ RosKmAdapter::QueryAdapterInfo(
             pHistoryBufferPrecision->PrecisionBits = 64;
         }
 
-        Status = STATUS_SUCCESS;
     }
     break;
 
     default:
-        // NT_ASSERT(FALSE);
-        break;
+        ROS_LOG_WARNING(
+            "Unsupported query type. (pQueryAdapterInfo->Type=%d, pQueryAdapterInfo=0x%p)",
+            pQueryAdapterInfo->Type,
+            pQueryAdapterInfo);
+        return STATUS_NOT_SUPPORTED;
     }
 
-    return Status;
+    return STATUS_SUCCESS;
 }
 
 NTSTATUS
 RosKmAdapter::DescribeAllocation(
     INOUT_PDXGKARG_DESCRIBEALLOCATION       pDescribeAllocation)
 {
-    RosKmdAllocation *pAllocation = (RosKmdAllocation *)pDescribeAllocation;
+    RosKmdAllocation *pAllocation = (RosKmdAllocation *)pDescribeAllocation->hAllocation;
 
     pDescribeAllocation->Width = pAllocation->m_mip0Info.TexelWidth;
     pDescribeAllocation->Height = pAllocation->m_mip0Info.TexelHeight;
@@ -1238,126 +1366,82 @@ RosKmAdapter::GetNodeMetadata(
     return STATUS_SUCCESS;
 }
 
-NTSTATUS
-RosKmAdapter::GetStandardAllocationDriverData(
-    INOUT_PDXGKARG_GETSTANDARDALLOCATIONDRIVERDATA  pGetStandardAllocationDriverData)
-{
-    pGetStandardAllocationDriverData;
-
-    NTSTATUS    Status = STATUS_SUCCESS;
-
-    return Status;
-}
 
 NTSTATUS
 RosKmAdapter::SubmitCommandVirtual(
-    IN_CONST_PDXGKARG_SUBMITCOMMANDVIRTUAL  pSubmitCommandVirtual)
+    IN_CONST_PDXGKARG_SUBMITCOMMANDVIRTUAL  /*pSubmitCommandVirtual*/)
 {
-    pSubmitCommandVirtual;
-
-    NTSTATUS        Status = STATUS_SUCCESS;
-
-    return Status;
+    ROS_LOG_ASSERTION("Not implemented");
+    return STATUS_NOT_IMPLEMENTED;
 }
 
 NTSTATUS
 RosKmAdapter::PreemptCommand(
-    IN_CONST_PDXGKARG_PREEMPTCOMMAND    pPreemptCommand)
+    IN_CONST_PDXGKARG_PREEMPTCOMMAND    /*pPreemptCommand*/)
 {
-    pPreemptCommand;
-
-    NTSTATUS        Status = STATUS_SUCCESS;
-
-    return Status;
+    ROS_LOG_WARNING("Not implemented");
+    return STATUS_SUCCESS;
 }
 
 NTSTATUS
 RosKmAdapter::RestartFromTimeout(void)
 {
-    return STATUS_SUCCESS;
+    ROS_LOG_ASSERTION("Not implemented");
+    return STATUS_NOT_IMPLEMENTED;
 }
 
 NTSTATUS
 RosKmAdapter::CancelCommand(
-    IN_CONST_PDXGKARG_CANCELCOMMAND pCancelCommand)
+    IN_CONST_PDXGKARG_CANCELCOMMAND /*pCancelCommand*/)
 {
-    pCancelCommand;
-
-    return STATUS_SUCCESS;
+    ROS_LOG_ASSERTION("Not implemented");
+    return STATUS_NOT_IMPLEMENTED;
 }
 
 NTSTATUS
 RosKmAdapter::QueryCurrentFence(
-    INOUT_PDXGKARG_QUERYCURRENTFENCE   pCurrentFence)
+    INOUT_PDXGKARG_QUERYCURRENTFENCE pCurrentFence)
 {
-    pCurrentFence;
+    ROS_LOG_WARNING("Not implemented");
 
+    NT_ASSERT(pCurrentFence->NodeOrdinal == 0);
+    NT_ASSERT(pCurrentFence->EngineOrdinal == 0);
+
+    pCurrentFence->CurrentFence = 0;
     return STATUS_SUCCESS;
 }
 
 NTSTATUS
 RosKmAdapter::ResetEngine(
-    INOUT_PDXGKARG_RESETENGINE  pResetEngine)
+    INOUT_PDXGKARG_RESETENGINE  /*pResetEngine*/)
 {
-    pResetEngine;
-
-    return STATUS_SUCCESS;
-}
-
-NTSTATUS
-RosKmAdapter::QueryDependentEngineGroup(
-    INOUT_DXGKARG_QUERYDEPENDENTENGINEGROUP     pQueryDependentEngineGroup)
-{
-    pQueryDependentEngineGroup;
-
-    return STATUS_SUCCESS;
-}
-
-NTSTATUS
-RosKmAdapter::GetScanLine(
-    INOUT_PDXGKARG_GETSCANLINE  pGetScanLine)
-{
-    pGetScanLine;
-
-    NT_ASSERT(FALSE);
-    return STATUS_SUCCESS;
-}
-
-
-NTSTATUS
-RosKmAdapter::ControlInterrupt(
-    IN_CONST_DXGK_INTERRUPT_TYPE    InterruptType,
-    IN_BOOLEAN                      EnableInterrupt)
-{
-    InterruptType;
-    EnableInterrupt;
-
+    ROS_LOG_WARNING("Not implemented");
     return STATUS_SUCCESS;
 }
 
 NTSTATUS
 RosKmAdapter::CollectDbgInfo(
-    IN_CONST_PDXGKARG_COLLECTDBGINFO        pCollectDbgInfo)
+    IN_CONST_PDXGKARG_COLLECTDBGINFO        /*pCollectDbgInfo*/)
 {
-    pCollectDbgInfo;
-
+    ROS_LOG_WARNING("Not implemented");
     return STATUS_SUCCESS;
 }
 
 NTSTATUS
 RosKmAdapter::CreateProcess(
-    IN DXGKARG_CREATEPROCESS* pArgs)
+    IN DXGKARG_CREATEPROCESS* /*pArgs*/)
 {
-    pArgs->hKmdProcess = 0;
-    return STATUS_SUCCESS;
+    // pArgs->hKmdProcess = 0;
+    ROS_LOG_ASSERTION("Not implemented");
+    return STATUS_NOT_IMPLEMENTED;
 }
 
 NTSTATUS
 RosKmAdapter::DestroyProcess(
-    IN HANDLE KmdProcessHandle)
+    IN HANDLE /*KmdProcessHandle*/)
 {
-    UNREFERENCED_PARAMETER(KmdProcessHandle);
-    return STATUS_SUCCESS;
+    ROS_LOG_ASSERTION("Not implemented");
+    return STATUS_NOT_IMPLEMENTED;
 }
 
 void
@@ -1365,20 +1449,18 @@ RosKmAdapter::SetStablePowerState(
     IN_CONST_PDXGKARG_SETSTABLEPOWERSTATE  pArgs)
 {
     UNREFERENCED_PARAMETER(pArgs);
+    ROS_LOG_ASSERTION("Not implemented");
 }
 
 NTSTATUS
 RosKmAdapter::CalibrateGpuClock(
-    IN UINT32                                   NodeOrdinal,
-    IN UINT32                                   EngineOrdinal,
-    OUT_PDXGKARG_CALIBRATEGPUCLOCK              pClockCalibration
+    IN UINT32                                   /*NodeOrdinal*/,
+    IN UINT32                                   /*EngineOrdinal*/,
+    OUT_PDXGKARG_CALIBRATEGPUCLOCK              /*pClockCalibration*/
     )
 {
-    NodeOrdinal;
-    EngineOrdinal;
-    pClockCalibration;
-
-    return STATUS_SUCCESS;
+    ROS_LOG_ASSERTION("Not implemented");
+    return STATUS_NOT_IMPLEMENTED;
 }
 
 NTSTATUS
@@ -1389,7 +1471,11 @@ RosKmAdapter::Escape(
 
     if (pEscape->PrivateDriverDataSize < sizeof(UINT))
     {
-        return STATUS_INVALID_PARAMETER;
+        ROS_LOG_ERROR(
+            "PrivateDriverDataSize is too small. (pEscape->PrivateDriverDataSize=%d, sizeof(UINT)=%d)",
+            pEscape->PrivateDriverDataSize,
+            sizeof(UINT));
+        return STATUS_BUFFER_TOO_SMALL;
     }
 
     UINT    EscapeId = *((UINT *)pEscape->pPrivateDriverData);
@@ -1405,58 +1491,15 @@ RosKmAdapter::Escape(
         break;
     }
 
-    return Status;
-}
-
-NTSTATUS
-RosKmAdapter::SetPalette(
-    IN_CONST_PDXGKARG_SETPALETTE    pSetPalette)
-{
-    // TODO(bhouse) - do we expect this to get called?
-    pSetPalette;
-    return STATUS_SUCCESS;
-}
-
-NTSTATUS
-RosKmAdapter::SetPointerPosition(
-    IN_CONST_PDXGKARG_SETPOINTERPOSITION    pSetPointerPosition)
-{
-    if (pSetPointerPosition->Flags.Visible)
-    {
-        return STATUS_NOT_IMPLEMENTED;
-    }
-    else
-    {
-        return STATUS_SUCCESS;
-    }
-
-}
-
-NTSTATUS
-RosKmAdapter::SetPointerShape(
-    IN_CONST_PDXGKARG_SETPOINTERSHAPE   pSetPointerShape)
-{
-    if (!pSetPointerShape->Flags.Value)
-    {
-        return STATUS_INVALID_PARAMETER;
-    }
-
+    ROS_LOG_ASSERTION("Not implemented");
     return STATUS_NOT_IMPLEMENTED;
 }
 
 NTSTATUS
 RosKmAdapter::ResetFromTimeout(void)
 {
-    return STATUS_SUCCESS;
-}
-
-NTSTATUS
-RosKmAdapter::QueryInterface(
-    IN_PQUERY_INTERFACE     QueryInterface)
-{
-    QueryInterface;
-
-    return STATUS_NOT_SUPPORTED;
+    ROS_LOG_ASSERTION("Not implemented");
+    return STATUS_NOT_IMPLEMENTED;
 }
 
 NTSTATUS
@@ -1464,10 +1507,13 @@ RosKmAdapter::QueryChildRelations(
     INOUT_PDXGK_CHILD_DESCRIPTOR    ChildRelations,
     IN_ULONG                        ChildRelationsSize)
 {
-    ChildRelations;
-    ChildRelationsSize;
+    if (RosKmdGlobal::IsRenderOnly())
+    {
+        ROS_LOG_ASSERTION("QueryChildRelations() is not supported by render-only driver.");
+        return STATUS_NOT_IMPLEMENTED;
+    }
 
-    return STATUS_INVALID_PARAMETER;
+    return m_display.QueryChildRelations(ChildRelations, ChildRelationsSize);
 }
 
 NTSTATUS
@@ -1475,10 +1521,13 @@ RosKmAdapter::QueryChildStatus(
     IN_PDXGK_CHILD_STATUS   ChildStatus,
     IN_BOOLEAN              NonDestructiveOnly)
 {
-    ChildStatus;
-    NonDestructiveOnly;
+    if (RosKmdGlobal::IsRenderOnly())
+    {
+        ROS_LOG_ASSERTION("QueryChildStatus() is not supported by render-only driver.");
+        return STATUS_NOT_IMPLEMENTED;
+    }
 
-    return STATUS_INVALID_PARAMETER;
+    return m_display.QueryChildStatus(ChildStatus, NonDestructiveOnly);
 }
 
 NTSTATUS
@@ -1486,10 +1535,13 @@ RosKmAdapter::QueryDeviceDescriptor(
     IN_ULONG                        ChildUid,
     INOUT_PDXGK_DEVICE_DESCRIPTOR   pDeviceDescriptor)
 {
-    ChildUid;
-    pDeviceDescriptor;
+    if (RosKmdGlobal::IsRenderOnly())
+    {
+        ROS_LOG_ASSERTION("QueryChildStatus() is not supported by render-only driver.");
+        return STATUS_NOT_IMPLEMENTED;
+    }
 
-    return STATUS_INVALID_PARAMETER;
+    return m_display.QueryDeviceDescriptor(ChildUid, pDeviceDescriptor);
 }
 
 NTSTATUS
@@ -1504,14 +1556,15 @@ RosKmAdapter::NotifyAcpiEvent(
     Argument;
     AcpiFlags;
 
-    NT_ASSERT(false);
-    return STATUS_SUCCESS;
+    ROS_LOG_ASSERTION("Not implemented");
+    return STATUS_NOT_IMPLEMENTED;
 }
 
 void
 RosKmAdapter::ResetDevice(void)
 {
     // Do nothing
+    ROS_LOG_ASSERTION("Not implemented");
 }
 
 void
@@ -1744,3 +1797,393 @@ RosKmAdapter::HwDmaBufCompletionDpcRoutine(
     KeSetEvent(&pRosKmAdapter->m_hwDmaBufCompletionEvent, 0, FALSE);
 }
 
+ROS_NONPAGED_SEGMENT_BEGIN; //================================================
+
+_Use_decl_annotations_
+NTSTATUS RosKmAdapter::SetVidPnSourceAddress (
+    const DXGKARG_SETVIDPNSOURCEADDRESS* SetVidPnSourceAddressPtr
+    )
+{
+    NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
+    return m_display.SetVidPnSourceAddress(SetVidPnSourceAddressPtr);
+}
+
+ROS_NONPAGED_SEGMENT_END; //==================================================
+ROS_PAGED_SEGMENT_BEGIN; //===================================================
+
+_Use_decl_annotations_
+NTSTATUS RosKmAdapter::QueryInterface (QUERY_INTERFACE* Args)
+{
+    ROS_LOG_WARNING(
+        "Received QueryInterface for unsupported interface. (InterfaceType=%!GUID!)",
+        Args->InterfaceType);
+    return STATUS_NOT_SUPPORTED;
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmAdapter::GetStandardAllocationDriverData (
+    DXGKARG_GETSTANDARDALLOCATIONDRIVERDATA* Args
+    )
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    //
+    // ResourcePrivateDriverDataSize gets passed to CreateAllocation as
+    // PrivateDriverDataSize.
+    // AllocationPrivateDriverDataSize get passed to CreateAllocation as
+    // pAllocationInfo->PrivateDriverDataSize.
+    //
+
+    if (!Args->pResourcePrivateDriverData && !Args->pResourcePrivateDriverData)
+    {
+        Args->ResourcePrivateDriverDataSize = sizeof(RosAllocationGroupExchange);
+        Args->AllocationPrivateDriverDataSize = sizeof(RosAllocationExchange);
+        return STATUS_SUCCESS;
+    }
+
+    // we expect them to both be null or both be valid
+    NT_ASSERT(Args->pResourcePrivateDriverData && Args->pResourcePrivateDriverData);
+    NT_ASSERT(
+        Args->ResourcePrivateDriverDataSize ==
+        sizeof(RosAllocationGroupExchange));
+
+    NT_ASSERT(
+        Args->AllocationPrivateDriverDataSize ==
+        sizeof(RosAllocationExchange));
+
+    new (Args->pResourcePrivateDriverData) RosAllocationGroupExchange();
+    auto allocParams = new (Args->pAllocationPrivateDriverData) RosAllocationExchange();
+
+    switch (Args->StandardAllocationType)
+    {
+    case D3DKMDT_STANDARDALLOCATION_SHAREDPRIMARYSURFACE:
+    {
+        const D3DKMDT_SHAREDPRIMARYSURFACEDATA* surfData =
+                Args->pCreateSharedPrimarySurfaceData;
+
+        ROS_LOG_TRACE(
+            "Preparing private allocation data for SHAREDPRIMARYSURFACEDATA. (Width=%d, Height=%d, Format=%d, RefreshRate=%d/%d, VidPnSourceId=%d)",
+            surfData->Width,
+            surfData->Height,
+            surfData->Format,
+            surfData->RefreshRate.Numerator,
+            surfData->RefreshRate.Denominator,
+            surfData->VidPnSourceId);
+
+        allocParams->m_resourceDimension = D3D10DDIRESOURCE_TEXTURE2D;
+        allocParams->m_mip0Info.TexelWidth = surfData->Width;
+        allocParams->m_mip0Info.TexelHeight = surfData->Height;
+        allocParams->m_mip0Info.TexelDepth = 0;
+        allocParams->m_mip0Info.PhysicalWidth = surfData->Width;
+        allocParams->m_mip0Info.PhysicalHeight = surfData->Height;
+        allocParams->m_mip0Info.PhysicalDepth = 0;
+
+        allocParams->m_usage = D3D10_DDI_USAGE_IMMUTABLE;
+
+        // We must ensure that the D3D10_DDI_BIND_PRESENT is set so that
+        // CreateAllocation() creates an allocation that is suitable
+        // for the primary, which must be flippable.
+        // The primary cannot be cached.
+        allocParams->m_bindFlags = D3D10_DDI_BIND_RENDER_TARGET | D3D10_DDI_BIND_PRESENT;
+
+        allocParams->m_mapFlags = 0;
+
+        // The shared primary allocation is shared by definition
+        allocParams->m_miscFlags = D3D10_DDI_RESOURCE_MISC_SHARED;
+
+        allocParams->m_format = DxgiFormatFromD3dDdiFormat(surfData->Format);
+        allocParams->m_sampleDesc.Count = 1;
+        allocParams->m_sampleDesc.Quality = 0;
+        allocParams->m_mipLevels = 1;
+        allocParams->m_arraySize = 1;
+        allocParams->m_isPrimary = true;
+        allocParams->m_primaryDesc.Flags = 0;
+        allocParams->m_primaryDesc.VidPnSourceId = surfData->VidPnSourceId;
+        allocParams->m_primaryDesc.ModeDesc.Width = surfData->Width;
+        allocParams->m_primaryDesc.ModeDesc.Height = surfData->Height;
+        allocParams->m_primaryDesc.ModeDesc.Format = DxgiFormatFromD3dDdiFormat(surfData->Format);
+        allocParams->m_primaryDesc.ModeDesc.RefreshRate.Numerator = surfData->RefreshRate.Numerator;
+        allocParams->m_primaryDesc.ModeDesc.RefreshRate.Denominator = surfData->RefreshRate.Denominator;
+        allocParams->m_primaryDesc.ModeDesc.ScanlineOrdering = DXGI_DDI_MODE_SCANLINE_ORDER_UNSPECIFIED;
+        allocParams->m_primaryDesc.ModeDesc.Rotation = DXGI_DDI_MODE_ROTATION_UNSPECIFIED;
+        allocParams->m_primaryDesc.ModeDesc.Scaling = DXGI_DDI_MODE_SCALING_UNSPECIFIED;
+        allocParams->m_primaryDesc.DriverFlags = 0;
+
+        allocParams->m_hwLayout = RosHwLayout::Linear;
+        allocParams->m_hwWidthPixels = surfData->Width;
+        allocParams->m_hwHeightPixels = surfData->Height;
+
+        NT_ASSERT(surfData->Format == D3DDDIFMT_A8R8G8B8);
+        allocParams->m_hwFormat = RosHwFormat::X8888;
+        allocParams->m_hwPitchBytes = surfData->Width * 4;
+        allocParams->m_hwSizeBytes = allocParams->m_hwPitchBytes * surfData->Height;
+
+        return STATUS_SUCCESS;
+    }
+    case D3DKMDT_STANDARDALLOCATION_SHADOWSURFACE:
+    {
+        const D3DKMDT_SHADOWSURFACEDATA* surfData = Args->pCreateShadowSurfaceData;
+        ROS_LOG_TRACE(
+            "Preparing private allocation data for SHADOWSURFACE. (Width=%d, Height=%d, Format=%d)",
+            surfData->Width,
+            surfData->Height,
+            surfData->Format);
+
+        allocParams->m_resourceDimension = D3D10DDIRESOURCE_TEXTURE2D;
+        allocParams->m_mip0Info.TexelWidth = surfData->Width;
+        allocParams->m_mip0Info.TexelHeight = surfData->Height;
+        allocParams->m_mip0Info.TexelDepth = 0;
+        allocParams->m_mip0Info.PhysicalWidth = surfData->Width;
+        allocParams->m_mip0Info.PhysicalHeight = surfData->Height;
+        allocParams->m_mip0Info.PhysicalDepth = 0;
+        allocParams->m_usage = D3D10_DDI_USAGE_DEFAULT;
+
+        // The shadow allocation does not get flipped directly
+        static_assert(
+            !(D3D10_DDI_BIND_PIPELINE_MASK & D3D10_DDI_BIND_PRESENT),
+            "BIND_PRESENT must not be part of BIND_MASK");
+        allocParams->m_bindFlags = D3D10_DDI_BIND_PIPELINE_MASK;
+
+        allocParams->m_mapFlags = D3D10_DDI_MAP_READWRITE;
+        allocParams->m_miscFlags = D3D10_DDI_RESOURCE_MISC_SHARED;
+
+        allocParams->m_format = DxgiFormatFromD3dDdiFormat(surfData->Format);
+        allocParams->m_sampleDesc.Count = 1;
+        allocParams->m_sampleDesc.Quality = 0;
+        allocParams->m_mipLevels = 1;
+        allocParams->m_arraySize = 1;
+        allocParams->m_isPrimary = true;
+        allocParams->m_primaryDesc.Flags = 0;
+        allocParams->m_primaryDesc.ModeDesc.Width = surfData->Width;
+        allocParams->m_primaryDesc.ModeDesc.Height = surfData->Height;
+        allocParams->m_primaryDesc.ModeDesc.Format = DxgiFormatFromD3dDdiFormat(surfData->Format);
+        allocParams->m_primaryDesc.DriverFlags = 0;
+        allocParams->m_hwLayout = RosHwLayout::Linear;
+        allocParams->m_hwWidthPixels = surfData->Width;
+        allocParams->m_hwHeightPixels = surfData->Height;
+
+        NT_ASSERT(surfData->Format == D3DDDIFMT_A8R8G8B8);
+        allocParams->m_hwFormat = RosHwFormat::X8888;
+        allocParams->m_hwPitchBytes = surfData->Width * 4;
+        allocParams->m_hwSizeBytes = allocParams->m_hwPitchBytes * surfData->Height;
+
+        Args->pCreateShadowSurfaceData->Pitch = allocParams->m_hwPitchBytes;
+        return STATUS_SUCCESS;
+    }
+    case D3DKMDT_STANDARDALLOCATION_STAGINGSURFACE:
+    {
+        const D3DKMDT_STAGINGSURFACEDATA* surfData = Args->pCreateStagingSurfaceData;
+        ROS_LOG_ASSERTION(
+            "STAGINGSURFACEDATA is not implemented. (Width=%d, Height=%d, Pitch=%d)",
+            surfData->Width,
+            surfData->Height,
+            surfData->Pitch);
+        return STATUS_NOT_IMPLEMENTED;
+    }
+    case D3DKMDT_STANDARDALLOCATION_GDISURFACE:
+    {
+        const D3DKMDT_GDISURFACEDATA* surfData = Args->pCreateGdiSurfaceData;
+        ROS_LOG_ASSERTION(
+            "GDISURFACEDATA is not implemented. We must return a nonzero Pitch if allocation is CPU visible. (Width=%d, Height=%d, Format=%d, Type=%d, Flags=0x%x, Pitch=%d)",
+            surfData->Width,
+            surfData->Height,
+            surfData->Format,
+            surfData->Type,
+            surfData->Flags.Value,
+            surfData->Pitch);
+        return STATUS_NOT_IMPLEMENTED;
+    }
+    default:
+        ROS_LOG_ASSERTION(
+            "Unknown standard allocation type. (StandardAllocationType=%d)",
+            Args->StandardAllocationType);
+        return STATUS_INVALID_PARAMETER;
+    }
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmAdapter::SetPalette (const DXGKARG_SETPALETTE* /*SetPalettePtr*/)
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    ROS_LOG_ASSERTION("Not implemented.");
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmAdapter::SetPointerPosition (
+    const DXGKARG_SETPOINTERPOSITION* SetPointerPositionPtr
+    )
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
+    return m_display.SetPointerPosition(SetPointerPositionPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmAdapter::SetPointerShape (
+    const DXGKARG_SETPOINTERSHAPE* SetPointerShapePtr
+    )
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
+    return m_display.SetPointerShape(SetPointerShapePtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmAdapter::IsSupportedVidPn (
+    DXGKARG_ISSUPPORTEDVIDPN* IsSupportedVidPnPtr
+    )
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
+    return m_display.IsSupportedVidPn(IsSupportedVidPnPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmAdapter::RecommendFunctionalVidPn (
+    const DXGKARG_RECOMMENDFUNCTIONALVIDPN* const RecommendFunctionalVidPnPtr
+    )
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
+    return m_display.RecommendFunctionalVidPn(RecommendFunctionalVidPnPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmAdapter::EnumVidPnCofuncModality (
+    const DXGKARG_ENUMVIDPNCOFUNCMODALITY* const EnumCofuncModalityPtr
+    )
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
+    return m_display.EnumVidPnCofuncModality(EnumCofuncModalityPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmAdapter::SetVidPnSourceVisibility (
+    const DXGKARG_SETVIDPNSOURCEVISIBILITY* SetVidPnSourceVisibilityPtr
+    )
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
+    return m_display.SetVidPnSourceVisibility(SetVidPnSourceVisibilityPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmAdapter::CommitVidPn (
+    const DXGKARG_COMMITVIDPN* const CommitVidPnPtr
+    )
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
+    return m_display.CommitVidPn(CommitVidPnPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmAdapter::UpdateActiveVidPnPresentPath (
+    const DXGKARG_UPDATEACTIVEVIDPNPRESENTPATH* const UpdateActiveVidPnPresentPathPtr
+    )
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
+    return m_display.UpdateActiveVidPnPresentPath(UpdateActiveVidPnPresentPathPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmAdapter::RecommendMonitorModes (
+    const DXGKARG_RECOMMENDMONITORMODES* const RecommendMonitorModesPtr
+    )
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
+    return m_display.RecommendMonitorModes(RecommendMonitorModesPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmAdapter::GetScanLine (DXGKARG_GETSCANLINE* /*GetScanLinePtr*/)
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    ROS_LOG_ASSERTION("Not implemented");
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmAdapter::ControlInterrupt (
+    const DXGK_INTERRUPT_TYPE InterruptType,
+    BOOLEAN EnableInterrupt
+    )
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
+    return m_display.ControlInterrupt(InterruptType, EnableInterrupt);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmAdapter::QueryVidPnHWCapability (
+    DXGKARG_QUERYVIDPNHWCAPABILITY* VidPnHWCapsPtr
+    )
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
+    return m_display.QueryVidPnHWCapability(VidPnHWCapsPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmAdapter::QueryDependentEngineGroup (
+    DXGKARG_QUERYDEPENDENTENGINEGROUP* ArgsPtr
+    )
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    NT_ASSERT(ArgsPtr->NodeOrdinal == 0);
+    NT_ASSERT(ArgsPtr->EngineOrdinal == 0);
+
+    ArgsPtr->DependentNodeOrdinalMask = 0;
+    return STATUS_SUCCESS;
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmAdapter::StopDeviceAndReleasePostDisplayOwnership (
+    D3DDDI_VIDEO_PRESENT_TARGET_ID TargetId,
+    DXGK_DISPLAY_INFORMATION* DisplayInfoPtr
+    )
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    NT_ASSERT(!RosKmdGlobal::IsRenderOnly());
+    return m_display.StopDeviceAndReleasePostDisplayOwnership(
+            TargetId,
+            DisplayInfoPtr);
+}
+
+
+ROS_PAGED_SEGMENT_END; //=====================================================

@@ -51,7 +51,6 @@ namespace DX
 		D2D1::Matrix3x2F			GetOrientationTransform2D() const		{ return m_orientationTransform2D; }
 
 	private:
-        IDXGIAdapter * FindRosAdapter();
 		void CreateDeviceIndependentResources();
 		void CreateDeviceResources();
 		void CreateWindowSizeDependentResources();
