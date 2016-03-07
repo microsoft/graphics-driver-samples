@@ -990,22 +990,52 @@ typedef enum _VC4TextureMinFilter
 const UINT VC4_BINNING_TILE_PIXELS  = 64;
 
 //
-// Constants related to tiled textures
+// Structure and constants related to tiled textures
 //
 
-const UINT VC4_1KB_SUB_TILE_WIDTH       = 16;
-const UINT VC4_1KB_SUB_TILE_HEIGHT      = 16;
-const UINT VC4_1KB_SUB_TILE_WIDTH_BYTES = 64;
-const UINT VC4_1KB_SUB_TILE_SIZE_BYTES  = 1024;
+typedef struct _VC4TileInfo
+{
+    UINT VC4_4kBTileWidthPixels;
+    UINT VC4_4kBTileHeightPixels;
+    UINT VC4_4kBTileWidthBytes;
 
-const UINT VC4_4KB_TILE_WIDTH           = 32;
-const UINT VC4_4KB_TILE_HEIGHT          = 32;
-const UINT VC4_4KB_TILE_WIDTH_BYTES     = 128;
-const UINT VC4_4KB_TILE_SIZE_BYTES      = 4096;
+    UINT VC4_1kBSubTileWidthPixels;
+    UINT VC4_1kBSubTileHeightPixels;
+    UINT VC4_1kBSubTileWidthBytes;
 
-const UINT VC4_MICRO_TILE_WIDTH_BYTES   = 16;
-const UINT VC4_MICRO_TILE_HEIGHT        = 4;
-const UINT VC4_MICRO_TILE_SIZE_BYTES    = 64;
+    UINT VC4_MicroTileWidthBytes;
+    UINT vC4_MicroTileHeight;
+
+} VC4TileInfo;
+
+// General tiles, sub-tiles and micro-tiles information
+const UINT VC4_MICRO_TILE_SIZE_BYTES            = 64;
+const UINT VC4_1KB_SUB_TILE_SIZE_BYTES          = 1024;
+const UINT VC4_4KB_TILE_SIZE_BYTES              = 4096;
+
+// Precalculated values for 32 bpp tile
+const UINT VC4_1KB_SUB_TILE_WIDTH_32BPP         = 16;
+const UINT VC4_1KB_SUB_TILE_HEIGHT_32BPP        = 16;
+
+const UINT VC4_MICRO_TILE_WIDTH_32BPP           = 4;
+const UINT VC4_MICRO_TILE_HEIGHT_32BPP          = 4;
+const UINT VC4_MICRO_TILE_WIDTH_BYTES_32BPP     = 16;
+
+// Precalculated values for 16 bpp tile
+const UINT VC4_1KB_SUB_TILE_WIDTH_16BPP         = 16;
+const UINT VC4_1KB_SUB_TILE_HEIGHT_16BPP        = 32;
+
+const UINT VC4_MICRO_TILE_WIDTH_16BPP           = 4;
+const UINT VC4_MICRO_TILE_HEIGHT_16BPP          = 8;
+const UINT VC4_MICRO_TILE_WIDTH_BYTES_16BPP     = 8;
+
+// Precalculated values for 8 bpp tile
+const UINT VC4_1KB_SUB_TILE_WIDTH_8BPP          = 32;
+const UINT VC4_1KB_SUB_TILE_HEIGHT_8BPP         = 32;
+
+const UINT VC4_MICRO_TILE_WIDTH_8BPP            = 8;
+const UINT VC4_MICRO_TILE_HEIGHT_8BPP           = 8;
+const UINT VC4_MICRO_TILE_WIDTH_BYTES_8BPP      = 8;
 
 //
 // VC4 bus address alias
