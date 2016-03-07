@@ -309,6 +309,13 @@ void RosUmdDevice::CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResou
         }
         else if (pResource->m_resourceDimension == D3D10DDIRESOURCE_TEXTURE2D)
         {
+
+            BYTE * pSrc = (BYTE *)pCreateResource->pInitialDataUP[0].pSysMem;
+            BYTE * pDst = (BYTE *)lock.pData;
+            UINT  rowStride = pCreateResource->pInitialDataUP[0].SysMemPitch;
+            pResource->ConvertInitialTextureFormatToInternal(pSrc, pDst, rowStride);
+
+#if 0
             if (pResource->m_hwLayout == RosHwLayout::Linear)
             {
                 BYTE *  pSrc = (BYTE *)pCreateResource->pInitialDataUP[0].pSysMem;
@@ -332,6 +339,7 @@ void RosUmdDevice::CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResou
                 // Swizzle texture to HW format
                 pResource->ConvertBitmapTo4kTileBlocks(pSrc, pDst, rowStride);
             }
+#endif
         }
         else
         {
@@ -2104,6 +2112,50 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
 
 #if VC4
 
+VC4TextureType RosUmdDevice::MapDXGITextureFormatToVC4Type(RosHwLayout layout, DXGI_FORMAT format)
+{   
+    VC4TextureType textureType;
+    textureType.TextureType = VC4_TEX_RGBA32R;
+
+    // Map texture layout and DXGI format to HW format
+    // Note: Some of the DXGI formats are emulated (for example, during 
+    // initialization, texture is converted to HW-compatible format)
+    if (layout == RosHwLayout::Tiled)
+    {
+        switch (format)
+        {
+            case DXGI_FORMAT_R8G8B8A8_UNORM:
+            {
+                textureType.TextureType = VC4_TEX_RGBX8888;
+            } 
+            break;
+            case DXGI_FORMAT_R8_UNORM:
+            {
+                textureType.TextureType = VC4_TEX_RGBX8888;
+            }
+            break;
+            case DXGI_FORMAT_R8G8_UNORM:
+            {
+                textureType.TextureType = VC4_TEX_RGBX8888;
+            }
+            break;
+            case DXGI_FORMAT_A8_UNORM:
+            {
+                textureType.TextureType = VC4_TEX_RGBX8888;
+            }
+            break;
+        }
+    }
+    else
+    {
+        // todo: create table with modes
+        // Linear (raster) format
+        textureType.TextureType = VC4_TEX_RGBA32R;
+    }
+
+    return textureType;
+}
+
 void RosUmdDevice::WriteUniforms(
     BOOLEAN                     bPSUniform,
     VC4_UNIFORM_FORMAT *        pUniformEntries,
@@ -2152,18 +2204,7 @@ void RosUmdDevice::WriteUniforms(
                 // TODO[indyz]: Support all VC4 texture formats and tiling
                 //
 
-                assert(pTexture->m_hwFormat == RosHwFormat::X8888);
-
-                VC4TextureType  vc4TextureType;
-
-                if (pTexture->m_hwLayout == RosHwLayout::Tiled)
-                {
-                    vc4TextureType.TextureType = VC4_TEX_RGBX8888;
-                }
-                else
-                {
-                    vc4TextureType.TextureType = VC4_TEX_RGBA32R;
-                }
+                VC4TextureType  vc4TextureType = MapDXGITextureFormatToVC4Type(pTexture->m_hwLayout, pTexture->m_format);
 
                 pVC4TexConfigParam0->TYPE = vc4TextureType.TYPE;
 
@@ -2193,17 +2234,8 @@ void RosUmdDevice::WriteUniforms(
 
                 pVC4TexConfigParam1->UInt0 = 0;
 
-                VC4TextureType  vc4TextureType;
-
-                if (pTexture->m_hwLayout == RosHwLayout::Tiled)
-                {
-                    vc4TextureType.TextureType = VC4_TEX_RGBX8888;
-                }
-                else
-                {
-                    vc4TextureType.TextureType = VC4_TEX_RGBA32R;
-                }
-
+                VC4TextureType  vc4TextureType = MapDXGITextureFormatToVC4Type(pTexture->m_hwLayout, pTexture->m_format);
+         
                 RosUmdSampler * pSampler = m_pixelSamplers[pCurUniformEntry->samplerConfiguration.samplerIndex];
                 D3D10_DDI_SAMPLER_DESC * pSamplerDesc = &pSampler->m_desc;
 

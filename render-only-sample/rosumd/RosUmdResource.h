@@ -3,6 +3,7 @@
 #include "RosAllocation.h"
 #include "Pixel.hpp"
 #include "RosUmdDebug.h"
+#include "Vc4Hw.h"
 
 class RosUmdResource : public RosAllocationExchange
 {    
@@ -111,13 +112,27 @@ public:
         return m_sampleDesc.Count > 1;
     }
 
-    // Tiled textures support
-    void ConvertBitmapTo4kTileBlocks(
-        BYTE *InputBuffer, 
-        BYTE *OutBuffer, 
+    // Support for various texture formats
+    void ConvertInitialTextureFormatToInternal(
+        BYTE *pSrc,
+        BYTE *pDst,
         UINT rowStride);
 
 private:
+
+    void  ConvertBufferto32Bpp(
+        BYTE *pSrc,
+        BYTE *pDst,
+        UINT srcBpp,
+        UINT swizzleMask,
+        UINT pSrcStride,
+        UINT pDstStride);
+
+    // Tiled textures support
+    void ConvertBitmapTo4kTileBlocks(
+        BYTE *InputBuffer,
+        BYTE *OutBuffer,
+        UINT rowStride);
 
     // Tiled textures support
     BYTE *Form1kSubTileBlock(
@@ -130,6 +145,12 @@ private:
         BYTE *pOutBuffer, 
         UINT rowStride, 
         BOOLEAN OddRow);
+
+    void CalculateTilesInfo();
+
+    void FillTileInfo(UINT bpp);
+
+    VC4TileInfo m_TileInfo;
 
 };
 
