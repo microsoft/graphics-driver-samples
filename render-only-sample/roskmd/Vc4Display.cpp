@@ -57,10 +57,42 @@ NTSTATUS VC4_DISPLAY::SetVidPnSourceAddress (
 {
     NT_ASSERT(Args->VidPnSourceId == 0);
 
+    const auto rosKmdAllocation =
+            static_cast<RosKmdAllocation*>(Args->hAllocation);
+
     if (Args->Flags.ModeChange) {
         NT_ASSERT(Args->ContextCount == 0);
 
-        ROS_LOG_WARNING("Mode change was requested. Not sure what to do.");
+        NT_ASSERT(rosKmdAllocation->m_isPrimary);
+        const D3DKMDT_GRAPHICS_RENDERING_FORMAT* currentFormatPtr =
+                &this->dxgkCurrentSourceMode.Format.Graphics;
+        const DXGI_DDI_MODE_DESC* desiredModeDescPtr =
+                &rosKmdAllocation->m_primaryDesc.ModeDesc;
+
+        // Verify that the surface is compatible with the current source mode
+        if ((desiredModeDescPtr->Width != 
+             currentFormatPtr->PrimSurfSize.cx) ||
+            (desiredModeDescPtr->Height != 
+             currentFormatPtr->PrimSurfSize.cy) ||
+            (TranslateDxgiFormat(rosKmdAllocation->m_format) != 
+             currentFormatPtr->PixelFormat))
+        {
+            ROS_LOG_ASSERTION(
+                "Incompatible mode change was requested. "
+                "(desiredModeDescPtr->Width/Height = (%d,%d), "
+                "TranslateDxgiFormat(rosKmdAllocation->m_primaryDesc.Format) = %d, "
+                "currentFormatPtr->PrimSurfSize = (%d,%d), "
+                "currentFormatPtr->PixelFormat = %d",
+                desiredModeDescPtr->Width,
+                desiredModeDescPtr->Height,
+                TranslateDxgiFormat(rosKmdAllocation->m_format),
+                currentFormatPtr->PrimSurfSize.cx,
+                currentFormatPtr->PrimSurfSize.cy,
+                currentFormatPtr->PixelFormat);
+
+            return STATUS_NOT_SUPPORTED;
+        }
+
         return STATUS_SUCCESS;
     }
 
@@ -88,10 +120,7 @@ NTSTATUS VC4_DISPLAY::SetVidPnSourceAddress (
     // Verify memory is in range
     NT_ASSERT(Args->PrimarySegment == ROSD_SEGMENT_VIDEO_MEMORY);
     NT_ASSERT(Args->PrimaryAddress.LowPart < RosKmdGlobal::s_videoMemorySize);
-    if (Args->hAllocation) {
-        const auto rosKmdAllocation =
-            static_cast<RosKmdAllocation*>(Args->hAllocation);
-        UNREFERENCED_PARAMETER(rosKmdAllocation);
+    if (rosKmdAllocation) {
         NT_ASSERT(
             (Args->PrimaryAddress.LowPart + rosKmdAllocation->m_hwSizeBytes) <=
             RosKmdGlobal::s_videoMemorySize);
