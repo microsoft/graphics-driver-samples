@@ -112,6 +112,14 @@ public:
     HRESULT SetDisplayMode(DXGI_DDI_ARG_SETDISPLAYMODE* Args);
     HRESULT Present1(DXGI_DDI_ARG_PRESENT1* Args);
 
+    void CheckDirectFlipSupport(
+        D3D10DDI_HDEVICE hDevice,
+        D3D10DDI_HRESOURCE hResource1,
+        D3D10DDI_HRESOURCE hResource2,
+        UINT CheckDirectFlipFlags,
+        _Out_ BOOL *pSupported
+        );
+    
     //
     // User mode call backs
     //

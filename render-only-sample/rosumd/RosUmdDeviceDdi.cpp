@@ -182,7 +182,7 @@ const D3DWDDM1_3DDI_DEVICEFUNCS RosUmdDeviceDdi::s_deviceFuncsWDDM1_3 =
     RosUmdDeviceDdi::Discard_Default,
     RosUmdDeviceDdi::AssignDebugBinary_Default,
     RosUmdDeviceDdi::DynamicConstantBufferMapNoOverwrite_Default,
-    NULL, // PFND3D11_1DDI_CHECKDIRECTFLIPSUPPORT
+    RosUmdDeviceDdi::CheckDirectFlipSupport,
     RosUmdDeviceDdi::ClearView_Default,
     NULL, // PFND3DWDDM1_3DDI_UPDATETILEMAPPINGS
     NULL, // PFND3DWDDM1_3DDI_COPYTILEMAPPINGS
@@ -1531,4 +1531,26 @@ HRESULT RosUmdDeviceDdi::Present1(DXGI_DDI_ARG_PRESENT1* pPresentData)
 
     RosUmdLogging::Exit(__FUNCTION__);
     return hr;
+}
+
+_Use_decl_annotations_
+void RosUmdDeviceDdi::CheckDirectFlipSupport(
+    D3D10DDI_HDEVICE hDevice,
+    D3D10DDI_HRESOURCE hResource1,
+    D3D10DDI_HRESOURCE hResource2,
+    UINT CheckDirectFlipFlags,
+    BOOL *pSupported
+    )
+{
+    RosUmdLogging::Entry(__FUNCTION__);
+
+    RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
+    pRosUmdDevice->CheckDirectFlipSupport(
+        hDevice,
+        hResource1,
+        hResource2,
+        CheckDirectFlipFlags,
+        pSupported);
+
+    RosUmdLogging::Exit(__FUNCTION__);
 }

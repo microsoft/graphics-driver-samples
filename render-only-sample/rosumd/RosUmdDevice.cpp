@@ -812,6 +812,23 @@ HRESULT RosUmdDevice::Present1(DXGI_DDI_ARG_PRESENT1* Args)
     return S_OK;
 }
 
+_Use_decl_annotations_
+void RosUmdDevice::CheckDirectFlipSupport(
+    D3D10DDI_HDEVICE hDevice,
+    D3D10DDI_HRESOURCE /*hResource1*/,
+    D3D10DDI_HRESOURCE /*hResource2*/,
+    UINT CheckDirectFlipFlags,
+    BOOL *pSupported
+    )
+{
+    assert(CastFrom(hDevice) == this);
+    assert((CheckDirectFlipFlags & ~D3D11_1DDI_CHECK_DIRECT_FLIP_IMMEDIATE) == 0);
+    
+    // We can seamlessly flip video memory between an application's managed 
+    // primary allocations and the DWM's managed primary allocations
+    *pSupported = TRUE;
+}
+
 //
 // User mode call backs
 //

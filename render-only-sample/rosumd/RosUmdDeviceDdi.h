@@ -266,6 +266,12 @@ public:
 
     static void APIENTRY AssignDebugBinary_Default(D3D10DDI_HDEVICE, D3D10DDI_HSHADER, UINT, CONST VOID*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY DynamicConstantBufferMapNoOverwrite_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT, D3D10_DDI_MAP, UINT, D3D10DDI_MAPPED_SUBRESOURCE*) { RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
+    static void APIENTRY CheckDirectFlipSupport (
+        D3D10DDI_HDEVICE hDevice,
+        D3D10DDI_HRESOURCE hResource1,
+        D3D10DDI_HRESOURCE hResource2,
+        UINT CheckDirectFlipFlags,
+        _Out_ BOOL *pSupported);
 
     // ClearView - Issue #33
     static void APIENTRY ClearView_Default(D3D10DDI_HDEVICE, D3D11DDI_HANDLETYPE, VOID*, const FLOAT Color[4], const D3D10_DDI_RECT*, UINT) { Color; RosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
