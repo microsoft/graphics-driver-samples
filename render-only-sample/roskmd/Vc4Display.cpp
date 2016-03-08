@@ -113,9 +113,10 @@ NTSTATUS VC4_DISPLAY::SetVidPnSourceAddress (
     ROS_TRACE_EVENTS(
         TRACE_LEVEL_VERBOSE,
         ROS_TRACING_PRESENT,
-        "Successfully programmed VidPn source address. (PrimaryAddress.LowPart=0x%lx, physicAddress=0x%lx)",
+        "Successfully programmed VidPn source address. (PrimaryAddress.LowPart=0x%lx, physicAddress=0x%lx, virtualAddress = 0x%p)",
         Args->PrimaryAddress.LowPart,
-        physicAddress);
+        physicAddress,
+        static_cast<const BYTE*>(RosKmdGlobal::s_pVideoMemory) + Args->PrimaryAddress.LowPart);
     return STATUS_SUCCESS;
 }
 
