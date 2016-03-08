@@ -363,6 +363,13 @@ void MapDxgiFormatToInternalFormats(DXGI_FORMAT format, UINT &bpp, RosHwFormat &
     }
     break;
 
+    case DXGI_FORMAT_A8_UNORM:
+    {
+        bpp = 32;
+        rosFormat = RosHwFormat::X8888;
+    }
+    break;
+
     default:
         bpp = 8;
         rosFormat = RosHwFormat::X8;
