@@ -7,43 +7,15 @@
 #include "RosKmdLogging.h"
 #include "Vc4Display.tmh"
 
-#include "Vc4Common.h"
+#include "RosKmdGlobal.h"
+#include "RosKmdAllocation.h"
+#include "RosKmdUtil.h"
+
+#include "Vc4Hw.h"
 #include "Vc4Debug.h"
 #include "Vc4Display.h"
 
-VC4_NONPAGED_SEGMENT_BEGIN; //================================================
-
-void BltBits (
-    const void *SourceBitsPtr,
-    void *DestBitsPtr,
-    ULONG Pitch,
-    _In_reads_(RectCount) const RECT* RectsPtr,
-    ULONG RectCount
-    )
-{
-    for (UINT i = 0; i < RectCount; ++i) {
-        const RECT* rectPtr = &RectsPtr[i];
-
-        NT_ASSERT(rectPtr->right >= rectPtr->left);
-        NT_ASSERT(rectPtr->bottom >= rectPtr->top);
-
-        const UINT numPixels = rectPtr->right - rectPtr->left;
-        const UINT numRows = rectPtr->bottom - rectPtr->top;
-        const UINT bytesToCopy = numPixels * 4;
-        BYTE* dstStartPtr = ((BYTE*)DestBitsPtr +
-                          rectPtr->top * Pitch +
-                          rectPtr->left * 4);
-        const BYTE* srcStartPtr = ((BYTE*)SourceBitsPtr +
-                                rectPtr->top * Pitch +
-                                rectPtr->left * 4);
-
-        for (UINT row = 0; row < numRows; ++row) {
-            RtlCopyMemory(dstStartPtr, srcStartPtr, bytesToCopy);
-            dstStartPtr += Pitch;
-            srcStartPtr += Pitch;
-        }
-    }
-}
+ROS_NONPAGED_SEGMENT_BEGIN; //================================================
 
 _Use_decl_annotations_
 void VC4_DISPLAY::ResetDevice ()
@@ -102,17 +74,35 @@ NTSTATUS VC4_DISPLAY::SetVidPnSourceAddress (
     NT_ASSERT(Args->Flags.FlipOnNextVSync);
 
     if (Args->Flags.SharedPrimaryTransition) {
-        ROS_LOG_ASSERTION("What do we do here?");
+        ROS_LOG_WARNING("What do we do here?");
     }
 
     if (Args->Flags.IndependentFlipExclusive) {
         ROS_LOG_ASSERTION("What do we do here?");
     }
 
-    ULONG physicAddress = Vc4PhysicalAddressFromVirtual(
-        reinterpret_cast<void*>(Args->PrimaryAddress.LowPart));
+    NT_ASSERT(
+        (RosKmdGlobal::s_videoMemoryPhysicalAddress.HighPart == 0) &&
+        (Args->PrimaryAddress.HighPart == 0));
 
-    // PrimaryAddress is actually a virtual address
+    // Verify memory is in range
+    NT_ASSERT(Args->PrimarySegment == ROSD_SEGMENT_VIDEO_MEMORY);
+    NT_ASSERT(Args->PrimaryAddress.LowPart < RosKmdGlobal::s_videoMemorySize);
+    if (Args->hAllocation) {
+        const auto rosKmdAllocation =
+            static_cast<RosKmdAllocation*>(Args->hAllocation);
+        UNREFERENCED_PARAMETER(rosKmdAllocation);
+        NT_ASSERT(
+            (Args->PrimaryAddress.LowPart + rosKmdAllocation->m_hwSizeBytes) <=
+            RosKmdGlobal::s_videoMemorySize);
+    }
+
+    // PrimaryAddress is an offset into the memory segment
+    ULONG physicAddress =
+        RosKmdGlobal::s_videoMemoryPhysicalAddress.LowPart +
+        VC4_BUS_ADDRESS_ALIAS_UNCACHED +
+        Args->PrimaryAddress.LowPart;
+
     // Update the source address in the display list
     WRITE_REGISTER_NOFENCE_ULONG(
         &this->displayListPtr->PointerWord0,
@@ -120,10 +110,13 @@ NTSTATUS VC4_DISPLAY::SetVidPnSourceAddress (
 
     this->currentVidPnSourceAddress = Args->PrimaryAddress;
 
-    ROS_LOG_TRACE(
-        "Successfully programmed VidPn source address. (PrimaryAddress.LowPart=0x%lx, physicAddress=0x%lx)",
+    ROS_TRACE_EVENTS(
+        TRACE_LEVEL_VERBOSE,
+        ROS_TRACING_PRESENT,
+        "Successfully programmed VidPn source address. (PrimaryAddress.LowPart=0x%lx, physicAddress=0x%lx, virtualAddress = 0x%p)",
         Args->PrimaryAddress.LowPart,
-        physicAddress);
+        physicAddress,
+        static_cast<const BYTE*>(RosKmdGlobal::s_pVideoMemory) + Args->PrimaryAddress.LowPart);
     return STATUS_SUCCESS;
 }
 
@@ -143,7 +136,7 @@ BOOLEAN VC4_DISPLAY::InterruptRoutine (
 
     // VSync interrupt
     if (intStat.VfpStart) {
-        ROS_LOG_TRACE("Notifying dxgkrnl lf VSYNC interrupt.");
+        // ROS_LOG_TRACE("Notifying dxgkrnl of VSYNC interrupt.");
 
         // Notify framework that previous active buffer is now safe
         // to use again
@@ -170,38 +163,13 @@ BOOLEAN VC4_DISPLAY::InterruptRoutine (
     return TRUE;
 }
 
-_Use_decl_annotations_
-VOID VC4_DISPLAY::EvtHotplugNotification (PVOID ContextPtr, BOOLEAN Connected)
+ULONG VC4_DISPLAY::Vc4PhysicalAddressFromVirtual (VOID* Address)
 {
-    NT_ASSERT(KeGetCurrentIrql() == DISPATCH_LEVEL);
-
-    ROS_LOG_INFORMATION(
-        "Received hotplug notification. (Connected=%d)",
-        Connected);
-
-    auto thisPtr = static_cast<VC4_DISPLAY*>(ContextPtr);
-
-    thisPtr->hdmiConnected = Connected;
-
-    auto childStatus = DXGK_CHILD_STATUS();
-    childStatus.Type = StatusConnection;
-    childStatus.ChildUid = 0;
-    childStatus.HotPlug.Connected = Connected;
-
-    NTSTATUS status = thisPtr->dxgkInterface.DxgkCbIndicateChildStatus(
-            thisPtr->dxgkInterface.DeviceHandle,
-            &childStatus);
-
-    if (!NT_SUCCESS(status)) {
-        ROS_LOG_ASSERTION(
-            "DxgkCbIndicateChildStatus(...) failed! (status=%!STATUS!, Connected=%d)",
-            status,
-            Connected);
-    }
+    return MmGetPhysicalAddress(Address).LowPart + VC4_BUS_ADDRESS_ALIAS_UNCACHED;
 }
 
-VC4_NONPAGED_SEGMENT_END; //==================================================
-VC4_PAGED_SEGMENT_BEGIN; //===================================================
+ROS_NONPAGED_SEGMENT_END; //==================================================
+ROS_PAGED_SEGMENT_BEGIN; //===================================================
 
 _Use_decl_annotations_
 VC4_DISPLAY::VC4_DISPLAY (
@@ -214,28 +182,20 @@ VC4_DISPLAY::VC4_DISPLAY (
     dxgkInterface(DxgkInterface),
     dxgkStartInfo(DxgkStartInfo),
     dxgkDeviceInfo(DxgkDeviceInfo),
-
     dbgHelper(this->dxgkInterface),
     dxgkDisplayInfo(),
     dxgkVideoSignalInfo(),
     dxgkCurrentSourceMode(),
-
-    hpdFileObjectPtr(),
-    hdmiConnected(),
-    i2cFileObjectPtrs(),
-
     hvsRegistersPtr(),
     pvRegistersPtr(),
-    pixelValveIntEn(),
-
     frameBufferLength(0),
     biosFrameBufferPtr(),
-
     displayListPtr(),
-    displayListControlWord0()
+    displayListControlWord0(),
+    currentVidPnSourceAddress()
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     ROS_LOG_TRACE(
         L"Successfully constructed display subsystem. (this=0x%p, PhysicalDeviceObjectPtr=0x%p)",
@@ -251,7 +211,7 @@ NTSTATUS VC4_DISPLAY::StartDevice (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     NTSTATUS status;
 
@@ -259,34 +219,10 @@ NTSTATUS VC4_DISPLAY::StartDevice (
     NT_ASSERT(this->dxgkInterface.DeviceHandle);
     NT_ASSERT(this->dxgkDeviceInfo.PhysicalDeviceObject == this->physicalDeviceObjectPtr);
 
-    // Open handle to HPD driver and register notification
-    FILE_OBJECT* localHpdFileObjectPtr;
-    auto dereferenceHpdFileObject = VC4_FINALLY::DoUnless([&] {
-        PAGED_CODE();
-        ObDereferenceObjectWithTag(localHpdFileObjectPtr, VC4_ALLOC_TAG::DEVICE);
-    }, true);   // DoNot by default
-    status = this->registerHotplugNotification(&localHpdFileObjectPtr);
-    switch (status) {
-    case STATUS_SUCCESS:
-        dereferenceHpdFileObject.DoNot(false);
-        break;
-    case STATUS_OBJECT_NAME_NOT_FOUND:
-        ROS_LOG_WARNING("Hotplug detection device was not found. Hotplug will not be supported.");
-        this->hdmiConnected = TRUE;
-        break;
-    default:
-        ROS_LOG_ERROR(
-            "Failed to register hotplug notification. (status=%!STATUS!)",
-            status);
-        return status;
-    }
-
     // Find and validate hardware resources
     const CM_PARTIAL_RESOURCE_DESCRIPTOR* hvsMemoryResourcePtr = nullptr;
     const CM_PARTIAL_RESOURCE_DESCRIPTOR* pvMemoryResourcePtr = nullptr;
     const CM_PARTIAL_RESOURCE_DESCRIPTOR* pvInterruptResourcePtr = nullptr;
-    const CM_PARTIAL_RESOURCE_DESCRIPTOR*
-        i2cResourcePtrs[ARRAYSIZE(this->i2cFileObjectPtrs)] = {0};
     {
         const CM_RESOURCE_LIST* resourceListPtr =
             this->dxgkDeviceInfo.TranslatedResourceList;
@@ -340,15 +276,11 @@ NTSTATUS VC4_DISPLAY::StartDevice (
                 case CM_RESOURCE_CONNECTION_CLASS_SERIAL:
                     switch (resourcePtr->u.Connection.Type) {
                     case CM_RESOURCE_CONNECTION_TYPE_SERIAL_I2C:
-                        if (i2cResourceCount < ARRAYSIZE(i2cResourcePtrs)) {
-                            i2cResourcePtrs[i2cResourceCount] = resourcePtr;
-                        } else {
-                            ROS_LOG_WARNING(
-                                "Received unexpected I2C resource. (i2cResourceCount=%d, resourcePtr=%p, FirstResourceIndex=%d)",
-                                i2cResourceCount,
-                                resourcePtr,
-                                FirstResourceIndex);
-                        }
+                        ROS_LOG_TRACE(
+                            "Received I2C resource. (i2cResourceCount=%d, resourcePtr=%p, FirstResourceIndex=%d)",
+                            i2cResourceCount,
+                            resourcePtr,
+                            FirstResourceIndex);
                         ++i2cResourceCount;
                     }
                 }
@@ -358,8 +290,7 @@ NTSTATUS VC4_DISPLAY::StartDevice (
 
         if (!hvsMemoryResourcePtr ||
             !pvMemoryResourcePtr ||
-            !pvInterruptResourcePtr ||
-            (i2cResourceCount < ARRAYSIZE(i2cResourcePtrs))) {
+            !pvInterruptResourcePtr) {
 
             ROS_LOG_ERROR(
                 "Did not find required resources. (TranslatedResourceList=%p, FirstResourceIndex=%d, hvsMemoryResourcePtr=%p, pvMemoryResourcePtr=%p, pvInterruptResourcePtr=%p, i2cResourceCount=%d)",
@@ -409,7 +340,7 @@ NTSTATUS VC4_DISPLAY::StartDevice (
             sizeof(*_hvsRegistersPtr));
         return status;
     }
-    auto unmapHvsRegisters = VC4_FINALLY::DoUnless([&] {
+    auto unmapHvsRegisters = ROS_FINALLY::DoUnless([&] {
         PAGED_CODE();
         NTSTATUS unmapStatus = this->dxgkInterface.DxgkCbUnmapMemory(
                 this->dxgkInterface.DeviceHandle,
@@ -440,7 +371,7 @@ NTSTATUS VC4_DISPLAY::StartDevice (
             sizeof(*_pvRegistersPtr));
         return status;
     }
-    auto unmapPvRegisters = VC4_FINALLY::DoUnless([&] {
+    auto unmapPvRegisters = ROS_FINALLY::DoUnless([&] {
         PAGED_CODE();
         NTSTATUS unmapStatus = this->dxgkInterface.DxgkCbUnmapMemory(
                 this->dxgkInterface.DeviceHandle,
@@ -448,48 +379,6 @@ NTSTATUS VC4_DISPLAY::StartDevice (
         UNREFERENCED_PARAMETER(unmapStatus);
         NT_ASSERT(NT_SUCCESS(unmapStatus));
     });
-
-    // Open I2C connections
-    auto dereferenceI2cFileObjects = VC4_FINALLY::DoUnless([&] {
-        PAGED_CODE();
-        for (auto& fileObjectPtr : this->i2cFileObjectPtrs) {
-            if (!fileObjectPtr) break;
-            ObDereferenceObjectWithTag(fileObjectPtr, VC4_ALLOC_TAG::DEVICE);
-            fileObjectPtr = nullptr;
-        }
-    });
-    for (ULONG i = 0; i < ARRAYSIZE(i2cResourcePtrs); ++i) {
-        static_assert(
-            ARRAYSIZE(i2cResourcePtrs) == ARRAYSIZE(this->i2cFileObjectPtrs),
-            "Sanity check on size of I2C channel array");
-
-        DECLARE_UNICODE_STRING_SIZE(deviceName, RESOURCE_HUB_PATH_CHARS);
-
-        status = RESOURCE_HUB_CREATE_PATH_FROM_ID(
-                &deviceName,
-                i2cResourcePtrs[i]->u.Connection.IdLowPart,
-                i2cResourcePtrs[i]->u.Connection.IdHighPart);
-        if (!NT_SUCCESS(status)) {
-            ROS_LOG_ERROR(
-                "RESOURCE_HUB_CREATE_PATH_FROM_ID() failed. (status = %!STATUS!)",
-                status);
-            return Vc4SanitizeNtstatus(status);
-        } // if
-
-        NT_ASSERT(!this->i2cFileObjectPtrs[i]);
-        status = Vc4OpenDevice(
-                &deviceName,
-                GENERIC_READ | GENERIC_WRITE,
-                0,                                  // ShareAccess
-                &(this->i2cFileObjectPtrs[i]));
-        if (!NT_SUCCESS(status)) {
-            ROS_LOG_ERROR(
-                "Failed to open I2C connection. (status=%!STATUS!, deviceName=%wZ)",
-                status,
-                &deviceName);
-            return status;
-        }
-    }
 
     // Ensure HVS register block is enabled
     {
@@ -554,7 +443,6 @@ NTSTATUS VC4_DISPLAY::StartDevice (
 #endif
 
         // Ensure interrupts are disabled
-        this->pixelValveIntEn.AsUlong = 0;
         WRITE_REGISTER_NOFENCE_ULONG(&_pvRegistersPtr->IntEn, 0);
     }
 
@@ -587,12 +475,13 @@ NTSTATUS VC4_DISPLAY::StartDevice (
     this->dxgkVideoSignalInfo.TotalSize.cy = this->dxgkDisplayInfo.Height;
     this->dxgkVideoSignalInfo.ActiveSize = this->dxgkVideoSignalInfo.TotalSize;
 
-    // Settings taken on my ASUS 1080p monitor (60Hz)
-    this->dxgkVideoSignalInfo.VSyncFreq.Numerator = 148500000; // D3DKMDT_FREQUENCY_NOTSPECIFIED;
-    this->dxgkVideoSignalInfo.VSyncFreq.Denominator = 2475000; // D3DKMDT_FREQUENCY_NOTSPECIFIED;
-    this->dxgkVideoSignalInfo.HSyncFreq.Numerator = 67500; // D3DKMDT_FREQUENCY_NOTSPECIFIED;
-    this->dxgkVideoSignalInfo.HSyncFreq.Denominator = 1; //D3DKMDT_FREQUENCY_NOTSPECIFIED;
-    this->dxgkVideoSignalInfo.PixelRate = 148500000; // D3DKMDT_FREQUENCY_NOTSPECIFIED;
+    // If Vsync interrupts are enabled, cannot use D3DKMDT_FREQUENCY_NOTSPECIFIED.
+    // Settings taken from ASUS 1080p monitor at 60Hz.
+    this->dxgkVideoSignalInfo.VSyncFreq.Numerator = 148500000;
+    this->dxgkVideoSignalInfo.VSyncFreq.Denominator = 2475000;
+    this->dxgkVideoSignalInfo.HSyncFreq.Numerator = 67500;
+    this->dxgkVideoSignalInfo.HSyncFreq.Denominator = 1;
+    this->dxgkVideoSignalInfo.PixelRate = 148500000;
     this->dxgkVideoSignalInfo.ScanLineOrdering = D3DDDI_VSSLO_PROGRESSIVE;
 
     ROS_LOG_TRACE(
@@ -618,7 +507,7 @@ NTSTATUS VC4_DISPLAY::StartDevice (
             _frameBufferLength);
         return STATUS_NO_MEMORY;
     }
-    auto unmapBiosFrameBuffer = VC4_FINALLY::DoUnless([&] {
+    auto unmapBiosFrameBuffer = ROS_FINALLY::DoUnless([&] {
         PAGED_CODE();
         MmUnmapIoSpace(_biosFrameBufferPtr, _frameBufferLength);
     });
@@ -681,11 +570,6 @@ NTSTATUS VC4_DISPLAY::StartDevice (
 
     // All resources have been acquired. Save them in the device context
 
-    dereferenceHpdFileObject.DoNot();
-    this->hpdFileObjectPtr = localHpdFileObjectPtr;
-
-    dereferenceI2cFileObjects.DoNot();
-
     unmapHvsRegisters.DoNot();
     this->hvsRegistersPtr = _hvsRegistersPtr;
 
@@ -708,20 +592,7 @@ _Use_decl_annotations_
 void VC4_DISPLAY::StopDevice ()
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-
-    // Close HPD notification handle
-    if (this->hpdFileObjectPtr) {
-        ObDereferenceObjectWithTag(this->hpdFileObjectPtr, VC4_ALLOC_TAG::DEVICE);
-        this->hpdFileObjectPtr = nullptr;
-    }
-
-    // Close I2C handles
-    for (auto& fileObjectPtr : this->i2cFileObjectPtrs) {
-        NT_ASSERT(fileObjectPtr);
-        ObDereferenceObjectWithTag(fileObjectPtr, VC4_ALLOC_TAG::DEVICE);
-        fileObjectPtr = nullptr;
-    }
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     // Disable interrupts
     WRITE_REGISTER_NOFENCE_ULONG(&this->pvRegistersPtr->IntEn, 0);
@@ -766,7 +637,7 @@ NTSTATUS VC4_DISPLAY::DispatchIoRequest (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     ROS_LOG_WARNING(
         "Unsupported IO Control Code. (VideoRequestPacketPtr->IoControlCode = 0x%lx)",
@@ -781,7 +652,7 @@ NTSTATUS VC4_DISPLAY::QueryChildRelations (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     // Enumerate the child devices of the adapter. There is a single child
     // to enumerate which is the HDMI connector. The number of children
@@ -819,13 +690,13 @@ NTSTATUS VC4_DISPLAY::QueryChildStatus (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     NT_ASSERT(ChildStatusPtr->ChildUid == 0);
 
     switch (ChildStatusPtr->Type) {
     case StatusConnection:
-        ChildStatusPtr->HotPlug.Connected = this->hdmiConnected;
+        ChildStatusPtr->HotPlug.Connected = TRUE;
         break;
     case StatusRotation:
         ROS_LOG_ERROR("Received StatusRotation query even though D3DKMDT_MOA_NONE was reported.");
@@ -849,110 +720,14 @@ NTSTATUS VC4_DISPLAY::QueryChildStatus (
 
 _Use_decl_annotations_
 NTSTATUS VC4_DISPLAY::QueryDeviceDescriptor (
-    ULONG ChildUid,
-    DXGK_DEVICE_DESCRIPTOR* DeviceDescriptorPtr
+    ULONG /*ChildUid*/,
+    DXGK_DEVICE_DESCRIPTOR* /*DeviceDescriptorPtr*/
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
-    UNREFERENCED_PARAMETER(ChildUid);
-    UNREFERENCED_PARAMETER(DeviceDescriptorPtr);
     return STATUS_GRAPHICS_CHILD_DESCRIPTOR_NOT_SUPPORTED;
-
-#if 0
-    UNREFERENCED_PARAMETER(ChildUid);
-    NT_ASSERT(ChildUid == 0);
-
-    ROS_LOG_TRACE(
-        "Querying EDID from monitor over DDC I2C channel. (DescriptorOffset=%d, DescriptorLength=%d)",
-        DeviceDescriptorPtr->DescriptorOffset,
-        DeviceDescriptorPtr->DescriptorLength);
-
-    if (!this->hdmiConnected) {
-        ROS_LOG_WARNING("The HDMI connector is disconnected.");
-    }
-
-    NTSTATUS status;
-
-    // Write segment register
-    // XXX only do this if segmentNumber is nonzero
-    {
-        ULONG segmentNumber = DeviceDescriptorPtr->DescriptorOffset / 256;
-        if (segmentNumber > BYTE_MAX) {
-            ROS_LOG_ERROR(
-                "Invalid EDID offset! (DescriptorOffset=%d, segmentNumber=%d)",
-                DeviceDescriptorPtr->DescriptorOffset,
-                segmentNumber);
-            return STATUS_INVALID_PARAMETER;
-        }
-
-        BYTE writeBuf[] = { static_cast<BYTE>(segmentNumber) };
-        ULONG information;
-        status = Vc4SendWriteSynchronously (
-                this->i2cFileObjectPtrs[I2C_CHANNEL_INDEX_EDDC],
-                writeBuf,
-                sizeof(writeBuf),
-                &information);
-        if (!NT_SUCCESS(status)) {
-            ROS_LOG_ERROR(
-                "Failed to write segment address to I2C channel. (status=%!STATUS!, this->i2cFileObjectPtr2=%p, segmentNumber=%d)",
-                status,
-                this->i2cFileObjectPtrs[I2C_CHANNEL_INDEX_EDDC],
-                segmentNumber);
-        }
-    }
-
-    SPB_TRANSFER_LIST_AND_ENTRIES(2) inputBuffer;
-    SPB_TRANSFER_LIST_INIT(&inputBuffer.List, 2);
-
-    ULONG offsetWithinSegment = DeviceDescriptorPtr->DescriptorOffset % 256;
-    BYTE writeBuf[] = { static_cast<BYTE>(offsetWithinSegment) };
-    inputBuffer.List.Transfers[0] = SPB_TRANSFER_LIST_ENTRY_INIT_SIMPLE(
-        SpbTransferDirectionToDevice,
-        0,
-        writeBuf,
-        sizeof(writeBuf));
-
-#pragma warning(suppress: 26000) // Supress OACR buffer overflow warning
-#pragma warning(suppress: 6201)  // Suppress OACR index out of range warning
-    inputBuffer.List.Transfers[1] = SPB_TRANSFER_LIST_ENTRY_INIT_SIMPLE(
-        SpbTransferDirectionFromDevice,
-        0,
-        DeviceDescriptorPtr->DescriptorBuffer,
-        DeviceDescriptorPtr->DescriptorLength);
-
-    ULONG bytesTransferred;
-    status = Vc4SendIoctlSynchronously(
-            this->i2cFileObjectPtrs[I2C_CHANNEL_INDEX_DDC],
-            IOCTL_SPB_EXECUTE_SEQUENCE,
-            &inputBuffer,
-            sizeof(inputBuffer),
-            nullptr,
-            0,
-            FALSE,                      // InternalDeviceIoControl
-            &bytesTransferred);
-
-    if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
-            "Failed to query EDID from monitor. (status=%!STATUS!, DescriptorOffset=%d, DescriptorLength=%d)",
-            status,
-            DeviceDescriptorPtr->DescriptorOffset,
-            DeviceDescriptorPtr->DescriptorLength);
-        return Vc4SanitizeNtstatus(status);
-    }
-
-    if (bytesTransferred != (1 + DeviceDescriptorPtr->DescriptorLength)) {
-        ROS_LOG_ERROR(
-            "An unexpected number of bytes was transferred. (bytesTransferred=%d, expected=%d)",
-            bytesTransferred,
-            1 + DeviceDescriptorPtr->DescriptorLength);
-        return STATUS_UNSUCCESSFUL;
-    }
-
-    NT_ASSERT(status == STATUS_SUCCESS);
-    return status;
-#endif // 0
 }
 
 _Use_decl_annotations_
@@ -963,13 +738,18 @@ NTSTATUS VC4_DISPLAY::SetPowerState (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
-    if (DeviceUid == DISPLAY_ADAPTER_HW_ID) {
-        // TODO put the adapter into a low power state
-    } else {
-        NT_ASSERT(DeviceUid == 0);
+    switch (DeviceUid) {
+    case 0:
         // TODO put the attached monitor into the specified power state
+        break;
+    case DISPLAY_ADAPTER_HW_ID:
+        // TODO put the adapter into a low power state
+        break;
+    default:
+        ROS_LOG_ASSERTION("Invalid DeviceUid. (DeviceUid = %d)", DeviceUid);
+        return STATUS_INVALID_PARAMETER;
     }
 
     ROS_LOG_TRACE(
@@ -992,7 +772,7 @@ NTSTATUS VC4_DISPLAY::SetPointerPosition (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     NT_ASSERT(SetPointerPositionPtr->VidPnSourceId == 0);
     if (!SetPointerPositionPtr->Flags.Visible) {
@@ -1010,7 +790,7 @@ NTSTATUS VC4_DISPLAY::SetPointerShape (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     UNREFERENCED_PARAMETER(SetPointerShapePtr);
     NT_ASSERT(SetPointerShapePtr->VidPnSourceId == 0);
@@ -1025,13 +805,16 @@ NTSTATUS VC4_DISPLAY::IsSupportedVidPn (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     IsSupportedVidPnPtr->IsVidPnSupported = FALSE;
 
     if (IsSupportedVidPnPtr->hDesiredVidPn == 0) {
         IsSupportedVidPnPtr->IsVidPnSupported = TRUE;
-        ROS_LOG_TRACE("Returning IsVidPnSupported=TRUE for hDesiredVidPn=0.");
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_VERBOSE,
+            ROS_TRACING_VIDPN,
+            "Returning IsVidPnSupported=TRUE for hDesiredVidPn=0.");
         return STATUS_SUCCESS;
     }
 
@@ -1042,7 +825,9 @@ NTSTATUS VC4_DISPLAY::IsSupportedVidPn (
             DXGK_VIDPN_INTERFACE_VERSION_V1,
             &vidPnInterfacePtr);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "DxgkCbQueryVidPnInterface() failed. (status = %!STATUS!, IsSupportedVidPnPtr->hDesiredVidPn = %p, this = %p)",
             status,
             IsSupportedVidPnPtr->hDesiredVidPn,
@@ -1057,7 +842,9 @@ NTSTATUS VC4_DISPLAY::IsSupportedVidPn (
         &vidPnTopologyHandle,
         &topologyInterfacePtr);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "pfnGetTopology() failed. (status = %!STATUS!, IsSupportedVidPnPtr->hDesiredVidPn = %p, vidPnInterfacePtr = %p)",
             status,
             IsSupportedVidPnPtr->hDesiredVidPn,
@@ -1071,7 +858,9 @@ NTSTATUS VC4_DISPLAY::IsSupportedVidPn (
             vidPnTopologyHandle,
             &numPaths);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "Failed to get number of paths in topology. (status = %!STATUS!, vidPnTopologyHandle = %p)",
             status,
             vidPnTopologyHandle);
@@ -1079,8 +868,10 @@ NTSTATUS VC4_DISPLAY::IsSupportedVidPn (
     }
 
     if (numPaths != 1) {
-        ROS_LOG_ERROR(
-            "Returning 'not supported' for a topology that does not contain exactly 1 path. (numPaths = %d, vidPnTopologyHandle = %p)",
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
+            "Returning 'not supported' for a topology that does not contain exactly 1 path. (numPaths = %Id, vidPnTopologyHandle = %p)",
             numPaths,
             vidPnTopologyHandle);
         NT_ASSERT(!IsSupportedVidPnPtr->IsVidPnSupported);
@@ -1093,7 +884,9 @@ NTSTATUS VC4_DISPLAY::IsSupportedVidPn (
             vidPnTopologyHandle,
             &presentPathPtr);
     if (status != STATUS_SUCCESS) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "Failed to get first path info from vidpn topology. (status = %!STATUS!, IsSupportedVidPnPtr->hDesiredVidPn = %p, vidPnTopologyHandle = %p)",
             status,
             IsSupportedVidPnPtr->hDesiredVidPn,
@@ -1101,7 +894,7 @@ NTSTATUS VC4_DISPLAY::IsSupportedVidPn (
         return status;
     }
     NT_ASSERT(presentPathPtr);
-    auto releasePathInfo = VC4_FINALLY::Do([&, presentPathPtr] () {
+    auto releasePathInfo = ROS_FINALLY::Do([&, presentPathPtr] () {
         PAGED_CODE();
         NTSTATUS releaseStatus = topologyInterfacePtr->pfnReleasePathInfo(
                 vidPnTopologyHandle,
@@ -1114,7 +907,9 @@ NTSTATUS VC4_DISPLAY::IsSupportedVidPn (
     if (!((presentPathPtr->VidPnSourceId == 0) &&
           (presentPathPtr->VidPnTargetId == 0)))
     {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "Returning 'not supported' for out of range source or target id. (presentPathPtr->VidPnSourceId = %d, presentPathPtr->VidPnTargetId = %d)",
             presentPathPtr->VidPnSourceId,
             presentPathPtr->VidPnTargetId);
@@ -1122,7 +917,9 @@ NTSTATUS VC4_DISPLAY::IsSupportedVidPn (
         return STATUS_SUCCESS;
     }
 
-    ROS_LOG_TRACE(
+    ROS_TRACE_EVENTS(
+        TRACE_LEVEL_VERBOSE,
+        ROS_TRACING_VIDPN,
         "Returning 'supported' for vidpn. (IsSupportedVidPnPtr->hDesiredVidPn = %p)",
         IsSupportedVidPnPtr->hDesiredVidPn);
 
@@ -1136,7 +933,7 @@ NTSTATUS VC4_DISPLAY::RecommendFunctionalVidPn (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     ROS_LOG_ASSERTION("Not implemented");
     return STATUS_NOT_IMPLEMENTED;
@@ -1148,7 +945,7 @@ NTSTATUS VC4_DISPLAY::EnumVidPnCofuncModality (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     // get the vidPn interface
     const DXGK_VIDPN_INTERFACE* vidPnInterfacePtr;
@@ -1157,7 +954,9 @@ NTSTATUS VC4_DISPLAY::EnumVidPnCofuncModality (
             DXGK_VIDPN_INTERFACE_VERSION_V1,
             &vidPnInterfacePtr);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "DxgkCbQueryVidPnInterface() failed. (status = %!STATUS!, EnumCofuncModalityPtr->hConstrainingVidPn, = %p, this = %p)",
             status,
             EnumCofuncModalityPtr->hConstrainingVidPn,
@@ -1173,7 +972,9 @@ NTSTATUS VC4_DISPLAY::EnumVidPnCofuncModality (
         &vidPnTopologyHandle,
         &topologyInterfacePtr);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "pfnGetTopology() failed. (status = %!STATUS!, EnumCofuncModalityPtr->hConstrainingVidPn, = %p, vidPnInterfacePtr = %p)",
             status,
             EnumCofuncModalityPtr->hConstrainingVidPn,
@@ -1187,7 +988,9 @@ NTSTATUS VC4_DISPLAY::EnumVidPnCofuncModality (
             vidPnTopologyHandle,
             &presentPathPtr);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "Failed to get first path info from vidpn topology. (status = %!STATUS!, EnumCofuncModalityPtr->hConstrainingVidPn, = %p, vidPnTopologyHandle = %p)",
             status,
             EnumCofuncModalityPtr->hConstrainingVidPn,
@@ -1197,7 +1000,7 @@ NTSTATUS VC4_DISPLAY::EnumVidPnCofuncModality (
 
     while (status == STATUS_SUCCESS) {
         NT_ASSERT(presentPathPtr);
-        auto releasePathInfo = VC4_FINALLY::Do([&, presentPathPtr] () {
+        auto releasePathInfo = ROS_FINALLY::Do([&, presentPathPtr] () {
             PAGED_CODE();
             NTSTATUS releaseStatus = topologyInterfacePtr->pfnReleasePathInfo(
                     vidPnTopologyHandle,
@@ -1221,7 +1024,9 @@ NTSTATUS VC4_DISPLAY::EnumVidPnCofuncModality (
             {
                 // This source does not have a pinned mode.
                 // Create a new source mode set
-                ROS_LOG_TRACE(
+                ROS_TRACE_EVENTS(
+                    TRACE_LEVEL_VERBOSE,
+                    ROS_TRACING_VIDPN,
                     "This source does not have a pinned mode. Creating a new source mode set. (presentPathPtr->VidPnSourceId = %d)",
                     presentPathPtr->VidPnSourceId);
 
@@ -1256,7 +1061,9 @@ NTSTATUS VC4_DISPLAY::EnumVidPnCofuncModality (
             {
                 // This target does not have a pinned mode.
                 // Create a new target mode set
-                ROS_LOG_TRACE(
+                ROS_TRACE_EVENTS(
+                    TRACE_LEVEL_VERBOSE,
+                    ROS_TRACING_VIDPN,
                     "This target does not have a pinned mode. Creating a new target mode set. (presentPathPtr->VidPnTargetId = %d)",
                     presentPathPtr->VidPnTargetId);
 
@@ -1288,8 +1095,6 @@ NTSTATUS VC4_DISPLAY::EnumVidPnCofuncModality (
             if (presentPathPtr->ContentTransformation.Scaling == D3DKMDT_VPPS_UNPINNED)
             {
                 // Identity and centered scaling are supported, but not any stretch modes
-                ROS_LOG_TRACE("Setting scaling support to Identity.");
-
                 modifiedPresentPath.ContentTransformation.ScalingSupport =
                     D3DKMDT_VIDPN_PRESENT_PATH_SCALING_SUPPORT();
 
@@ -1308,8 +1113,6 @@ NTSTATUS VC4_DISPLAY::EnumVidPnCofuncModality (
             // If the rotation is unpinned, then modify the rotation support field
             if (presentPathPtr->ContentTransformation.Rotation == D3DKMDT_VPPR_UNPINNED)
             {
-                ROS_LOG_TRACE("Setting rotation support to Identity.");
-
                 modifiedPresentPath.ContentTransformation.RotationSupport =
                     D3DKMDT_VIDPN_PRESENT_PATH_ROTATION_SUPPORT();
 
@@ -1328,7 +1131,9 @@ NTSTATUS VC4_DISPLAY::EnumVidPnCofuncModality (
                     vidPnTopologyHandle,
                     &modifiedPresentPath);
             if (!NT_SUCCESS(status)) {
-                ROS_LOG_ERROR(
+                ROS_TRACE_EVENTS(
+                    TRACE_LEVEL_ERROR,
+                    ROS_TRACING_VIDPN,
                     "DXGK_VIDPNTOPOLOGY_INTERFACE::pfnUpdatePathSupportInfo() failed. (status = %!STATUS!)",
                     status);
                 return status;
@@ -1342,7 +1147,9 @@ NTSTATUS VC4_DISPLAY::EnumVidPnCofuncModality (
             presentPathPtr,
             &nextPresentPathPtr);
         if (!NT_SUCCESS(status)) {
-            ROS_LOG_ERROR(
+            ROS_TRACE_EVENTS(
+                TRACE_LEVEL_ERROR,
+                ROS_TRACING_VIDPN,
                 "pfnAcquireNextPathInfo() failed. (status = %!STATUS!, EnumCofuncModalityPtr->hConstrainingVidPn, = %p, vidPnTopologyHandle = %p)",
                 status,
                 EnumCofuncModalityPtr->hConstrainingVidPn,
@@ -1362,9 +1169,11 @@ NTSTATUS VC4_DISPLAY::SetVidPnSourceVisibility (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
-    ROS_LOG_TRACE(
+    ROS_TRACE_EVENTS(
+        TRACE_LEVEL_VERBOSE,
+        ROS_TRACING_VIDPN,
         "Received request to set visibility. (VidPnSourceId = %d, Visible = %d)",
         SetVidPnSourceVisibilityPtr->VidPnSourceId,
         SetVidPnSourceVisibilityPtr->Visible);
@@ -1378,9 +1187,11 @@ NTSTATUS VC4_DISPLAY::CommitVidPn (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
-    ROS_LOG_TRACE(
+    ROS_TRACE_EVENTS(
+        TRACE_LEVEL_VERBOSE,
+        ROS_TRACING_VIDPN,
         "DdiCommitVidPn() was called. (hFunctionalVidPn = %p, AffectedVidPnSourceId = %d, MonitorConnectivityChecks = %d, hPrimaryAllocation = %p, Flags.PathPowerTransition = %d, Flags.PathPoweredOff = %d)",
         CommitVidPnPtr->hFunctionalVidPn,
         CommitVidPnPtr->AffectedVidPnSourceId,
@@ -1400,7 +1211,9 @@ NTSTATUS VC4_DISPLAY::CommitVidPn (
             DXGK_VIDPN_INTERFACE_VERSION_V1,
             &vidPnInterfacePtr);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "DxgkCbQueryVidPnInterface() failed. (status = %!STATUS!, CommitVidPnPtr->hFunctionalVidPn, = %p, this = %p)",
             status,
             CommitVidPnPtr->hFunctionalVidPn,
@@ -1416,7 +1229,9 @@ NTSTATUS VC4_DISPLAY::CommitVidPn (
         &vidPnTopologyHandle,
         &topologyInterfacePtr);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "pfnGetTopology() failed. (status = %!STATUS!, CommitVidPnPtr->hFunctionalVidPn, = %p, vidPnInterfacePtr = %p)",
             status,
             CommitVidPnPtr->hFunctionalVidPn,
@@ -1431,14 +1246,19 @@ NTSTATUS VC4_DISPLAY::CommitVidPn (
             vidPnTopologyHandle,
             &numPaths);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "DXGK_VIDPNTOPOLOGY_INTERFACE::pfnGetNumPaths() failed. (status = %!STATUS!)",
             status);
         return status;
     }
 
     if (numPaths == 0) {
-        ROS_LOG_INFORMATION(L"There are no paths in this topology.");
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_VERBOSE,
+            ROS_TRACING_VIDPN,
+            L"There are no paths in this topology.");
         return STATUS_SUCCESS;
     }
 
@@ -1451,13 +1271,15 @@ NTSTATUS VC4_DISPLAY::CommitVidPn (
             &sourceModeSetHandle,
             &smsInterfacePtr);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "DXGK_VIDPN_INTERFACE::pfnAcquireSourceModeSet() failed. (status = %!STATUS!)",
             status);
         return status;
     }
     NT_ASSERT(sourceModeSetHandle);
-    auto releaseSms = VC4_FINALLY::Do([&] () {
+    auto releaseSms = ROS_FINALLY::Do([&] () {
         PAGED_CODE();
         NTSTATUS releaseStatus = vidPnInterfacePtr->pfnReleaseSourceModeSet(
                 CommitVidPnPtr->hFunctionalVidPn,
@@ -1472,7 +1294,9 @@ NTSTATUS VC4_DISPLAY::CommitVidPn (
             sourceModeSetHandle,
             &pinnedSourceModeInfoPtr);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "DXGK_VIDPNSOURCEMODESET_INTERFACE::pfnAcquirePinnedModeInfo() failed. (status = %!STATUS!, sourceModeSetHandle = %p)",
             status,
             sourceModeSetHandle);
@@ -1486,7 +1310,7 @@ NTSTATUS VC4_DISPLAY::CommitVidPn (
         return STATUS_SUCCESS;
     }
 
-    auto releaseModeInfo = VC4_FINALLY::Do([&] () {
+    auto releaseModeInfo = ROS_FINALLY::Do([&] () {
         PAGED_CODE();
         NTSTATUS releaseStatus = smsInterfacePtr->pfnReleaseModeInfo(
                 sourceModeSetHandle,
@@ -1507,7 +1331,9 @@ NTSTATUS VC4_DISPLAY::CommitVidPn (
         (pinnedSourceModeInfoPtr->Format.Graphics.PrimSurfSize.cy !=
          this->dxgkVideoSignalInfo.TotalSize.cy))
     {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "VidPn source has different size than monitor. (pinnedSourceModeInfoPtr->Format.Graphics.PrimSurfSize = %d,%d, this->dxgkVideoSignalInfo.TotalSize = %d, %d)",
             pinnedSourceModeInfoPtr->Format.Graphics.PrimSurfSize.cx,
             pinnedSourceModeInfoPtr->Format.Graphics.PrimSurfSize.cy,
@@ -1523,7 +1349,9 @@ NTSTATUS VC4_DISPLAY::CommitVidPn (
             CommitVidPnPtr->AffectedVidPnSourceId,
             &numPathsFromSource);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "DXGK_VIDPNTOPOLOGY_INTERFACE::pfnGetNumPathsFromSource() failed. (status = %!STATUS!)",
             status);
         return status;
@@ -1539,7 +1367,9 @@ NTSTATUS VC4_DISPLAY::CommitVidPn (
                 pathIndex,
                 &targetId);
         if (!NT_SUCCESS(status)) {
-            ROS_LOG_ERROR(
+            ROS_TRACE_EVENTS(
+                TRACE_LEVEL_ERROR,
+                ROS_TRACING_VIDPN,
                 "DXGK_VIDPNTOPOLOGY_INTERFACE::pfnEnumPathTargetsFromSource() failed. (status = %!STATUS!)",
                 status);
             return status;
@@ -1553,14 +1383,16 @@ NTSTATUS VC4_DISPLAY::CommitVidPn (
                 targetId,
                 &presentPathPtr);
         if (!NT_SUCCESS(status)) {
-            ROS_LOG_ERROR(
+            ROS_TRACE_EVENTS(
+                TRACE_LEVEL_ERROR,
+                ROS_TRACING_VIDPN,
                 "DXGK_VIDPNTOPOLOGY_INTERFACE::pfnAcquirePathInfo() failed. (status = %!STATUS!, AffectedVidPnSourceId = %d, targetId = %d)",
                 status,
                 CommitVidPnPtr->AffectedVidPnSourceId,
                 targetId);
             return status;
         }
-        auto releasePathInfo = VC4_FINALLY::Do([&] {
+        auto releasePathInfo = ROS_FINALLY::Do([&] {
             PAGED_CODE();
             NTSTATUS releaseStatus = topologyInterfacePtr->pfnReleasePathInfo(
                     vidPnTopologyHandle,
@@ -1579,7 +1411,9 @@ NTSTATUS VC4_DISPLAY::CommitVidPn (
 
     this->dxgkCurrentSourceMode = *pinnedSourceModeInfoPtr;
 
-    ROS_LOG_TRACE(
+    ROS_TRACE_EVENTS(
+        TRACE_LEVEL_INFORMATION,
+        ROS_TRACING_VIDPN,
         "Successfully committed VidPn. (hFunctionalVidPn = %p, PrimSurfSize = %d, %d, VisibleRegionSize = %d,%d, Stride = %d, PixelFormat = %d, ColorBasis = %d, PixelValueAccessMode = %d)",
         CommitVidPnPtr->hFunctionalVidPn,
         pinnedSourceModeInfoPtr->Format.Graphics.PrimSurfSize.cx,
@@ -1600,7 +1434,7 @@ NTSTATUS VC4_DISPLAY::UpdateActiveVidPnPresentPath (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     ROS_LOG_ASSERTION("Not implemented");
     return STATUS_NOT_IMPLEMENTED;
@@ -1616,7 +1450,7 @@ NTSTATUS VC4_DISPLAY::RecommendMonitorModes (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     NT_ASSERT(RecommendMonitorModesPtr->VideoPresentTargetId == 0);
 
@@ -1631,12 +1465,14 @@ NTSTATUS VC4_DISPLAY::RecommendMonitorModes (
             RecommendMonitorModesPtr->hMonitorSourceModeSet,
             &monitorModePtr);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "pfnCreateNewModeInfo() failed. (status = %!STATUS!)",
             status);
         return status;
     }
-    auto releaseMonitorMode = VC4_FINALLY::DoUnless([&] () {
+    auto releaseMonitorMode = ROS_FINALLY::DoUnless([&] () {
         PAGED_CODE();
         NTSTATUS releaseStatus = tbl.pfnReleaseModeInfo(
                 RecommendMonitorModesPtr->hMonitorSourceModeSet,
@@ -1662,15 +1498,17 @@ NTSTATUS VC4_DISPLAY::RecommendMonitorModes (
             monitorModePtr);
     if (!NT_SUCCESS(status)) {
         if (status == STATUS_GRAPHICS_MODE_ALREADY_IN_MODESET) {
-            status = STATUS_SUCCESS;
+            return STATUS_SUCCESS;
         } else {
-            ROS_LOG_ERROR(
+            ROS_TRACE_EVENTS(
+                TRACE_LEVEL_ERROR,
+                ROS_TRACING_VIDPN,
                 "pfnAddMode failed. (status = %!STATUS!, RecommendMonitorModesPtr->hMonitorSourceModeSet = %p, monitorModePtr = %p)",
                 status,
                 RecommendMonitorModesPtr->hMonitorSourceModeSet,
                 monitorModePtr);
+            return status;
         }
-        return status;
     }
     releaseMonitorMode.DoNot();
 
@@ -1688,7 +1526,7 @@ NTSTATUS VC4_DISPLAY::ControlInterrupt (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     switch (InterruptType) {
     case DXGK_INTERRUPT_CRTC_VSYNC:
@@ -1703,18 +1541,14 @@ NTSTATUS VC4_DISPLAY::ControlInterrupt (
                 intStat.AsUlong);
 
             // enable interrupt
-            this->pixelValveIntEn.VfpStart = TRUE;
             WRITE_REGISTER_NOFENCE_ULONG(
                 &this->pvRegistersPtr->IntEn,
-                this->pixelValveIntEn.AsUlong);
+                intStat.AsUlong);
         } else {
             ROS_LOG_TRACE("Disabling CRTC_VSYNC interrupt");
 
             // disable interrupt
-            this->pixelValveIntEn.VfpStart = FALSE;
-            WRITE_REGISTER_NOFENCE_ULONG(
-                &this->pvRegistersPtr->IntEn,
-                this->pixelValveIntEn.AsUlong);
+            WRITE_REGISTER_NOFENCE_ULONG(&this->pvRegistersPtr->IntEn, 0);
 
             // clear interrupt flag
             auto intStat = VC4PIXELVALVE_INTERRUPT();
@@ -1748,9 +1582,11 @@ NTSTATUS VC4_DISPLAY::QueryVidPnHWCapability (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
-    ROS_LOG_TRACE(
+    ROS_TRACE_EVENTS(
+        TRACE_LEVEL_VERBOSE,
+        ROS_TRACING_VIDPN,
         "DdiQueryVidPnHWCapability() was called. (hFunctionalVidPn = %p, SourceId = %d, TargetId = %d)",
         VidPnHWCapsPtr->hFunctionalVidPn,
         VidPnHWCapsPtr->SourceId,
@@ -1777,7 +1613,7 @@ NTSTATUS VC4_DISPLAY::StopDeviceAndReleasePostDisplayOwnership (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     ROS_LOG_ASSERTION("Not implemented");
     return STATUS_NOT_IMPLEMENTED;
@@ -1795,7 +1631,7 @@ NTSTATUS VC4_DISPLAY::SourceHasPinnedMode (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     // Get the source mode set for this SourceId
     D3DKMDT_HVIDPNSOURCEMODESET sourceModeSetHandle;
@@ -1806,13 +1642,15 @@ NTSTATUS VC4_DISPLAY::SourceHasPinnedMode (
             &sourceModeSetHandle,
             &smsInterfacePtr);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "DXGK_VIDPN_INTERFACE::pfnAcquireSourceModeSet() failed. (status = %!STATUS!)",
             status);
-        return Vc4SanitizeNtstatus(status);
+        return RosSanitizeNtstatus(status);
     }
     NT_ASSERT(sourceModeSetHandle);
-    auto releaseSms = VC4_FINALLY::Do([&] () {
+    auto releaseSms = ROS_FINALLY::Do([&] () {
         PAGED_CODE();
         NTSTATUS releaseStatus = VidPnInterfacePtr->pfnReleaseSourceModeSet(
                 VidPnHandle,
@@ -1827,11 +1665,13 @@ NTSTATUS VC4_DISPLAY::SourceHasPinnedMode (
             sourceModeSetHandle,
             &pinnedSourceModeInfoPtr);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "DXGK_VIDPNSOURCEMODESET_INTERFACE::pfnAcquirePinnedModeInfo() failed. (status = %!STATUS!, sourceModeSetHandle = %p)",
             status,
             sourceModeSetHandle);
-        return Vc4SanitizeNtstatus(status);
+        return RosSanitizeNtstatus(status);
     }
 
     if (status != STATUS_SUCCESS) {
@@ -1839,7 +1679,7 @@ NTSTATUS VC4_DISPLAY::SourceHasPinnedMode (
         return STATUS_NOT_FOUND;
     }
 
-    auto releaseModeInfo = VC4_FINALLY::Do([&] () {
+    auto releaseModeInfo = ROS_FINALLY::Do([&] () {
         PAGED_CODE();
         NTSTATUS releaseStatus = smsInterfacePtr->pfnReleaseModeInfo(
                 sourceModeSetHandle,
@@ -1864,7 +1704,7 @@ NTSTATUS VC4_DISPLAY::CreateAndAssignSourceModeSet (
     ) const
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     // Create a new source mode set which will be added to the constraining VidPn with all the possible modes
     D3DKMDT_HVIDPNSOURCEMODESET sourceModeSetHandle;
@@ -1875,13 +1715,15 @@ NTSTATUS VC4_DISPLAY::CreateAndAssignSourceModeSet (
             &sourceModeSetHandle,
             &smsInterfacePtr);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "DXGK_VIDPN_INTERFACE::pfnCreateNewSourceModeSet failed. (status = %!STATUS!)",
             status);
         return status;
     }
     NT_ASSERT(sourceModeSetHandle);
-    auto releaseSms = VC4_FINALLY::DoUnless([&] () {
+    auto releaseSms = ROS_FINALLY::DoUnless([&] () {
         PAGED_CODE();
         NTSTATUS releaseStatus = VidPnInterfacePtr->pfnReleaseSourceModeSet(
                 VidPnHandle,
@@ -1897,13 +1739,15 @@ NTSTATUS VC4_DISPLAY::CreateAndAssignSourceModeSet (
                 sourceModeSetHandle,
                 &sourceModeInfoPtr);
         if (!NT_SUCCESS(status)) {
-            ROS_LOG_ERROR(
+            ROS_TRACE_EVENTS(
+                TRACE_LEVEL_ERROR,
+                ROS_TRACING_VIDPN,
                 "DXGK_VIDPNSOURCEMODESET_INTERFACE::pfnCreateNewModeInfo() failed. (status = %!STATUS!)",
                 status);
             return status;
         }
         NT_ASSERT(sourceModeInfoPtr);
-        auto releaseModeInfo = VC4_FINALLY::DoUnless([&] () {
+        auto releaseModeInfo = ROS_FINALLY::DoUnless([&] () {
             PAGED_CODE();
             NTSTATUS releaseStatus = smsInterfacePtr->pfnReleaseModeInfo(
                     sourceModeSetHandle,
@@ -1924,7 +1768,9 @@ NTSTATUS VC4_DISPLAY::CreateAndAssignSourceModeSet (
         sourceModeInfoPtr->Format.Graphics.ColorBasis = D3DKMDT_CB_SCRGB;
         sourceModeInfoPtr->Format.Graphics.PixelValueAccessMode = D3DKMDT_PVAM_DIRECT;
 
-        ROS_LOG_TRACE(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_VERBOSE,
+            ROS_TRACING_VIDPN,
             "Adding source mode. (PrimSurfSize = %d,%d, Stride = %d, PixelFormat = %d, ColorBasis = %d, PixelValueAccessMode = %d)",
             sourceModeInfoPtr->Format.Graphics.PrimSurfSize.cx,
             sourceModeInfoPtr->Format.Graphics.PrimSurfSize.cy,
@@ -1938,7 +1784,9 @@ NTSTATUS VC4_DISPLAY::CreateAndAssignSourceModeSet (
                 sourceModeSetHandle,
                 sourceModeInfoPtr);
         if (!NT_SUCCESS(status)) {
-            ROS_LOG_ERROR(
+            ROS_TRACE_EVENTS(
+                TRACE_LEVEL_ERROR,
+                ROS_TRACING_VIDPN,
                 "DXGK_VIDPNSOURCEMODESET_INTERFACE::pfnAddMode() failed. (status = %!STATUS!)",
                 status);
             return status;
@@ -1952,7 +1800,9 @@ NTSTATUS VC4_DISPLAY::CreateAndAssignSourceModeSet (
             SourceId,
             sourceModeSetHandle);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "DXGK_VIDPN_INTERFACE::pfnAssignSourceModeSet() failed. (status = %!STATUS!)",
             status);
         return status;
@@ -1974,7 +1824,7 @@ NTSTATUS VC4_DISPLAY::TargetHasPinnedMode (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     // Get the source mode set for this SourceId
     D3DKMDT_HVIDPNTARGETMODESET targetModeSetHandle;
@@ -1985,13 +1835,15 @@ NTSTATUS VC4_DISPLAY::TargetHasPinnedMode (
             &targetModeSetHandle,
             &tmsInterfacePtr);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "DXGK_VIDPN_INTERFACE::pfnAcquireTargetModeSet() failed. (status = %!STATUS!)",
             status);
-        return Vc4SanitizeNtstatus(status);
+        return RosSanitizeNtstatus(status);
     }
     NT_ASSERT(targetModeSetHandle);
-    auto releaseTargetModeSet = VC4_FINALLY::Do([&] () {
+    auto releaseTargetModeSet = ROS_FINALLY::Do([&] () {
         PAGED_CODE();
         NTSTATUS releaseStatus = VidPnInterfacePtr->pfnReleaseTargetModeSet(
                 VidPnHandle,
@@ -2006,11 +1858,13 @@ NTSTATUS VC4_DISPLAY::TargetHasPinnedMode (
             targetModeSetHandle,
             &pinnedTargetModeInfoPtr);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "DXGK_VIDPNTARGETMODESET_INTERFACE::pfnAcquirePinnedModeInfo() failed. (status = %!STATUS!, targetModeSetHandle = %p)",
             status,
             targetModeSetHandle);
-        return Vc4SanitizeNtstatus(status);
+        return RosSanitizeNtstatus(status);
     }
 
     if (status != STATUS_SUCCESS) {
@@ -2018,7 +1872,7 @@ NTSTATUS VC4_DISPLAY::TargetHasPinnedMode (
         return STATUS_NOT_FOUND;
     }
 
-    auto releaseModeInfo = VC4_FINALLY::Do([&] () {
+    auto releaseModeInfo = ROS_FINALLY::Do([&] () {
         PAGED_CODE();
         NTSTATUS releaseStatus = tmsInterfacePtr->pfnReleaseModeInfo(
                 targetModeSetHandle,
@@ -2043,7 +1897,7 @@ NTSTATUS VC4_DISPLAY::CreateAndAssignTargetModeSet (
     ) const
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     D3DKMDT_HVIDPNTARGETMODESET targetModeSetHandle;
     const DXGK_VIDPNTARGETMODESET_INTERFACE* tmsInterfacePtr;
@@ -2053,13 +1907,15 @@ NTSTATUS VC4_DISPLAY::CreateAndAssignTargetModeSet (
             &targetModeSetHandle,
             &tmsInterfacePtr);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "DXGK_VIDPN_INTERFACE::pfnCreateNewTargetModeSet failed. (status = %!STATUS!)",
             status);
         return status;
     }
     NT_ASSERT(targetModeSetHandle);
-    auto releaseSms = VC4_FINALLY::DoUnless([&] () {
+    auto releaseSms = ROS_FINALLY::DoUnless([&] () {
         PAGED_CODE();
         NTSTATUS releaseStatus = VidPnInterfacePtr->pfnReleaseTargetModeSet(
                 VidPnHandle,
@@ -2075,13 +1931,15 @@ NTSTATUS VC4_DISPLAY::CreateAndAssignTargetModeSet (
                 targetModeSetHandle,
                 &targetModeInfoPtr);
         if (!NT_SUCCESS(status)) {
-            ROS_LOG_ERROR(
+            ROS_TRACE_EVENTS(
+                TRACE_LEVEL_ERROR,
+                ROS_TRACING_VIDPN,
                 "DXGK_VIDPNTARGETMODESET_INTERFACE::pfnCreateNewModeInfo() failed. (status = %!STATUS!)",
                 status);
             return status;
         }
         NT_ASSERT(targetModeInfoPtr);
-        auto releaseModeInfo = VC4_FINALLY::DoUnless([&] () {
+        auto releaseModeInfo = ROS_FINALLY::DoUnless([&] () {
             PAGED_CODE();
             NTSTATUS releaseStatus = tmsInterfacePtr->pfnReleaseModeInfo(
                     targetModeSetHandle,
@@ -2100,7 +1958,9 @@ NTSTATUS VC4_DISPLAY::CreateAndAssignTargetModeSet (
                 targetModeSetHandle,
                 targetModeInfoPtr);
         if (!NT_SUCCESS(status)) {
-            ROS_LOG_ERROR(
+            ROS_TRACE_EVENTS(
+                TRACE_LEVEL_ERROR,
+                ROS_TRACING_VIDPN,
                 "DXGK_VIDPNTARGETMODESET_INTERFACE::pfnAddMode() failed. (status = %!STATUS!)",
                 status);
             return status;
@@ -2114,7 +1974,9 @@ NTSTATUS VC4_DISPLAY::CreateAndAssignTargetModeSet (
             TargetId,
             targetModeSetHandle);
     if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "DXGK_VIDPN_INTERFACE::pfnAssignTargetModeSet() failed. (status = %!STATUS!)",
             status);
         return status;
@@ -2130,10 +1992,12 @@ NTSTATUS VC4_DISPLAY::IsVidPnSourceModeFieldsValid (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     if (SourceModePtr->Type != D3DKMDT_RMT_GRAPHICS) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "Pinned source mode is not a graphics mode. (SourceModePtr->Type = %d)",
             SourceModePtr->Type);
         return STATUS_GRAPHICS_INVALID_VIDEO_PRESENT_SOURCE_MODE;
@@ -2142,21 +2006,27 @@ NTSTATUS VC4_DISPLAY::IsVidPnSourceModeFieldsValid (
     if ((SourceModePtr->Format.Graphics.ColorBasis != D3DKMDT_CB_SCRGB) &&
         (SourceModePtr->Format.Graphics.ColorBasis != D3DKMDT_CB_UNINITIALIZED))
     {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "Pinned source mode has a non-linear RGB color basis (ColorBasis = %d)",
             SourceModePtr->Format.Graphics.ColorBasis);
         return STATUS_GRAPHICS_INVALID_VIDEO_PRESENT_SOURCE_MODE;
     }
 
     if (SourceModePtr->Format.Graphics.PixelValueAccessMode != D3DKMDT_PVAM_DIRECT) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "Pinned source mode has a palettized access mode. (PixelValueAccessMode = %d)",
             SourceModePtr->Format.Graphics.PixelValueAccessMode);
         return STATUS_GRAPHICS_INVALID_VIDEO_PRESENT_SOURCE_MODE;
     }
 
     if (SourceModePtr->Format.Graphics.PixelFormat != D3DDDIFMT_A8R8G8B8) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "Pinned source mode has invalid pixel format. (SourceModePtr->Format.Graphics.PixelFormat = %d, D3DDDIFMT_A8R8G8B8 = %d)",
             SourceModePtr->Format.Graphics.PixelFormat,
             D3DDDIFMT_A8R8G8B8);
@@ -2172,17 +2042,21 @@ NTSTATUS VC4_DISPLAY::IsVidPnPathFieldsValid (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     if (PathPtr->VidPnSourceId != 0) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "Path contains invalid source id. (VidPnSourceId = %d)",
             PathPtr->VidPnSourceId);
         return STATUS_GRAPHICS_INVALID_VIDEO_PRESENT_SOURCE;
     }
 
     if (PathPtr->VidPnTargetId != 0) {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "Path contains invalid target id. (VidPnTargetId = %d)",
             PathPtr->VidPnTargetId);
         return STATUS_GRAPHICS_INVALID_VIDEO_PRESENT_TARGET;
@@ -2190,7 +2064,9 @@ NTSTATUS VC4_DISPLAY::IsVidPnPathFieldsValid (
 
     if (PathPtr->GammaRamp.Type != D3DDDI_GAMMARAMP_DEFAULT)
     {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "Path contains a gamma ramp. (GammaRamp.Type = %d)",
             PathPtr->GammaRamp.Type);
         return STATUS_GRAPHICS_GAMMA_RAMP_NOT_SUPPORTED;
@@ -2200,7 +2076,9 @@ NTSTATUS VC4_DISPLAY::IsVidPnPathFieldsValid (
         (PathPtr->ContentTransformation.Scaling != D3DKMDT_VPPS_NOTSPECIFIED) &&
         (PathPtr->ContentTransformation.Scaling != D3DKMDT_VPPS_UNINITIALIZED))
     {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "Path contains a non-identity scaling. (ContentTransformation.Scaling = %d)",
             PathPtr->ContentTransformation.Scaling);
         return STATUS_GRAPHICS_VIDPN_MODALITY_NOT_SUPPORTED;
@@ -2210,7 +2088,9 @@ NTSTATUS VC4_DISPLAY::IsVidPnPathFieldsValid (
         (PathPtr->ContentTransformation.Rotation != D3DKMDT_VPPR_NOTSPECIFIED) &&
         (PathPtr->ContentTransformation.Rotation != D3DKMDT_VPPR_UNINITIALIZED))
     {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "Path contains a not-identity rotation (ContentTransformation.Rotation = %d)",
             PathPtr->ContentTransformation.Rotation);
         return STATUS_GRAPHICS_VIDPN_MODALITY_NOT_SUPPORTED;
@@ -2219,7 +2099,9 @@ NTSTATUS VC4_DISPLAY::IsVidPnPathFieldsValid (
     if ((PathPtr->VidPnTargetColorBasis != D3DKMDT_CB_SCRGB) &&
         (PathPtr->VidPnTargetColorBasis != D3DKMDT_CB_UNINITIALIZED))
     {
-        ROS_LOG_ERROR(
+        ROS_TRACE_EVENTS(
+            TRACE_LEVEL_ERROR,
+            ROS_TRACING_VIDPN,
             "Path has a non-linear RGB color basis. (VidPnTargetColorBasis = %d)",
             PathPtr->VidPnTargetColorBasis);
         return STATUS_GRAPHICS_INVALID_VIDEO_PRESENT_SOURCE_MODE;
@@ -2228,62 +2110,4 @@ NTSTATUS VC4_DISPLAY::IsVidPnPathFieldsValid (
     return STATUS_SUCCESS;
 }
 
-_Use_decl_annotations_
-NTSTATUS VC4_DISPLAY::registerHotplugNotification (FILE_OBJECT** FileObjectPPtr)
-{
-    PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-
-    DECLARE_CONST_UNICODE_STRING(hpdDeviceName, GPIOHPD_DEVICE_OBJECT_NAME_WSZ);
-    FILE_OBJECT* fileObjectPtr;
-    NTSTATUS status = Vc4OpenDevice(
-            const_cast<UNICODE_STRING*>(&hpdDeviceName),
-            GENERIC_READ | GENERIC_WRITE,
-            0,
-            &fileObjectPtr);
-    if (!NT_SUCCESS(status)) {
-        ROS_LOG_ERROR(
-            "Failed to open handle to hotplug detection device.. (status=%!STATUS!, hpdDeviceName=%wZ)",
-            status,
-            &hpdDeviceName);
-        return status;
-    }
-    auto dereferenceHpdFileObject = VC4_FINALLY::DoUnless([&] {
-        PAGED_CODE();
-        ObDereferenceObjectWithTag(fileObjectPtr, VC4_ALLOC_TAG::DEVICE);
-    });
-
-    // Register for hotplug notification
-    {
-        auto inputBuffer = GPIOHPD_REGISTER_NOTIFICATION_INPUT();
-        inputBuffer.EvtHotplugNotificationFunc = EvtHotplugNotification;
-        inputBuffer.ContextPtr = this;
-        GPIOHPD_REGISTER_NOTIFICATION_OUTPUT outputBuffer;
-        ULONG information;
-        status = Vc4SendIoctlSynchronously(
-                fileObjectPtr,
-                IOCTL_GPIOHPD_REGISTER_NOTIFICATION,
-                &inputBuffer,
-                sizeof(inputBuffer),
-                &outputBuffer,
-                sizeof(outputBuffer),
-                TRUE,                       // InternalDeviceIoControl
-                &information);
-        if (!NT_SUCCESS(status)) {
-            ROS_LOG_ERROR(
-                "Vc4SendIoctlSynchronously(...IOCTL_GPIOHPD_REGISTER_NOTIFICATION...) failed. (status=%!STATUS!, fileObjectPtr=%p)",
-                status,
-                fileObjectPtr);
-            return status;
-        }
-        this->hdmiConnected = outputBuffer.Connected;
-    }
-
-    dereferenceHpdFileObject.DoNot();
-    *FileObjectPPtr = fileObjectPtr;
-
-    NT_ASSERT(NT_SUCCESS(status));
-    return STATUS_SUCCESS;
-}
-
-VC4_PAGED_SEGMENT_END; //=====================================================
+ROS_PAGED_SEGMENT_END; //=====================================================

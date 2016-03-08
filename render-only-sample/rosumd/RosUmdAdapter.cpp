@@ -92,7 +92,7 @@ HRESULT APIENTRY RosUmdAdapter::CreateDevice(
         return e.m_hr;
     }
 
-    return DXGI_STATUS_NO_REDIRECTION;
+    return S_OK;
 }
 
 //----------------------------------------------------------------------------------------------------------------------------------
@@ -180,7 +180,7 @@ HRESULT APIENTRY RosUmdAdapter::GetCaps(
 
             D3D11DDI_3DPIPELINESUPPORT_CAPS* pData = static_cast< D3D11DDI_3DPIPELINESUPPORT_CAPS* >( pCaps->pData );
             // Ref11 supports pipeline levels 9.1, 9.2, 9.3, 10, 10.1, 11, 11.1
-            pData->Caps = 
+            pData->Caps =
 #if !VC4 // VC4 only supports up to FL9_3.
                 D3D11DDI_ENCODE_3DPIPELINESUPPORT_CAP( D3D11_1DDI_3DPIPELINELEVEL_11_1 ) |
                 D3D11DDI_ENCODE_3DPIPELINESUPPORT_CAP( D3D11DDI_3DPIPELINELEVEL_11_0 ) |

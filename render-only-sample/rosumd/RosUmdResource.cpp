@@ -15,6 +15,7 @@
 #include "Vc4Hw.h"
 
 RosUmdResource::RosUmdResource() :
+    m_signature(_SIGNATURE::CONSTRUCTED),
     m_hKMAllocation(NULL)
 {
     // do nothing
@@ -22,6 +23,9 @@ RosUmdResource::RosUmdResource() :
 
 RosUmdResource::~RosUmdResource()
 {
+    assert(
+        (m_signature == _SIGNATURE::CONSTRUCTED) ||
+        (m_signature == _SIGNATURE::INITIALIZED));
     // do nothing
 }
 
@@ -32,6 +36,8 @@ RosUmdResource::Standup(
     D3D10DDI_HRTRESOURCE hRTResource)
 {
     UNREFERENCED_PARAMETER(pUmdDevice);
+    
+    assert(m_signature == _SIGNATURE::CONSTRUCTED);
 
     m_resourceDimension = pCreateResource->ResourceDimension;
     m_mip0Info = *pCreateResource->pMipInfoList;
@@ -46,10 +52,17 @@ RosUmdResource::Standup(
 
     if (pCreateResource->pPrimaryDesc)
     {
+        assert(
+            (pCreateResource->MiscFlags & D3DWDDM2_0DDI_RESOURCE_MISC_DISPLAYABLE_SURFACE) &&
+            (pCreateResource->BindFlags & D3D10_DDI_BIND_PRESENT) &&
+            (pCreateResource->pPrimaryDesc->ModeDesc.Width != 0));
+        
+        m_isPrimary = true;
         m_primaryDesc = *pCreateResource->pPrimaryDesc;
     }
     else
     {
+        m_isPrimary = false;
         ZeroMemory(&m_primaryDesc, sizeof(m_primaryDesc));
     }
 
@@ -66,12 +79,44 @@ RosUmdResource::Standup(
 
     m_allocationListIndex = 0;
 
-    m_pSysMemCopy = NULL;
+    m_pData = nullptr;
+    m_pSysMemCopy = nullptr;
+    m_signature = _SIGNATURE::INITIALIZED;
+}
+
+void RosUmdResource::InitSharedResourceFromExistingAllocation (
+    const RosAllocationExchange* ExistingAllocationPtr,
+    D3D10DDI_HKMRESOURCE hKMResource,
+    D3DKMT_HANDLE hKMAllocation,        // can this be a D3D10DDI_HKMALLOCATION?
+    D3D10DDI_HRTRESOURCE hRTResource
+    )
+{
+    assert(m_signature == _SIGNATURE::CONSTRUCTED);
+    
+    // copy members from the existing allocation into this object
+    RosAllocationExchange* basePtr = this;
+    *basePtr = *ExistingAllocationPtr;
+
+    // HW specific information calculated based on the fields above
+    CalculateMemoryLayout();
+    
+    m_hRTResource = hRTResource;
+    m_hKMResource = hKMResource.handle;
+    m_hKMAllocation = hKMAllocation;
+
+    m_mostRecentFence = RosUmdCommandBuffer::s_nullFence;
+    m_allocationListIndex = 0;
+
+    m_pData = nullptr;
+    m_pSysMemCopy = nullptr;
+    
+    m_signature = _SIGNATURE::INITIALIZED;
 }
 
 void
 RosUmdResource::Teardown(void)
 {
+    m_signature = _SIGNATURE::CONSTRUCTED;
     // TODO[indyz]: Implement
 }
 
@@ -94,7 +139,7 @@ RosUmdResource::ConstantBufferUpdateSubresourceUP(
     UINT BytesToCopy = RowPitch;
     if (pDstBox)
     {
-        if (pDstBox->left < 0 || 
+        if (pDstBox->left < 0 ||
             pDstBox->left > (INT)m_hwSizeBytes ||
             pDstBox->left > pDstBox->right ||
             pDstBox->right > (INT)m_hwSizeBytes)
@@ -298,6 +343,13 @@ RosUmdResource::CalculateMemoryLayout(
                 m_hwFormat = RosHwFormat::X8888;
             }
 
+            // Force tiled layout for given configuration only
+            if ((m_usage == D3D10_DDI_USAGE_DEFAULT) &&
+                (m_bindFlags == D3D10_DDI_BIND_SHADER_RESOURCE))
+            {
+                m_hwLayout = RosHwLayout::Tiled;
+            }
+
             // Using system memory linear MipMap as example
             m_hwWidthPixels = m_mip0Info.TexelWidth;
             m_hwHeightPixels = m_mip0Info.TexelHeight;
@@ -306,15 +358,15 @@ RosUmdResource::CalculateMemoryLayout(
             // Align width and height to VC4_BINNING_TILE_PIXELS for binning
 #endif
 
-            m_hwWidthTilePixels = VC4_BINNING_TILE_PIXELS;
-            m_hwHeightTilePixels = VC4_BINNING_TILE_PIXELS;
-            m_hwWidthTiles = (m_hwWidthPixels + m_hwWidthTilePixels - 1) / m_hwWidthTilePixels;
-            m_hwHeightTiles = (m_hwHeightPixels + m_hwHeightTilePixels - 1) / m_hwHeightTilePixels;
-            m_hwWidthPixels = m_hwWidthTiles*m_hwWidthTilePixels;
-            m_hwHeightPixels = m_hwHeightTiles*m_hwHeightTilePixels;
-
             if (m_hwLayout == RosHwLayout::Linear)
             {
+                m_hwWidthTilePixels = VC4_BINNING_TILE_PIXELS;
+                m_hwHeightTilePixels = VC4_BINNING_TILE_PIXELS;
+                m_hwWidthTiles = (m_hwWidthPixels + m_hwWidthTilePixels - 1) / m_hwWidthTilePixels;
+                m_hwHeightTiles = (m_hwHeightPixels + m_hwHeightTilePixels - 1) / m_hwHeightTilePixels;
+                m_hwWidthPixels = m_hwWidthTiles*m_hwWidthTilePixels;
+                m_hwHeightPixels = m_hwHeightTiles*m_hwHeightTilePixels;
+
                 m_hwSizeBytes = CPixel::ComputeMipMapSize(
                     m_hwWidthPixels,
                     m_hwHeightPixels,
@@ -331,7 +383,16 @@ RosUmdResource::CalculateMemoryLayout(
                 assert(m_mipLevels == 1);
 
                 assert((m_hwFormat == RosHwFormat::X8888) || (m_hwFormat == RosHwFormat::D24S8));
-                UINT sizeTileBytes = 64 * 64 * 4;
+                
+                // Values are hardocded - we are using RosHwFormat::X8888 format
+                m_hwWidthTilePixels = VC4_4KB_TILE_WIDTH;
+                m_hwHeightTilePixels = VC4_4KB_TILE_HEIGHT;
+                m_hwWidthTiles = (m_hwWidthPixels + m_hwWidthTilePixels - 1) / m_hwWidthTilePixels;
+                m_hwHeightTiles = (m_hwHeightPixels + m_hwHeightTilePixels - 1) / m_hwHeightTilePixels;
+                m_hwWidthPixels = m_hwWidthTiles*m_hwWidthTilePixels;
+                m_hwHeightPixels = m_hwHeightTiles*m_hwHeightTilePixels;
+
+                UINT sizeTileBytes = m_hwWidthTilePixels * m_hwHeightTilePixels * 4;
 
                 m_hwSizeBytes = m_hwWidthTiles * m_hwHeightTiles * sizeTileBytes;
                 m_hwPitchBytes = 0;
@@ -348,35 +409,162 @@ RosUmdResource::CalculateMemoryLayout(
     }
 }
 
-void RosUmdResource::GetAllocationExchange(
-    RosAllocationExchange * pOutAllocationExchange)
+bool RosUmdResource::CanRotateFrom(const RosUmdResource* Other) const
 {
-#if 0
-    pOutAllocationExchange->m_resourceDimension = m_resourceDimension;
-#endif
-    pOutAllocationExchange->m_mip0Info = m_mip0Info;
-#if 0
-    pOutAllocationExchange->m_usage = m_usage;
-    pOutAllocationExchange->m_mapFlags = m_mapFlags;
-#endif
-
-    pOutAllocationExchange->m_miscFlags = m_miscFlags;
-    pOutAllocationExchange->m_bindFlags = m_bindFlags;
-    pOutAllocationExchange->m_format = m_format;
-    pOutAllocationExchange->m_sampleDesc = m_sampleDesc;
-#if 0
-    pOutAllocationExchange->m_mipLevels = m_mipLevels;
-    pOutAllocationExchange->m_arraySize = m_arraySize;
-#endif
+    // Make sure we're not rotating from ourself and that the resources
+    // are compatible (e.g. size, flags, ...)
     
-    pOutAllocationExchange->m_primaryDesc = m_primaryDesc;
-    pOutAllocationExchange->m_hwLayout = m_hwLayout;
-    pOutAllocationExchange->m_hwWidthPixels = m_hwWidthPixels;
-    pOutAllocationExchange->m_hwHeightPixels = m_hwHeightPixels;
-    pOutAllocationExchange->m_hwFormat = m_hwFormat;
-#if 0
-    pOutAllocationExchange->m_hwPitch = m_hwPitch;
-#endif
+    return (this != Other) &&
+           (!m_pData && !Other->m_pData) &&
+           (!m_pSysMemCopy && !Other->m_pSysMemCopy) &&
+           (m_hRTResource != Other->m_hRTResource) &&
+           ((m_hKMAllocation != Other->m_hKMAllocation) || !m_hKMAllocation) &&
+           ((m_hKMResource != Other->m_hKMResource) || !m_hKMResource) &&
+           (m_resourceDimension == Other->m_resourceDimension) &&
+           (m_mip0Info == Other->m_mip0Info) &&
+           (m_usage == Other->m_usage) &&
+           (m_bindFlags == Other->m_bindFlags) &&
+           (m_bindFlags & D3D10_DDI_BIND_PRESENT) &&
+           (m_mapFlags == Other->m_mapFlags) &&
+           (m_miscFlags == Other->m_miscFlags) &&
+           (m_format == Other->m_format) &&
+           (m_sampleDesc == Other->m_sampleDesc) &&
+           (m_mipLevels == Other->m_mipLevels) &&
+           (m_arraySize == Other->m_arraySize) &&
+           (m_isPrimary == Other->m_isPrimary) &&
+           ((m_primaryDesc.Flags & ~DXGI_DDI_PRIMARY_OPTIONAL) ==
+            (Other->m_primaryDesc.Flags & ~DXGI_DDI_PRIMARY_OPTIONAL)) &&
+           (m_primaryDesc.VidPnSourceId == Other->m_primaryDesc.VidPnSourceId) &&
+           (m_primaryDesc.ModeDesc == Other->m_primaryDesc.ModeDesc) &&
+           (m_primaryDesc.DriverFlags == Other->m_primaryDesc.DriverFlags) &&
+           (m_hwLayout == Other->m_hwLayout) &&
+           (m_hwWidthPixels == Other->m_hwWidthPixels) &&
+           (m_hwHeightPixels == Other->m_hwHeightPixels) &&
+           (m_hwFormat == Other->m_hwFormat) &&
+           (m_hwPitchBytes == Other->m_hwPitchBytes) &&
+           (m_hwSizeBytes == Other->m_hwSizeBytes) &&
+           (m_hwWidthTilePixels == Other->m_hwWidthTilePixels) &&
+           (m_hwHeightTilePixels == Other->m_hwHeightTilePixels) &&
+           (m_hwWidthTiles == Other->m_hwWidthTiles) &&
+           (m_hwHeightTiles == Other->m_hwHeightTiles);
+}
 
-    pOutAllocationExchange->m_hwSizeBytes = m_hwSizeBytes;
+// Form 1k sub-tile block
+BYTE *RosUmdResource::Form1kSubTileBlock(BYTE *pInputBuffer, BYTE *pOutBuffer, UINT rowStride)
+{    
+    // 1k sub-tile block is formed from micro-tiles blocks
+    for (UINT h = 0; h < VC4_1KB_SUB_TILE_HEIGHT; h += 4)
+    {
+        BYTE *currentBufferPos = pInputBuffer + h*rowStride;
+
+        // Process row of 4 micro-tiles blocks
+        for (UINT w = 0; w < VC4_1KB_SUB_TILE_WIDTH_BYTES; w+= VC4_MICRO_TILE_WIDTH_BYTES)
+        {
+            BYTE *microTileOffset = currentBufferPos + w;
+
+            // Process micro-tile block (4x16 bytes)
+            for (int t = 0; t < VC4_MICRO_TILE_HEIGHT; t++)
+            {
+                memcpy(pOutBuffer, microTileOffset, VC4_MICRO_TILE_WIDTH_BYTES);
+                pOutBuffer += VC4_MICRO_TILE_WIDTH_BYTES;
+                microTileOffset += rowStride;
+            }
+        }
+    }
+    return pOutBuffer;
+}
+
+// Form one 4k tile block from pInputBuffer and store in pOutBuffer
+BYTE *RosUmdResource::Form4kTileBlock(BYTE *pInputBuffer, BYTE *pOutBuffer, UINT rowStride, BOOLEAN OddRow)
+{
+    BYTE *currentTileOffset = NULL;
+
+    if (OddRow)
+    {
+        // For even rows, process sub-tile blocks in ABCD order, where
+        // each sub-tile is stored in memory as follows:
+        //
+        //  [C  B]   
+        //  [D  A]
+        //                  
+
+        // Get A block
+        currentTileOffset = pInputBuffer + rowStride * VC4_1KB_SUB_TILE_HEIGHT + VC4_1KB_SUB_TILE_WIDTH_BYTES;
+        pOutBuffer = Form1kSubTileBlock(currentTileOffset, pOutBuffer, rowStride);
+
+        // Get B block
+        currentTileOffset = pInputBuffer + VC4_1KB_SUB_TILE_WIDTH_BYTES;
+
+        pOutBuffer = Form1kSubTileBlock(currentTileOffset, pOutBuffer, rowStride);
+
+        // Get C block
+        pOutBuffer = Form1kSubTileBlock(pInputBuffer, pOutBuffer, rowStride);
+
+        // Get D block
+        currentTileOffset = pInputBuffer + rowStride * VC4_1KB_SUB_TILE_HEIGHT;
+        pOutBuffer = Form1kSubTileBlock(currentTileOffset, pOutBuffer, rowStride);
+
+        // return current position in out buffer
+        return pOutBuffer;
+
+    }
+    else
+    {
+        // For even rows, process sub-tile blocks in ABCD order, where
+        // each sub-tile is stored in memory as follows:
+        // 
+        //  [A  D]    
+        //  [B  C] 
+        //
+
+        // Get A block
+        pOutBuffer = Form1kSubTileBlock(pInputBuffer, pOutBuffer, rowStride);
+
+        /// Get B block
+        currentTileOffset = pInputBuffer + rowStride * VC4_1KB_SUB_TILE_HEIGHT;
+        pOutBuffer = Form1kSubTileBlock(currentTileOffset, pOutBuffer, rowStride);
+
+        // Get C Block
+        currentTileOffset = pInputBuffer + rowStride * VC4_1KB_SUB_TILE_HEIGHT + VC4_1KB_SUB_TILE_WIDTH_BYTES;
+        pOutBuffer = Form1kSubTileBlock(currentTileOffset, pOutBuffer, rowStride);
+
+        // Get D block
+        currentTileOffset = pInputBuffer + VC4_1KB_SUB_TILE_WIDTH_BYTES;
+        pOutBuffer = Form1kSubTileBlock(currentTileOffset, pOutBuffer, rowStride);
+
+        // return current position in out buffer
+        return pOutBuffer;
+    }
+}
+
+// Form (CountX * CountY) tile blocks from InputBuffer and store them in OutBuffer
+void RosUmdResource::ConvertBitmapTo4kTileBlocks(BYTE *InputBuffer, BYTE *OutBuffer, UINT rowStride)
+{
+    // [todo] Currently only 32bpp mode is supported
+
+    UINT CountX = m_hwWidthTiles;
+    UINT CountY = m_hwHeightTiles;
+
+    for (UINT k = 0; k < CountY; k++)
+    {
+        BOOLEAN oddRow = k & 1;
+        if (oddRow)
+        {
+            // Build 4k blocks from right to left for odd rows
+            for (int i = CountX - 1; i >= 0; i--)
+            {
+                BYTE *blockStartOffset = InputBuffer + k * rowStride * VC4_4KB_TILE_HEIGHT + i * VC4_4KB_TILE_WIDTH_BYTES;
+                OutBuffer = Form4kTileBlock(blockStartOffset, OutBuffer, rowStride, oddRow);
+            }
+        }
+        else
+        {
+            // Build 4k blocks from left to right for even rows
+            for (UINT i = 0; i < CountX; i++)
+            {
+                BYTE *blockStartOffset = InputBuffer + k * rowStride * VC4_4KB_TILE_HEIGHT + i * VC4_4KB_TILE_WIDTH_BYTES;
+                OutBuffer = Form4kTileBlock(blockStartOffset, OutBuffer, rowStride, oddRow);
+            }
+        }
+    }
 }

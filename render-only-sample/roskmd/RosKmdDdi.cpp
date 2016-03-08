@@ -10,7 +10,7 @@
 #include "RosKmdDdi.h"
 #include "RosKmdContext.h"
 #include "RosKmdResource.h"
-#include "Vc4Common.h"
+#include "RosKmdUtil.h"
 
 
 
@@ -313,18 +313,7 @@ RosKmdDdi::DdiQueryEngineStatus(
 }
 
 
-NTSTATUS
-__stdcall
-RosKmdDdi::DdiQueryDependentEngineGroup(
-    IN_CONST_HANDLE                             hAdapter,
-    INOUT_DXGKARG_QUERYDEPENDENTENGINEGROUP     pQueryDependentEngineGroup)
-{
-    RosKmAdapter  *pRosKmdAdapter = RosKmAdapter::Cast(hAdapter);
 
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n", __FUNCTION__, hAdapter);
-
-    return pRosKmdAdapter->QueryDependentEngineGroup(pQueryDependentEngineGroup);
-}
 
 NTSTATUS
 __stdcall
@@ -594,7 +583,7 @@ RosKmdDdi::DdiResetDevice(
     return pRosKmdAdapter->ResetDevice();
 }
 
-VC4_NONPAGED_SEGMENT_BEGIN; //================================================
+ROS_NONPAGED_SEGMENT_BEGIN; //================================================
 
 _Use_decl_annotations_
 NTSTATUS RosKmdDisplayDdi::DdiSetVidPnSourceAddress (
@@ -606,9 +595,37 @@ NTSTATUS RosKmdDisplayDdi::DdiSetVidPnSourceAddress (
             SetVidPnSourceAddressPtr);
 }
 
-VC4_NONPAGED_SEGMENT_END; //==================================================
-VC4_PAGED_SEGMENT_BEGIN; //===================================================
+ROS_NONPAGED_SEGMENT_END; //==================================================
+ROS_PAGED_SEGMENT_BEGIN; //===================================================
 // TODO[jordanh] put PASSIVE_LEVEL DDIs in the paged section
+
+//
+// RosKmdDdi
+//
+
+_Use_decl_annotations_
+NTSTATUS RosKmdDdi::DdiOpenAllocation (
+    HANDLE const hDevice,
+    const DXGKARG_OPENALLOCATION* ArgsPtr
+    )
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    return RosKmDevice::Cast(hDevice)->OpenAllocation(ArgsPtr);
+}
+
+_Use_decl_annotations_
+NTSTATUS RosKmdDdi::DdiQueryDependentEngineGroup (
+    HANDLE const hAdapter,
+    DXGKARG_QUERYDEPENDENTENGINEGROUP* ArgsPtr
+    )
+{
+    PAGED_CODE();
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    return RosKmAdapter::Cast(hAdapter)->QueryDependentEngineGroup(ArgsPtr);
+}
 
 //
 // RosKmdDisplayDdi
@@ -621,8 +638,8 @@ NTSTATUS RosKmdDisplayDdi::DdiSetPalette (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-    
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
     return RosKmAdapter::Cast(AdapterPtr)->SetPalette(SetPalettePtr);
 }
 
@@ -633,8 +650,8 @@ NTSTATUS RosKmdDisplayDdi::DdiSetPointerPosition (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-    
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
     return RosKmAdapter::Cast(AdapterPtr)->SetPointerPosition(
         SetPointerPositionPtr);
 }
@@ -646,8 +663,8 @@ NTSTATUS RosKmdDisplayDdi::DdiSetPointerShape (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-    
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
     return RosKmAdapter::Cast(AdapterPtr)->SetPointerShape(SetPointerShapePtr);
 }
 
@@ -658,7 +675,7 @@ NTSTATUS RosKmdDisplayDdi::DdiIsSupportedVidPn (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     return RosKmAdapter::Cast(MiniportDeviceContextPtr)->IsSupportedVidPn(
             IsSupportedVidPnPtr);
@@ -671,7 +688,7 @@ NTSTATUS RosKmdDisplayDdi::DdiRecommendFunctionalVidPn (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     return RosKmAdapter::Cast(MiniportDeviceContextPtr)->RecommendFunctionalVidPn(
             RecommendFunctionalVidPnPtr);
@@ -684,7 +701,7 @@ NTSTATUS RosKmdDisplayDdi::DdiEnumVidPnCofuncModality (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     return RosKmAdapter::Cast(MiniportDeviceContextPtr)->EnumVidPnCofuncModality(
             EnumCofuncModalityPtr);
@@ -697,7 +714,7 @@ NTSTATUS RosKmdDisplayDdi::DdiSetVidPnSourceVisibility (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     return RosKmAdapter::Cast(MiniportDeviceContextPtr)->SetVidPnSourceVisibility(
             SetVidPnSourceVisibilityPtr);
@@ -710,7 +727,7 @@ NTSTATUS RosKmdDisplayDdi::DdiCommitVidPn (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     return RosKmAdapter::Cast(MiniportDeviceContextPtr)->CommitVidPn(
             CommitVidPnPtr);
@@ -723,7 +740,7 @@ NTSTATUS RosKmdDisplayDdi::DdiUpdateActiveVidPnPresentPath (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     return RosKmAdapter::Cast(MiniportDeviceContextPtr)->UpdateActiveVidPnPresentPath(
             UpdateActiveVidPnPresentPathPtr);
@@ -736,7 +753,7 @@ NTSTATUS RosKmdDisplayDdi::DdiRecommendMonitorModes (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     return RosKmAdapter::Cast(MiniportDeviceContextPtr)->RecommendMonitorModes(
             RecommendMonitorModesPtr);
@@ -749,8 +766,8 @@ NTSTATUS RosKmdDisplayDdi::DdiGetScanLine (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-    
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
     return RosKmAdapter::Cast(AdapterPtr)->GetScanLine(GetScanLinePtr);
 }
 
@@ -761,7 +778,7 @@ NTSTATUS RosKmdDisplayDdi::DdiQueryVidPnHWCapability (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     return RosKmAdapter::Cast(MiniportDeviceContextPtr)->QueryVidPnHWCapability(
             VidPnHWCapsPtr);
@@ -775,11 +792,11 @@ NTSTATUS RosKmdDisplayDdi::DdiStopDeviceAndReleasePostDisplayOwnership (
     )
 {
     PAGED_CODE();
-    VC4_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+    ROS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     return RosKmAdapter::Cast(MiniportDeviceContextPtr)->StopDeviceAndReleasePostDisplayOwnership(
             TargetId,
             DisplayInfoPtr);
 }
 
-VC4_PAGED_SEGMENT_END; //=====================================================
+ROS_PAGED_SEGMENT_END; //=====================================================

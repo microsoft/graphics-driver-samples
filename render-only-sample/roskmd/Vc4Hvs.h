@@ -722,9 +722,4 @@ static_assert(
 
 #pragma warning(default:4201) // nameless struct/union
 
-__forceinline ULONG Vc4PhysicalAddressFromVirtual (VOID* Address)
-{
-    return MmGetPhysicalAddress(Address).LowPart + 0xC0000000UL;
-}
-
 #endif // _VC4HVS_HPP_

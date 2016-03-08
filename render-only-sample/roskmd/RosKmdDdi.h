@@ -117,12 +117,6 @@ public:
 
     static NTSTATUS
         __stdcall
-        DdiQueryDependentEngineGroup(
-            IN_CONST_HANDLE                             hAdapter,
-            INOUT_DXGKARG_QUERYDEPENDENTENGINEGROUP     pQueryDependentEngineGroup);
-
-    static NTSTATUS
-        __stdcall
         DdiControlInterrupt(
             IN_CONST_HANDLE                 hAdapter,
             IN_CONST_DXGK_INTERRUPT_TYPE    InterruptType,
@@ -241,6 +235,12 @@ public:
         DdiResetDevice(
             IN_CONST_PVOID  MiniportDeviceContext);
 
+
+public: // PAGED
+
+    static DXGKDDI_OPENALLOCATIONINFO DdiOpenAllocation;
+    static DXGKDDI_QUERYDEPENDENTENGINEGROUP DdiQueryDependentEngineGroup;
+
 };
 
 //
@@ -265,7 +265,7 @@ public: // PAGED
     static DXGKDDI_SETVIDPNSOURCEVISIBILITY DdiSetVidPnSourceVisibility;
     static DXGKDDI_COMMITVIDPN DdiCommitVidPn;
     static DXGKDDI_UPDATEACTIVEVIDPNPRESENTPATH DdiUpdateActiveVidPnPresentPath;
-    
+
     static DXGKDDI_RECOMMENDMONITORMODES DdiRecommendMonitorModes;
     static DXGKDDI_GETSCANLINE DdiGetScanLine;
     static DXGKDDI_QUERYVIDPNHWCAPABILITY DdiQueryVidPnHWCapability;

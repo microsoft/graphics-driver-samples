@@ -3,12 +3,12 @@
 #include "RosKmdLogging.h"
 #include "RosKmdGlobal.tmh"
 
-#include "Vc4Common.h"
 #include "RosKmdGlobal.h"
 #include "RosKmdDevice.h"
 #include "RosKmdAdapter.h"
 #include "RosKmdContext.h"
 #include "RosKmdDdi.h"
+#include "RosKmdUtil.h"
 
 #include <ntverp.h>
 
@@ -82,6 +82,8 @@ NTSTATUS RosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
         RECORDER_CONFIGURE_PARAMS recorderConfigureParams;
         RECORDER_CONFIGURE_PARAMS_INIT(&recorderConfigureParams);
         WppRecorderConfigure(&recorderConfigureParams);
+        WPP_RECORDER_LEVEL_FILTER(ROS_TRACING_VIDPN) = FALSE;
+        WPP_RECORDER_LEVEL_FILTER(ROS_TRACING_PRESENT) = FALSE;
 #if DBG
         WPP_RECORDER_LEVEL_FILTER(ROS_TRACING_DEFAULT) = TRUE;
 #endif // DBG
@@ -162,7 +164,7 @@ NTSTATUS RosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
                 pDriverObject);
             return Status;
         }
-        auto closeRegKey = VC4_FINALLY::Do([&]
+        auto closeRegKey = ROS_FINALLY::Do([&]
         {
             PAGED_CODE();
             NTSTATUS tempStatus = ZwClose(keyHandle);
@@ -263,7 +265,7 @@ NTSTATUS RosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
     // DriverInitializationData.DxgkDdiAcquireSwizzlingRange   = RosKmdAcquireSwizzlingRange;
     // DriverInitializationData.DxgkDdiReleaseSwizzlingRange   = RosKmdReleaseSwizzlingRange;
 
-    DriverInitializationData.DxgkDdiOpenAllocation = RosKmDevice::DdiOpenAllocation;
+    DriverInitializationData.DxgkDdiOpenAllocation = RosKmdDdi::DdiOpenAllocation;
     DriverInitializationData.DxgkDdiCloseAllocation = RosKmDevice::DdiCloseAllocation;
 
     DriverInitializationData.DxgkDdiPatch = RosKmdDdi::DdiPatch;
@@ -317,7 +319,7 @@ NTSTATUS RosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
 
 
     //
-    // Register VidPn and display DDIs
+    // Register display subsystem DDIS.
     // Refer to adapterdisplay.cxx:ADAPTER_DISPLAY::CreateDisplayCore() for
     // required DDIs.
     //
