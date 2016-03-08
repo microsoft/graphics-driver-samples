@@ -296,32 +296,6 @@ void RosUmdDevice::CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResou
             BYTE * pDst = (BYTE *)lock.pData;
             UINT  rowStride = pCreateResource->pInitialDataUP[0].SysMemPitch;
             pResource->ConvertInitialTextureFormatToInternal(pSrc, pDst, rowStride);
-
-#if 0
-            if (pResource->m_hwLayout == RosHwLayout::Linear)
-            {
-                BYTE *  pSrc = (BYTE *)pCreateResource->pInitialDataUP[0].pSysMem;
-                BYTE *  pDst = (BYTE *)lock.pData;
-
-                for (UINT i = 0; i < pResource->m_mip0Info.TexelHeight; i++)
-                {
-                    memcpy(pDst, pSrc, pCreateResource->pInitialDataUP[0].SysMemPitch);
-
-                    pSrc += pCreateResource->pInitialDataUP[0].SysMemPitch;
-                    pDst += pResource->m_hwPitchBytes;
-                }
-            }
-            else
-            {
-                // Texture tiled mode support
-                BYTE * pSrc = (BYTE *)pCreateResource->pInitialDataUP[0].pSysMem;
-                BYTE * pDst = (BYTE *)lock.pData;
-                UINT  rowStride = pCreateResource->pInitialDataUP[0].SysMemPitch;
-
-                // Swizzle texture to HW format
-                pResource->ConvertBitmapTo4kTileBlocks(pSrc, pDst, rowStride);
-            }
-#endif
         }
         else
         {
