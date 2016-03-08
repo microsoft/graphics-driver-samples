@@ -815,8 +815,8 @@ HRESULT RosUmdDevice::Present1(DXGI_DDI_ARG_PRESENT1* Args)
 _Use_decl_annotations_
 void RosUmdDevice::CheckDirectFlipSupport(
     D3D10DDI_HDEVICE hDevice,
-    D3D10DDI_HRESOURCE /*hResource1*/,
-    D3D10DDI_HRESOURCE /*hResource2*/,
+    D3D10DDI_HRESOURCE hResource1,
+    D3D10DDI_HRESOURCE hResource2,
     UINT CheckDirectFlipFlags,
     BOOL *pSupported
     )
@@ -824,9 +824,20 @@ void RosUmdDevice::CheckDirectFlipSupport(
     assert(CastFrom(hDevice) == this);
     assert((CheckDirectFlipFlags & ~D3D11_1DDI_CHECK_DIRECT_FLIP_IMMEDIATE) == 0);
     
-    // We can seamlessly flip video memory between an application's managed 
-    // primary allocations and the DWM's managed primary allocations
-    *pSupported = TRUE;
+    //
+    // We can only flip to the resource if it has the same format as the
+    // current primary since we do not support mode change in 
+    // SetVidPnSourceAddress() at this point.
+    //
+    const RosUmdResource* currentResourcePtr = RosUmdResource::CastFrom(hResource1);
+    const RosUmdResource* directFlipResourcePtr = RosUmdResource::CastFrom(hResource2);
+    
+    // Resources must have same dimensions and format
+    *pSupported =
+        (directFlipResourcePtr->m_mip0Info == currentResourcePtr->m_mip0Info) &&
+        (directFlipResourcePtr->m_format == currentResourcePtr->m_format) &&
+        (directFlipResourcePtr->m_hwPitchBytes == currentResourcePtr->m_hwPitchBytes) &&
+        (directFlipResourcePtr->m_hwSizeBytes == currentResourcePtr->m_hwSizeBytes);
 }
 
 //
