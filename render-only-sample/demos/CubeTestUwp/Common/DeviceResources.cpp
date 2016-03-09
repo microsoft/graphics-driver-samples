@@ -158,8 +158,6 @@ void DX::DeviceResources::CreateDeviceResources()
 	// Create the Direct3D 11 API device object and a corresponding context.
 	ComPtr<ID3D11Device> device;
 	ComPtr<ID3D11DeviceContext> context;
-
-    Sleep(10000);
     
 	HRESULT hr = D3D11CreateDevice(
 		nullptr,					// Specify nullptr to use the default adapter.
