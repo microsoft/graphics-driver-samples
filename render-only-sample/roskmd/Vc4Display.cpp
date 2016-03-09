@@ -63,32 +63,33 @@ NTSTATUS VC4_DISPLAY::SetVidPnSourceAddress (
     if (Args->Flags.ModeChange) {
         NT_ASSERT(Args->ContextCount == 0);
 
-        NT_ASSERT(rosKmdAllocation->m_isPrimary);
-        const D3DKMDT_GRAPHICS_RENDERING_FORMAT* currentFormatPtr =
+        const D3DKMDT_GRAPHICS_RENDERING_FORMAT* currentSourceModePtr =
                 &this->dxgkCurrentSourceMode.Format.Graphics;
+
+        NT_ASSERT(rosKmdAllocation->m_isPrimary);
         const DXGI_DDI_MODE_DESC* desiredModeDescPtr =
                 &rosKmdAllocation->m_primaryDesc.ModeDesc;
 
         // Verify that the surface is compatible with the current source mode
-        if ((desiredModeDescPtr->Width != 
-             currentFormatPtr->PrimSurfSize.cx) ||
-            (desiredModeDescPtr->Height != 
-             currentFormatPtr->PrimSurfSize.cy) ||
-            (TranslateDxgiFormat(rosKmdAllocation->m_format) != 
-             currentFormatPtr->PixelFormat))
+        if ((desiredModeDescPtr->Width !=
+             currentSourceModePtr->PrimSurfSize.cx) ||
+            (desiredModeDescPtr->Height !=
+             currentSourceModePtr->PrimSurfSize.cy) ||
+            (TranslateDxgiFormat(rosKmdAllocation->m_format) !=
+             currentSourceModePtr->PixelFormat))
         {
             ROS_LOG_ASSERTION(
                 "Incompatible mode change was requested. "
                 "(desiredModeDescPtr->Width/Height = (%d,%d), "
                 "TranslateDxgiFormat(rosKmdAllocation->m_primaryDesc.Format) = %d, "
-                "currentFormatPtr->PrimSurfSize = (%d,%d), "
-                "currentFormatPtr->PixelFormat = %d",
+                "currentSourceModePtr->PrimSurfSize = (%d,%d), "
+                "currentSourceModePtr->PixelFormat = %d",
                 desiredModeDescPtr->Width,
                 desiredModeDescPtr->Height,
                 TranslateDxgiFormat(rosKmdAllocation->m_format),
-                currentFormatPtr->PrimSurfSize.cx,
-                currentFormatPtr->PrimSurfSize.cy,
-                currentFormatPtr->PixelFormat);
+                currentSourceModePtr->PrimSurfSize.cx,
+                currentSourceModePtr->PrimSurfSize.cy,
+                currentSourceModePtr->PixelFormat);
 
             return STATUS_NOT_SUPPORTED;
         }
