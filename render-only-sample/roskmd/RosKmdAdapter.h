@@ -75,6 +75,7 @@ typedef struct _ROSDMABUFINFO
 
     RosKmdAllocation           *m_pRenderTarget;
     UINT                        m_RenderTargetPhysicalAddress;
+    const void*                 m_RenderTargetVirtualAddress;
 
     D3DDDI_PATCHLOCATIONLIST    m_DmaBufSelfRef[VC4_MAX_DMA_BUFFER_SELF_REF];
 
