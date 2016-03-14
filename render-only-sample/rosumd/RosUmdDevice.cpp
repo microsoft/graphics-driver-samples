@@ -78,7 +78,8 @@ RosUmdDevice::RosUmdDevice(
     m_pAdapter(pAdapter),
     m_Interface(pArgs->Interface),
     m_hRTDevice(pArgs->hRTDevice),
-    m_hRTCoreLayer(pArgs->hRTCoreLayer)
+    m_hRTCoreLayer(pArgs->hRTCoreLayer),
+    m_bPredicateValue(FALSE)
 {
     // Location of function table for runtime callbacks. Can not change these function pointers, as they are runtime-owned;
     // but the pointer should be saved. Do not cache function pointers, as the runtime may change the table entries at will.
@@ -2317,3 +2318,35 @@ void RosUmdDevice::CreateInternalBuffer(RosUmdResource * pRes, UINT size)
         MAKE_D3D10DDI_HRTRESOURCE(NULL));
 }
 
+void RosUmdDevice::SetPredication(D3D10DDI_HQUERY hQuery, BOOL bPredicateValue)
+{
+    HRESULT hr = S_OK;
+
+    //
+    // https://msdn.microsoft.com/en-us/library/windows/hardware/ff569547(v=vs.85).aspx
+    // per doc, hQuery can contain nullptr - supposed to save the predicate value for future use
+    //
+
+    if (nullptr == hQuery.pDrvPrivate)
+    {
+        m_bPredicateValue = bPredicateValue;
+    }
+    else
+    {
+        //
+        // TODO: Implement remaining query values other than null
+        //
+
+        assert(false);
+    }
+
+    //
+    // per MDSN Predication should set an error in the case one was seen
+    // D3D will interpret an error as critical, except D3DDDIERR_DEVICEREMOVED
+    // 
+
+    if (FAILED(hr))
+    {
+        SetError(hr);
+    }
+}

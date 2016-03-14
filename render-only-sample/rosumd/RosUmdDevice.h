@@ -216,7 +216,7 @@ public:
     void SetDepthStencilState(RosUmdDepthStencilState * pDepthStencilState, UINT stencilRef);
     void SetRasterizerState(RosUmdRasterizerState * pRasterizerState);
     void SetScissorRects(UINT NumScissorRects, UINT ClearScissorRects, const D3D10_DDI_RECT *pRects);
-
+    void SetPredication(D3D10DDI_HQUERY hQuery, BOOL bPredicateValue);
 
     RosUmdResource *                m_vertexBuffers[kMaxVertexBuffers];
     UINT                            m_vertexStrides[kMaxVertexBuffers];
@@ -277,6 +277,8 @@ public:
 
     BOOL                            m_scissorRectSet;
     D3D10_DDI_RECT                  m_scissorRect;
+
+    BOOL                            m_bPredicateValue;
 
 public:
 

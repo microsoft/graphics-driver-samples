@@ -72,7 +72,7 @@ const D3DWDDM1_3DDI_DEVICEFUNCS RosUmdDeviceDdi::s_deviceFuncsWDDM1_3 =
     RosUmdDeviceDdi::DdiSetScissorRects,
     RosUmdDeviceDdi::DdiClearRenderTargetView,
     RosUmdDeviceDdi::DdiClearDepthStencilView,
-    RosUmdDeviceDdi::SetPredication_Default,
+    RosUmdDeviceDdi::DdiSetPredication,
     RosUmdDeviceDdi::QueryGetData_Default,
     RosUmdDeviceDdi::DdiFlush,
     RosUmdDeviceDdi::GenerateMips_Default,
@@ -1551,6 +1551,28 @@ void RosUmdDeviceDdi::CheckDirectFlipSupport(
         hResource2,
         CheckDirectFlipFlags,
         pSupported);
+
+    RosUmdLogging::Exit(__FUNCTION__);
+}
+
+void APIENTRY RosUmdDeviceDdi::DdiSetPredication(
+    D3D10DDI_HDEVICE hDevice,
+    D3D10DDI_HQUERY hQuery,
+    BOOL bPredicateValue
+    )
+{
+    RosUmdLogging::Entry(__FUNCTION__);
+    
+    RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
+    
+    try
+    {
+        pRosUmdDevice->SetPredication(hQuery, bPredicateValue);
+    }
+    catch (std::exception &)
+    {
+        // do nothing
+    }
 
     RosUmdLogging::Exit(__FUNCTION__);
 }
