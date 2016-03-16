@@ -2320,8 +2320,6 @@ void RosUmdDevice::CreateInternalBuffer(RosUmdResource * pRes, UINT size)
 
 void RosUmdDevice::SetPredication(D3D10DDI_HQUERY hQuery, BOOL bPredicateValue)
 {
-    HRESULT hr = S_OK;
-
     //
     // https://msdn.microsoft.com/en-us/library/windows/hardware/ff569547(v=vs.85).aspx
     // per doc, hQuery can contain nullptr - supposed to save the predicate value for future use
@@ -2342,11 +2340,201 @@ void RosUmdDevice::SetPredication(D3D10DDI_HQUERY hQuery, BOOL bPredicateValue)
 
     //
     // per MDSN Predication should set an error in the case one was seen
-    // D3D will interpret an error as critical, except D3DDDIERR_DEVICEREMOVED
+    // D3D will interpret an error as critical
     // 
+    /*
+    HRESULT hr = S_OK;
+
+    if (FAILED(hr))
+    {
+    SetError(hr);
+    }
+    */
+}
+
+void RosUmdDevice::ResourceCopyRegion11_1(
+    RosUmdResource *pDestinationResource,
+    UINT DstSubresource,
+    UINT DstX,
+    UINT DstY,
+    UINT DstZ,
+    RosUmdResource * pSourceResource,
+    UINT SrcSubresource,
+    const D3D10_DDI_BOX* pSrcBox,
+    UINT copyFlags
+    )
+{
+    bool bCopy = true;
+    bool bCopyEntireSubresource = false;
+
+    //
+    // TODO: come back to philosophy if these need to be checked in FREE builds
+    //
+
+    assert(nullptr != pDestinationResource);
+    assert(nullptr != pSourceResource);
+
+    //
+    // https://msdn.microsoft.com/en-us/library/windows/hardware/hh439845(v=vs.85).aspx
+    //
+
+    if (nullptr == pSrcBox)
+    {
+        //
+        // when pSrcBox is null, copy the entire subresource
+        //
+
+        bCopyEntireSubresource = true;
+    }
+    else if (pSrcBox->left >= pSrcBox->right ||
+             pSrcBox->top >= pSrcBox->bottom ||
+             pSrcBox->front >= pSrcBox->back)
+    {
+        //
+        // pSrcBox is considered empty, don't do anything, and exit
+        //
+
+        return;
+    }
+    else
+    {
+        //
+        // TODO: the pSrcBox must not extend over the edges of the source subregion or the destination subregion
+        //
+    }
+
+    //
+    // both source and destination resources must be the same type of resource
+    //
+
+    if (pDestinationResource->m_primaryDesc.ModeDesc.Format != pSourceResource->m_primaryDesc.ModeDesc.Format)
+    {
+        return;
+    }
+
+    //
+    // both source and destination must have format types that are convertible to each other
+    //
+
+    if (pDestinationResource->m_format == pSourceResource->m_format)
+    {
+        bCopy = true;
+    }
+    else
+    {
+        bCopy = false;
+
+        //
+        // TOOD: Implement conversion check logic, or DDI for ResourceConvertRegion
+        //       ensure each source and destionation resource format in D3D11DDIARG_CREATERESOURCE.Format supports appropriate conversion
+        //
+
+        assert(false);
+    }
+
+    //
+    // the source and destination resource must not be currently mapped
+    //
+
+    if (pDestinationResource->IsMapped() || pSourceResource->IsMapped())
+    {
+        return;
+    }
+   
+    //
+    // TODO: - Honor the copy flags
+    //
+
+    (copyFlags); //not used yet
+
+    //
+    // NOTE: for buffers, all coordinates are in bytes. for textures, all coordinates are in pixels
+    //
+   
+    //
+    // ensure the destination resource not created with D3D10_DDI_USAGE_IMMUTABLE
+    //
+
+    if (pDestinationResource->m_usage & D3D10_DDI_USAGE_IMMUTABLE)
+    {
+        return;
+    }
+
+    //
+    // ensure either source or destination has D3D10_DDI_BIND_DEPTH_STENCIL in D3D11DDIARG_CREATERESOURCE.BindFlags OR is a multi - sampled resource :
+    //          then verify pSrcBox is NULL and DstX, DstY and DstZ are 0
+
+    if ((((pDestinationResource->m_bindFlags & D3D10_DDI_BIND_DEPTH_STENCIL) || pDestinationResource->IsMultisampled()) ||
+        ((pSourceResource->m_bindFlags & D3D10_DDI_BIND_DEPTH_STENCIL) || pSourceResource->IsMultisampled())) &&
+        (nullptr != pSrcBox || 0 != DstX || 0 != DstY || 0 != DstZ))
+    {
+        return;
+    }
+      
+    //
+    // ensure sub resource indicies are in range
+    //
+
+    if (DstSubresource >= pDestinationResource->m_arraySize ||
+        SrcSubresource >= pSourceResource->m_arraySize)
+    {
+        return;
+    }
+
+    //
+    // TODO: ensure the source and destination resources are NOT part of the exact same subresource
+    //
+
+    //
+    // TODO: ensure alignment restrictions apply to coordinates
+    //
+
+    //
+    // TODO: ensure each source and desitnation resource format in D3D11DDIARG_CREATERESOURCE.Format is in the same typeless group
+    //
+
+    //
+    // ensure the source and destination resources have the same number of samples and quality level (except for single sampled resources, which only number of samples are the same)
+    //
+
+    if (pDestinationResource->m_sampleDesc.Count != pSourceResource->m_sampleDesc.Count ||
+        pDestinationResource->m_sampleDesc.Quality != pSourceResource->m_sampleDesc.Quality)
+    {
+        return;
+    }
+
+    //
+    // finally perform the copy or convert
+    //
+
+    if (bCopy)
+    {
+        //
+        // TODO: implement the copy
+        //
+
+        assert(false);
+    }
+    else
+    {
+        //
+        // TODO: convert path
+        //
+
+        assert(false);
+    }
+
+    //
+    // per MDSN ResourceCopyRegion should set an error in the case one was seen
+    // D3D will interpret an error as critical
+    // 
+
+/*  
+    HRESULT hr = S_OK;
 
     if (FAILED(hr))
     {
         SetError(hr);
     }
+*/
 }

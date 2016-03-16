@@ -64,7 +64,7 @@ const D3DWDDM1_3DDI_DEVICEFUNCS RosUmdDeviceDdi::s_deviceFuncsWDDM1_3 =
     RosUmdDeviceDdi::DdiSetRasterizerState,
     RosUmdDeviceDdi::QueryEnd_Default,
     RosUmdDeviceDdi::QueryBegin_Default,
-    RosUmdDeviceDdi::ResourceCopyRegion11_1_Default,
+    RosUmdDeviceDdi::DdiResourceCopyRegion11_1,
     RosUmdDeviceDdi::ResourceUpdateSubresourceUP11_1_Default,
     RosUmdDeviceDdi::SOSetTargets_Default,
     RosUmdDeviceDdi::DrawAuto_Dirty,
@@ -130,7 +130,7 @@ const D3DWDDM1_3DDI_DEVICEFUNCS RosUmdDeviceDdi::s_deviceFuncsWDDM1_3 =
     RosUmdDeviceDdi::DdiDestroyDevice,
     RosUmdDeviceDdi::SetTextFilter_Default,
     RosUmdDeviceDdi::DdiResourceCopy,
-    RosUmdDeviceDdi::ResourceCopyRegion11_1_Default,
+    RosUmdDeviceDdi::DdiResourceCopyRegion11_1,
 
     RosUmdDeviceDdi::DrawIndexedInstancedIndirect_Dirty,
     RosUmdDeviceDdi::DrawInstancedIndirect_Dirty,
@@ -1569,10 +1569,61 @@ void APIENTRY RosUmdDeviceDdi::DdiSetPredication(
     {
         pRosUmdDevice->SetPredication(hQuery, bPredicateValue);
     }
-    catch (std::exception &)
+    catch (std::exception & e)
     {
-        // do nothing
+        pRosUmdDevice->SetException(e);
     }
+
+    RosUmdLogging::Exit(__FUNCTION__);
+}
+
+void APIENTRY RosUmdDeviceDdi::DdiResourceCopyRegion11_1(
+    D3D10DDI_HDEVICE hDevice,
+    D3D10DDI_HRESOURCE hDstResource,
+    UINT DstSubresource,
+    UINT DstX,
+    UINT DstY,
+    UINT DstZ,
+    D3D10DDI_HRESOURCE hSrcResource,
+    UINT SrcSubresource,
+    const D3D10_DDI_BOX* pSrcBox,
+    UINT copyFlags
+    )
+{
+    RosUmdLogging::Entry(__FUNCTION__);
+
+    RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
+    RosUmdResource * pDestinationResource = (RosUmdResource *) hDstResource.pDrvPrivate;
+    RosUmdResource * pSourceResource = (RosUmdResource *) hSrcResource.pDrvPrivate;
+
+    try
+    {
+        pRosUmdDevice->ResourceCopyRegion11_1(pDestinationResource, DstSubresource, DstX, DstY, DstZ, pSourceResource, SrcSubresource, pSrcBox, copyFlags);
+    }
+
+    catch (std::exception & e)
+    {
+        pRosUmdDevice->SetException(e);
+    }
+
+    RosUmdLogging::Exit(__FUNCTION__);
+}
+
+void APIENTRY RosUmdDeviceDdi::DdiResourceCopyRegion(
+    D3D10DDI_HDEVICE hDevice,
+    D3D10DDI_HRESOURCE hDstResource,
+    UINT DstSubresource,
+    UINT DstX,
+    UINT DstY,
+    UINT DstZ,
+    D3D10DDI_HRESOURCE hSrcResource,
+    UINT SrcSubresource,
+    const D3D10_DDI_BOX* pSrcBox
+    )
+{
+    RosUmdLogging::Entry(__FUNCTION__);
+
+    DdiResourceCopyRegion11_1(hDevice, hDstResource, DstSubresource, DstX, DstY, DstZ, hSrcResource, SrcSubresource, pSrcBox, 0);
 
     RosUmdLogging::Exit(__FUNCTION__);
 }

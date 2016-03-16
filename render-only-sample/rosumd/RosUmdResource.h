@@ -101,6 +101,16 @@ public:
         return m_isPrimary;
     }
 
+    bool IsMapped()
+    {
+        return nullptr != m_pData;
+    }
+
+    bool IsMultisampled()
+    {
+        return m_sampleDesc.Count > 1;
+    }
+
     // Tiled textures support
     void ConvertBitmapTo4kTileBlocks(
         BYTE *InputBuffer, 
