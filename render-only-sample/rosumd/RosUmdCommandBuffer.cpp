@@ -1,8 +1,9 @@
+#include "precomp.h"
 #include "RosUmdCommandBuffer.h"
 #include "RosUmdResource.h"
 #include "RosUmdDevice.h"
 #include "RosUmdDebug.h"
-#include <math.h>
+
 
 RosUmdCommandBuffer::RosUmdCommandBuffer()
 {

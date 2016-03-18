@@ -1,7 +1,6 @@
 #pragma once
 
-#include <debugapi.h>
-#include <stdio.h>
+
 
 class RosUmdLogging
 {

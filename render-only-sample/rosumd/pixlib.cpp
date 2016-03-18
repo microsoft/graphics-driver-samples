@@ -1,5 +1,5 @@
 
-
+#include "precomp.h"
 #include "pixel.cpp"
 
 // Bytes per "pixel" table index by DXGI_FORMAT

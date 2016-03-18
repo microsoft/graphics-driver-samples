@@ -2,8 +2,6 @@
 
 #pragma once
 
-#include "d3dumddi_.h"
-
 class RosUmdSampler
 {
     friend class RosUmdDevice;

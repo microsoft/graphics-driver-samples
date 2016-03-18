@@ -1,8 +1,7 @@
 #pragma once
 
-#include "d3dumddi_.h"
 #include "RosUmdDevice.h"
-#include "..\roscompiler\roscompiler.h"
+#include <roscompiler.h>
 
 class RosUmdShader
 {

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "d3dumddi_.h"
-
 #include "roscompilerdebug.h"
 #include "DisasmBase.hpp"
 #include "HLSLBinary.hpp"
@@ -35,6 +33,8 @@ class RosUmdDevice;
 
 #define ROS_PIXEL_SHADER_STORAGE 0
 #define ROS_PIXEL_SHADER_UNIFORM_STORAGE 1
+
+void InitializeShaderCompilerLibrary();
 
 class RosCompiler
 {
