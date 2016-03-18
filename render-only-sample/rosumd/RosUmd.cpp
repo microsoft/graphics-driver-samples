@@ -1,10 +1,10 @@
-#include <windows.h>
 
-#include <RosUmdLogging.h>
+#include "precomp.h"
+
+#include "RosUmdLogging.h"
+#include "roscompiler.h"
 
 // TODO[bhouse] Turn ApiValidator back on
-
-void __stdcall InitializeShaderCompilerLibrary();
 
 HINSTANCE g_hDLL;
 

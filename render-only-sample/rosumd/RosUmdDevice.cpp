@@ -5,6 +5,7 @@
 // Copyright (C) Microsoft Corporation
 //
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#include "precomp.h"
 #include "RosUmdDevice.h"
 #include "RosUmdResource.h"
 #include "RosUmdDebug.h"
@@ -22,10 +23,6 @@
 #include "RosContext.h"
 #include "RosUmdUtil.h"
 
-#include <exception>
-#include <typeinfo>
-#include <new>
-
 #if VC4
 
 #include "Vc4Hw.h"
@@ -34,8 +31,6 @@
 // #define NV_SHADER 1
 
 #endif
-
-#include "math.h"
 
 static
 BOOLEAN _IntersectRect(RECT* CONST pDst, RECT CONST* CONST pSrc1, RECT CONST* CONST pSrc2)

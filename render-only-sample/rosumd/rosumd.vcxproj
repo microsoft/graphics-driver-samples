@@ -34,56 +34,9 @@
       <Platform>ARM64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
-  <ItemGroup>
-    <None Include="RosUmd.def" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="pixlib.cpp" />
-    <ClCompile Include="RosUmd.cpp" />
-    <ClCompile Include="RosUmdAdapter.cpp">
-      <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</PreprocessToFile>
-      <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</PreprocessToFile>
-    </ClCompile>
-    <ClCompile Include="RosUmdCommandBuffer.cpp" />
-    <ClCompile Include="RosUmdDevice.cpp" />
-    <ClCompile Include="RosUmdDeviceDdi.cpp" />
-    <ClCompile Include="RosUmdResource.cpp" />
-    <ClCompile Include="RosUmdShader.cpp" />
-    <ClCompile Include="RosUmdUtil.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\roscommon\RosAdapter.h" />
-    <ClInclude Include="..\roscommon\RosAllocation.h" />
-    <ClInclude Include="..\roscommon\RosGpuCommand.h" />
-    <ClInclude Include="..\roscommon\Vc4Ddi.h" />
-    <ClInclude Include="..\roscommon\Vc4Hw.h" />
-    <ClInclude Include="..\roscompiler\roscompiler.h" />
-    <ClInclude Include="d3dumddi_.h" />
-    <ClInclude Include="pixel.hpp" />
-    <ClInclude Include="RosContext.h" />
-    <ClInclude Include="RosUmdAdapter.h" />
-    <ClInclude Include="RosUmdBlendState.h" />
-    <ClInclude Include="RosUmdCommandBuffer.h" />
-    <ClInclude Include="RosUmdDebug.h" />
-    <ClInclude Include="RosUmdDepthStencilState.h" />
-    <ClInclude Include="RosUmdDepthStencilView.h" />
-    <ClInclude Include="RosUmdDevice.h" />
-    <ClInclude Include="RosUmdDeviceDdi.h" />
-    <ClInclude Include="RosUmdElementLayout.h" />
-    <ClInclude Include="RosUmdLogging.h" />
-    <ClInclude Include="RosUmdRasterizerState.h" />
-    <ClInclude Include="RosUmdRenderTargetView.h" />
-    <ClInclude Include="RosUmdResource.h" />
-    <ClInclude Include="RosUmdSampler.h" />
-    <ClInclude Include="RosUmdShader.h" />
-    <ClInclude Include="RosUmdShaderResourceView.h" />
-    <ClInclude Include="RosUmdUtil.h" />
-  </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{B87732A7-0D66-4692-96E2-2772BF77C3FC}</ProjectGuid>
     <TemplateGuid>{9181db3b-298d-4e39-a572-55bca4e4ac89}</TemplateGuid>
-    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
-    <MinimumVisualStudioVersion>12.0</MinimumVisualStudioVersion>
     <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
     <Platform Condition="'$(Platform)' == ''">ARM</Platform>
     <RootNamespace>rosumd</RootNamespace>
@@ -115,30 +68,27 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup />
   <PropertyGroup>
-    <DebuggerFlavor>DbgengRemoteDebugger</DebuggerFlavor>
-    <IncludePath>$(IncludePath);$(KM_IncludePath);$(SolutionDir)\roscommon</IncludePath>
     <EnableInf2cat>false</EnableInf2cat>
     <ApiValidator_Enable>false</ApiValidator_Enable>
-    <LibraryPath>$(SDK_LibraryPath_DDKPlatform);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <!-- Common configuration to debug/release -->
   <ItemDefinitionGroup>
     <ClCompile>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>precomp.h</PrecompiledHeaderFile>
       <WarningLevel>Level4</WarningLevel>
       <TreatWarningAsError>true</TreatWarningAsError>
       <SDLCheck>true</SDLCheck>
       <WppEnabled>false</WppEnabled>
-      <WppRecorderEnabled>false</WppRecorderEnabled>
-      <WppScanConfigurationData Condition="'%(ClCompile.ScanConfigurationData)' == ''">trace.h</WppScanConfigurationData>
       <ExceptionHandling>Sync</ExceptionHandling>
       <DisableSpecificWarnings>4201;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <PreprocessorDefinitions>VC4=1;_USE_DECLSPECS_FOR_SAL=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\roscompiler;..\roscommon;$(KM_IncludePath);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <ModuleDefinitionFile>RosUmd.def</ModuleDefinitionFile>
-      <AdditionalDependencies>roscompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>roscompiler.lib;onecoreuap.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>true</IgnoreAllDefaultLibraries>
     </Link>
@@ -149,29 +99,73 @@
   <!-- Debug compiler/link settings -->
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
     <ClCompile>
-      <Optimization>Disabled</Optimization>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
     </ClCompile>
     <Link>
       <AdditionalDependencies>msvcrtd.lib;vcruntimed.lib;ucrtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
   <!-- Release compiler/link settings -->
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
     <ClCompile>
-      <Optimization>MaxSpeed</Optimization>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
     </ClCompile>
     <Link>
       <AdditionalDependencies>msvcrt.lib;vcruntime.lib;ucrt.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
+      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <FilesToPackage Include="$(TargetPath)" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="RosUmd.def" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="precomp.cpp">
+      <PrecompiledHeader>Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="pixlib.cpp" />
+    <ClCompile Include="RosUmd.cpp" />
+    <ClCompile Include="RosUmdAdapter.cpp" />
+    <ClCompile Include="RosUmdCommandBuffer.cpp" />
+    <ClCompile Include="RosUmdDevice.cpp" />
+    <ClCompile Include="RosUmdDeviceDdi.cpp" />
+    <ClCompile Include="RosUmdResource.cpp" />
+    <ClCompile Include="RosUmdShader.cpp" />
+    <ClCompile Include="RosUmdUtil.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="precomp.h" />
+    <ClInclude Include="..\roscommon\RosAdapter.h" />
+    <ClInclude Include="..\roscommon\RosAllocation.h" />
+    <ClInclude Include="..\roscommon\RosGpuCommand.h" />
+    <ClInclude Include="..\roscommon\Vc4Ddi.h" />
+    <ClInclude Include="..\roscommon\Vc4Hw.h" />
+    <ClInclude Include="..\roscompiler\roscompiler.h" />
+    <ClInclude Include="d3dumddi_.h" />
+    <ClInclude Include="pixel.hpp" />
+    <ClInclude Include="RosContext.h" />
+    <ClInclude Include="RosUmdAdapter.h" />
+    <ClInclude Include="RosUmdBlendState.h" />
+    <ClInclude Include="RosUmdCommandBuffer.h" />
+    <ClInclude Include="RosUmdDebug.h" />
+    <ClInclude Include="RosUmdDepthStencilState.h" />
+    <ClInclude Include="RosUmdDepthStencilView.h" />
+    <ClInclude Include="RosUmdDevice.h" />
+    <ClInclude Include="RosUmdDeviceDdi.h" />
+    <ClInclude Include="RosUmdElementLayout.h" />
+    <ClInclude Include="RosUmdLogging.h" />
+    <ClInclude Include="RosUmdRasterizerState.h" />
+    <ClInclude Include="RosUmdRenderTargetView.h" />
+    <ClInclude Include="RosUmdResource.h" />
+    <ClInclude Include="RosUmdSampler.h" />
+    <ClInclude Include="RosUmdShader.h" />
+    <ClInclude Include="RosUmdShaderResourceView.h" />
+    <ClInclude Include="RosUmdUtil.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

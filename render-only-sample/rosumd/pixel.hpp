@@ -21,8 +21,6 @@
 #define DXGASSERT( x ) _Analysis_assume_( x );
 #endif
 
-#include <d3dumddi_.h>
-
 struct IHVFormatInfo
 {
     DXGI_FORMAT     m_Format;

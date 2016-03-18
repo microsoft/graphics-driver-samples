@@ -1,3 +1,4 @@
+#include "precomp.h"
 #include "roscompiler.h"
 
 BOOL IsOpCodeValid(D3D10_SB_OPCODE_TYPE OpCode)

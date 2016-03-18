@@ -1,3 +1,4 @@
+#include "precomp.h"
 #include "RosUmdDeviceDdi.h"
 #include "RosUmdDevice.h"
 #include "RosUmdResource.h"
@@ -14,10 +15,6 @@
 #include "RosUmdShaderResourceView.h"
 
 #include "RosContext.h"
-
-#include <exception>
-#include <typeinfo>
-#include <new>
 
 //
 // Ddi Tables

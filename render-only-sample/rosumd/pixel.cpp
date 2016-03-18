@@ -8,6 +8,7 @@
  *
  ***************************************************************************/
 
+#include "precomp.h"
 #include "strsafe.h"
 #include "pixel.hpp"
 

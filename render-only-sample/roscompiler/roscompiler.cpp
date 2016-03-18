@@ -1,9 +1,7 @@
+#include "precomp.h"
 #include "roscompiler.h"
 
-void __stdcall InitInstructionInfo();
-void __stdcall VC4_InitializeName();
-
-void __stdcall InitializeShaderCompilerLibrary()
+void InitializeShaderCompilerLibrary()
 {
     InitInstructionInfo();
 }
