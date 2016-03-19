@@ -1,9 +1,12 @@
 #include "precomp.h"
+
+#include "RosUmdLogging.h"
+#include "RosUmdDeviceDdi.tmh"
+
 #include "RosUmdDeviceDdi.h"
 #include "RosUmdDevice.h"
 #include "RosUmdResource.h"
 #include "RosUmdDebug.h"
-#include "RosUmdLogging.h"
 #include "RosUmdRasterizerState.h"
 #include "RosUmdDepthStencilState.h"
 #include "RosUmdSampler.h"

@@ -1,4 +1,8 @@
 #include "precomp.h"
+
+#include "RosUmdLogging.h"
+#include "RosUmdCommandBuffer.tmh"
+
 #include "RosUmdCommandBuffer.h"
 #include "RosUmdResource.h"
 #include "RosUmdDevice.h"

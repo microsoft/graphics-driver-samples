@@ -146,7 +146,7 @@
       <PrecompiledHeaderFile>precomp.h</PrecompiledHeaderFile>
       <WppEnabled>true</WppEnabled>
       <WppRecorderEnabled>true</WppRecorderEnabled>
-      <WppScanConfigurationData>RosKmdLogging.h</WppScanConfigurationData>
+      <WppScanConfigurationData>..\roscommon\RosLogging.h</WppScanConfigurationData>
       <WppKernelMode>true</WppKernelMode>
       <WppAddAlternateNameToMessageGUID>ROSKMD</WppAddAlternateNameToMessageGUID>
       <WppPreprocessorDefinitions>ENABLE_WPP_RECORDER=1;WPP_EMIT_FUNC_NAME</WppPreprocessorDefinitions>

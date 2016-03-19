@@ -1,7 +1,10 @@
 
 #include "precomp.h"
 
+#undef WPP_MACRO_USE_KM_VERSION_FOR_UM
 #include "RosUmdLogging.h"
+#include "RosUmd.tmh"
+
 #include "roscompiler.h"
 
 // TODO[bhouse] Turn ApiValidator back on
@@ -15,8 +18,6 @@ BOOL WINAPI DllMain(
 {
     lpvReserved; // unused
 
-    RosUmdLogging::Entry(__FUNCTION__);
-
     // Warning, do not call outside of this module, except for functions located in kernel32.dll. BUT, do not call LoadLibrary nor
     // FreeLibrary, either. Nor, call malloc nor new; use HeapAlloc directly.
 
@@ -24,6 +25,10 @@ BOOL WINAPI DllMain(
     {
     case( DLL_PROCESS_ATTACH ):
         {
+            WPP_INIT_TRACING(L"RosUmd");
+            
+            ROS_LOG_TRACE("RosUmd was loaded. (hmod = 0x%p)", hmod);
+            
             InitializeShaderCompilerLibrary();
             g_hDLL = hmod;
         } break;
@@ -31,12 +36,12 @@ BOOL WINAPI DllMain(
     case( DLL_PROCESS_DETACH ):
         {
             g_hDLL = NULL;
-        } break;
+            WPP_CLEANUP();
+            return TRUE;
+        }
 
     default: break;
     }
-
-    RosUmdLogging::Exit(__FUNCTION__);
 
     return TRUE;
 }

@@ -79,12 +79,18 @@
       <PrecompiledHeaderFile>precomp.h</PrecompiledHeaderFile>
       <WarningLevel>Level4</WarningLevel>
       <TreatWarningAsError>true</TreatWarningAsError>
+      <ForcedIncludeFiles />
       <SDLCheck>true</SDLCheck>
-      <WppEnabled>false</WppEnabled>
       <ExceptionHandling>Sync</ExceptionHandling>
-      <DisableSpecificWarnings>4201;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4201;</DisableSpecificWarnings>
       <PreprocessorDefinitions>VC4=1;_USE_DECLSPECS_FOR_SAL=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\roscompiler;..\roscommon;$(KM_IncludePath);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <WppEnabled>true</WppEnabled>
+      <WppDllMacro>true</WppDllMacro>
+      <WppScanConfigurationData>..\roscommon\RosLogging.h</WppScanConfigurationData>
+      <WppKernelMode>false</WppKernelMode>
+      <WppAddAlternateNameToMessageGUID>ROSUMD</WppAddAlternateNameToMessageGUID>
+      <WppPreprocessorDefinitions>WPP_EMIT_FUNC_NAME</WppPreprocessorDefinitions>
     </ClCompile>
     <Link>
       <ModuleDefinitionFile>RosUmd.def</ModuleDefinitionFile>
@@ -137,6 +143,7 @@
     <ClCompile Include="RosUmdResource.cpp" />
     <ClCompile Include="RosUmdShader.cpp" />
     <ClCompile Include="RosUmdUtil.cpp" />
+    <ClCompile Include="RosUmdLogging.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="precomp.h" />
