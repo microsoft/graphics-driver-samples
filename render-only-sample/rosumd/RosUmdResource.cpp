@@ -6,10 +6,13 @@
 //
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #include "precomp.h"
+
+#include "RosUmdLogging.h"
+#include "RosUmdResource.tmh"
+
 #include "RosUmdDevice.h"
 #include "RosUmdResource.h"
 #include "RosUmdDebug.h"
-#include "RosUmdLogging.h"
 
 #include "RosContext.h"
 

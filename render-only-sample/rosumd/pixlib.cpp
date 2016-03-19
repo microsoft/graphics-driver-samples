@@ -1,5 +1,9 @@
 
 #include "precomp.h"
+
+#include "RosUmdLogging.h"
+#include "pixlib.tmh"
+
 #include "pixel.cpp"
 
 // Bytes per "pixel" table index by DXGI_FORMAT

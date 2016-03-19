@@ -12,5 +12,6 @@
 
 #include <stdio.h>
 #include <math.h>
+#include <intrin.h>
 
 #endif // _ROSUMD_PRECOMP_H_

@@ -6,6 +6,10 @@
 //
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #include "precomp.h"
+
+#include "RosUmdLogging.h"
+#include "RosUmdDevice.tmh"
+
 #include "RosUmdDevice.h"
 #include "RosUmdResource.h"
 #include "RosUmdDebug.h"
@@ -623,7 +627,7 @@ HRESULT RosUmdDevice::Present(DXGI_DDI_ARG_PRESENT* Args)
             return E_INVALIDARG;
         }
     }
-    
+
     // Get the allocation for the source resource
     auto pSrcResource = RosUmdResource::CastFrom(Args->hSurfaceToPresent);
 
@@ -673,17 +677,17 @@ HRESULT RosUmdDevice::RotateResourceIdentities(
     assert(RosUmdDevice::CastFrom(Args->hDevice) == this);
 
     assert(Args->Resources != 0);
-    
+
     // Save the handles from the first resource
     const RosUmdResource* const firstResource = RosUmdResource::CastFrom(
             Args->pResources[0]);
     RosUmdResource* const lastResource = RosUmdResource::CastFrom(
             Args->pResources[Args->Resources - 1]);
     assert(lastResource->CanRotateFrom(firstResource));
-            
+
     D3DKMT_HANDLE firstResourceKMResource = firstResource->m_hKMResource;
     D3DKMT_HANDLE firstResourceKMAllocation = firstResource->m_hKMAllocation;
-    
+
     for (UINT i = 0; i < (Args->Resources - 1); ++i)
     {
         RosUmdResource* rotateTo = RosUmdResource::CastFrom(Args->pResources[i]);
@@ -691,7 +695,7 @@ HRESULT RosUmdDevice::RotateResourceIdentities(
                 Args->pResources[i + 1]);
 
         assert(rotateTo->CanRotateFrom(rotateFrom));
-        
+
         rotateTo->m_hKMResource = rotateFrom->m_hKMResource;
         rotateTo->m_hKMAllocation = rotateFrom->m_hKMAllocation;
     }
@@ -819,15 +823,15 @@ void RosUmdDevice::CheckDirectFlipSupport(
 {
     assert(CastFrom(hDevice) == this);
     assert((CheckDirectFlipFlags & ~D3D11_1DDI_CHECK_DIRECT_FLIP_IMMEDIATE) == 0);
-    
+
     //
     // We can only flip to the resource if it has the same format as the
-    // current primary since we do not support mode change in 
+    // current primary since we do not support mode change in
     // SetVidPnSourceAddress() at this point.
     //
     const RosUmdResource* currentResourcePtr = RosUmdResource::CastFrom(hResource1);
     const RosUmdResource* directFlipResourcePtr = RosUmdResource::CastFrom(hResource2);
-    
+
     // Resources must have same dimensions and format
     *pSupported =
         (directFlipResourcePtr->m_mip0Info == currentResourcePtr->m_mip0Info) &&
@@ -2336,7 +2340,7 @@ void RosUmdDevice::SetPredication(D3D10DDI_HQUERY hQuery, BOOL bPredicateValue)
     //
     // per MDSN Predication should set an error in the case one was seen
     // D3D will interpret an error as critical
-    // 
+    //
     /*
     HRESULT hr = S_OK;
 
@@ -2435,7 +2439,7 @@ void RosUmdDevice::ResourceCopyRegion11_1(
     {
         return;
     }
-   
+
     //
     // TODO: - Honor the copy flags
     //
@@ -2445,7 +2449,7 @@ void RosUmdDevice::ResourceCopyRegion11_1(
     //
     // NOTE: for buffers, all coordinates are in bytes. for textures, all coordinates are in pixels
     //
-   
+
     //
     // ensure the destination resource not created with D3D10_DDI_USAGE_IMMUTABLE
     //
@@ -2465,7 +2469,7 @@ void RosUmdDevice::ResourceCopyRegion11_1(
     {
         return;
     }
-      
+
     //
     // ensure sub resource indicies are in range
     //
@@ -2522,9 +2526,9 @@ void RosUmdDevice::ResourceCopyRegion11_1(
     //
     // per MDSN ResourceCopyRegion should set an error in the case one was seen
     // D3D will interpret an error as critical
-    // 
+    //
 
-/*  
+/*
     HRESULT hr = S_OK;
 
     if (FAILED(hr))
