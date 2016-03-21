@@ -2065,7 +2065,13 @@ VC4TextureType RosUmdDevice::MapDXGITextureFormatToVC4Type(RosHwLayout layout, D
             break;
             case DXGI_FORMAT_A8_UNORM:
             {
-                textureType.TextureType = VC4_TEX_RGBX8888;
+                textureType.TextureType = VC4_TEX_ALPHA;
+            }
+            break;
+
+            default:
+            {
+                assert(false);
             }
             break;
         }
