@@ -40,6 +40,9 @@ public:
     // Used by constant buffer
     BYTE                   *m_pSysMemCopy;
 
+    // Tiled textures information
+    VC4TileInfo m_TileInfo;
+
     void
     Standup(
         RosUmdDevice *pUmdDevice,
@@ -114,14 +117,14 @@ public:
 
     // Support for various texture formats
     void ConvertInitialTextureFormatToInternal(
-        BYTE *pSrc,
+        const BYTE *pSrc,
         BYTE *pDst,
         UINT rowStride);
 
 private:
 
     void  ConvertBufferto32Bpp(
-        BYTE *pSrc,
+        const BYTE *pSrc,
         BYTE *pDst,
         UINT srcBpp,
         UINT swizzleMask,
@@ -130,27 +133,30 @@ private:
 
     // Tiled textures support
     void ConvertBitmapTo4kTileBlocks(
-        BYTE *InputBuffer,
+        const BYTE *InputBuffer,
         BYTE *OutBuffer,
         UINT rowStride);
 
     // Tiled textures support
     BYTE *Form1kSubTileBlock(
-        BYTE *pInputBuffer, 
+        const BYTE *pInputBuffer, 
         BYTE *pOutBuffer, 
         UINT rowStride);
 
     BYTE *Form4kTileBlock(
-        BYTE *pInputBuffer, 
+        const BYTE *pInputBuffer, 
         BYTE *pOutBuffer, 
         UINT rowStride, 
         BOOLEAN OddRow);
 
+    static void MapDxgiFormatToInternalFormats(
+        DXGI_FORMAT format,
+        _Out_ UINT &bpp,
+        _Out_ RosHwFormat &rosFormat);
+
     void CalculateTilesInfo();
 
-    void FillTileInfo(UINT bpp);
-
-    VC4TileInfo m_TileInfo;
+    static VC4TileInfo FillTileInfo(UINT bpp);
 
 };
 

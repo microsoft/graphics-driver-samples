@@ -424,7 +424,7 @@ private:
     std::shared_ptr<D3DDevice>              m_pDevice;
 };
 
-char *DXGIFormatToString(DXGI_FORMAT format)
+const char *DXGIFormatToString(DXGI_FORMAT format)
 {
     switch (format)
     {
@@ -451,7 +451,10 @@ public:
 
     const void *ConvertTextureFromRGBA(PBYTE pTexels, DXGI_FORMAT outFormat, ULONG texWidth, ULONG texHeight, D3D11_SUBRESOURCE_DATA &initData)
     {
-        if (outFormat == DXGI_FORMAT_R8G8B8A8_UNORM)
+
+        switch (outFormat)
+        {
+        case(DXGI_FORMAT_R8G8B8A8_UNORM) :
         {
             // Conversion is not needed.
             initData.pSysMem = pTexels;
@@ -460,7 +463,7 @@ public:
             return NULL;
         }
 
-        if (outFormat == DXGI_FORMAT_R8G8_UNORM)
+        case(DXGI_FORMAT_R8G8_UNORM) :
         {
             BYTE *colorConvertedBuffer = (BYTE*)malloc(texWidth * texHeight * sizeof(WORD) * 2);
             if (colorConvertedBuffer == NULL)
@@ -496,7 +499,7 @@ public:
             return initData.pSysMem;
         }
 
-        if (outFormat == DXGI_FORMAT_R8_UNORM)
+        case(DXGI_FORMAT_R8_UNORM) :
         {
             BYTE *colorConvertedBuffer = (BYTE*)malloc(texWidth * texHeight);
             if (colorConvertedBuffer == NULL)
@@ -529,7 +532,7 @@ public:
             return initData.pSysMem;
         }
 
-        if (outFormat == DXGI_FORMAT_A8_UNORM)
+        case(DXGI_FORMAT_A8_UNORM) :
         {
 
             BYTE *colorConvertedBuffer = (BYTE*)malloc(texWidth * texHeight);
@@ -548,17 +551,21 @@ public:
             initData.pSysMem = colorConvertedBuffer;
             initData.SysMemSlicePitch = texWidth * texHeight;
 
-            // Fill with some height-based alpha
+            // Fill with some red-based alpha
             for (UINT k = 0; k < texHeight; k++)
             {
                 for (UINT i = 0; i < texWidth * 4; i += 4)
                 {
-                    *colorConvertedBuffer++ = (BYTE)k;
+                   
+					 BYTE red = pTexels[i];
+                    *colorConvertedBuffer++ = (BYTE)red;
+
                 }
                 pTexels += texWidth * 4;
             }
 
             return initData.pSysMem;
+          }
         }
 
         throw std::exception("Not implemented texture color format passed");
@@ -1714,7 +1721,7 @@ int main(int argc, char* argv[])
             printf("Success\n");
         }
 
-        catch (std::exception & e)
+        catch (const std::exception &e)
         {
             printf("ERROR: %s\n", e.what());
         }
