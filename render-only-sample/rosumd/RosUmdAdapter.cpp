@@ -1,9 +1,12 @@
+#include "precomp.h"
+
+#include "RosUmdLogging.h"
+#include "RosUmdAdapter.tmh"
+
 #include "RosUmdAdapter.h"
 #include "RosUmdDevice.h"
-#include "RosUmdLogging.h"
 #include "RosAdapter.h"
 
-#include <new>
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //

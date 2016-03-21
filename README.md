@@ -60,3 +60,6 @@ Solo developers can contribute to the project in various ways including implemen
 All submissions by solo developers should be done via a pull request submission that includes a description of the change and for code changes the set of tests that were run.
 
 If a part or all of a submission is rejected, a clear explaination will be provided to the contributor along with guidance on what issues if any can be addressed in order for the submission to be accepted.
+
+The [ISO C++ Core guidelines](https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md) are a good read for anyone hoping to contribute to the project, as we are attempting to follow the bulk of the recommendations especially with respect to resource management. This project uses exceptions and therefore also uses RIAA.
+

@@ -12,4 +12,5 @@
 extern "C" {
 #include <dispmprt.h>
 #include <dxgiformat.h>
-}; // extern "C"
+#include <WppRecorder.h>
+} // extern "C"

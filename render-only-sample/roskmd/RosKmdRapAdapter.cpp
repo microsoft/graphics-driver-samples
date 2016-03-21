@@ -502,6 +502,10 @@ RosKmdRapAdapter::ProcessRenderBuffer(
                 m_renderingControlListPhysicalAddress + m_busAddressOffset,
                 m_renderingControlListPhysicalAddress + m_busAddressOffset + renderingControlListLength);
 
+            ROS_LOG_TRACE(
+                "Completed rendering to 0x%p",
+                pDmaBufInfo->m_RenderTargetVirtualAddress);
+                
             MoveToNextBinnerRenderMemChunk(renderingControlListLength);
 
             //

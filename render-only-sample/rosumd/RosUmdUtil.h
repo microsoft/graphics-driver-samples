@@ -54,7 +54,7 @@ ConvertD3D11TextureMinFilter(
 
 #endif
 
-inline operator== (const D3D10DDI_MIPINFO &Lhs, const D3D10DDI_MIPINFO &Rhs)
+inline bool operator== (const D3D10DDI_MIPINFO &Lhs, const D3D10DDI_MIPINFO &Rhs)
 {
     return (Lhs.TexelWidth == Rhs.TexelWidth) &&
         (Lhs.TexelHeight == Rhs.TexelHeight) &&
@@ -64,18 +64,18 @@ inline operator== (const D3D10DDI_MIPINFO &Lhs, const D3D10DDI_MIPINFO &Rhs)
         (Lhs.PhysicalDepth == Rhs.PhysicalDepth);
 }
 
-inline operator== (const DXGI_SAMPLE_DESC &Lhs, const DXGI_SAMPLE_DESC &Rhs)
+inline bool operator== (const DXGI_SAMPLE_DESC &Lhs, const DXGI_SAMPLE_DESC &Rhs)
 {
     return (Lhs.Count == Rhs.Count) && (Lhs.Quality == Rhs.Quality);
 }
 
-inline operator== (const DXGI_DDI_RATIONAL &Lhs, const DXGI_DDI_RATIONAL &Rhs)
+inline bool operator== (const DXGI_DDI_RATIONAL &Lhs, const DXGI_DDI_RATIONAL &Rhs)
 {
     return (Lhs.Numerator == Rhs.Numerator) && 
         (Lhs.Denominator == Rhs.Denominator);
 }
 
-inline operator== (const DXGI_DDI_MODE_DESC &Lhs, const DXGI_DDI_MODE_DESC &Rhs)
+inline bool operator== (const DXGI_DDI_MODE_DESC &Lhs, const DXGI_DDI_MODE_DESC &Rhs)
 {
     return (Lhs.Width == Rhs.Width) &&
         (Lhs.Height == Rhs.Height) &&
@@ -86,7 +86,7 @@ inline operator== (const DXGI_DDI_MODE_DESC &Lhs, const DXGI_DDI_MODE_DESC &Rhs)
         (Lhs.Scaling == Rhs.Scaling);
 }
 
-inline operator== (const DXGI_DDI_PRIMARY_DESC &Lhs, const DXGI_DDI_PRIMARY_DESC &Rhs)
+inline bool operator== (const DXGI_DDI_PRIMARY_DESC &Lhs, const DXGI_DDI_PRIMARY_DESC &Rhs)
 {
     return (Lhs.Flags == Rhs.Flags) &&
         (Lhs.VidPnSourceId == Rhs.VidPnSourceId) &&

@@ -1,3 +1,4 @@
+#include "precomp.h"
 #include "roscompiler.h"
 
 HRESULT Vc4ShaderStorage::Initialize()

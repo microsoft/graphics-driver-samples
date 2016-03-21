@@ -57,10 +57,43 @@ NTSTATUS VC4_DISPLAY::SetVidPnSourceAddress (
 {
     NT_ASSERT(Args->VidPnSourceId == 0);
 
+    const auto rosKmdAllocation =
+            static_cast<RosKmdAllocation*>(Args->hAllocation);
+
     if (Args->Flags.ModeChange) {
         NT_ASSERT(Args->ContextCount == 0);
 
-        ROS_LOG_WARNING("Mode change was requested. Not sure what to do.");
+        const D3DKMDT_GRAPHICS_RENDERING_FORMAT* currentSourceModePtr =
+                &this->dxgkCurrentSourceMode.Format.Graphics;
+
+        NT_ASSERT(rosKmdAllocation->m_isPrimary);
+        const DXGI_DDI_MODE_DESC* desiredModeDescPtr =
+                &rosKmdAllocation->m_primaryDesc.ModeDesc;
+
+        // Verify that the surface is compatible with the current source mode
+        if ((desiredModeDescPtr->Width !=
+             currentSourceModePtr->PrimSurfSize.cx) ||
+            (desiredModeDescPtr->Height !=
+             currentSourceModePtr->PrimSurfSize.cy) ||
+            (TranslateDxgiFormat(rosKmdAllocation->m_format) !=
+             currentSourceModePtr->PixelFormat))
+        {
+            ROS_LOG_ASSERTION(
+                "Incompatible mode change was requested. "
+                "(desiredModeDescPtr->Width/Height = (%d,%d), "
+                "TranslateDxgiFormat(rosKmdAllocation->m_primaryDesc.Format) = %d, "
+                "currentSourceModePtr->PrimSurfSize = (%d,%d), "
+                "currentSourceModePtr->PixelFormat = %d",
+                desiredModeDescPtr->Width,
+                desiredModeDescPtr->Height,
+                TranslateDxgiFormat(rosKmdAllocation->m_format),
+                currentSourceModePtr->PrimSurfSize.cx,
+                currentSourceModePtr->PrimSurfSize.cy,
+                currentSourceModePtr->PixelFormat);
+
+            return STATUS_NOT_SUPPORTED;
+        }
+
         return STATUS_SUCCESS;
     }
 
@@ -88,10 +121,7 @@ NTSTATUS VC4_DISPLAY::SetVidPnSourceAddress (
     // Verify memory is in range
     NT_ASSERT(Args->PrimarySegment == ROSD_SEGMENT_VIDEO_MEMORY);
     NT_ASSERT(Args->PrimaryAddress.LowPart < RosKmdGlobal::s_videoMemorySize);
-    if (Args->hAllocation) {
-        const auto rosKmdAllocation =
-            static_cast<RosKmdAllocation*>(Args->hAllocation);
-        UNREFERENCED_PARAMETER(rosKmdAllocation);
+    if (rosKmdAllocation) {
         NT_ASSERT(
             (Args->PrimaryAddress.LowPart + rosKmdAllocation->m_hwSizeBytes) <=
             RosKmdGlobal::s_videoMemorySize);
@@ -113,9 +143,10 @@ NTSTATUS VC4_DISPLAY::SetVidPnSourceAddress (
     ROS_TRACE_EVENTS(
         TRACE_LEVEL_VERBOSE,
         ROS_TRACING_PRESENT,
-        "Successfully programmed VidPn source address. (PrimaryAddress.LowPart=0x%lx, physicAddress=0x%lx)",
+        "Successfully programmed VidPn source address. (PrimaryAddress.LowPart=0x%lx, physicAddress=0x%lx, virtualAddress = 0x%p)",
         Args->PrimaryAddress.LowPart,
-        physicAddress);
+        physicAddress,
+        static_cast<const BYTE*>(RosKmdGlobal::s_pVideoMemory) + Args->PrimaryAddress.LowPart);
     return STATUS_SUCCESS;
 }
 

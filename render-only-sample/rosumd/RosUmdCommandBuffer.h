@@ -1,6 +1,5 @@
 #pragma once
 
-#include "d3dumddi_.h"
 #include "RosGpuCommand.h"
 
 class RosUmdDevice;

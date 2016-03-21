@@ -7,9 +7,6 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 
-#include "d3dumddi_.h"
-#include <debugapi.h>
-
 #include "RosUmdCommandBuffer.h"
 #include "RosAllocation.h"
 #include "RosUmdUtil.h"
@@ -76,6 +73,7 @@ public:
     void OpenResource(const D3D10DDIARG_OPENRESOURCE*, D3D10DDI_HRESOURCE, D3D10DDI_HRTRESOURCE);
     void DestroyResource(RosUmdResource * pResource);
     void ResourceCopy(RosUmdResource *pDestinationResource, RosUmdResource * pSourceResource);
+    void ResourceCopyRegion11_1(RosUmdResource *pDestinationResource, UINT DstSubresource, UINT DstX, UINT DstY, UINT DstZ, RosUmdResource * pSourceResource, UINT SrcSubresource, const D3D10_DDI_BOX* pSrcBox, UINT copyFlags);
     void ConstantBufferUpdateSubresourceUP(RosUmdResource *pDestinationResource, UINT DstSubresource, _In_opt_ const D3D10_DDI_BOX *pDstBox, _In_ const VOID *pSysMemUP, UINT RowPitch, UINT DepthPitch, UINT CopyFlags);
 
     void CreatePixelShader(const UINT* pCode, D3D10DDI_HSHADER hShader, D3D10DDI_HRTSHADER hRTShader, const D3D11_1DDIARG_STAGE_IO_SIGNATURES* pSignatures);
@@ -88,6 +86,8 @@ public:
 
     void ResourceMap(RosUmdResource * pResource, UINT subResource, D3D10_DDI_MAP mapType, UINT mapFlags, D3D10DDI_MAPPED_SUBRESOURCE* pMappedSubRes);
     void ResourceUnmap(RosUmdResource * pResource, UINT subResource);
+
+    void SetPredication(D3D10DDI_HQUERY hQuery, BOOL bPredicateValue);
 
 public:
 
@@ -112,6 +112,14 @@ public:
     HRESULT SetDisplayMode(DXGI_DDI_ARG_SETDISPLAYMODE* Args);
     HRESULT Present1(DXGI_DDI_ARG_PRESENT1* Args);
 
+    void CheckDirectFlipSupport(
+        D3D10DDI_HDEVICE hDevice,
+        D3D10DDI_HRESOURCE hResource1,
+        D3D10DDI_HRESOURCE hResource2,
+        UINT CheckDirectFlipFlags,
+        _Out_ BOOL *pSupported
+        );
+    
     //
     // User mode call backs
     //
@@ -209,7 +217,6 @@ public:
     void SetRasterizerState(RosUmdRasterizerState * pRasterizerState);
     void SetScissorRects(UINT NumScissorRects, UINT ClearScissorRects, const D3D10_DDI_RECT *pRects);
 
-
     RosUmdResource *                m_vertexBuffers[kMaxVertexBuffers];
     UINT                            m_vertexStrides[kMaxVertexBuffers];
     UINT                            m_vertexOffsets[kMaxVertexBuffers];
@@ -269,6 +276,8 @@ public:
 
     BOOL                            m_scissorRectSet;
     D3D10_DDI_RECT                  m_scissorRect;
+
+    BOOL                            m_bPredicateValue;
 
 public:
 
