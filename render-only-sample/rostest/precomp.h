@@ -1,8 +1,10 @@
-#ifndef _XAMLTESTS_PRECOMP_H_
-#define _XAMLTESTS_PRECOMP_H_
+#ifndef _PRECOMP_H_
+#define _PRECOMP_H_
 
 #include <windows.h>
 #undef GetCurrentTime
+
+#include <d3d11_3.h>
 
 #include <windows.foundation.h>
 #include <windows.applicationmodel.h>
@@ -12,4 +14,6 @@
 #include <wrl.h>
 #include <WexTestClass.h>
 
-#endif // _XAMLTESTS_PRECOMP_H_
+#include <numeric> // std::iota
+
+#endif // _PRECOMP_H_

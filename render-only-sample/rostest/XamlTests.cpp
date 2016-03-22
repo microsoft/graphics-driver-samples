@@ -67,6 +67,11 @@ bool XamlTests::ClassSetup ()
     return true;
 }
 
+//
+// The purpose of this test is to demonstrate how to use RunOnUIThread
+// and how to attach/detach a XAML event handler. This test does no actual
+// verification.
+//
 void XamlTests::TestResizeWindow ()
 {
     // run on UI thread

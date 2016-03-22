@@ -1,5 +1,7 @@
-#ifndef _XAMLTESTS_UTIL_H_
-#define _XAMLTESTS_UTIL_H_
+#ifndef _ROSTEST_UTIL_H_
+#define _ROSTEST_UTIL_H_
+
+#define ROS_DRIVER_NAME_WSZ L"Render Only Sample Driver"
 
 #define LogComment(fmt, ...) WEX::Logging::Log::Comment( \
     WEX::Common::NoThrowString().Format((fmt), __VA_ARGS__))
@@ -120,4 +122,56 @@ HRESULT RunOnUIThread (const TFunction& Function)
     return invokeResult;
 }
 
-#endif // _XAMLTESTS_UTIL_H_
+//
+// An exception deriving from WEX::Common::Exception that can be constructed
+// with a printf-style message and explicitly thrown via the 'throw' keyword.
+// The problem with VERIFY_ and WEX::Common::Throw::* is that they are functions,
+// so the compiler and OACR don't know they cause a change in control flow. 
+// An explicit 'throw' in the source makes it clear to both the reader
+// and compiler that the current scope is being exited via an exception.
+//
+// Usage:
+//   throw MyException::Make(E_FAIL, L"Something bad happened (%d)", value);
+//
+class MyException : public WEX::Common::Exception {
+public:
+    explicit MyException (_In_range_(<, 0) HRESULT Hr) /*noexcept*/ :
+        Exception(Hr) {}
+    MyException (_In_range_(<, 0) HRESULT Hr, PCWSTR Message) /*noexcept*/ :
+        Exception(Hr, Message) {}
+
+    static MyException Make (
+        HRESULT HResult,
+        _In_ _Printf_format_string_ PCWSTR Format,
+        ...
+        ) /*noexcept*/
+    {
+        WCHAR buf[512];
+
+        va_list argList;
+        va_start(argList, Format);
+
+        HRESULT hr = StringCchVPrintfW(
+            buf,
+            ARRAYSIZE(buf),
+            Format,
+            argList);
+
+        va_end(argList);
+
+        return MyException(HResult, SUCCEEDED(hr) ? buf : Format);
+    }
+
+    MyException& operator= (const MyException&) = delete;
+};
+
+PCWSTR StringFromFeatureLevel (D3D_FEATURE_LEVEL FeatureLevel);
+
+Microsoft::WRL::ComPtr<IDXGIAdapter2> FindAdapter (PCWSTR Description);
+
+void CreateDevice (
+    _COM_Outptr_ ID3D11Device3** DevicePPtr,
+    _COM_Outptr_ ID3D11DeviceContext3** ContextPPtr
+    );
+
+#endif // _ROSTEST_UTIL_H_
