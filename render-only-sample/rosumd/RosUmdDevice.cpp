@@ -220,7 +220,7 @@ void RosUmdDevice::CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResou
     RosUmdResource* pResource = new (hResource.pDrvPrivate) RosUmdResource();
 
     pResource->Standup(this, pCreateResource, hRTResource);
-
+    
     //
     // Constant buffer is created in system memory
     //
@@ -273,6 +273,24 @@ void RosUmdDevice::CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResou
         pResource->m_hKMResource = allocate.hKMResource;
         pResource->m_hKMAllocation = allocationInfo.hAllocation;
     }
+    
+     ROS_LOG_TRACE(
+        "Creating resource. "
+        "(m_hwWidth/HeightPixels = %u,%u  "
+        "m_hwPitchBytes = %u, "
+        "m_hwSizeBytes = %u, "
+        "m_isPrimary = %d, "
+        "m_hRTResource = 0x%p, "
+        "m_hKMResource = 0x%x, "
+        "m_hKMAllocation = 0x%x)",
+        pResource->m_hwWidthPixels,
+        pResource->m_hwHeightPixels,
+        pResource->m_hwPitchBytes,
+        pResource->m_hwSizeBytes,
+        pResource->m_isPrimary,
+        pResource->m_hRTResource.handle,
+        pResource->m_hKMResource,
+        pResource->m_hKMAllocation);
 
     if (pCreateResource->pInitialDataUP != NULL && pCreateResource->pInitialDataUP[0].pSysMem != NULL)
     {

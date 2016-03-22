@@ -24,6 +24,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CubeTest", "CubeTest\CubeTe
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RosDriver", "rosdriver\RosDriver.vcxproj", "{593E30CD-93AD-432A-B6A1-B59F85C77ACC}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RosTest", "rostest\RosTest.vcxproj", "{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -146,6 +148,22 @@ Global
 		{593E30CD-93AD-432A-B6A1-B59F85C77ACC}.Release|x86.ActiveCfg = Release|Win32
 		{593E30CD-93AD-432A-B6A1-B59F85C77ACC}.Release|x86.Build.0 = Release|Win32
 		{593E30CD-93AD-432A-B6A1-B59F85C77ACC}.Release|x86.Deploy.0 = Release|Win32
+		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Debug|Any CPU.ActiveCfg = Debug|Win32
+		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Debug|ARM.ActiveCfg = Debug|ARM
+		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Debug|ARM.Build.0 = Debug|ARM
+		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Debug|ARM64.ActiveCfg = Debug|Win32
+		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Debug|x64.ActiveCfg = Debug|x64
+		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Debug|x64.Build.0 = Debug|x64
+		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Debug|x86.ActiveCfg = Debug|Win32
+		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Debug|x86.Build.0 = Debug|Win32
+		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Release|Any CPU.ActiveCfg = Release|Win32
+		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Release|ARM.ActiveCfg = Release|ARM
+		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Release|ARM.Build.0 = Release|ARM
+		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Release|ARM64.ActiveCfg = Release|Win32
+		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Release|x64.ActiveCfg = Release|x64
+		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Release|x64.Build.0 = Release|x64
+		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Release|x86.ActiveCfg = Release|Win32
+		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

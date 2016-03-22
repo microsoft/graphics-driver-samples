@@ -97,12 +97,38 @@ void RosUmdResource::InitSharedResourceFromExistingAllocation (
 {
     assert(m_signature == _SIGNATURE::CONSTRUCTED);
     
+    ROS_LOG_TRACE(
+        "Opening existing resource. "
+        "(ExistingAllocationPtr->m_hwWidth/HeightPixels = %u,%u  "
+        "ExistingAllocationPtr->m_hwPitchBytes = %u, "
+        "ExistingAllocationPtr->m_hwSizeBytes = %u, "
+        "ExistingAllocationPtr->m_isPrimary = %d, "
+        "hRTResource = 0x%p, "
+        "hKMResource= 0x%x, "
+        "hKMAllocation = 0x%x)",
+        ExistingAllocationPtr->m_hwWidthPixels,
+        ExistingAllocationPtr->m_hwHeightPixels,
+        ExistingAllocationPtr->m_hwPitchBytes,
+        ExistingAllocationPtr->m_hwSizeBytes,
+        ExistingAllocationPtr->m_isPrimary,
+        hRTResource.handle,
+        hKMResource.handle,
+        hKMAllocation);
+    
     // copy members from the existing allocation into this object
     RosAllocationExchange* basePtr = this;
     *basePtr = *ExistingAllocationPtr;
 
     // HW specific information calculated based on the fields above
     CalculateMemoryLayout();
+    
+    NT_ASSERT(
+        (m_hwLayout == ExistingAllocationPtr->m_hwLayout) &&
+        (m_hwWidthPixels == ExistingAllocationPtr->m_hwWidthPixels) &&
+        (m_hwHeightPixels == ExistingAllocationPtr->m_hwHeightPixels) &&
+        (m_hwFormat == ExistingAllocationPtr->m_hwFormat) &&
+        (m_hwPitchBytes == ExistingAllocationPtr->m_hwPitchBytes) &&
+        (m_hwSizeBytes == ExistingAllocationPtr->m_hwSizeBytes));
     
     m_hRTResource = hRTResource;
     m_hKMResource = hKMResource.handle;
