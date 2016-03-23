@@ -310,7 +310,7 @@ void RosUmdDevice::CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResou
         else if (pResource->m_resourceDimension == D3D10DDIRESOURCE_TEXTURE2D)
         {
 
-            BYTE * pSrc = (BYTE *)pCreateResource->pInitialDataUP[0].pSysMem;
+            const BYTE * pSrc = (BYTE *)pCreateResource->pInitialDataUP[0].pSysMem;
             BYTE * pDst = (BYTE *)lock.pData;
             UINT  rowStride = pCreateResource->pInitialDataUP[0].SysMemPitch;
             pResource->ConvertInitialTextureFormatToInternal(pSrc, pDst, rowStride);
