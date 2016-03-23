@@ -265,8 +265,7 @@ RosUmdResource::Unmap(
     pUmdDevice->Unlock(&unlock);
 }
 
-VC4TileInfo
-RosUmdResource::FillTileInfo(UINT bpp)
+VC4TileInfo RosUmdResource::FillTileInfo(UINT bpp)
 {
     // Provide detailed information about tile.
     // Partial information about 4kB tiles, 1kB sub-tiles and micro-tiles for

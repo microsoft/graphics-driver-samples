@@ -449,38 +449,66 @@ class D3DBitmapTexture
 {
 public:
 
-    const void *ConvertTextureFromRGBA(PBYTE pTexels, DXGI_FORMAT outFormat, ULONG texWidth, ULONG texHeight, D3D11_SUBRESOURCE_DATA &initData)
+    UINT GetFormatBytesPerPixel(DXGI_FORMAT inFormat)
     {
+        switch (inFormat)
+        {
+        case DXGI_FORMAT_R8G8B8A8_UNORM:
+        {
+            return 4;
+        }
+        break;
+
+        case DXGI_FORMAT_R8G8_UNORM:
+        {
+            return 2;
+        }
+        break;
+
+        case DXGI_FORMAT_R8_UNORM:
+        {
+            return 1;
+        }
+        break;
+
+        case DXGI_FORMAT_A8_UNORM:
+        {
+            return 1;
+        }
+        break;
+
+        default:
+        {
+            throw std::exception("Not implemented texture color format passed");
+        }
+        
+        }        
+    }
+
+    std::unique_ptr<BYTE[]> ConvertTextureFromRGBA(PBYTE _In_ pTexels, DXGI_FORMAT _In_ outFormat, ULONG _In_ texWidth, ULONG _In_ texHeight, UINT _Out_ &outTextureBytesPerPixel)
+    {
+        outTextureBytesPerPixel = GetFormatBytesPerPixel(outFormat);        
+        std::unique_ptr<BYTE[]> colorConvertedBuffer(new BYTE[texWidth * texHeight * outTextureBytesPerPixel]);
+        BYTE *colorConvertedBufferRaw = (BYTE*)colorConvertedBuffer.get();
 
         switch (outFormat)
         {
-        case(DXGI_FORMAT_R8G8B8A8_UNORM) :
-        {
-            // Conversion is not needed.
-            initData.pSysMem = pTexels;
-            initData.SysMemPitch = texWidth * 4;
-            initData.SysMemSlicePitch = texWidth * 4 * texHeight;
-            return NULL;
-        }
-
-        case(DXGI_FORMAT_R8G8_UNORM) :
-        {
-            BYTE *colorConvertedBuffer = (BYTE*)malloc(texWidth * texHeight * sizeof(WORD) * 2);
-            if (colorConvertedBuffer == NULL)
+        case DXGI_FORMAT_R8G8B8A8_UNORM:        
+        {            
+            // Just do the copy
+            UINT pSysPitch = texWidth * outTextureBytesPerPixel;
+            for (UINT k = 0; k < texHeight; k++)
             {
-                initData.pSysMem = NULL;
-                initData.SysMemPitch = 0;
-                initData.SysMemSlicePitch = 0;
-
-                throw std::exception("Failed to alloc memory for color converted bitmap");
+                memcpy(colorConvertedBufferRaw, pTexels, pSysPitch);
+                colorConvertedBufferRaw += pSysPitch;
+                pTexels += pSysPitch;
             }
 
-            memset(colorConvertedBuffer, 0, texWidth * texHeight * 2);
+            return colorConvertedBuffer;
+        }
 
-            initData.SysMemPitch = texWidth * 2;
-            initData.pSysMem = colorConvertedBuffer;
-            initData.SysMemSlicePitch = texHeight* texWidth * 2;
-
+        case DXGI_FORMAT_R8G8_UNORM:
+        {                                
             // Extract only red and green colors
             for (UINT k = 0; k < texHeight; k++)
             {
@@ -489,86 +517,51 @@ public:
                     BYTE red = pTexels[i];
                     BYTE green = pTexels[i + 1];
 
-                    *colorConvertedBuffer++ = (BYTE)red;
-                    *colorConvertedBuffer++ = (BYTE)green;
-
+                    *colorConvertedBufferRaw++ = (BYTE)red;
+                    *colorConvertedBufferRaw++ = (BYTE)green;
                 }
                 pTexels += texWidth * 4;
             }
-
-            return initData.pSysMem;
+            return colorConvertedBuffer;
         }
 
-        case(DXGI_FORMAT_R8_UNORM) :
+        case DXGI_FORMAT_R8_UNORM:
         {
-            BYTE *colorConvertedBuffer = (BYTE*)malloc(texWidth * texHeight);
-            if (colorConvertedBuffer == NULL)
-            {
-                initData.pSysMem = NULL;
-                initData.SysMemPitch = 0;
-                initData.SysMemSlicePitch = 0;
-
-                throw std::exception("Failed to alloc memory for color converted bitmap");
-            }
-
-            memset(colorConvertedBuffer, 0, texHeight * texWidth);
-
-            initData.SysMemPitch = texWidth;
-            initData.pSysMem = colorConvertedBuffer;
-            initData.SysMemSlicePitch = texWidth * texHeight;
-
             // Extract only red color
             for (UINT k = 0; k < texHeight; k++)
             {
                 for (UINT i = 0; i < texWidth * 4; i += 4)
                 {
                     BYTE red = pTexels[i];
-
-                    *colorConvertedBuffer++ = (BYTE)red;
+                    *colorConvertedBufferRaw++ = (BYTE)red;
                 }
                 pTexels += texWidth * 4;
             }
-
-            return initData.pSysMem;
+            return colorConvertedBuffer;
         }
 
-        case(DXGI_FORMAT_A8_UNORM) :
+        case DXGI_FORMAT_A8_UNORM:
         {
-
-            BYTE *colorConvertedBuffer = (BYTE*)malloc(texWidth * texHeight);
-            if (colorConvertedBuffer == NULL)
-            {
-                initData.pSysMem = NULL;
-                initData.SysMemPitch = 0;
-                initData.SysMemSlicePitch = 0;
-
-                throw std::exception("Failed to alloc memory for color converted bitmap");
-            }
-
-            memset(colorConvertedBuffer, 0, texHeight * texWidth);
-
-            initData.SysMemPitch = texWidth;
-            initData.pSysMem = colorConvertedBuffer;
-            initData.SysMemSlicePitch = texWidth * texHeight;
-
             // Fill with some red-based alpha
             for (UINT k = 0; k < texHeight; k++)
             {
                 for (UINT i = 0; i < texWidth * 4; i += 4)
-                {
-                   
+                {                   
 					 BYTE red = pTexels[i];
-                    *colorConvertedBuffer++ = (BYTE)red;
-
+                    *colorConvertedBufferRaw++ = (BYTE)red;
                 }
                 pTexels += texWidth * 4;
             }
 
-            return initData.pSysMem;
+            return colorConvertedBuffer;
           }
+
+        default:
+        {
+            throw std::exception("Not implemented texture color format passed");
+        }
         }
 
-        throw std::exception("Not implemented texture color format passed");
     }
 
     D3DBitmapTexture(std::shared_ptr<D3DDevice> & inDevice, DXGI_FORMAT textureFormat = DXGI_FORMAT_R8G8B8A8_UNORM)
@@ -605,17 +598,15 @@ public:
         D3D11_SUBRESOURCE_DATA initData;
 
         ZeroMemory(&initData, sizeof(initData));
+        UINT bytesPerPixel = 0;
 
-        ConvertTextureFromRGBA(pTexels, textureFormat, texWidth, texHeight, initData);
-
+        auto texture = ConvertTextureFromRGBA(pTexels, textureFormat, texWidth, texHeight, bytesPerPixel);
+        initData.SysMemPitch = texWidth * bytesPerPixel;
+        initData.SysMemSlicePitch = texWidth * texHeight * bytesPerPixel;
+        initData.pSysMem = texture.get();
         ID3D11Texture2D * pTexture;
 
         hr = inDevice->GetDevice()->CreateTexture2D(&desc, &initData, &pTexture);
-
-        if (initData.pSysMem != NULL)
-        {
-            free((void*)initData.pSysMem);
-        }
 
         if (FAILED(hr))
         {
