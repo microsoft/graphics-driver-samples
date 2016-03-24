@@ -13,15 +13,9 @@
 
 #endif
 
-template<typename InputType>
-FORCEINLINE
-void
-AlignValue(
-    InputType &Value,
-    UINT Alignment
-    )
+inline UINT AlignValue (UINT Value, _In_range_(>, 0) UINT Alignment)
 {
-    Value = InputType((SIZE_T(Value) + (Alignment - 1)) & ~SIZE_T(Alignment - 1));
+    return (Value + (Alignment - 1)) & ~(Alignment - 1);
 }
 
 UINT

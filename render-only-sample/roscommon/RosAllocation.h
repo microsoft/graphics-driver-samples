@@ -5,6 +5,8 @@
 #include <wingdi.h>
 #include <d3d10umddi.h>
 
+#include <Vc4Hw.h>
+
 enum RosHwLayout
 {
     Linear,
@@ -40,13 +42,9 @@ struct RosAllocationExchange
     bool                    m_isPrimary;
     DXGI_DDI_PRIMARY_DESC   m_primaryDesc;
 
-    // HW specific information calculated based on the fields above
     RosHwLayout             m_hwLayout;
-
     UINT                    m_hwWidthPixels;
     UINT                    m_hwHeightPixels;
-    RosHwFormat             m_hwFormat;
-    UINT                    m_hwPitchBytes;
     UINT                    m_hwSizeBytes;
 };
 
@@ -54,3 +52,76 @@ struct RosAllocationGroupExchange
 {
     int     m_dummy;
 };
+
+inline
+VC4_NON_HDR_FRAME_BUFFER_COLOR_FORMAT
+Vc4FrameBufferColorFormatFromDxgiFormat (
+    DXGI_FORMAT Format
+    )
+{
+    switch (Format) {
+    case DXGI_FORMAT_R8G8B8A8_UNORM:
+    case DXGI_FORMAT_B8G8R8A8_UNORM:
+        return VC4_NON_HDR_FRAME_BUFFER_COLOR_FORMAT::RGBA8888;
+    default:
+        NT_ASSERT(false);
+        return VC4_NON_HDR_FRAME_BUFFER_COLOR_FORMAT::RGBA8888;
+    }
+}
+
+inline VC4TileBufferPixelFormat Vc4TileBufferPixelFormatFromDxgiFormat (
+    DXGI_FORMAT Format
+    )
+{
+    switch (Format) {
+    case DXGI_FORMAT_R8G8B8A8_UNORM:
+    case DXGI_FORMAT_B8G8R8A8_UNORM:
+        return VC4_TILE_BUFFER_PIXEL_FORMAT_RGBA8888;
+    default:
+        NT_ASSERT(false);
+        return VC4_TILE_BUFFER_PIXEL_FORMAT_RGBA8888;
+    }
+}
+
+inline VC4_MEMORY_FORMAT Vc4MemoryFormatFromRosHwLayout (RosHwLayout Layout)
+{
+    switch (Layout) {
+    case RosHwLayout::Linear: return VC4_MEMORY_FORMAT::LINEAR;
+    case RosHwLayout::Tiled: return VC4_MEMORY_FORMAT::T_FORMAT;
+    default:
+        NT_ASSERT(false);
+        return VC4_MEMORY_FORMAT::LINEAR;
+    }
+}
+
+inline VC4TextureDataType Vc4TextureTypeFromDxgiFormat (
+    RosHwLayout Layout,
+    DXGI_FORMAT Format
+    )
+{
+    switch (Layout) {
+    case RosHwLayout::Linear:
+        switch (Format) {
+        case DXGI_FORMAT_R8G8B8A8_UNORM:
+        case DXGI_FORMAT_B8G8R8A8_UNORM:
+            return VC4_TEX_RGBA32R;
+        default:
+            NT_ASSERT(false);
+            return VC4_TEX_RGBA32R;
+        }
+        break;
+    case RosHwLayout::Tiled:
+        switch (Format) {
+        case DXGI_FORMAT_R8G8B8A8_UNORM:
+        case DXGI_FORMAT_B8G8R8A8_UNORM:
+            return VC4_TEX_RGBX8888; // XXX: shouldn't this be VC4_TEX_RGBA8888?
+            break;
+        default:
+            NT_ASSERT(false);
+            return VC4_TEX_RGBX8888;
+        }
+    default:
+        NT_ASSERT(false);
+        return VC4_TEX_RGBA32R;
+    }
+}

@@ -813,6 +813,18 @@ typedef struct _VC4TileBinningModeConfig
 
 const VC4TileBinningModeConfig vc4TileBinningModeConfig = { VC4_CMD_TILE_BINNING_MODE_CONFIG, 0 };
 
+enum class VC4_NON_HDR_FRAME_BUFFER_COLOR_FORMAT {
+    BGR565D = 0,        // bgr565 dithered
+    RGBA8888 = 1,       // rgba8888
+    BGR565 = 2,         // bgr565 non-dithered
+};
+
+enum class VC4_MEMORY_FORMAT {
+    LINEAR = 0,
+    T_FORMAT = 1,
+    LT_FORMAT = 2,
+};
+
 // Code 113,    Rendering only
 typedef struct _VC4TileRenderingModeConfig
 {
