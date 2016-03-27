@@ -22,7 +22,7 @@ RosUmdResource::RosUmdResource() :
     m_signature(_SIGNATURE::CONSTRUCTED),
     m_hKMAllocation(NULL)
 {
-    // do nothing
+ 
 }
 
 RosUmdResource::~RosUmdResource()
@@ -69,6 +69,8 @@ RosUmdResource::Standup(
         m_isPrimary = false;
         ZeroMemory(&m_primaryDesc, sizeof(m_primaryDesc));
     }
+
+    memset(&m_TileInfo, 0, sizeof(m_TileInfo));
 
     CalculateMemoryLayout();
 
@@ -292,6 +294,140 @@ RosUmdResource::Unmap(
     pUmdDevice->Unlock(&unlock);
 }
 
+VC4TileInfo RosUmdResource::FillTileInfo(UINT bpp)
+{
+    // Provide detailed information about tile.
+    // Partial information about 4kB tiles, 1kB sub-tiles and micro-tiles for
+    // given bpp is precalculated.
+    // Values are used i.e. during converting bitmap to tiled texture
+
+    VC4TileInfo info = { 0 };
+
+    if (bpp == 8)
+    {
+        info.VC4_1kBSubTileWidthPixels        = VC4_1KB_SUB_TILE_WIDTH_8BPP;
+        info.VC4_1kBSubTileHeightPixels       = VC4_1KB_SUB_TILE_HEIGHT_8BPP;
+        info.VC4_MicroTileWidthBytes          = VC4_MICRO_TILE_WIDTH_BYTES_8BPP;
+        info.vC4_MicroTileHeight              = VC4_MICRO_TILE_HEIGHT_8BPP;
+    }
+    else if (bpp == 16)
+    {
+        info.VC4_1kBSubTileWidthPixels        = VC4_1KB_SUB_TILE_WIDTH_16BPP;
+        info.VC4_1kBSubTileHeightPixels       = VC4_1KB_SUB_TILE_HEIGHT_16BPP;
+        info.VC4_MicroTileWidthBytes          = VC4_MICRO_TILE_WIDTH_BYTES_16BPP;
+        info.vC4_MicroTileHeight              = VC4_MICRO_TILE_HEIGHT_16BPP;
+    }
+    else if (bpp == 32)
+    {
+        info.VC4_1kBSubTileWidthPixels        = VC4_1KB_SUB_TILE_WIDTH_32BPP;
+        info.VC4_1kBSubTileHeightPixels       = VC4_1KB_SUB_TILE_HEIGHT_32BPP;
+        info.VC4_MicroTileWidthBytes          = VC4_MICRO_TILE_WIDTH_BYTES_32BPP;
+        info.vC4_MicroTileHeight              = VC4_MICRO_TILE_HEIGHT_32BPP;
+    }
+    else
+    {
+        // We expect 8, 16 or 32 bpp only
+        assert(false);
+    }
+
+    // Calculate sub-tile width in bytes
+    info.VC4_1kBSubTileWidthBytes = info.VC4_1kBSubTileWidthPixels * (bpp / 8);
+    
+    // 4kB tile consists of four 1kB sub-tiles
+    info.VC4_4kBTileWidthPixels = info.VC4_1kBSubTileWidthPixels * 2;
+    info.VC4_4kBTileHeightPixels = info.VC4_1kBSubTileHeightPixels * 2;
+    info.VC4_4kBTileWidthBytes = info.VC4_1kBSubTileWidthBytes * 2;
+
+    return info;
+}
+
+void 
+RosUmdResource::MapDxgiFormatToInternalFormats(DXGI_FORMAT format, _Out_ UINT &bpp, _Out_ RosHwFormat &rosFormat)
+{
+
+    // Number of HW formats is limited, so some of DXGI formats must be emulated.
+    // For example, format DXGI_FORMAT_R8_UNORM is emulated with  DXGI_FORMAT_R8G8B8A8_UNORM 
+    // where G8, B8 are set to 0
+    // 
+    switch (format)
+    {
+    case DXGI_FORMAT_R8G8B8A8_UNORM:
+    {
+        bpp = 32;
+        rosFormat = RosHwFormat::X8888;
+    }
+    break;
+
+    case DXGI_FORMAT_R8G8_UNORM:
+    {
+        bpp = 32;
+        rosFormat = RosHwFormat::X8888;
+    }
+    break;
+
+    case DXGI_FORMAT_R8_UNORM:
+    {
+        bpp = 32;
+        rosFormat = RosHwFormat::X8888;
+    }
+    break;
+
+    case DXGI_FORMAT_A8_UNORM:
+    {
+        bpp = 8;
+        rosFormat = RosHwFormat::X8;
+    }
+    break;
+
+    case DXGI_FORMAT_D24_UNORM_S8_UINT:
+    {
+        bpp = 8;
+        rosFormat = RosHwFormat::X8;
+    }
+    break;
+
+    case DXGI_FORMAT_D16_UNORM:
+    {
+        bpp = 8;
+        rosFormat = RosHwFormat::X8;
+    }
+    break;
+
+    default:
+    {
+        // Formats that are not on the list.
+        assert(false);
+    }
+
+    }
+}
+
+void
+RosUmdResource::CalculateTilesInfo()
+{
+    UINT bpp = 0;
+
+    // Provide information about hardware formats
+    MapDxgiFormatToInternalFormats(m_format, bpp, m_hwFormat);
+
+    // Prepare information about tiles
+    m_TileInfo = FillTileInfo(bpp);
+
+    m_hwWidthTilePixels = m_TileInfo.VC4_4kBTileWidthPixels;
+    m_hwHeightTilePixels = m_TileInfo.VC4_4kBTileHeightPixels;
+
+    m_hwWidthTiles = (m_hwWidthPixels + m_hwWidthTilePixels - 1) / m_hwWidthTilePixels;
+    m_hwHeightTiles = (m_hwHeightPixels + m_hwHeightTilePixels - 1) / m_hwHeightTilePixels;
+    m_hwWidthPixels = m_hwWidthTiles*m_hwWidthTilePixels;
+    m_hwHeightPixels = m_hwHeightTiles*m_hwHeightTilePixels;
+
+    UINT sizeTileBytes = m_hwWidthTilePixels * m_hwHeightTilePixels * (bpp/8);
+
+    m_hwSizeBytes = m_hwWidthTiles * m_hwHeightTiles * sizeTileBytes;
+    m_hwPitchBytes = 0;
+
+}
+
 void
 RosUmdResource::SetLockFlags(
     D3D10_DDI_MAP mapType,
@@ -411,23 +547,7 @@ RosUmdResource::CalculateMemoryLayout(
             }
             else
             {
-                assert(m_hwLayout == RosHwLayout::Tiled);
-                assert(m_mipLevels == 1);
-
-                assert((m_hwFormat == RosHwFormat::X8888) || (m_hwFormat == RosHwFormat::D24S8));
-                
-                // Values are hardocded - we are using RosHwFormat::X8888 format
-                m_hwWidthTilePixels = VC4_4KB_TILE_WIDTH;
-                m_hwHeightTilePixels = VC4_4KB_TILE_HEIGHT;
-                m_hwWidthTiles = (m_hwWidthPixels + m_hwWidthTilePixels - 1) / m_hwWidthTilePixels;
-                m_hwHeightTiles = (m_hwHeightPixels + m_hwHeightTilePixels - 1) / m_hwHeightTilePixels;
-                m_hwWidthPixels = m_hwWidthTiles*m_hwWidthTilePixels;
-                m_hwHeightPixels = m_hwHeightTiles*m_hwHeightTilePixels;
-
-                UINT sizeTileBytes = m_hwWidthTilePixels * m_hwHeightTilePixels * 4;
-
-                m_hwSizeBytes = m_hwWidthTiles * m_hwHeightTiles * sizeTileBytes;
-                m_hwPitchBytes = 0;
+                CalculateTilesInfo();
             }
         }
         break;
@@ -481,24 +601,147 @@ bool RosUmdResource::CanRotateFrom(const RosUmdResource* Other) const
            (m_hwHeightTiles == Other->m_hwHeightTiles);
 }
 
+
+// Converts R, RG or A buffer to 32 bpp (RGBA) buffer
+void  RosUmdResource::ConvertBufferto32Bpp(const BYTE *pSrc, BYTE *pDst, UINT srcBpp, UINT swizzleMask, UINT pSrcStride, UINT pDstStride)
+{
+    for (UINT i = 0; i < m_mip0Info.TexelHeight; i++)
+    {
+        UINT32 *dstSwizzled = (UINT32*)pDst;
+
+        UINT dstIndex = 0;
+        for (UINT k = 0; k < m_mip0Info.TexelWidth*srcBpp; k += srcBpp)
+        {
+            UINT32 swizzledRGBA = 0;
+
+            // Gather individual color elements into one DWORD
+            for (UINT colorElement = 0; colorElement < srcBpp; colorElement++)
+            {
+                UINT32 currentColorElement = (UINT32)pSrc[k + colorElement];
+
+                // Move element to the right position
+                currentColorElement = currentColorElement << (colorElement << 3);
+                swizzledRGBA = swizzledRGBA | currentColorElement;
+            }
+
+            swizzledRGBA = swizzledRGBA << swizzleMask;
+            dstSwizzled[dstIndex] = swizzledRGBA;
+            dstIndex += 1;
+        }
+
+        pSrc += pSrcStride;
+        pDst += pDstStride;
+    }
+}
+
+// Converts texture to internal (HW friendly) representation
+void RosUmdResource::ConvertInitialTextureFormatToInternal(const BYTE *pSrc, BYTE *pDst, UINT rowStride)
+{
+    // HW supports only limited set of formats, so most of DXGI formats must
+    // be converted at the beginning.    
+    UINT swizzleMask = 0;
+    UINT srcBpp = 0;
+ 
+    switch (m_format)
+    {
+    case DXGI_FORMAT_R8G8B8A8_UNORM:
+    {
+        // Do nothing
+    }
+    break;
+
+    case DXGI_FORMAT_R8_UNORM:
+    {
+        swizzleMask = 0;
+        srcBpp = 1;
+    }
+    break;
+
+    case DXGI_FORMAT_R8G8_UNORM:
+    {
+        swizzleMask = 0;
+        srcBpp = 2;
+    }
+    break;
+
+    case DXGI_FORMAT_A8_UNORM:
+    {
+        swizzleMask = 0;
+        srcBpp = 1;
+    }
+    break;
+
+    default:
+    {
+        assert(false);
+    }
+    break;
+    }
+   
+    // For DXGI_FORMAT_R8G8B8A8_UNORM and DXGI_FORMAT_A8_UNORM we can do a simple copy or swizzle 
+    // texture directly to memory.
+    if ((m_format == DXGI_FORMAT_R8G8B8A8_UNORM) || (m_format == DXGI_FORMAT_A8_UNORM))
+    {
+        if (m_hwLayout == RosHwLayout::Linear)
+        {
+            for (UINT i = 0; i < m_mip0Info.TexelHeight; i++)
+            {
+                memcpy(pDst, pSrc, rowStride);
+
+                pSrc += rowStride;
+                pDst += m_hwPitchBytes;
+            }
+        }
+        else
+        {
+            // Swizzle texture to HW format
+            ConvertBitmapTo4kTileBlocks(pSrc, pDst, rowStride);
+        }
+    }
+    else
+    {
+        // We have to convert other formats to internal format         
+        if (m_hwLayout == RosHwLayout::Linear)
+        {
+            // Do a conversion directly to the locked allocation
+            ConvertBufferto32Bpp(pSrc, pDst, srcBpp, swizzleMask, rowStride, m_hwPitchBytes);            
+        }
+        else
+        {
+            // For tiled layout, additional buffer is allocated. It is a 
+            // conversion (temporary) buffer.
+            UINT pitch = m_mip0Info.TexelHeight * m_mip0Info.TexelWidth * 4;
+            
+            auto temporary = std::unique_ptr<BYTE[]>{ new BYTE[pitch] };
+            
+            UINT dstStride = m_mip0Info.TexelWidth * 4;
+
+            ConvertBufferto32Bpp(pSrc, temporary.get(), srcBpp, swizzleMask, rowStride, dstStride);
+
+            ConvertBitmapTo4kTileBlocks(temporary.get(), pDst, dstStride);
+
+        }
+    }
+}
+
 // Form 1k sub-tile block
-BYTE *RosUmdResource::Form1kSubTileBlock(BYTE *pInputBuffer, BYTE *pOutBuffer, UINT rowStride)
+BYTE *RosUmdResource::Form1kSubTileBlock(const BYTE *pInputBuffer, BYTE *pOutBuffer, UINT rowStride)
 {    
     // 1k sub-tile block is formed from micro-tiles blocks
-    for (UINT h = 0; h < VC4_1KB_SUB_TILE_HEIGHT; h += 4)
+    for (UINT h = 0; h < m_TileInfo.VC4_1kBSubTileHeightPixels; h += m_TileInfo.vC4_MicroTileHeight)
     {
-        BYTE *currentBufferPos = pInputBuffer + h*rowStride;
+        const BYTE *currentBufferPos = pInputBuffer + h*rowStride;
 
         // Process row of 4 micro-tiles blocks
-        for (UINT w = 0; w < VC4_1KB_SUB_TILE_WIDTH_BYTES; w+= VC4_MICRO_TILE_WIDTH_BYTES)
+        for (UINT w = 0; w < m_TileInfo.VC4_1kBSubTileWidthBytes; w+= m_TileInfo.VC4_MicroTileWidthBytes)
         {
-            BYTE *microTileOffset = currentBufferPos + w;
+            const BYTE *microTileOffset = currentBufferPos + w;
 
-            // Process micro-tile block (4x16 bytes)
-            for (int t = 0; t < VC4_MICRO_TILE_HEIGHT; t++)
+            // Process micro-tile block
+            for (UINT t = 0; t < m_TileInfo.vC4_MicroTileHeight; t++)
             {
-                memcpy(pOutBuffer, microTileOffset, VC4_MICRO_TILE_WIDTH_BYTES);
-                pOutBuffer += VC4_MICRO_TILE_WIDTH_BYTES;
+                memcpy(pOutBuffer, microTileOffset, m_TileInfo.VC4_MicroTileWidthBytes);
+                pOutBuffer += m_TileInfo.VC4_MicroTileWidthBytes;
                 microTileOffset += rowStride;
             }
         }
@@ -507,9 +750,12 @@ BYTE *RosUmdResource::Form1kSubTileBlock(BYTE *pInputBuffer, BYTE *pOutBuffer, U
 }
 
 // Form one 4k tile block from pInputBuffer and store in pOutBuffer
-BYTE *RosUmdResource::Form4kTileBlock(BYTE *pInputBuffer, BYTE *pOutBuffer, UINT rowStride, BOOLEAN OddRow)
+BYTE *RosUmdResource::Form4kTileBlock(const BYTE *pInputBuffer, BYTE *pOutBuffer, UINT rowStride, BOOLEAN OddRow)
 {
-    BYTE *currentTileOffset = NULL;
+    const BYTE *currentTileOffset = NULL;
+   
+    UINT subTileHeightPixels        = m_TileInfo.VC4_1kBSubTileHeightPixels;
+    UINT subTileWidthBytes          = m_TileInfo.VC4_1kBSubTileWidthBytes;
 
     if (OddRow)
     {
@@ -521,11 +767,11 @@ BYTE *RosUmdResource::Form4kTileBlock(BYTE *pInputBuffer, BYTE *pOutBuffer, UINT
         //                  
 
         // Get A block
-        currentTileOffset = pInputBuffer + rowStride * VC4_1KB_SUB_TILE_HEIGHT + VC4_1KB_SUB_TILE_WIDTH_BYTES;
+        currentTileOffset = pInputBuffer + rowStride * subTileHeightPixels + subTileWidthBytes;
         pOutBuffer = Form1kSubTileBlock(currentTileOffset, pOutBuffer, rowStride);
 
         // Get B block
-        currentTileOffset = pInputBuffer + VC4_1KB_SUB_TILE_WIDTH_BYTES;
+        currentTileOffset = pInputBuffer + subTileWidthBytes;
 
         pOutBuffer = Form1kSubTileBlock(currentTileOffset, pOutBuffer, rowStride);
 
@@ -533,7 +779,7 @@ BYTE *RosUmdResource::Form4kTileBlock(BYTE *pInputBuffer, BYTE *pOutBuffer, UINT
         pOutBuffer = Form1kSubTileBlock(pInputBuffer, pOutBuffer, rowStride);
 
         // Get D block
-        currentTileOffset = pInputBuffer + rowStride * VC4_1KB_SUB_TILE_HEIGHT;
+        currentTileOffset = pInputBuffer + rowStride * subTileHeightPixels;
         pOutBuffer = Form1kSubTileBlock(currentTileOffset, pOutBuffer, rowStride);
 
         // return current position in out buffer
@@ -553,15 +799,15 @@ BYTE *RosUmdResource::Form4kTileBlock(BYTE *pInputBuffer, BYTE *pOutBuffer, UINT
         pOutBuffer = Form1kSubTileBlock(pInputBuffer, pOutBuffer, rowStride);
 
         /// Get B block
-        currentTileOffset = pInputBuffer + rowStride * VC4_1KB_SUB_TILE_HEIGHT;
+        currentTileOffset = pInputBuffer + rowStride * subTileHeightPixels;
         pOutBuffer = Form1kSubTileBlock(currentTileOffset, pOutBuffer, rowStride);
 
         // Get C Block
-        currentTileOffset = pInputBuffer + rowStride * VC4_1KB_SUB_TILE_HEIGHT + VC4_1KB_SUB_TILE_WIDTH_BYTES;
+        currentTileOffset = pInputBuffer + rowStride * subTileHeightPixels + subTileWidthBytes;
         pOutBuffer = Form1kSubTileBlock(currentTileOffset, pOutBuffer, rowStride);
 
         // Get D block
-        currentTileOffset = pInputBuffer + VC4_1KB_SUB_TILE_WIDTH_BYTES;
+        currentTileOffset = pInputBuffer + subTileWidthBytes;
         pOutBuffer = Form1kSubTileBlock(currentTileOffset, pOutBuffer, rowStride);
 
         // return current position in out buffer
@@ -570,10 +816,8 @@ BYTE *RosUmdResource::Form4kTileBlock(BYTE *pInputBuffer, BYTE *pOutBuffer, UINT
 }
 
 // Form (CountX * CountY) tile blocks from InputBuffer and store them in OutBuffer
-void RosUmdResource::ConvertBitmapTo4kTileBlocks(BYTE *InputBuffer, BYTE *OutBuffer, UINT rowStride)
+void RosUmdResource::ConvertBitmapTo4kTileBlocks(const BYTE *InputBuffer, BYTE *OutBuffer, UINT rowStride)
 {
-    // [todo] Currently only 32bpp mode is supported
-
     UINT CountX = m_hwWidthTiles;
     UINT CountY = m_hwHeightTiles;
 
@@ -585,7 +829,7 @@ void RosUmdResource::ConvertBitmapTo4kTileBlocks(BYTE *InputBuffer, BYTE *OutBuf
             // Build 4k blocks from right to left for odd rows
             for (int i = CountX - 1; i >= 0; i--)
             {
-                BYTE *blockStartOffset = InputBuffer + k * rowStride * VC4_4KB_TILE_HEIGHT + i * VC4_4KB_TILE_WIDTH_BYTES;
+                const BYTE *blockStartOffset = InputBuffer + k * rowStride * m_TileInfo.VC4_4kBTileHeightPixels + i * m_TileInfo.VC4_4kBTileWidthBytes;
                 OutBuffer = Form4kTileBlock(blockStartOffset, OutBuffer, rowStride, oddRow);
             }
         }
@@ -594,7 +838,7 @@ void RosUmdResource::ConvertBitmapTo4kTileBlocks(BYTE *InputBuffer, BYTE *OutBuf
             // Build 4k blocks from left to right for even rows
             for (UINT i = 0; i < CountX; i++)
             {
-                BYTE *blockStartOffset = InputBuffer + k * rowStride * VC4_4KB_TILE_HEIGHT + i * VC4_4KB_TILE_WIDTH_BYTES;
+                const BYTE *blockStartOffset = InputBuffer + k * rowStride * m_TileInfo.VC4_4kBTileHeightPixels + i * m_TileInfo.VC4_4kBTileWidthBytes;
                 OutBuffer = Form4kTileBlock(blockStartOffset, OutBuffer, rowStride, oddRow);
             }
         }

@@ -653,11 +653,15 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
     uint32_t texDimension = this->ResourceDimension[resourceIndex];
 
     DXGI_FORMAT texFormat = UmdCompiler->GetShaderResourceFormat((uint8_t)resourceIndex);
-    VC4_ASSERT((texFormat == DXGI_FORMAT_B8G8R8A8_UNORM) || (texFormat == DXGI_FORMAT_R8G8B8A8_UNORM));
+    VC4_ASSERT((texFormat == DXGI_FORMAT_B8G8R8A8_UNORM)
+        || (texFormat == DXGI_FORMAT_R8G8B8A8_UNORM)
+        || (texFormat == DXGI_FORMAT_R8G8_UNORM)
+        || (texFormat == DXGI_FORMAT_R8_UNORM)
+        || (texFormat == DXGI_FORMAT_A8_UNORM));
         
     // TODO: more generic color channel swizzle support.
-    boolean bSwapColorChannel = (texFormat != DXGI_FORMAT_R8G8B8A8_UNORM);
-    
+    boolean bSwapColorChannel = (texFormat == DXGI_FORMAT_B8G8R8A8_UNORM);
+
     // Texture coordinate
     VC4_ASSERT(Inst.m_Operands[1].m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
     VC4_ASSERT(Inst.m_Operands[1].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);

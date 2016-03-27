@@ -424,11 +424,147 @@ private:
     std::shared_ptr<D3DDevice>              m_pDevice;
 };
 
+const char *DXGIFormatToString(DXGI_FORMAT format)
+{
+    switch (format)
+    {
+    case DXGI_FORMAT_R8G8B8A8_UNORM:
+        return "R8G8B8A8_UNORM";
+
+    case DXGI_FORMAT_R8G8_UNORM:
+        return "DXGI_FORMAT_R8G8_UNORM";
+
+    case DXGI_FORMAT_R8_UNORM:
+        return "DXGI_FORMAT_R8_UNORM";
+
+    case DXGI_FORMAT_A8_UNORM:
+        return "DXGI_FORMAT_A8_UNORM";
+
+    default:
+        return "UNKNOWN";
+    }
+}
+
 class D3DBitmapTexture
 {
 public:
 
-    D3DBitmapTexture(std::shared_ptr<D3DDevice> & inDevice)
+    UINT GetFormatBytesPerPixel(DXGI_FORMAT inFormat)
+    {
+        switch (inFormat)
+        {
+        case DXGI_FORMAT_R8G8B8A8_UNORM:
+        {
+            return 4;
+        }
+        break;
+
+        case DXGI_FORMAT_R8G8_UNORM:
+        {
+            return 2;
+        }
+        break;
+
+        case DXGI_FORMAT_R8_UNORM:
+        {
+            return 1;
+        }
+        break;
+
+        case DXGI_FORMAT_A8_UNORM:
+        {
+            return 1;
+        }
+        break;
+
+        default:
+        {
+            throw std::exception("Not implemented texture color format passed");
+        }
+        
+        }        
+    }
+
+    std::unique_ptr<BYTE[]> ConvertTextureFromRGBA(PBYTE _In_ pTexels, DXGI_FORMAT _In_ outFormat, ULONG _In_ texWidth, ULONG _In_ texHeight, UINT _Out_ &outTextureBytesPerPixel)
+    {
+        outTextureBytesPerPixel = GetFormatBytesPerPixel(outFormat);        
+        std::unique_ptr<BYTE[]> colorConvertedBuffer(new BYTE[texWidth * texHeight * outTextureBytesPerPixel]);
+        BYTE *colorConvertedBufferRaw = (BYTE*)colorConvertedBuffer.get();
+
+        switch (outFormat)
+        {
+        case DXGI_FORMAT_R8G8B8A8_UNORM:        
+        {            
+            // Just do the copy
+            UINT pSysPitch = texWidth * outTextureBytesPerPixel;
+            for (UINT k = 0; k < texHeight; k++)
+            {
+                memcpy(colorConvertedBufferRaw, pTexels, pSysPitch);
+                colorConvertedBufferRaw += pSysPitch;
+                pTexels += pSysPitch;
+            }
+
+            return colorConvertedBuffer;
+        }
+
+        case DXGI_FORMAT_R8G8_UNORM:
+        {                                
+            // Extract only red and green colors
+            for (UINT k = 0; k < texHeight; k++)
+            {
+                for (UINT i = 0; i < texWidth * 4; i += 4)
+                {
+                    BYTE red = pTexels[i];
+                    BYTE green = pTexels[i + 1];
+
+                    *colorConvertedBufferRaw++ = (BYTE)red;
+                    *colorConvertedBufferRaw++ = (BYTE)green;
+                }
+                pTexels += texWidth * 4;
+            }
+            return colorConvertedBuffer;
+        }
+
+        case DXGI_FORMAT_R8_UNORM:
+        {
+            // Extract only red color
+            for (UINT k = 0; k < texHeight; k++)
+            {
+                for (UINT i = 0; i < texWidth * 4; i += 4)
+                {
+                    BYTE red = pTexels[i];
+                    *colorConvertedBufferRaw++ = (BYTE)red;
+                }
+                pTexels += texWidth * 4;
+            }
+            return colorConvertedBuffer;
+        }
+
+        case DXGI_FORMAT_A8_UNORM:
+        {
+            // Fill with some red-based alpha
+            for (UINT k = 0; k < texHeight; k++)
+            {
+                for (UINT i = 0; i < texWidth * 4; i += 4)
+                {                   
+					 BYTE red = pTexels[i];
+                    *colorConvertedBufferRaw++ = (BYTE)red;
+                }
+                pTexels += texWidth * 4;
+            }
+
+            return colorConvertedBuffer;
+          }
+
+        default:
+        {
+            throw std::exception("Not implemented texture color format passed");
+        }
+        }
+
+    }
+
+    D3DBitmapTexture(std::shared_ptr<D3DDevice> & inDevice, DXGI_FORMAT textureFormat = DXGI_FORMAT_R8G8B8A8_UNORM)
     {
         ULONG texWidth, texHeight, resSize;
         PVOID pRes;
@@ -452,7 +588,7 @@ public:
         desc.Height = texHeight;
         desc.MipLevels = 1;
         desc.ArraySize = 1;
-        desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        desc.Format = textureFormat;
         desc.SampleDesc.Count = 1;
         desc.SampleDesc.Quality = 0;
         desc.Usage = D3D11_USAGE_DEFAULT;
@@ -462,10 +598,12 @@ public:
         D3D11_SUBRESOURCE_DATA initData;
 
         ZeroMemory(&initData, sizeof(initData));
-        initData.pSysMem = pTexels;
-        initData.SysMemPitch = texWidth * 4;
-        initData.SysMemSlicePitch = texWidth * 4 * texHeight;
+        UINT bytesPerPixel = 0;
 
+        auto texture = ConvertTextureFromRGBA(pTexels, textureFormat, texWidth, texHeight, bytesPerPixel);
+        initData.SysMemPitch = texWidth * bytesPerPixel;
+        initData.SysMemSlicePitch = texWidth * texHeight * bytesPerPixel;
+        initData.pSysMem = texture.get();
         ID3D11Texture2D * pTexture;
 
         hr = inDevice->GetDevice()->CreateTexture2D(&desc, &initData, &pTexture);
@@ -1204,8 +1342,10 @@ class D3DEngine
 {
 public:
 
-    D3DEngine()
+    D3DEngine(DXGI_FORMAT textureFormat = DXGI_FORMAT_R8G8B8A8_UNORM)
     {
+
+        m_textureFormat = textureFormat;
 #if USE_VC4
         m_pDevice = std::shared_ptr<D3DDevice>(new D3DDevice(L"Render Only Sample Driver"));
 #else
@@ -1250,7 +1390,7 @@ public:
         m_pPSConstantBuffer = std::unique_ptr<D3DPSConstantBuffer>(new D3DPSConstantBuffer(m_pDevice));
 
 #if USE_BITMAP_TEX
-        m_pDefaultTexture = std::unique_ptr<D3DBitmapTexture>(new D3DBitmapTexture(m_pDevice));
+        m_pDefaultTexture = std::unique_ptr<D3DBitmapTexture>(new D3DBitmapTexture(m_pDevice, m_textureFormat));
 #else
         m_pDefaultTexture = std::unique_ptr<D3DDefaultTexture>(new D3DDefaultTexture(m_pDevice, 256, 256));
 #endif // USE_BITMAP_TEX
@@ -1361,7 +1501,7 @@ public:
             {
                 char fileName[MAX_PATH];
 #if USE_VC4
-                sprintf_s(fileName, MAX_PATH, "c:\\temp\\image_%d_vc4.bmp", iFrame);
+                sprintf_s(fileName, MAX_PATH, "c:\\temp\\image_%s_%d_vc4.bmp", DXGIFormatToString(m_textureFormat),iFrame);
 #else
                 sprintf_s(fileName, MAX_PATH, "c:\\temp\\image_%d_warp.bmp", iFrame);
 #endif // USE_VC4
@@ -1395,6 +1535,7 @@ private:
     std::unique_ptr<D3DSamplerState>        m_pSamplerState;
     std::unique_ptr<D3DVSConstantBuffer>    m_pVSConstantBuffer;
     std::unique_ptr<D3DPSConstantBuffer>    m_pPSConstantBuffer;
+    DXGI_FORMAT                             m_textureFormat;
 #if USE_BITMAP_TEX
     std::unique_ptr<D3DBitmapTexture>       m_pDefaultTexture;
 #else
@@ -1434,132 +1575,147 @@ BOOL InitPerf()
     return hQueueEvent ? true : false;
 }
 
+const UINT TESTED_FORMATS_COUNT = 4;
+
 int main(int argc, char* argv[])
 {
-    try
+
+    DXGI_FORMAT formatsToTest[TESTED_FORMATS_COUNT] =
     {
-        BOOL bPerfMode = false;
+        DXGI_FORMAT_R8G8B8A8_UNORM,
+        DXGI_FORMAT_R8G8_UNORM,
+        DXGI_FORMAT_R8_UNORM,
+        DXGI_FORMAT_A8_UNORM
+    };
 
-        LARGE_INTEGER   framesStart;
-        LARGE_INTEGER   framesEnd;
+    BOOL bPerfMode = false;
 
-        LARGE_INTEGER   frequenceStart;
-        LARGE_INTEGER   frequenceEnd;
+    LARGE_INTEGER   framesStart;
+    LARGE_INTEGER   framesEnd;
 
-        if (argc >= 3)
+    LARGE_INTEGER   frequenceStart;
+    LARGE_INTEGER   frequenceEnd;
+
+    if (argc >= 3)
+    {
+        bPerfMode = true;
+    }
+
+    if (bPerfMode)
+    {
+        sscanf_s(argv[1], "%d", &kWidth);
+        sscanf_s(argv[2], "%d", &kHeight);
+
+        if (argc > 3)
         {
-            bPerfMode = true;
-        }
+            sscanf_s(argv[3], "%d", &frames);
 
-        if (bPerfMode)
-        {
-            sscanf_s(argv[1], "%d", &kWidth);
-            sscanf_s(argv[2], "%d", &kHeight);
-
-            if (argc > 3)
-            {
-                sscanf_s(argv[3], "%d", &frames);
-
-                if (frames < 20)
-                {
-                    frames = 20;
-                }
-            }
-            else
+            if (frames < 20)
             {
                 frames = 20;
             }
         }
-
-        D3DEngine engine;
-
-        if (bPerfMode)
+        else
         {
-            pd3dDevice = engine.GetDevice();
-            pd3dContext = engine.GetContext();
-
-            InitPerf();
+            frames = 20;
         }
+    }
 
-        float t = 0.0f;
-        for (UINT i = 0; i < frames; i++)
+    for (int currentTest = 0; currentTest < TESTED_FORMATS_COUNT; currentTest++)
+    {
+        printf("Test for [%s] \n", DXGIFormatToString(formatsToTest[currentTest]));
+        try
         {
-            // Skip the 1st frame for shader compilation time
-            if (bPerfMode && (i == 1))
-            {
-                QueryPerformanceCounter(&framesStart);
-                QueryPerformanceFrequency(&frequenceStart);
-            }
-
-            t += (float)XM_PI * 0.125f;
-            engine.Render(i, t, bPerfMode);
+            D3DEngine engine(formatsToTest[currentTest]);
 
             if (bPerfMode)
             {
-                if (i == 0)
-                {
-                    //
-                    // Wait for the 1st frame to finish to account for the GPU paging cost
-                    //
+                pd3dDevice = engine.GetDevice();
+                pd3dContext = engine.GetContext();
 
-                    DWORD dwWaitResult;
-
-                    pDxgiDev2->EnqueueSetEvent(hQueueEvent);
-
-                    dwWaitResult = WaitForSingleObject(
-                        hQueueEvent,    // event handle
-                        INFINITE);      // indefinite wait
-
-                    ResetEvent(hQueueEvent);
-                }
-                else if (i < (frames - 1))
-                {
-                    pd3dContext->Flush();
-                }
-                else
-                {
-                    pDxgiDev2->EnqueueSetEvent(hQueueEvent);
-                }
+                InitPerf();
             }
-        }
 
-        if (bPerfMode)
-        {
-            DWORD dwWaitResult;
-
-            dwWaitResult = WaitForSingleObject(
-                hQueueEvent,    // event handle
-                INFINITE);      // indefinite wait
-
-            if (dwWaitResult == WAIT_OBJECT_0)
+            float t = 0.0f;
+            for (UINT i = 0; i < frames; i++)
             {
-                QueryPerformanceCounter(&framesEnd);
-                QueryPerformanceFrequency(&frequenceEnd);
-
-                UINT measuredFrames = frames - 1;
-
-                if (frequenceStart.QuadPart != frequenceEnd.QuadPart)
+                // Skip the 1st frame for shader compilation time
+                if (bPerfMode && (i == 1))
                 {
-                    printf("Perf frequence changed during %d frames of rendering", measuredFrames);
+                    QueryPerformanceCounter(&framesStart);
+                    QueryPerformanceFrequency(&frequenceStart);
                 }
 
-                printf(
-                    "Average rendering time for (%d x %d) from %d frames: %I64d ms\n",
-                    kWidth,
-                    kHeight,
-                    measuredFrames,
-                    ((framesEnd.QuadPart - framesStart.QuadPart) * 1000) / (measuredFrames*frequenceEnd.QuadPart));
+                t += (float)XM_PI * 0.125f;
+                engine.Render(i, t, bPerfMode);
+
+                if (bPerfMode)
+                {
+                    if (i == 0)
+                    {
+                        //
+                        // Wait for the 1st frame to finish to account for the GPU paging cost
+                        //
+
+                        DWORD dwWaitResult;
+
+                        pDxgiDev2->EnqueueSetEvent(hQueueEvent);
+
+                        dwWaitResult = WaitForSingleObject(
+                            hQueueEvent,    // event handle
+                            INFINITE);      // indefinite wait
+
+                        ResetEvent(hQueueEvent);
+                    }
+                    else if (i < (frames - 1))
+                    {
+                        pd3dContext->Flush();
+                    }
+                    else
+                    {
+                        pDxgiDev2->EnqueueSetEvent(hQueueEvent);
+                    }
+                }
             }
 
-            UninitPerf();
+            if (bPerfMode)
+            {
+                DWORD dwWaitResult;
+
+                dwWaitResult = WaitForSingleObject(
+                    hQueueEvent,    // event handle
+                    INFINITE);      // indefinite wait
+
+                if (dwWaitResult == WAIT_OBJECT_0)
+                {
+                    QueryPerformanceCounter(&framesEnd);
+                    QueryPerformanceFrequency(&frequenceEnd);
+
+                    UINT measuredFrames = frames - 1;
+
+                    if (frequenceStart.QuadPart != frequenceEnd.QuadPart)
+                    {
+                        printf("Perf frequence changed during %d frames of rendering", measuredFrames);
+                    }
+
+                    printf(
+                        "Average rendering time for (%d x %d) from %d frames: %I64d ms\n",
+                        kWidth,
+                        kHeight,
+                        measuredFrames,
+                        ((framesEnd.QuadPart - framesStart.QuadPart) * 1000) / (measuredFrames*frequenceEnd.QuadPart));
+                }
+
+                UninitPerf();
+            }
+
+            printf("Success\n");
         }
 
-        printf("Success\n");
-    }
-
-    catch (std::exception & e)
-    {
-        printf("ERROR: %s\n", e.what());
+        catch (const std::exception &e)
+        {
+            printf("ERROR: %s\n", e.what());
+        }
     }
 
     printf("Done\n");
