@@ -673,11 +673,11 @@ RosKmdRapAdapter::GenerateRenderingControlList(
     tileRenderingModeConfig.WidthInPixels = (USHORT)pRenderTarget->m_mip0Info.TexelWidth;
     tileRenderingModeConfig.HeightInPixels = (USHORT)pRenderTarget->m_mip0Info.TexelHeight;
 
-    NT_ASSERT(pRenderTarget->m_hwFormat == X8888);
-    tileRenderingModeConfig.NonHDRFrameBufferColorFormat = 1; // rgba8888
+    tileRenderingModeConfig.NonHDRFrameBufferColorFormat = static_cast<USHORT>(
+        Vc4FrameBufferColorFormatFromDxgiFormat(pRenderTarget->m_format));
 
-    NT_ASSERT(pRenderTarget->m_hwLayout == Linear);
-    tileRenderingModeConfig.MemoryFormat = 0; // linear
+    tileRenderingModeConfig.MemoryFormat = static_cast<USHORT>(
+        Vc4MemoryFormatFromRosHwLayout(pRenderTarget->m_hwLayout));
 
     *pVC4TileRenderingModeConfig = tileRenderingModeConfig;
 
@@ -722,11 +722,13 @@ RosKmdRapAdapter::GenerateRenderingControlList(
         {
             loadTileBufColor.BufferToLoad = VC4_TILE_BUFFER_COLOR;
 
-            NT_ASSERT(pDmaBufInfo->m_pRenderTarget->m_hwLayout == Linear);
-            loadTileBufColor.Fortmat = pDmaBufInfo->m_pRenderTarget->m_hwLayout;
+            loadTileBufColor.Fortmat = static_cast<USHORT>(
+                Vc4MemoryFormatFromRosHwLayout(
+                    pDmaBufInfo->m_pRenderTarget->m_hwLayout));
 
-            NT_ASSERT(pDmaBufInfo->m_pRenderTarget->m_hwFormat == X8888);
-            loadTileBufColor.PixelColorFormat = VC4_TILE_BUFFER_PIXEL_FORMAT_RGBA8888;
+            loadTileBufColor.PixelColorFormat = static_cast<USHORT>(
+                Vc4TileBufferPixelFormatFromDxgiFormat(
+                    pDmaBufInfo->m_pRenderTarget->m_format));
 
             loadTileBufColor.MemoryBaseAddress = (pDmaBufInfo->m_RenderTargetPhysicalAddress + m_busAddressOffset) >> 4;
 

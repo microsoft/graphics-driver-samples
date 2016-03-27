@@ -227,6 +227,7 @@ void RosUmdDevice::CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResou
 
     if (pCreateResource->BindFlags & D3D10_DDI_BIND_CONSTANT_BUFFER)
     {
+        // XXX[jordanrh] Leaked!
         pResource->m_pSysMemCopy = new BYTE[pResource->m_hwSizeBytes];
 
         if (NULL == pResource->m_pSysMemCopy)
@@ -242,6 +243,8 @@ void RosUmdDevice::CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResou
         return;
     }
 
+    // TODO[jordanrh]: create staging resources in system memory
+    
     // Call kernel mode allocation routine
     {
         RosAllocationExchange* rosAllocationExchange = pResource;
@@ -273,19 +276,20 @@ void RosUmdDevice::CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResou
         pResource->m_hKMResource = allocate.hKMResource;
         pResource->m_hKMAllocation = allocationInfo.hAllocation;
     }
-    
+
      ROS_LOG_TRACE(
         "Creating resource. "
-        "(m_hwWidth/HeightPixels = %u,%u  "
-        "m_hwPitchBytes = %u, "
+        "(m_mip0Info.TexelWidth/Height = %u,%u "
+        "m_hwWidth/HeightPixels = %u,%u  "
         "m_hwSizeBytes = %u, "
         "m_isPrimary = %d, "
         "m_hRTResource = 0x%p, "
         "m_hKMResource = 0x%x, "
         "m_hKMAllocation = 0x%x)",
+        pResource->m_mip0Info.TexelWidth,
+        pResource->m_mip0Info.TexelHeight,
         pResource->m_hwWidthPixels,
         pResource->m_hwHeightPixels,
-        pResource->m_hwPitchBytes,
         pResource->m_hwSizeBytes,
         pResource->m_isPrimary,
         pResource->m_hRTResource.handle,
@@ -313,13 +317,14 @@ void RosUmdDevice::CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResou
             {
                 BYTE *  pSrc = (BYTE *)pCreateResource->pInitialDataUP[0].pSysMem;
                 BYTE *  pDst = (BYTE *)lock.pData;
+                const UINT destPitch = pResource->Pitch();
 
                 for (UINT i = 0; i < pResource->m_mip0Info.TexelHeight; i++)
                 {
                     memcpy(pDst, pSrc, pCreateResource->pInitialDataUP[0].SysMemPitch);
 
                     pSrc += pCreateResource->pInitialDataUP[0].SysMemPitch;
-                    pDst += pResource->m_hwPitchBytes;
+                    pDst += destPitch;
                 }
             }
             else
@@ -427,15 +432,64 @@ void RosUmdDevice::ResourceCopy(
         if (pDestinationResource->m_usage == D3D10_DDI_USAGE_STAGING &&
             pSourceResource->m_usage == D3D10_DDI_USAGE_STAGING)
         {
-            assert(pSourceResource->m_hwSizeBytes == pDestinationResource->m_hwSizeBytes);
+            NT_ASSERT(
+                (pSourceResource->m_hwLayout == pDestinationResource->m_hwLayout) &&
+                (pSourceResource->m_hwSizeBytes == pDestinationResource->m_hwSizeBytes));
             memcpy(destinationLock.pData, sourceLock.pData, pDestinationResource->m_hwSizeBytes);
         }
         else if (pDestinationResource->m_usage == D3D10_DDI_USAGE_STAGING &&
             pSourceResource->m_usage == D3D10_DDI_USAGE_DEFAULT)
         {
             // TODO(bhouse) Implement CPU side tile to linear swizzle
-            assert(pSourceResource->m_hwSizeBytes >= pDestinationResource->m_hwSizeBytes);
-            memcpy(destinationLock.pData, sourceLock.pData, pDestinationResource->m_hwSizeBytes);
+            if (pSourceResource->m_format != pDestinationResource->m_format)
+            {
+                ROS_LOG_ERROR(
+                    "Unsupported format conversion. "
+                    "(pSourceResource->m_format = %d, "
+                    "pDestinationResource->m_format = %d)",
+                    pSourceResource->m_format,
+                    pDestinationResource->m_format);
+                throw RosUmdException(E_INVALIDARG);
+            }
+                
+            if (pSourceResource->m_hwLayout == pDestinationResource->m_hwLayout)
+            {
+                // no swizzling necessary
+                assert(pSourceResource->m_hwSizeBytes >= pDestinationResource->m_hwSizeBytes);
+                memcpy(destinationLock.pData, sourceLock.pData, pDestinationResource->m_hwSizeBytes);
+            }
+            else
+            {
+                switch (pSourceResource->m_hwLayout) {
+                case RosHwLayout::Linear:
+                    switch (pDestinationResource->m_hwLayout) {
+                    case RosHwLayout::Tiled:
+                        NT_ASSERT(false); // not implemented
+                        break;
+                    default:
+                        NT_ASSERT(false);
+                    }
+                    break;
+                case RosHwLayout::Tiled:
+                    switch (pDestinationResource->m_hwLayout) {
+                    case RosHwLayout::Linear:
+                        // Tiled to linear
+                        RosUmdResource::CopyTFormatToLinear(
+                            sourceLock.pData,
+                            pSourceResource->WidthInTiles(),
+                            pSourceResource->HeightInTiles(),
+                            destinationLock.pData,
+                            pDestinationResource->Pitch(),
+                            pDestinationResource->m_mip0Info.TexelHeight);
+                        break;
+                    default:
+                        NT_ASSERT(false);
+                    }
+                    break;
+                default:
+                    throw RosUmdException(E_INVALIDARG);
+                }
+            }
         }
         else
         {
@@ -854,7 +908,8 @@ void RosUmdDevice::CheckDirectFlipSupport(
     *pSupported =
         (directFlipResourcePtr->m_mip0Info == currentResourcePtr->m_mip0Info) &&
         (directFlipResourcePtr->m_format == currentResourcePtr->m_format) &&
-        (directFlipResourcePtr->m_hwPitchBytes == currentResourcePtr->m_hwPitchBytes) &&
+        (directFlipResourcePtr->m_hwLayout == currentResourcePtr->m_hwLayout) &&
+        (directFlipResourcePtr->Pitch() == currentResourcePtr->Pitch()) &&
         (directFlipResourcePtr->m_hwSizeBytes == currentResourcePtr->m_hwSizeBytes);
 }
 
@@ -1298,12 +1353,7 @@ void RosUmdDevice::SetScissorRects(UINT NumScissorRects, UINT ClearScissorRects,
 void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
 {
     RosUmdResource * pRenderTarget = RosUmdResource::CastFrom(m_renderTargetViews[0]->m_create.hDrvResource);
-
-    // TODO[indyz] : Update RosHwFormat
-    assert(pRenderTarget->m_hwFormat == RosHwFormat::X8888);
-    // TODO[indyz] : Handle T and LT tiled formats
-    assert(pRenderTarget->m_hwLayout == RosHwLayout::Linear);
-
+    
     //
     // Update shaders
     //
@@ -1414,8 +1464,8 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
         pVC4TileBinningModeConfig->TileStateDataArrayBaseAddress = 0xDEADBEEF;
 #endif
 
-        pVC4TileBinningModeConfig->WidthInTiles = (BYTE)pRenderTarget->m_hwWidthTiles;
-        pVC4TileBinningModeConfig->HeightInTiles = (BYTE)pRenderTarget->m_hwHeightTiles;
+        pVC4TileBinningModeConfig->WidthInTiles = static_cast<BYTE>(pRenderTarget->WidthInBinningTiles());
+        pVC4TileBinningModeConfig->HeightInTiles = static_cast<BYTE>(pRenderTarget->HeightInBinningTiles());
 
         pVC4TileBinningModeConfig->AutoInitialiseTileStateDataArray = 1;
 
@@ -1599,7 +1649,7 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
     MoveToNextCommand(pVC4ViewportOffset, pVC4Branch, curCommandOffset);
 
     UINT vc4NVShaderStateRecordOffset = curCommandOffset + sizeof(VC4Branch);
-    AlignValue(vc4NVShaderStateRecordOffset, 16);
+    vc4NVShaderStateRecordOffset = AlignValue(vc4NVShaderStateRecordOffset, 16);
 
     *pVC4Branch = vc4Branch;
 
@@ -1807,7 +1857,7 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
     MoveToNextCommand(pVC4FlatShadeFlags, pVC4Branch, curCommandOffset);
 
     UINT vc4GLShaderStateRecordOffset = curCommandOffset + sizeof(VC4Branch);
-    AlignValue(vc4GLShaderStateRecordOffset, 16);
+    vc4GLShaderStateRecordOffset = AlignValue(vc4GLShaderStateRecordOffset, 16);
 
     *pVC4Branch = vc4Branch;
 
@@ -2152,19 +2202,8 @@ void RosUmdDevice::WriteUniforms(
                 // TODO[indyz]: Support all VC4 texture formats and tiling
                 //
 
-                assert(pTexture->m_hwFormat == RosHwFormat::X8888);
-
-                VC4TextureType  vc4TextureType;
-
-                if (pTexture->m_hwLayout == RosHwLayout::Tiled)
-                {
-                    vc4TextureType.TextureType = VC4_TEX_RGBX8888;
-                }
-                else
-                {
-                    vc4TextureType.TextureType = VC4_TEX_RGBA32R;
-                }
-
+                VC4TextureType vc4TextureType;
+                vc4TextureType.TextureType = pTexture->GetVc4TextureType();
                 pVC4TexConfigParam0->TYPE = vc4TextureType.TYPE;
 
                 allocListIndex = m_commandBuffer.UseResource(pTexture, false);

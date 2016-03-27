@@ -1919,9 +1919,7 @@ NTSTATUS RosKmAdapter::GetStandardAllocationDriverData (
         allocParams->m_hwHeightPixels = surfData->Height;
 
         NT_ASSERT(surfData->Format == D3DDDIFMT_A8R8G8B8);
-        allocParams->m_hwFormat = RosHwFormat::X8888;
-        allocParams->m_hwPitchBytes = surfData->Width * 4;
-        allocParams->m_hwSizeBytes = allocParams->m_hwPitchBytes * surfData->Height;
+        allocParams->m_hwSizeBytes = surfData->Width * 4 * surfData->Height;
 
         return STATUS_SUCCESS;
     }
@@ -1937,10 +1935,10 @@ NTSTATUS RosKmAdapter::GetStandardAllocationDriverData (
         allocParams->m_resourceDimension = D3D10DDIRESOURCE_TEXTURE2D;
         allocParams->m_mip0Info.TexelWidth = surfData->Width;
         allocParams->m_mip0Info.TexelHeight = surfData->Height;
-        allocParams->m_mip0Info.TexelDepth = 0;
+        allocParams->m_mip0Info.TexelDepth = 1;
         allocParams->m_mip0Info.PhysicalWidth = surfData->Width;
         allocParams->m_mip0Info.PhysicalHeight = surfData->Height;
-        allocParams->m_mip0Info.PhysicalDepth = 0;
+        allocParams->m_mip0Info.PhysicalDepth = 1;
         allocParams->m_usage = D3D10_DDI_USAGE_DEFAULT;
 
         // The shadow allocation does not get flipped directly
@@ -1968,11 +1966,9 @@ NTSTATUS RosKmAdapter::GetStandardAllocationDriverData (
         allocParams->m_hwHeightPixels = surfData->Height;
 
         NT_ASSERT(surfData->Format == D3DDDIFMT_A8R8G8B8);
-        allocParams->m_hwFormat = RosHwFormat::X8888;
-        allocParams->m_hwPitchBytes = surfData->Width * 4;
-        allocParams->m_hwSizeBytes = allocParams->m_hwPitchBytes * surfData->Height;
+        allocParams->m_hwSizeBytes = surfData->Width * 4 * surfData->Height;
 
-        Args->pCreateShadowSurfaceData->Pitch = allocParams->m_hwPitchBytes;
+        Args->pCreateShadowSurfaceData->Pitch = surfData->Width * 4; //allocParams->m_hwPitchBytes;
         return STATUS_SUCCESS;
     }
     case D3DKMDT_STANDARDALLOCATION_STAGINGSURFACE:

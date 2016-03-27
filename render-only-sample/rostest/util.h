@@ -12,6 +12,20 @@
 #define LogError(fmt, ...) WEX::Logging::Log::Error( \
     WEX::Common::NoThrowString().Format((fmt), __VA_ARGS__))
 
+template <typename Fn>
+struct _Finally : public Fn
+{
+    _Finally (Fn&& Func) : Fn(std::forward<Fn>(Func)) {}
+    _Finally (const _Finally&); // generate link error if copy constructor is called
+    ~_Finally () { this->operator()(); }
+};
+
+template <typename Fn>
+inline _Finally<Fn> Finally (Fn&& Func)
+{
+    return {std::forward<Fn>(Func)};
+}
+    
 template <typename TFunction>
 HRESULT RunOnUIThread (const TFunction& Function)
 {
@@ -174,4 +188,6 @@ void CreateDevice (
     _COM_Outptr_ ID3D11DeviceContext3** ContextPPtr
     );
 
+void SaveTextureToBmp (PCWSTR FileName, ID3D11Texture2D* Texture);
+    
 #endif // _ROSTEST_UTIL_H_
