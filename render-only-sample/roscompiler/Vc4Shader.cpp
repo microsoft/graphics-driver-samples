@@ -838,11 +838,14 @@ void Vc4Shader::HLSL_ParseDecl()
         {
         case D3D10_SB_OPCODE_DCL_RESOURCE:
             HLSL_GetShaderInstruction(this->HLSLParser, Inst);
-            VC4_ASSERT(cResource < 8);
-            this->ResourceDimension[cResource++] = Inst.m_ResourceDecl.SRVInfo.Dimension;
+            VC4_ASSERT(Inst.m_Operands[0].m_Index[0].m_RegIndex < ARRAYSIZE(this->ResourceDimension));
+            this->ResourceDimension[Inst.m_Operands[0].m_Index[0].m_RegIndex] = Inst.m_ResourceDecl.SRVInfo.Dimension;
+            cResources++;
             break;
         case D3D10_SB_OPCODE_DCL_CONSTANT_BUFFER:
             HLSL_GetShaderInstruction(this->HLSLParser, Inst);
+            // Issue 37: VC4 Find_Vc4Register_I needs to implement dynamic index support for constant buffers
+            VC4_ASSERT(Inst.m_ResourceDecl.CBInfo.AccessPattern == D3D10_SB_CONSTANT_BUFFER_IMMEDIATE_INDEXED);
             cConstants++;
             break;
         case D3D10_SB_OPCODE_DCL_SAMPLER:

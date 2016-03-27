@@ -206,7 +206,7 @@ public:
         cTemp(0),
         cSampler(0),
         cConstants(0),
-        cResource(0)
+        cResources(0)
     { 
         memset(this->InputRegister, 0, sizeof(this->InputRegister));
         memset(this->OutputRegister, 0, sizeof(this->OutputRegister));
@@ -399,8 +399,7 @@ private:
         case D3D10_SB_OPERAND_TYPE_CONSTANT_BUFFER:
             VC4_ASSERT(c.m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
             VC4_ASSERT(c.m_IndexDimension == D3D10_SB_OPERAND_INDEX_2D);
-            VC4_ASSERT(c.m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
-            VC4_ASSERT(c.m_IndexType[1] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
+            VC4_ASSERT(c.m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32); // constant buffer slot
 
             {
                 Vc4Register unif(VC4_QPU_ALU_REG_A, VC4_QPU_RADDR_UNIFORM); // TODO: fix hardcoded REG_A.
@@ -412,16 +411,28 @@ private:
                 u.Type = VC4_UNIFORM_TYPE_USER_CONSTANT;
                 u.userConstant.bufferSlot = c.m_Index[0].m_RegIndex;
 
-                switch (c.m_ComponentSelection)
+                switch (c.m_IndexType[1])
                 {
-                case D3D10_SB_OPERAND_4_COMPONENT_SWIZZLE_MODE:
-                    u.userConstant.bufferOffset = (c.m_Index[1].m_RegIndex * 4) + c.m_Swizzle[swizzleIndex];
+                case D3D10_SB_OPERAND_INDEX_IMMEDIATE32:
+                    switch (c.m_ComponentSelection)
+                    {
+                    case D3D10_SB_OPERAND_4_COMPONENT_SWIZZLE_MODE:
+                        u.userConstant.bufferOffset = (c.m_Index[1].m_RegIndex * 4) + c.m_Swizzle[swizzleIndex];
+                        break;
+                    case D3D10_SB_OPERAND_4_COMPONENT_SELECT_1_MODE:
+                        u.userConstant.bufferOffset = (c.m_Index[1].m_RegIndex * 4) + c.m_ComponentName;
+                        break;
+                    default:
+                        VC4_ASSERT(false);
+                    }
                     break;
-                case D3D10_SB_OPERAND_4_COMPONENT_SELECT_1_MODE:
-                    u.userConstant.bufferOffset = (c.m_Index[1].m_RegIndex * 4) + c.m_ComponentName;
+                case D3D10_SB_OPERAND_INDEX_RELATIVE:
+                    // Issue 37: VC4 Find_Vc4Register_I needs to implement dynamic index support for constant buffers
+                    VC4_ASSERT(false);
                     break;
                 default:
                     VC4_ASSERT(false);
+                    break;
                 }
 
                 this->AddUniformReference(u);
@@ -675,6 +686,7 @@ private:
 
     uint8_t cSampler;
     uint8_t cConstants;
+    uint8_t cResources;
 
     // Register map
     uint8_t cInput;
@@ -686,8 +698,7 @@ private:
     uint8_t cTemp;
     Vc4Register TempRegister[4][4];
 
-    uint8_t cResource;
-    uint32_t ResourceDimension[8];
+     uint32_t ResourceDimension[16];
 
     // TEMPORARY Register Usage Map
     //
