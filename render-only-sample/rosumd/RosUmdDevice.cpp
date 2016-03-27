@@ -1277,18 +1277,22 @@ void RosUmdDevice::SetRasterizerState(RosUmdRasterizerState * pRasterizerState)
 
 void RosUmdDevice::SetScissorRects(UINT NumScissorRects, UINT ClearScissorRects, const D3D10_DDI_RECT *pRects)
 {
-    // Issue #36
-    assert((NumScissorRects + ClearScissorRects) <= 1);
+#if VC4
+    // VC4 can handle only 1 scissor rect, so take 1st one only.
+    assert(NumScissorRects <= 1);
     if (NumScissorRects)
     {
+        assert(pRects);
         m_scissorRectSet = true;
         m_scissorRect = *pRects;
     }
-    if (ClearScissorRects)
+    else if (ClearScissorRects)
     {
+        // When NumScissorRects is zero and ClearScissorRects is not zero, then clear current scissor.
         m_scissorRectSet = false;
         ZeroMemory(&m_scissorRect, sizeof(m_scissorRect));
     }
+#endif // VC4
 }
 
 void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)

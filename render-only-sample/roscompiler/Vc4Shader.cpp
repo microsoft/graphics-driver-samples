@@ -538,6 +538,9 @@ void Vc4Shader::Emit_with_Add_pipe(CInstruction &Inst)
                     case D3D10_SB_OPCODE_MIN:
                         Vc4Inst.Vc4_a_FMIN(_dst, src[0], src[1]);
                         break;
+                    case D3D10_SB_OPCODE_IADD:
+                        Vc4Inst.Vc4_a_IADD(_dst, src[0], src[1]);
+                        break;
                     default:
                         VC4_ASSERT(false);
                     }
@@ -1036,6 +1039,7 @@ HRESULT Vc4Shader::Translate_VS()
             case D3D10_SB_OPCODE_ADD:
             case D3D10_SB_OPCODE_MAX:
             case D3D10_SB_OPCODE_MIN:
+            case D3D10_SB_OPCODE_IADD:
                 this->Emit_with_Add_pipe(Inst);
                 break;
             case D3D10_SB_OPCODE_DP2:

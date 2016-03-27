@@ -298,6 +298,11 @@ public:
         Vc4_a_Inst(VC4_QPU_OPCODE_ADD_FTOI, dst, src, cond);
     }
 
+    void Vc4_a_IADD(Vc4Register dst, Vc4Register src1, Vc4Register src2, uint8_t cond = VC4_QPU_COND_ALWAYS)
+    {
+        Vc4_a_Inst(VC4_QPU_OPCODE_ADD_ADD, dst, src1, src2, cond);
+    }
+
     void Vc4_a_MOV(Vc4Register dst, Vc4Register src, uint8_t cond = VC4_QPU_COND_ALWAYS)
     {
         Vc4_a_Inst(VC4_QPU_OPCODE_ADD_OR, dst, src, cond);
