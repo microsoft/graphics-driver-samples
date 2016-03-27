@@ -17,7 +17,6 @@
 #include "RosContext.h"
 
 #include "Vc4Hw.h"
-#include <memory>
 
 RosUmdResource::RosUmdResource() :
     m_signature(_SIGNATURE::CONSTRUCTED),
