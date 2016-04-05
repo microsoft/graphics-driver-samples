@@ -2,9 +2,9 @@
 
 This project is focused on providing Windows graphics driver samples.
 
-The first sample being developed is a Windows render only sample driver for the Raspberry Pi 2.
+The first sample being developed is a Windows graphics driver for the Raspberry Pi 2.  This is a sample driver intended to demonstrate how to write a graphics driver for the Windows platform.  The driver is a functioning graphics driver on the Raspberry Pi 2 but it is not a fully featured driver.
 
-Work on the render only sample driver was started in August 2015 with the understanding that a fully featured driver may take one to two years to complete.
+Work on the driver was started in August 2015.
 
 Anyone wishing to contribute to this project should recognize that this project is managed by a team of professional developers and there is an expectation that all contributing members of community should be be polite, respectful and honest.
 
@@ -12,46 +12,33 @@ All code within this project is covered by the MIT license with Microsoft as the
 
 If you wish to get involved in the project, please email grfxdrvsamples@microsoft.com and include how you wish to contribute.
 
-# Render Only Driver Status
+# Sample Graphics Driver Status
 
-The render only driver builds and installs on a raspberry pi 2 and supports a variety of operations but is currently not ready for general DX usage.  The driver is still in the early stages of development.  We are currently working on getting a functional shader compiler working to support basic rendering operations.
+The sample driver builds and installs on a raspberry pi 2 and supports a variety of operations.  The driver is still in the early stages of development.  The driver is capable of some basic D3D rendering including the ability to run a canonical demo application called Dolphin.
+
+Note, due to limitations of the Raspberry Pi 2 the sample driver running on the Raspberry Pi 2 will never be able to fully support D3D and any usage of the driver must take into account the limitations of the driver and the underlying hardware.
 
 # Roles
 
 ##Project Coordinator
 
-There is only one active project coordinator who oversees all other aspects of the project.  This role is currently filled by the graphics driver development lead at Microsoft.
+There is only one active project coordinator who oversees all aspects of the project.  This role is currently filled by a development engineer at Microsoft.
 
-##Team Lead
+##Microsoft Developer
 
-The project has several teams contributing to the project.  In order to coordinate the activities of these different teams, each team has assigned a team lead who is responsible for managing and overseeing the development activities within the team.
-
-Currently, the teams are:
-- Microsoft Graphics Driver (MGD) Team
-- Microsoft Internet of Things (IOT) Team
-- Raspberry Pi Foundation (RPF) Team
-
-##Team Developer
-
-Individual team developers contribute source to the project following the submission process outlined below without further review.
+Individual microsoft developers contribute source to the project following the submission process outlined below without further review.
 
 ##Solo Developer
 
-Individuals not part of a team contribute source to the project following the submission process outlined below but those submissions will be reviewed by the Project Coordinator before inclusion in the project. It is highly recommended that solo developers work with the project coordinator prior to submission to ensure that their contributions are in aligned with the goals of the project, not already being addressed by other contributors and are likely to be accepted once the work is complete.
+Individuals not part of Microsoft contribute source to the project following the submission process outlined below but those submissions will be reviewed by the Project Coordinator before inclusion in the project. It is highly recommended that solo developers work with the project coordinator prior to submission to ensure that their contributions are in aligned with the goals of the project, not already being addressed by other contributors and are likely to be accepted once the work is complete.
 
 # Support
 
 There is currently no active support for how to use the sample driver beyond what is documented in the Wiki.
 
-# Decision-Making Process
+# Contribution Process By Microsoft Developers
 
-Code ownership across the project will be partitioned into areas assigned to one of the teams.  In general terms, the MGD team will own all generic driver plumbing dealing with Windows DDI and the RPF team will own all code that is hardware specfic.  Design and implemenation details and all other related decisions regarding an area is owned by the corresponding owning team.
-
-Architecture and design decisions that span areas will be discussed among the teams at a weekly conference call until a general agreement is reached.
-
-# Contribution Process By Team Developers
-
-Every team member is expected to ensure that the driver compiles (X64&ARM) and successfully passes both RosTest and BasicTests when run on both within a virtual machine (X64) and a Raspberry Pi 2 (ARM).
+Every Microsoft developer is expected to ensure that the driver compiles (X64&ARM) and successfully passes both RosTest and BasicTests when run on both within a virtual machine (X64) and a Raspberry Pi 2 (ARM).
 
 # Contribution Process By Solo Developers
 
