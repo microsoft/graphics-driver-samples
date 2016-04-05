@@ -45,6 +45,9 @@
     <ClInclude Include="Vc4Shader.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="roscompilerdebug.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="roscompiler.cpp">

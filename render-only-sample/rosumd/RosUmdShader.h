@@ -1,8 +1,7 @@
 #pragma once
 
-#include "d3dumddi_.h"
 #include "RosUmdDevice.h"
-#include "..\roscompiler\roscompiler.h"
+#include <roscompiler.h>
 
 class RosUmdShader
 {
@@ -32,6 +31,27 @@ public:
     {
         return &m_hwShaderCode;
     }
+
+    UINT * GetHLSLCode()
+    {
+        return m_pCode;
+    }
+
+    UINT GetShaderInputCount()
+    {
+        return m_pCompiler->GetShaderInputCount();
+    }
+
+    UINT GetShaderOutputCount()
+    {
+        return m_pCompiler->GetShaderOutputCount();
+    }
+
+#if VC4
+
+    VC4_UNIFORM_FORMAT * GetShaderUniformFormat(UINT Type, UINT *pUniformFormatEntries);
+    
+#endif
 
 protected:
 

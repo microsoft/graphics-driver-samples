@@ -170,7 +170,7 @@ typedef unsigned __int64 VC4_QPU_INSTRUCTION; // every QPU instruction is 64bits
 #define VC4_QPU_WADDR_ACC5 37 // A: replicate pixel 0 per quad, B: replicate SIMD element 0
 #define VC4_QPU_WADDR_HOSTINT 38
 #define VC4_QPU_WADDR_NOP 39
-#define VC4_QPU_WADDR_UNIFORM 40
+#define VC4_QPU_WADDR_UNIFORM_ADDRESS 40
 #define VC4_QPU_WADDR_QUAD_X 41 // regfile A
 #define VC4_QPU_WADDR_QUAD_Y 41 // regfile B
 #define VC4_QPU_WADDR_MS_FLAGS 42 // regfile A
@@ -670,8 +670,8 @@ _declspec(selectany) VC4QPU_TOKENLOOKUP_ADDR_TABLE VC4_QPU_WADDR_LOOKUP[] =
              VC4_QPU_WADDR_NOP,     _TEXT("") },
     { true,  VC4_QPU_WADDR_NOP,     _TEXT("nop"),
              VC4_QPU_WADDR_NOP,     _TEXT("nop") },
-    { true,  VC4_QPU_WADDR_UNIFORM, _TEXT("uniform"),
-             VC4_QPU_WADDR_UNIFORM, _TEXT("uniform") },
+    { true,  VC4_QPU_WADDR_UNIFORM_ADDRESS, _TEXT("uniform_address"),
+             VC4_QPU_WADDR_UNIFORM_ADDRESS, _TEXT("uniform_address") },
     { false, VC4_QPU_WADDR_QUAD_X,  _TEXT("quad_X"),   // X for regfile A.
              VC4_QPU_WADDR_QUAD_Y,  _TEXT("quad_Y") }, // Y for regfile B.
     { false, VC4_QPU_WADDR_MS_FLAGS, _TEXT("ms_flags"),   // regfile A.

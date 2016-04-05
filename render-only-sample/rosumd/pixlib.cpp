@@ -1,4 +1,8 @@
 
+#include "precomp.h"
+
+#include "RosUmdLogging.h"
+#include "pixlib.tmh"
 
 #include "pixel.cpp"
 
@@ -94,8 +98,8 @@ static UINT s_BytesPerPixel[] =
     (UINT)-16,  // DXGI_FORMAT_BC5_SNORM
     2,          // DXGI_FORMAT_B5G6R5_UNORM
     2,          // DXGI_FORMAT_B5G5R5A1_UNORM
-    2,          // DXGI_FORMAT_B8G8R8A8_UNORM
-    2,          // DXGI_FORMAT_B8G8R8X8_UNORM
+    4,          // DXGI_FORMAT_B8G8R8A8_UNORM
+    4,          // DXGI_FORMAT_B8G8R8X8_UNORM
     4,          // DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM
     4,          // DXGI_FORMAT_B8G8R8A8_TYPELESS
     4,          // DXGI_FORMAT_B8G8R8A8_UNORM_SRGB

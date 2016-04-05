@@ -117,18 +117,6 @@ public:
 
     static NTSTATUS
         __stdcall
-        DdiQueryDependentEngineGroup(
-            IN_CONST_HANDLE                             hAdapter,
-            INOUT_DXGKARG_QUERYDEPENDENTENGINEGROUP     pQueryDependentEngineGroup);
-
-    static NTSTATUS
-        __stdcall
-        DdiGetScanLine(
-            IN_CONST_HANDLE             hAdapter,
-            INOUT_PDXGKARG_GETSCANLINE  pGetScanLine);
-
-    static NTSTATUS
-        __stdcall
         DdiControlInterrupt(
             IN_CONST_HANDLE                 hAdapter,
             IN_CONST_DXGK_INTERRUPT_TYPE    InterruptType,
@@ -184,24 +172,6 @@ public:
         DdiEscape(
             IN_CONST_HANDLE                 hAdapter,
             IN_CONST_PDXGKARG_ESCAPE        pEscape);
-
-    static NTSTATUS
-        __stdcall
-        DdiSetPalette(
-            IN_CONST_HANDLE                 hAdapter,
-            IN_CONST_PDXGKARG_SETPALETTE    pSetPalette);
-
-    static NTSTATUS
-        __stdcall
-        DdiSetPointerPosition(
-            IN_CONST_HANDLE                         hAdapter,
-            IN_CONST_PDXGKARG_SETPOINTERPOSITION    pSetPointerPosition);
-
-    static NTSTATUS
-        __stdcall
-        DdiSetPointerShape(
-            IN_CONST_HANDLE                     hAdapter,
-            IN_CONST_PDXGKARG_SETPOINTERSHAPE   pSetPointerShape);
 
     static NTSTATUS
         __stdcall
@@ -264,6 +234,45 @@ public:
     static void
         DdiResetDevice(
             IN_CONST_PVOID  MiniportDeviceContext);
+
+
+public: // PAGED
+
+    static DXGKDDI_OPENALLOCATIONINFO DdiOpenAllocation;
+    static DXGKDDI_QUERYDEPENDENTENGINEGROUP DdiQueryDependentEngineGroup;
+
+};
+
+//
+// DDIs that don't have to be registered in render only mode.
+//
+class RosKmdDisplayDdi
+{
+public:  // NONPAGED
+
+    static DXGKDDI_SETVIDPNSOURCEADDRESS DdiSetVidPnSourceAddress;
+
+private: // NONPAGED
+public: // PAGED
+
+    static DXGKDDI_SETPALETTE DdiSetPalette;
+    static DXGKDDI_SETPOINTERPOSITION DdiSetPointerPosition;
+    static DXGKDDI_SETPOINTERSHAPE DdiSetPointerShape;
+
+    static DXGKDDI_ISSUPPORTEDVIDPN DdiIsSupportedVidPn;
+    static DXGKDDI_RECOMMENDFUNCTIONALVIDPN DdiRecommendFunctionalVidPn;
+    static DXGKDDI_ENUMVIDPNCOFUNCMODALITY DdiEnumVidPnCofuncModality;
+    static DXGKDDI_SETVIDPNSOURCEVISIBILITY DdiSetVidPnSourceVisibility;
+    static DXGKDDI_COMMITVIDPN DdiCommitVidPn;
+    static DXGKDDI_UPDATEACTIVEVIDPNPRESENTPATH DdiUpdateActiveVidPnPresentPath;
+
+    static DXGKDDI_RECOMMENDMONITORMODES DdiRecommendMonitorModes;
+    static DXGKDDI_GETSCANLINE DdiGetScanLine;
+    static DXGKDDI_QUERYVIDPNHWCAPABILITY DdiQueryVidPnHWCapability;
+    static DXGKDDI_STOP_DEVICE_AND_RELEASE_POST_DISPLAY_OWNERSHIP
+        DdiStopDeviceAndReleasePostDisplayOwnership;
+
+private: // PAGED
 
 };
 

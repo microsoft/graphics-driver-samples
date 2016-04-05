@@ -1,10 +1,9 @@
 #pragma once
 
-#include "d3dumddi_.h"
-
 class RosUmdRenderTargetView
 {
 friend class RosUmdDevice;
+friend class RosCompiler;
 
 public:
 

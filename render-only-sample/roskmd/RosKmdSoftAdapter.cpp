@@ -1,3 +1,8 @@
+#include "precomp.h"
+
+#include "RosKmdLogging.h"
+#include "RosKmdSoftAdapter.tmh"
+
 #include "RosKmdSoftAdapter.h"
 #include "RosGpuCommand.h"
 
@@ -54,3 +59,12 @@ RosKmdSoftAdapter::ProcessRenderBuffer(
         }
     }
 }
+
+BOOLEAN RosKmdSoftAdapter::InterruptRoutine(
+    IN_ULONG        MessageNumber)
+{
+    MessageNumber;
+
+    return false;
+}
+

@@ -6,15 +6,6 @@
 //    Copyright (C) Microsoft.  All rights reserved.
 //
 
-extern "C" {
-#include <ntddk.h>
-#include <windef.h>
-#include <ntdef.h>
-#include <dispmprt.h>
-#include <ntintsafe.h>
-#include <ntstrsafe.h>
-}
-
 #include "RosAllocation.h"
 #include "RosAdapter.h"
 
@@ -55,7 +46,7 @@ const int C_ROSD_GPU_ENGINE_COUNT = 1;
 
 #if DBG
 
-#define BINNER_DBG  1
+// #define BINNER_DBG  1
 
 #endif
 

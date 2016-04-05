@@ -5,6 +5,11 @@
 // Copyright (C) Microsoft Corporation
 //
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#include "precomp.h"
+
+#include "RosUmdLogging.h"
+#include "RosUmdDevice.tmh"
+
 #include "RosUmdDevice.h"
 #include "RosUmdResource.h"
 #include "RosUmdDebug.h"
@@ -22,10 +27,6 @@
 #include "RosContext.h"
 #include "RosUmdUtil.h"
 
-#include <exception>
-#include <typeinfo>
-#include <new>
-
 #if VC4
 
 #include "Vc4Hw.h"
@@ -35,7 +36,33 @@
 
 #endif
 
-#include "math.h"
+static
+BOOLEAN _IntersectRect(RECT* CONST pDst, RECT CONST* CONST pSrc1, RECT CONST* CONST pSrc2)
+{
+    pDst->left = max(pSrc1->left, pSrc2->left);
+    pDst->right = min(pSrc1->right, pSrc2->right);
+
+    //
+    // Left must be less than right for a rect intersection.  Otherwise pDst
+    // is either an empty rect (left == right), or an invalid rect (left > right).
+    //
+    if (pDst->left < pDst->right)
+    {
+        pDst->top = max(pSrc1->top, pSrc2->top);
+        pDst->bottom = min(pSrc1->bottom, pSrc2->bottom);
+
+        //
+        // Top must be less than bottom for a rect intersection.  Otherwise pDst
+        // is either an empty rect (top == bottom), or an invalid rect (top > bottom).
+        //
+        if (pDst->top < pDst->bottom)
+        {
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
 
 //==================================================================================================================================
 //
@@ -50,14 +77,15 @@ RosUmdDevice::RosUmdDevice(
     m_pAdapter(pAdapter),
     m_Interface(pArgs->Interface),
     m_hRTDevice(pArgs->hRTDevice),
-    m_hRTCoreLayer(pArgs->hRTCoreLayer)
+    m_hRTCoreLayer(pArgs->hRTCoreLayer),
+    m_bPredicateValue(FALSE)
 {
     // Location of function table for runtime callbacks. Can not change these function pointers, as they are runtime-owned;
     // but the pointer should be saved. Do not cache function pointers, as the runtime may change the table entries at will.
     m_pMSKTCallbacks = pArgs->pKTCallbacks;
 
-    // Currently only support 11.1
-    assert(m_Interface == D3D11_1_DDI_INTERFACE_VERSION);
+    // Currently only support WDDM1.3 DDI
+    assert(m_Interface == D3DWDDM1_3_DDI_INTERFACE_VERSION);
     m_pMSUMCallbacks = pArgs->p11UMCallbacks;
 
     // Can change these function pointers in this table whenever the UM Driver has context. That's why the UM Driver can
@@ -66,13 +94,12 @@ RosUmdDevice::RosUmdDevice(
     // Immediately fill out the Device function table with default methods.
     m_PipelineLevel = D3D11DDI_EXTRACT_3DPIPELINELEVEL_FROM_FLAGS(pArgs->Flags);
 
-    m_p11_1DeviceFuncs = pArgs->p11_1DeviceFuncs;
-    *m_p11_1DeviceFuncs = RosUmdDeviceDdi::s_deviceFuncs11_1;
+    m_pWDDM1_3DeviceFuncs = pArgs->pWDDM1_3DeviceFuncs;
+    *m_pWDDM1_3DeviceFuncs = RosUmdDeviceDdi::s_deviceFuncsWDDM1_3;
 
-    assert(!IS_DXGI1_3_BASE_FUNCTIONS(pArgs->Interface, pArgs->Version));
-    assert(IS_DXGI1_2_BASE_FUNCTIONS(pArgs->Interface, pArgs->Version));
+    assert(IS_DXGI1_3_BASE_FUNCTIONS(pArgs->Interface, pArgs->Version));
 
-    *(pArgs->DXGIBaseDDI.pDXGIDDIBaseFunctions3) = RosUmdDeviceDdi::s_dxgiDeviceFuncs3;
+    *(pArgs->DXGIBaseDDI.pDXGIDDIBaseFunctions4) = RosUmdDeviceDdi::s_dxgiDeviceFuncs4;
 
     //... and the DXGI callbacks
     m_pDXGICallbacks = pArgs->DXGIBaseDDI.pDXGIBaseCallbacks;
@@ -128,7 +155,7 @@ void RosUmdDevice::Standup()
     memset(m_vsConstantBuffer, 0, sizeof(m_vsConstantBuffer));
     memset(m_vs1stConstant, 0, sizeof(m_vs1stConstant));
     memset(m_vsNumberContants, 0, sizeof(m_vsNumberContants));
-        
+
     memset(m_renderTargetViews, 0, sizeof(m_renderTargetViews));
 
     m_blendState = nullptr;
@@ -193,47 +220,81 @@ void RosUmdDevice::CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResou
     RosUmdResource* pResource = new (hResource.pDrvPrivate) RosUmdResource();
 
     pResource->Standup(this, pCreateResource, hRTResource);
-
-    RosAllocationExchange rosAllocationExchange;
-
-    pResource->GetAllocationExchange(&rosAllocationExchange);
-
-    D3DDDI_ALLOCATIONINFO allocationInfo;
-
-    allocationInfo.Flags.Value = 0;
-    allocationInfo.hAllocation = NULL;
-    allocationInfo.pPrivateDriverData = &rosAllocationExchange;
-    allocationInfo.PrivateDriverDataSize = sizeof(rosAllocationExchange);
-    allocationInfo.pSystemMem = NULL;
-    allocationInfo.VidPnSourceId = 0;
-
-    RosAllocationGroupExchange rosAllocationGroupExchange;
-
-    rosAllocationGroupExchange.m_dummy = 0;
-
-    D3DDDICB_ALLOCATE allocate;
-
-    allocate.pPrivateDriverData = &rosAllocationGroupExchange;
-    allocate.PrivateDriverDataSize = sizeof(rosAllocationGroupExchange);
-    allocate.hResource = hRTResource.handle;
-    allocate.hKMResource = NULL;
-    allocate.NumAllocations = 1;
-    allocate.pAllocationInfo = &allocationInfo;
-
-    Allocate(&allocate);
-
-    pResource->m_hKMResource = allocate.hKMResource;
-    pResource->m_hKMAllocation = allocationInfo.hAllocation;
+    
+    //
+    // Constant buffer is created in system memory
+    //
 
     if (pCreateResource->BindFlags & D3D10_DDI_BIND_CONSTANT_BUFFER)
     {
+        // XXX[jordanrh] Leaked!
         pResource->m_pSysMemCopy = new BYTE[pResource->m_hwSizeBytes];
 
         if (NULL == pResource->m_pSysMemCopy)
         {
             throw RosUmdException(E_OUTOFMEMORY);
         }
+
+        if (pCreateResource->pInitialDataUP != NULL && pCreateResource->pInitialDataUP[0].pSysMem != NULL)
+        {
+            memcpy(pResource->m_pSysMemCopy, pCreateResource->pInitialDataUP[0].pSysMem, pResource->m_hwSizeBytes);
+        }
+
+        return;
     }
+
+    // TODO[jordanrh]: create staging resources in system memory
+    
+    // Call kernel mode allocation routine
+    {
+        RosAllocationExchange* rosAllocationExchange = pResource;
+
+        auto allocate = D3DDDICB_ALLOCATE{};
+        auto allocationInfo = D3DDDI_ALLOCATIONINFO{};
+        {
+            // allocationInfo.hAllocation - out: Private driver data for allocation
+            allocationInfo.pSystemMem = nullptr;
+            allocationInfo.pPrivateDriverData = rosAllocationExchange;
+            allocationInfo.PrivateDriverDataSize = sizeof(*rosAllocationExchange);
+            allocationInfo.VidPnSourceId = 0;
+            allocationInfo.Flags.Primary = pCreateResource->pPrimaryDesc != nullptr;
+        }
+
+        auto rosAllocationGroupExchange = RosAllocationGroupExchange{};
+
+        allocate.pPrivateDriverData = &rosAllocationGroupExchange;
+        allocate.PrivateDriverDataSize = sizeof(rosAllocationGroupExchange);
+        allocate.hResource = hRTResource.handle;
+        // allocate.hKMResource - out: kernel resource handle
+        allocate.NumAllocations = 1;
+        allocate.pAllocationInfo = &allocationInfo;
+
+        HRESULT hr = m_pMSKTCallbacks->pfnAllocateCb(m_hRTDevice.handle, &allocate);
+        if (FAILED(hr))
+            throw RosUmdException(hr);
+
+        pResource->m_hKMResource = allocate.hKMResource;
+        pResource->m_hKMAllocation = allocationInfo.hAllocation;
+    }
+
+     ROS_LOG_TRACE(
+        "Creating resource. "
+        "(m_mip0Info.TexelWidth/Height = %u,%u "
+        "m_hwWidth/HeightPixels = %u,%u  "
+        "m_hwSizeBytes = %u, "
+        "m_isPrimary = %d, "
+        "m_hRTResource = 0x%p, "
+        "m_hKMResource = 0x%x, "
+        "m_hKMAllocation = 0x%x)",
+        pResource->m_mip0Info.TexelWidth,
+        pResource->m_mip0Info.TexelHeight,
+        pResource->m_hwWidthPixels,
+        pResource->m_hwHeightPixels,
+        pResource->m_hwSizeBytes,
+        pResource->m_isPrimary,
+        pResource->m_hRTResource.handle,
+        pResource->m_hKMResource,
+        pResource->m_hKMAllocation);
 
     if (pCreateResource->pInitialDataUP != NULL && pCreateResource->pInitialDataUP[0].pSysMem != NULL)
     {
@@ -246,7 +307,41 @@ void RosUmdDevice::CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResou
 
         Lock(&lock);
 
-        memcpy(lock.pData, pCreateResource->pInitialDataUP[0].pSysMem, pResource->m_hwSizeBytes);
+        if (pResource->m_resourceDimension == D3D10DDIRESOURCE_BUFFER)
+        {
+            memcpy(lock.pData, pCreateResource->pInitialDataUP[0].pSysMem, pResource->m_mip0Info.PhysicalWidth);
+        }
+        else if (pResource->m_resourceDimension == D3D10DDIRESOURCE_TEXTURE2D)
+        {
+            if (pResource->m_hwLayout == RosHwLayout::Linear)
+            {
+                BYTE *  pSrc = (BYTE *)pCreateResource->pInitialDataUP[0].pSysMem;
+                BYTE *  pDst = (BYTE *)lock.pData;
+                const UINT destPitch = pResource->Pitch();
+
+                for (UINT i = 0; i < pResource->m_mip0Info.TexelHeight; i++)
+                {
+                    memcpy(pDst, pSrc, pCreateResource->pInitialDataUP[0].SysMemPitch);
+
+                    pSrc += pCreateResource->pInitialDataUP[0].SysMemPitch;
+                    pDst += destPitch;
+                }
+            }
+            else
+            {
+                // Texture tiled mode support
+                BYTE * pSrc = (BYTE *)pCreateResource->pInitialDataUP[0].pSysMem;
+                BYTE * pDst = (BYTE *)lock.pData;
+                UINT  rowStride = pCreateResource->pInitialDataUP[0].SysMemPitch;
+
+                // Swizzle texture to HW format
+                pResource->ConvertBitmapTo4kTileBlocks(pSrc, pDst, rowStride);
+            }
+        }
+        else
+        {
+            assert(false);
+        }
 
         D3DDDICB_UNLOCK unlock;
         memset(&unlock, 0, sizeof(unlock));
@@ -255,12 +350,41 @@ void RosUmdDevice::CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResou
         unlock.phAllocations = &pResource->m_hKMAllocation;
 
         Unlock(&unlock);
-
-        if (pCreateResource->BindFlags & D3D10_DDI_BIND_CONSTANT_BUFFER)
-        {
-            memcpy(pResource->m_pSysMemCopy, pCreateResource->pInitialDataUP[0].pSysMem, pResource->m_hwSizeBytes);
-        }
     }
+}
+
+//
+// Need to instantiate a new RosUmdResource object in the memory
+// pointed to by hResource.pDrvPrivate and initialize it according to
+// the existing RosAllocationExchange object pointed to by the pPrivateDriverData
+// member of D3DDDI_OPENALLOCATIONINFO.
+//
+void RosUmdDevice::OpenResource(
+    const D3D10DDIARG_OPENRESOURCE* Args,
+    D3D10DDI_HRESOURCE hResource,
+    D3D10DDI_HRTRESOURCE hRTResource)
+{
+    assert(Args->PrivateDriverDataSize == sizeof(RosAllocationGroupExchange));
+
+    if (Args->NumAllocations != 1)
+        throw RosUmdException(E_INVALIDARG);
+
+    D3DDDI_OPENALLOCATIONINFO* openAllocationInfoPtr = &Args->pOpenAllocationInfo[0];
+    assert(
+        openAllocationInfoPtr->PrivateDriverDataSize ==
+        sizeof(RosAllocationExchange));
+
+    auto rosAllocationExchangePtr = static_cast<const RosAllocationExchange*>(
+            openAllocationInfoPtr->pPrivateDriverData);
+
+    // Instantiate the new resource in the memory provided to us by the framework
+    auto rosUmdResourcePtr = new (hResource.pDrvPrivate) RosUmdResource();
+
+    rosUmdResourcePtr->InitSharedResourceFromExistingAllocation(
+            rosAllocationExchangePtr,
+            Args->hKMResource,
+            openAllocationInfoPtr->hAllocation,
+            hRTResource);
 }
 
 void RosUmdDevice::DestroyResource(
@@ -282,7 +406,7 @@ void RosUmdDevice::ResourceCopy(
     }
     else
     {
-        // Before accessing the resources on CPU, flush if there is pending 
+        // Before accessing the resources on CPU, flush if there is pending
         // GPU operation
         m_commandBuffer.FlushIfMatching(pDestinationResource->m_mostRecentFence);
         m_commandBuffer.FlushIfMatching(pSourceResource->m_mostRecentFence);
@@ -308,15 +432,64 @@ void RosUmdDevice::ResourceCopy(
         if (pDestinationResource->m_usage == D3D10_DDI_USAGE_STAGING &&
             pSourceResource->m_usage == D3D10_DDI_USAGE_STAGING)
         {
-            assert(pSourceResource->m_hwSizeBytes == pDestinationResource->m_hwSizeBytes);
+            NT_ASSERT(
+                (pSourceResource->m_hwLayout == pDestinationResource->m_hwLayout) &&
+                (pSourceResource->m_hwSizeBytes == pDestinationResource->m_hwSizeBytes));
             memcpy(destinationLock.pData, sourceLock.pData, pDestinationResource->m_hwSizeBytes);
         }
         else if (pDestinationResource->m_usage == D3D10_DDI_USAGE_STAGING &&
             pSourceResource->m_usage == D3D10_DDI_USAGE_DEFAULT)
         {
             // TODO(bhouse) Implement CPU side tile to linear swizzle
-            assert(pSourceResource->m_hwSizeBytes >= pDestinationResource->m_hwSizeBytes);
-            memcpy(destinationLock.pData, sourceLock.pData, pDestinationResource->m_hwSizeBytes);
+            if (pSourceResource->m_format != pDestinationResource->m_format)
+            {
+                ROS_LOG_ERROR(
+                    "Unsupported format conversion. "
+                    "(pSourceResource->m_format = %d, "
+                    "pDestinationResource->m_format = %d)",
+                    pSourceResource->m_format,
+                    pDestinationResource->m_format);
+                throw RosUmdException(E_INVALIDARG);
+            }
+                
+            if (pSourceResource->m_hwLayout == pDestinationResource->m_hwLayout)
+            {
+                // no swizzling necessary
+                assert(pSourceResource->m_hwSizeBytes >= pDestinationResource->m_hwSizeBytes);
+                memcpy(destinationLock.pData, sourceLock.pData, pDestinationResource->m_hwSizeBytes);
+            }
+            else
+            {
+                switch (pSourceResource->m_hwLayout) {
+                case RosHwLayout::Linear:
+                    switch (pDestinationResource->m_hwLayout) {
+                    case RosHwLayout::Tiled:
+                        NT_ASSERT(false); // not implemented
+                        break;
+                    default:
+                        NT_ASSERT(false);
+                    }
+                    break;
+                case RosHwLayout::Tiled:
+                    switch (pDestinationResource->m_hwLayout) {
+                    case RosHwLayout::Linear:
+                        // Tiled to linear
+                        RosUmdResource::CopyTFormatToLinear(
+                            sourceLock.pData,
+                            pSourceResource->WidthInTiles(),
+                            pSourceResource->HeightInTiles(),
+                            destinationLock.pData,
+                            pDestinationResource->Pitch(),
+                            pDestinationResource->m_mip0Info.TexelHeight);
+                        break;
+                    default:
+                        NT_ASSERT(false);
+                    }
+                    break;
+                default:
+                    throw RosUmdException(E_INVALIDARG);
+                }
+            }
         }
         else
         {
@@ -335,6 +508,18 @@ void RosUmdDevice::ResourceCopy(
 
         Unlock(&unlock);
     }
+}
+
+void RosUmdDevice::ConstantBufferUpdateSubresourceUP(
+    RosUmdResource *pDstResource,
+    UINT DstSubresource,
+    _In_opt_ const D3D10_DDI_BOX *pDstBox,
+    _In_ const VOID *pSysMemUP,
+    UINT RowPitch,
+    UINT DepthPitch,
+    UINT CopyFlags)
+{
+    pDstResource->ConstantBufferUpdateSubresourceUP(DstSubresource, pDstBox, pSysMemUP, RowPitch, DepthPitch, CopyFlags);
 }
 
 void RosUmdDevice::CreatePixelShader(
@@ -455,10 +640,12 @@ void RosUmdDevice::CheckCounterInfo(
 void RosUmdDevice::CheckMultisampleQualityLevels(
     DXGI_FORMAT inFormat,
     UINT inSampleCount,
+    UINT inFlags,
     UINT* pOutNumQualityLevels)
 {
     inFormat; // unused
     inSampleCount; // unused
+    inFlags; // unused
 
     *pOutNumQualityLevels = 0;
 }
@@ -466,13 +653,6 @@ void RosUmdDevice::CheckMultisampleQualityLevels(
 //
 // Kernel mode callbacks
 //
-
-void RosUmdDevice::Allocate(D3DDDICB_ALLOCATE * pAllocate)
-{
-    HRESULT hr = m_pMSKTCallbacks->pfnAllocateCb(m_hRTDevice.handle, pAllocate);
-
-    if (hr != S_OK) throw RosUmdException(hr);
-}
 
 void RosUmdDevice::Lock(D3DDDICB_LOCK * pLock)
 {
@@ -507,6 +687,232 @@ void RosUmdDevice::DestroyContext(D3DDDICB_DESTROYCONTEXT * pDestroyContext)
     if (hr != S_OK) throw RosUmdException(hr);
 }
 
+HRESULT RosUmdDevice::Present(DXGI_DDI_ARG_PRESENT* Args)
+{
+    assert(this == CastFrom(Args->hDevice));
+
+    if (Args->Flags.Flip)
+    {
+        if (Args->FlipInterval != DXGI_DDI_FLIP_INTERVAL_ONE)
+        {
+            assert(!"The only supported flip interval is 1.");
+            return E_INVALIDARG;
+        }
+    }
+
+    // Get the allocation for the source resource
+    auto pSrcResource = RosUmdResource::CastFrom(Args->hSurfaceToPresent);
+
+    // we only handle a single subresource for now
+    if (Args->SrcSubResourceIndex != 0)
+    {
+        assert(!"Only a single subresource is supported currently");
+        return E_NOTIMPL;
+    }
+
+    if (!pSrcResource->IsPrimary())
+    {
+        assert(!"Only primaries may be flipped");
+        return E_INVALIDARG;
+    }
+
+    assert(pSrcResource->m_hKMAllocation);
+
+    // hDstResource can be null
+    D3DKMT_HANDLE hDstAllocation = {};
+    if (Args->hDstResource)
+    {
+        auto pDstResource = RosUmdResource::CastFrom(Args->hDstResource);
+
+        // we only handle a single subresource for now
+        if (Args->DstSubResourceIndex != 0)
+        {
+            assert(!"Only a single subresource is support right now");
+            return E_NOTIMPL;
+        }
+        assert(pDstResource->m_hKMAllocation);
+        hDstAllocation = pDstResource->m_hKMAllocation;
+    }
+
+    DXGIDDICB_PRESENT args = {};
+    args.hSrcAllocation = pSrcResource->m_hKMAllocation;
+    args.hDstAllocation = hDstAllocation;
+    args.pDXGIContext = Args->pDXGIContext;
+    args.hContext = m_hContext;
+
+    return m_pDXGICallbacks->pfnPresentCb(m_hRTDevice.handle, &args);
+}
+
+HRESULT RosUmdDevice::RotateResourceIdentities(
+    DXGI_DDI_ARG_ROTATE_RESOURCE_IDENTITIES* Args)
+{
+    assert(RosUmdDevice::CastFrom(Args->hDevice) == this);
+
+    assert(Args->Resources != 0);
+
+    // Save the handles from the first resource
+    const RosUmdResource* const firstResource = RosUmdResource::CastFrom(
+            Args->pResources[0]);
+    RosUmdResource* const lastResource = RosUmdResource::CastFrom(
+            Args->pResources[Args->Resources - 1]);
+    assert(lastResource->CanRotateFrom(firstResource));
+
+    D3DKMT_HANDLE firstResourceKMResource = firstResource->m_hKMResource;
+    D3DKMT_HANDLE firstResourceKMAllocation = firstResource->m_hKMAllocation;
+
+    for (UINT i = 0; i < (Args->Resources - 1); ++i)
+    {
+        RosUmdResource* rotateTo = RosUmdResource::CastFrom(Args->pResources[i]);
+        const RosUmdResource* rotateFrom = RosUmdResource::CastFrom(
+                Args->pResources[i + 1]);
+
+        assert(rotateTo->CanRotateFrom(rotateFrom));
+
+        rotateTo->m_hKMResource = rotateFrom->m_hKMResource;
+        rotateTo->m_hKMAllocation = rotateFrom->m_hKMAllocation;
+    }
+
+    // Replace the last resource's handles with those from the first resource
+    lastResource->m_hKMResource = firstResourceKMResource;
+    lastResource->m_hKMAllocation = firstResourceKMAllocation;
+
+    return S_OK;
+}
+
+HRESULT RosUmdDevice::SetDisplayMode(DXGI_DDI_ARG_SETDISPLAYMODE* Args)
+{
+    assert(RosUmdDevice::CastFrom(Args->hDevice) == this);
+
+    // Translate hResource and SubResourceIndex to a primary allocation handle
+    auto pResource = reinterpret_cast<RosUmdResource*>(Args->hResource);
+
+    if (Args->SubResourceIndex != 0)
+    {
+        assert(!"Only a single subresource is supported right now");
+        return E_NOTIMPL;
+    }
+
+    // We are expecting the resource to represent a primary allocation
+    assert(pResource->IsPrimary());
+
+    // XXX Do we need to flush all rendering tasks before calling kernel side?
+
+    D3DDDICB_SETDISPLAYMODE args = {};
+    args.hPrimaryAllocation = pResource->m_hKMAllocation;
+
+    HRESULT hr = m_pMSKTCallbacks->pfnSetDisplayModeCb(m_hRTDevice.handle, &args);
+    if (FAILED(hr)) {
+        switch (hr) {
+        case D3DDDIERR_INCOMPATIBLEPRIVATEFORMAT:
+            // TODO[jordanrh] Use args.PrivateDriverFormatAttribute to convert the
+            // primary surface
+            assert(args.PrivateDriverFormatAttribute != 0);
+        default:
+            return hr;
+        }
+    }
+
+    assert(SUCCEEDED(hr));
+    return S_OK;
+}
+
+HRESULT RosUmdDevice::Present1(DXGI_DDI_ARG_PRESENT1* Args)
+{
+    assert(this == CastFrom(Args->hDevice));
+
+    if (Args->Flags.Flip)
+    {
+        if (Args->FlipInterval != DXGI_DDI_FLIP_INTERVAL_ONE)
+        {
+            assert(!"The only supported flip interval is 1.");
+            return E_INVALIDARG;
+        }
+    }
+
+    // TODO[jordanrh]: Ensure all rendering commands are flushed
+
+    // Call pfnPresentCb for each source surface
+    for (UINT i = 0; i < Args->SurfacesToPresent; ++i)
+    {
+        // Get the allocation for the source resource
+        auto pSrcResource = RosUmdResource::CastFrom(
+                Args->phSurfacesToPresent[i].hSurface);
+
+        // we only handle a single subresource for now
+        if (Args->phSurfacesToPresent[i].SubResourceIndex != 0)
+        {
+            assert(!"Only a single subresource is supported right now");
+            return E_NOTIMPL;
+        }
+
+        if (Args->Flags.Flip && !pSrcResource->IsPrimary())
+        {
+            assert(!"Only primaries may be flipped");
+            return E_INVALIDARG;
+        }
+
+        assert(pSrcResource->m_hKMAllocation);
+
+        // hDstResource can be null
+        D3DKMT_HANDLE hDstAllocation = {};
+        if (Args->hDstResource)
+        {
+            auto pDstResource = RosUmdResource::CastFrom(
+                    Args->hDstResource);
+
+            // we only handle a single subresource for now
+            if (Args->DstSubResourceIndex != 0)
+            {
+                assert(!"Only a single subresource is supported right now");
+                return E_NOTIMPL;
+            }
+            assert(pDstResource->m_hKMAllocation);
+            hDstAllocation = pDstResource->m_hKMAllocation;
+        }
+
+        DXGIDDICB_PRESENT args = {};
+        args.hSrcAllocation = pSrcResource->m_hKMAllocation;
+        args.hDstAllocation = hDstAllocation;
+        args.pDXGIContext = Args->pDXGIContext;
+        args.hContext = m_hContext;
+
+        HRESULT hr = m_pDXGICallbacks->pfnPresentCb(m_hRTDevice.handle, &args);
+        if (FAILED(hr))
+            return hr;
+    }
+
+    return S_OK;
+}
+
+_Use_decl_annotations_
+void RosUmdDevice::CheckDirectFlipSupport(
+    D3D10DDI_HDEVICE hDevice,
+    D3D10DDI_HRESOURCE hResource1,
+    D3D10DDI_HRESOURCE hResource2,
+    UINT CheckDirectFlipFlags,
+    BOOL *pSupported
+    )
+{
+    assert(CastFrom(hDevice) == this);
+    assert((CheckDirectFlipFlags & ~D3D11_1DDI_CHECK_DIRECT_FLIP_IMMEDIATE) == 0);
+
+    //
+    // We can only flip to the resource if it has the same format as the
+    // current primary since we do not support mode change in
+    // SetVidPnSourceAddress() at this point.
+    //
+    const RosUmdResource* currentResourcePtr = RosUmdResource::CastFrom(hResource1);
+    const RosUmdResource* directFlipResourcePtr = RosUmdResource::CastFrom(hResource2);
+
+    // Resources must have same dimensions and format
+    *pSupported =
+        (directFlipResourcePtr->m_mip0Info == currentResourcePtr->m_mip0Info) &&
+        (directFlipResourcePtr->m_format == currentResourcePtr->m_format) &&
+        (directFlipResourcePtr->m_hwLayout == currentResourcePtr->m_hwLayout) &&
+        (directFlipResourcePtr->Pitch() == currentResourcePtr->Pitch()) &&
+        (directFlipResourcePtr->m_hwSizeBytes == currentResourcePtr->m_hwSizeBytes);
+}
+
 //
 // User mode call backs
 //
@@ -522,18 +928,17 @@ void RosUmdDevice::SetError(HRESULT hr)
 // Excepton handling support
 //
 
-void RosUmdDevice::SetException(RosUmdException & e)
+void RosUmdDevice::SetException(const RosUmdException & e)
 {
     SetError(e.m_hr);
 }
 
-void RosUmdDevice::SetException(std::exception & e)
+void RosUmdDevice::SetException(const std::exception & e)
 {
-    if (typeid(e) == typeid(RosUmdException))
+    auto rosUmdException = dynamic_cast<const RosUmdException*>(&e);
+    if (rosUmdException)
     {
-        RosUmdException & rosUmdException = dynamic_cast<RosUmdException &>(e);
-
-        SetError(rosUmdException.m_hr);
+        SetError(rosUmdException->m_hr);
     }
     else
     {
@@ -633,7 +1038,7 @@ void RosUmdDevice::DrawIndexed(UINT indexCount, UINT startIndexLocation, INT bas
         0,
         startIndexLocation*indexSize + m_indexOffset);
 
-    pVC4IndexedPrimitiveList->MaximumIndex = 0xffff;    // Maximal USHORT 
+    pVC4IndexedPrimitiveList->MaximumIndex = 0xffff;    // Maximal USHORT
 
 #endif
 
@@ -645,11 +1050,9 @@ void RosUmdDevice::DrawIndexed(UINT indexCount, UINT startIndexLocation, INT bas
 
 void RosUmdDevice::ClearRenderTargetView(RosUmdRenderTargetView * pRenderTargetView, FLOAT clearColor[4])
 {
-    // TODO[indyz]: Use format from pRenderTargetView to decide if 
-    //              VC4ClearColors::ClearColor16 should be used
-    pRenderTargetView; // unused
-
 #if VC4
+
+    RosUmdResource * pRenderTarget = RosUmdResource::CastFrom(pRenderTargetView->m_create.hDrvResource);
 
     //
     // KMD issumes Clear Colors command before Draw call
@@ -661,7 +1064,7 @@ void RosUmdDevice::ClearRenderTargetView(RosUmdRenderTargetView * pRenderTargetV
     }
 
     // Set clear color into command buffer header for KMD to generate Rendering Control List
-    m_commandBuffer.UpdateClearColor(ConvertFloatColor(clearColor));
+    m_commandBuffer.UpdateClearColor(ConvertFloatColor(pRenderTarget->m_format, clearColor));
 
 #endif
 }
@@ -720,7 +1123,7 @@ void RosUmdDevice::VsSetConstantBuffers11_1(
     const UINT *    pNumberConstants)
 {
     UINT bufIndex;
-    
+
     bufIndex = startBuffer;
     for (UINT i = 0; i < numberBuffers; i++, bufIndex++)
     {
@@ -766,7 +1169,7 @@ void RosUmdDevice::SetRenderTargets(const D3D10DDI_HRENDERTARGETVIEW* phRenderTa
 #if VC4
 
     //
-    // Flush is necessary for tile based render 
+    // Flush is necessary for tile based render
     // if there is Draw command for the previous render target
     //
 
@@ -927,15 +1330,30 @@ void RosUmdDevice::SetRasterizerState(RosUmdRasterizerState * pRasterizerState)
     m_rasterizerState = pRasterizerState;
 }
 
+void RosUmdDevice::SetScissorRects(UINT NumScissorRects, UINT ClearScissorRects, const D3D10_DDI_RECT *pRects)
+{
+#if VC4
+    // VC4 can handle only 1 scissor rect, so take 1st one only.
+    assert(NumScissorRects <= 1);
+    if (NumScissorRects)
+    {
+        assert(pRects);
+        m_scissorRectSet = true;
+        m_scissorRect = *pRects;
+    }
+    else if (ClearScissorRects)
+    {
+        // When NumScissorRects is zero and ClearScissorRects is not zero, then clear current scissor.
+        m_scissorRectSet = false;
+        ZeroMemory(&m_scissorRect, sizeof(m_scissorRect));
+    }
+#endif // VC4
+}
+
 void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
 {
-    RosUmdResource * pRenderTarget = (RosUmdResource *)m_renderTargetViews[0]->m_create.hDrvResource.pDrvPrivate;
-
-    // TODO[indyz] : Update RosHwFormat
-    assert(pRenderTarget->m_hwFormat == RosHwFormat::X8888);
-    // TODO[indyz] : Handle T and LT tiled formats
-    assert(pRenderTarget->m_hwLayout == RosHwLayout::Linear);
-
+    RosUmdResource * pRenderTarget = RosUmdResource::CastFrom(m_renderTargetViews[0]->m_create.hDrvResource);
+    
     //
     // Update shaders
     //
@@ -987,41 +1405,30 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
     // the pixel shader constant buffer is copied directly into command buffer.
     //
 
-    UINT    psContantDataSize = 0;
+    UINT    psContantDataSize;
+    UINT    vsContantDataSize;
+    UINT    csContantDataSize;
 
-    for (UINT i = 0; i < kMaxShaderResourceViews; i++)
-    {
-        if (m_psResourceViews[i])
-        {
-            RosUmdResource *    pTexture = RosUmdResource::CastFrom(m_psResourceViews[i]->m_create.hDrvResource);
-
-            switch (pTexture->m_resourceDimension)
-            {
-            case D3D10DDIRESOURCE_TEXTURE2D:
-                psContantDataSize += 2 * sizeof(VC4TextureConfigParameter0);
-                break;
-            case D3D10DDIRESOURCE_TEXTURECUBE:
-                psContantDataSize += 4 * sizeof(VC4TextureConfigParameter0);
-                break;
-            default:
-                // 3D texture creation should have failed
-                // TODO[indyz] : decide if 1D texture can be supported
-                assert(false);
-                break;
-            }            
-        }
-    }
+    VC4_UNIFORM_FORMAT *    pPSUniformEntries;
+    VC4_UNIFORM_FORMAT *    pVSUniformEntries;
+    VC4_UNIFORM_FORMAT *    pCSUniformEntries;
+    UINT    numPSUniformEntries;
+    UINT    numVSUniformEntries;
+    UINT    numCSUniformEntries;
 
     //
-    // TODO[indyz] : Decide how multiple constant buffers should be supported
+    // Shader compiler specifies how multiple constant buffers are copied/merged into command buffer
     //
 
-    if (m_psConstantBuffer[0])
-    {
-        psContantDataSize += m_psConstantBuffer[0]->m_hwSizeBytes;
-    }
+    pPSUniformEntries = m_pixelShader->GetShaderUniformFormat(ROS_PIXEL_SHADER_UNIFORM_STORAGE, &numPSUniformEntries);
+    pVSUniformEntries = m_vertexShader->GetShaderUniformFormat(ROS_VERTEX_SHADER_UNIFORM_STORAGE, &numVSUniformEntries);
+    pCSUniformEntries = m_vertexShader->GetShaderUniformFormat(ROS_COORDINATE_SHADER_UNIFORM_STORAGE, &numCSUniformEntries);
 
-    maxStateComamnds += psContantDataSize;
+    psContantDataSize = numPSUniformEntries*sizeof(FLOAT);
+    vsContantDataSize = numVSUniformEntries*sizeof(FLOAT);
+    csContantDataSize = numCSUniformEntries*sizeof(FLOAT);
+
+    maxStateComamnds += (psContantDataSize + vsContantDataSize + csContantDataSize);
 
     m_commandBuffer.ReserveCommandBufferSpace(
         false,                                  // HW command
@@ -1057,8 +1464,8 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
         pVC4TileBinningModeConfig->TileStateDataArrayBaseAddress = 0xDEADBEEF;
 #endif
 
-        pVC4TileBinningModeConfig->WidthInTiles = (BYTE)pRenderTarget->m_hwWidthTiles;
-        pVC4TileBinningModeConfig->HeightInTiles = (BYTE)pRenderTarget->m_hwHeightTiles;
+        pVC4TileBinningModeConfig->WidthInTiles = static_cast<BYTE>(pRenderTarget->WidthInBinningTiles());
+        pVC4TileBinningModeConfig->HeightInTiles = static_cast<BYTE>(pRenderTarget->HeightInBinningTiles());
 
         pVC4TileBinningModeConfig->AutoInitialiseTileStateDataArray = 1;
 
@@ -1127,10 +1534,34 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
 
     *pVC4ClipWindow = vc4ClipWindow;
 
-    pVC4ClipWindow->ClipWindowLeft   = (USHORT)round(m_viewports[0].TopLeftX);
-    pVC4ClipWindow->ClipWindowBottom = (USHORT)round(m_viewports[0].TopLeftY);
-    pVC4ClipWindow->ClipWindowWidth  = (USHORT)round(m_viewports[0].Width);
-    pVC4ClipWindow->ClipWindowHeight = (USHORT)round(m_viewports[0].Height);
+    if (m_scissorRectSet && m_rasterizerState->GetDesc()->ScissorEnable)
+    {
+        RECT Intersect;
+        RECT Viewport = {
+            (LONG)round(m_viewports[0].TopLeftX),
+            (LONG)round(m_viewports[0].TopLeftY),
+            (LONG)round((m_viewports[0].TopLeftX + m_viewports[0].Width)),
+            (LONG)round((m_viewports[0].TopLeftY + m_viewports[0].Height)) };
+
+        if (_IntersectRect(&Intersect, &Viewport, &m_scissorRect))
+        {
+            pVC4ClipWindow->ClipWindowLeft = (USHORT)Intersect.left;
+            pVC4ClipWindow->ClipWindowBottom = (USHORT)Intersect.top;
+            pVC4ClipWindow->ClipWindowWidth = (USHORT)(Intersect.right - Intersect.left);
+            pVC4ClipWindow->ClipWindowHeight = (USHORT)(Intersect.bottom - Intersect.top);
+        }
+        else
+        {
+            assert(false); // NOTHING to draw.
+        }
+    }
+    else
+    {
+        pVC4ClipWindow->ClipWindowLeft = (USHORT)round(m_viewports[0].TopLeftX);
+        pVC4ClipWindow->ClipWindowBottom = (USHORT)round(m_viewports[0].TopLeftY);
+        pVC4ClipWindow->ClipWindowWidth = (USHORT)round(m_viewports[0].Width);
+        pVC4ClipWindow->ClipWindowHeight = (USHORT)round(m_viewports[0].Height);
+    }
 
     //
     // Write Configuration Bits command to update render state
@@ -1142,9 +1573,6 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
     MoveToNextCommand(pVC4ClipWindow, pVC4ConfigBits, curCommandOffset);
 
     *pVC4ConfigBits = vc4ConfigBits;
-
-#if 0
-
     switch (m_rasterizerState->m_desc.CullMode)
     {
     case D3D10_DDI_CULL_NONE:
@@ -1159,18 +1587,23 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
         break;
     }
 
-#else
+    //
+    // It looks like that VC4ConfigBits::ClockwisePrimitives
+    // matches the D3D11_1_DDI_RASTERIZER_DESC::FrontCounterClockwise.
+    // It must be set in the same way for proper behavior.
+    //
 
-    pVC4ConfigBits->EnableForwardFacingPrimitive = 1;
-    pVC4ConfigBits->EnableReverseFacingPrimitive = 1;
+    pVC4ConfigBits->ClockwisePrimitives = m_rasterizerState->m_desc.FrontCounterClockwise;
 
-    pVC4ConfigBits->ClosewisePrimitives = 1;
+    //
+    // The D3D11 default depth stencil state is DepthEnable of true with
+    // comparison function of less, and VC4's Tile Buffer has Z of 0.0 by
+    // default, without checking depth stencil view this combination would
+    // cull all pixels.
+    //
 
-#endif
-
-    if (m_depthStencilState->m_desc.DepthEnable)
+    if (m_depthStencilState->m_desc.DepthEnable && m_depthStencilView)
     {
-
         pVC4ConfigBits->EarlyZEnable = 1;
 
         pVC4ConfigBits->DepthTestFunction = ConvertD3D11DepthComparisonFunc(
@@ -1216,7 +1649,7 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
     MoveToNextCommand(pVC4ViewportOffset, pVC4Branch, curCommandOffset);
 
     UINT vc4NVShaderStateRecordOffset = curCommandOffset + sizeof(VC4Branch);
-    AlignValue(vc4NVShaderStateRecordOffset, 16);
+    vc4NVShaderStateRecordOffset = AlignValue(vc4NVShaderStateRecordOffset, 16);
 
     *pVC4Branch = vc4Branch;
 
@@ -1242,7 +1675,7 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
 
     // TODO[indyz] : Decide the size of Uniforms by constant buffer bound
     //
-    
+
     pVC4NVShaderStateRecord->FragmentShaderNumberOfUniforms = 0;
 
     // TODO[indyz] : Need to calculate it from Input Layout Elements, etc
@@ -1424,7 +1857,7 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
     MoveToNextCommand(pVC4FlatShadeFlags, pVC4Branch, curCommandOffset);
 
     UINT vc4GLShaderStateRecordOffset = curCommandOffset + sizeof(VC4Branch);
-    AlignValue(vc4GLShaderStateRecordOffset, 16);
+    vc4GLShaderStateRecordOffset = AlignValue(vc4GLShaderStateRecordOffset, 16);
 
     *pVC4Branch = vc4Branch;
 
@@ -1436,7 +1869,9 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
         vc4GLShaderStateRecordOffset +
             sizeof(VC4GLShaderStateRecord) +
             m_elementLayout->m_numElements*sizeof(VC4VertexAttribute) +
-            psContantDataSize);
+            psContantDataSize +
+            vsContantDataSize +
+            csContantDataSize);
 
     //
     // Write Shader State Record for the subsequent NV Shader State command
@@ -1450,36 +1885,12 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
 
 
     pVC4GLShaderStateRecord->EnableClipping = 1;
-    
+
     pVC4GLShaderStateRecord->FragmentShaderIsSingleThreaded = 1;
 
-    //
-    // Calculate Number Of Varyings from pixel shader signature
-    //
-
-    D3D11_1DDIARG_SIGNATURE_ENTRY * pInputEntry;
-    UINT    numEntries = m_pixelShader->m_pCompiler->GetInputSignature(&pInputEntry);
-    BYTE    numVaryings = 0;
-
-    for (UINT i = 0; i < numEntries; i++, pInputEntry++)
-    {
-        if (pInputEntry->SystemValue != D3D10_SB_NAME_UNDEFINED)
-        {
-            continue;
-        }
-
-        for (UINT j = 0; j < 4; j++)
-        {
-            if (pInputEntry->Mask & (1 << j))
-            {
-                numVaryings++;
-            }
-        }
-    }
-
-    // TODO[indyz]: Need to increase by 1 if W is written by VS for FS
-    //
-    pVC4GLShaderStateRecord->FragmentShaderNumberOfVaryings = numVaryings;
+    UINT numVaryings = m_pixelShader->GetShaderInputCount();
+    assert(numVaryings < 0x100);
+    pVC4GLShaderStateRecord->FragmentShaderNumberOfVaryings = (BYTE)numVaryings;
 
 #if DBG
     pVC4GLShaderStateRecord->FragmentShaderCodeAddress      = 0xDEADBEEF;
@@ -1497,6 +1908,10 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
     // Set Fragment Shader Uniforms Address
     //
 
+    UINT    psUniformOffset = vc4GLShaderStateRecordOffset +
+                              sizeof(VC4GLShaderStateRecord) +
+                              m_elementLayout->m_numElements*sizeof(VC4VertexAttribute);
+
     if (psContantDataSize)
     {
         m_commandBuffer.SetPatchLocation(
@@ -1504,9 +1919,7 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
             dummyAllocIndex,
             vc4GLShaderStateRecordOffset + offsetof(VC4GLShaderStateRecord, FragmentShaderUniformsAddress),
             VC4_SLOT_FS_UNIFORM_ADDRESS,
-            vc4GLShaderStateRecordOffset +
-                sizeof(VC4GLShaderStateRecord) + 
-                m_elementLayout->m_numElements*sizeof(VC4VertexAttribute));
+            psUniformOffset);
     }
     else
     {
@@ -1533,18 +1946,18 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
         allocListIndex,
         vc4GLShaderStateRecordOffset + offsetof(VC4GLShaderStateRecord, VertexShaderCodeAddress));
 
-    // NOTE[indyz] : Before shader compiler is ready, half of the constant
-    //               buffer is used for VS, the other half for CS (Coordinate Shader)
+    //
+    // Set Vertex Shader Uniform Address
     //
 
-    if (m_vsConstantBuffer[0])
+    if (vsContantDataSize)
     {
-        allocListIndex = m_commandBuffer.UseResource(m_vsConstantBuffer[0], false);
-
         m_commandBuffer.SetPatchLocation(
             pCurPatchLocation,
-            allocListIndex,
-            vc4GLShaderStateRecordOffset + offsetof(VC4GLShaderStateRecord, VertexShaderUniformsAddress));
+            dummyAllocIndex,
+            vc4GLShaderStateRecordOffset + offsetof(VC4GLShaderStateRecord, VertexShaderUniformsAddress),
+            VC4_SLOT_VS_UNIFORM_ADDRESS,
+            psUniformOffset + psContantDataSize);
     }
     else
     {
@@ -1553,7 +1966,7 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
             dummyAllocIndex,
             vc4GLShaderStateRecordOffset + offsetof(VC4GLShaderStateRecord, VertexShaderUniformsAddress));
     }
-    
+
 #if DBG
     pVC4GLShaderStateRecord->CoordinateShaderCodeAddress        = 0xDEADBEEF;
     pVC4GLShaderStateRecord->CoordinateShaderUniformsAddress    = 0xDEADBEEF;
@@ -1568,19 +1981,18 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
         0,
         m_vertexShader->m_vc4CoordinateShaderOffset);
 
-    // Set CoordinateShaderUniformsAddress to constant buffer's address
+    //
+    // Set Vertex Shader Uniform Address
     //
 
-    if (m_vsConstantBuffer[0])
+    if (csContantDataSize)
     {
-        allocListIndex = m_commandBuffer.UseResource(m_vsConstantBuffer[0], false);
-
         m_commandBuffer.SetPatchLocation(
             pCurPatchLocation,
-            allocListIndex,
+            dummyAllocIndex,
             vc4GLShaderStateRecordOffset + offsetof(VC4GLShaderStateRecord, CoordinateShaderUniformsAddress),
-            0,
-            m_vsConstantBuffer[0]->m_hwSizeBytes/2);
+            VC4_SLOT_CS_UNIFORM_ADDRESS,
+            psUniformOffset + psContantDataSize + vsContantDataSize);
     }
     else
     {
@@ -1647,94 +2059,35 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
 
     if (psContantDataSize)
     {
-        VC4TextureConfigParameter0 *    pVC4TexConfigParam0 = (VC4TextureConfigParameter0 *)pCurCommand;
+        WriteUniforms(
+            true,
+            pPSUniformEntries,
+            numPSUniformEntries,
+            pCurCommand,
+            curCommandOffset,
+            pCurPatchLocation);
+    }
 
-        for (UINT i = 0; i < kMaxShaderResourceViews; i++)
-        {
-            if (m_psResourceViews[i])
-            {
-                RosUmdResource *    pTexture = RosUmdResource::CastFrom(m_psResourceViews[i]->m_create.hDrvResource);
+    if (vsContantDataSize)
+    {
+        WriteUniforms(
+            false,
+            pVSUniformEntries,
+            numVSUniformEntries,
+            pCurCommand,
+            curCommandOffset,
+            pCurPatchLocation);
+    }
 
-                pVC4TexConfigParam0->UInt0 = 0;
-
-                //
-                // TODO[indyz]: Support all VC4 texture formats and tiling
-                //
-
-                assert(pTexture->m_hwFormat == RosHwFormat::X8888);
-                assert(pTexture->m_hwLayout == RosHwLayout::Linear);
-
-                VC4TextureType  vc4TextureType;
-
-                vc4TextureType.TextureType = VC4_TEX_RGBA32R;
-
-                pVC4TexConfigParam0->TYPE = vc4TextureType.TYPE;
-
-                allocListIndex = m_commandBuffer.UseResource(pTexture, false);
-
-                m_commandBuffer.SetPatchLocation(
-                    pCurPatchLocation,
-                    allocListIndex,
-                    curCommandOffset,
-                    0,
-                    pVC4TexConfigParam0->UInt0);
-
-#if DBG
-
-                pVC4TexConfigParam0->BASE = 0xDEADB;
-
-#endif
-
-                VC4TextureConfigParameter1 *    pVC4TexConfigParam1;
-                MoveToNextCommand(pVC4TexConfigParam0, pVC4TexConfigParam1, curCommandOffset);
-
-                pVC4TexConfigParam1->UInt0 = 0;
-
-                //
-                // TODO[indyz] : Set up texture filter and wrap mode
-                //
-
-                pVC4TexConfigParam1->WIDTH = pTexture->m_hwWidthPixels;
-                pVC4TexConfigParam1->HEIGHT = pTexture->m_hwHeightPixels;
-
-                pVC4TexConfigParam1->TYPE4 = vc4TextureType.TYPE4;
-
-                if (pTexture->m_resourceDimension == D3D10DDIRESOURCE_TEXTURECUBE)
-                {
-                    // 
-                    // TODO[indyz] : Add support for cube texture
-                    //
-
-                    DWORD * pVC4TexConfigParam23;
-
-                    MoveToNextCommand(pVC4TexConfigParam1, pVC4TexConfigParam23, curCommandOffset);
-                    *pVC4TexConfigParam23 = 0;
-
-                    MoveToNextCommand(pVC4TexConfigParam23, pVC4TexConfigParam23, curCommandOffset);
-                    *pVC4TexConfigParam23 = 0;
-
-                    MoveToNextCommand(pVC4TexConfigParam23, pVC4TexConfigParam0, curCommandOffset);
-                }
-                else
-                {
-                    MoveToNextCommand(pVC4TexConfigParam1, pVC4TexConfigParam0, curCommandOffset);
-                }
-            }
-        }
-
-        //
-        // Copy the data in user constant buffer(s)
-        //
-
-        pCurCommand = (BYTE*)pVC4TexConfigParam0;
-
-        if (m_psConstantBuffer[0])
-        {
-            memcpy(pCurCommand, m_psConstantBuffer[0]->m_pSysMemCopy, m_psConstantBuffer[0]->m_hwSizeBytes);
-
-            pCurCommand += m_psConstantBuffer[0]->m_hwSizeBytes;
-            curCommandOffset += m_psConstantBuffer[0]->m_hwSizeBytes;
-        }
+    if (csContantDataSize)
+    {
+        WriteUniforms(
+            false,
+            pCSUniformEntries,
+            numCSUniformEntries,
+            pCurCommand,
+            curCommandOffset,
+            pCurPatchLocation);
     }
 
     //
@@ -1799,23 +2152,206 @@ void RosUmdDevice::RefreshPipelineState(UINT vertexOffset)
 
 }
 
+#if VC4
+
+void RosUmdDevice::WriteUniforms(
+    BOOLEAN                     bPSUniform,
+    VC4_UNIFORM_FORMAT *        pUniformEntries,
+    UINT                        numUniformEntries,
+    BYTE *                     &pCurCommand,
+    UINT                       &curCommandOffset,
+    D3DDDI_PATCHLOCATIONLIST * &pCurPatchLocation)
+{
+    UINT                    allocListIndex;
+    RosUmdResource *        pTexture;
+    VC4_UNIFORM_FORMAT *    pCurUniformEntry = pUniformEntries;
+
+    for (UINT i = 0; i < numUniformEntries; i++, pCurUniformEntry++)
+    {
+        switch (pCurUniformEntry->Type)
+        {
+        case VC4_UNIFORM_TYPE_USER_CONSTANT:
+            {
+                FLOAT * pUniform = (FLOAT *)pCurCommand;
+
+                RosUmdResource *    pConstantBuffer;
+
+                if (bPSUniform)
+                {
+                    pConstantBuffer = m_psConstantBuffer[pCurUniformEntry->userConstant.bufferSlot];
+                }
+                else
+                {
+                    pConstantBuffer = m_vsConstantBuffer[pCurUniformEntry->userConstant.bufferSlot];
+                }
+
+                *pUniform = *(((FLOAT *)pConstantBuffer->m_pSysMemCopy) + pCurUniformEntry->userConstant.bufferOffset);
+
+                MoveToNextCommand(pUniform, pCurCommand, curCommandOffset);
+            }
+            break;
+        case VC4_UNIFORM_TYPE_SAMPLER_CONFIG_P0:
+            {
+                VC4TextureConfigParameter0 *    pVC4TexConfigParam0 = (VC4TextureConfigParameter0 *)pCurCommand;
+
+                pTexture = RosUmdResource::CastFrom(m_psResourceViews[pCurUniformEntry->samplerConfiguration.resourceIndex]->m_create.hDrvResource);
+
+                pVC4TexConfigParam0->UInt0 = 0;
+
+                //
+                // TODO[indyz]: Support all VC4 texture formats and tiling
+                //
+
+                VC4TextureType vc4TextureType;
+                vc4TextureType.TextureType = pTexture->GetVc4TextureType();
+                pVC4TexConfigParam0->TYPE = vc4TextureType.TYPE;
+
+                allocListIndex = m_commandBuffer.UseResource(pTexture, false);
+
+                m_commandBuffer.SetPatchLocation(
+                    pCurPatchLocation,
+                    allocListIndex,
+                    curCommandOffset,
+                    0,
+                    pVC4TexConfigParam0->UInt0);
+
+#if DBG
+
+                pVC4TexConfigParam0->BASE = 0xDEADB;
+
+#endif
+
+                MoveToNextCommand(pVC4TexConfigParam0, pCurCommand, curCommandOffset);
+            }
+            break;
+        case VC4_UNIFORM_TYPE_SAMPLER_CONFIG_P1:
+            {
+                VC4TextureConfigParameter1 *    pVC4TexConfigParam1 = (VC4TextureConfigParameter1 *)pCurCommand;
+
+                pTexture = RosUmdResource::CastFrom(m_psResourceViews[pCurUniformEntry->samplerConfiguration.resourceIndex]->m_create.hDrvResource);
+
+                pVC4TexConfigParam1->UInt0 = 0;
+
+                VC4TextureType  vc4TextureType;
+
+                if (pTexture->m_hwLayout == RosHwLayout::Tiled)
+                {
+                    vc4TextureType.TextureType = VC4_TEX_RGBX8888;
+                }
+                else
+                {
+                    vc4TextureType.TextureType = VC4_TEX_RGBA32R;
+                }
+
+                RosUmdSampler * pSampler = m_pixelSamplers[pCurUniformEntry->samplerConfiguration.samplerIndex];
+                D3D10_DDI_SAMPLER_DESC * pSamplerDesc = &pSampler->m_desc;
+
+                //
+                // TODO[indyz] : Support wrap mode of border (using border color)
+                //
+                assert(pSampler->m_desc.AddressU != D3D10_DDI_TEXTURE_ADDRESS_BORDER);
+                assert(pSampler->m_desc.AddressV != D3D10_DDI_TEXTURE_ADDRESS_BORDER);
+
+                // VC4 doesn't support Mirror Once wrap mode
+                assert(pSampler->m_desc.AddressU != D3D10_DDI_TEXTURE_ADDRESS_MIRRORONCE);
+                assert(pSampler->m_desc.AddressV != D3D10_DDI_TEXTURE_ADDRESS_MIRRORONCE);
+
+                pVC4TexConfigParam1->WRAP_S = ConvertD3D11TextureAddressMode(pSamplerDesc->AddressU);
+                pVC4TexConfigParam1->WRAP_T = ConvertD3D11TextureAddressMode(pSamplerDesc->AddressV);
+
+                pVC4TexConfigParam1->MINFILT = ConvertD3D11TextureMinFilter(pSamplerDesc->Filter, pTexture->m_mipLevels <= 1);
+                pVC4TexConfigParam1->MAGFILT = ConvertD3D11TextureMagFilter(pSamplerDesc->Filter);
+
+                pVC4TexConfigParam1->WIDTH = pTexture->m_hwWidthPixels;
+                pVC4TexConfigParam1->HEIGHT = pTexture->m_hwHeightPixels;
+
+                pVC4TexConfigParam1->TYPE4 = vc4TextureType.TYPE4;
+
+                MoveToNextCommand(pVC4TexConfigParam1, pCurCommand, curCommandOffset);
+            }
+            break;
+        case VC4_UNIFORM_TYPE_SAMPLER_CONFIG_P2:
+            {
+                DWORD * pVC4TexConfigParam23 = (DWORD *)pCurCommand;
+
+                pTexture = RosUmdResource::CastFrom(m_psResourceViews[pCurUniformEntry->samplerConfiguration.resourceIndex]->m_create.hDrvResource);
+
+                assert(pTexture->m_resourceDimension == D3D10DDIRESOURCE_TEXTURECUBE);
+
+                *pVC4TexConfigParam23 = 0;
+                MoveToNextCommand(pVC4TexConfigParam23, pVC4TexConfigParam23, curCommandOffset);
+
+                *pVC4TexConfigParam23 = 0;
+                MoveToNextCommand(pVC4TexConfigParam23, pCurCommand, curCommandOffset);
+            }
+            break;
+        case VC4_UNIFORM_TYPE_VIEWPORT_SCALE_X:
+            {
+                RosUmdResource * pRenderTarget = RosUmdResource::CastFrom(m_renderTargetViews[0]->m_create.hDrvResource);
+
+                FLOAT * pScaleX = (FLOAT *)pCurCommand;
+
+                *pScaleX = pRenderTarget->m_hwWidthPixels*16.0f/2.0f;
+                MoveToNextCommand(pScaleX, pCurCommand, curCommandOffset);
+            }
+            break;
+        case VC4_UNIFORM_TYPE_VIEWPORT_SCALE_Y:
+            {
+                RosUmdResource * pRenderTarget = RosUmdResource::CastFrom(m_renderTargetViews[0]->m_create.hDrvResource);
+
+                FLOAT * pScaleY = (FLOAT *)pCurCommand;
+
+                *pScaleY = pRenderTarget->m_hwHeightPixels*-16.0f/2.0f;
+                MoveToNextCommand(pScaleY, pCurCommand, curCommandOffset);
+            }
+            break;
+        case VC4_UNIFORM_TYPE_BLEND_FACTOR_R:
+        case VC4_UNIFORM_TYPE_BLEND_FACTOR_G:
+        case VC4_UNIFORM_TYPE_BLEND_FACTOR_B:
+        case VC4_UNIFORM_TYPE_BLEND_FACTOR_A:
+            {
+                FLOAT * pBlendFactor = (FLOAT *)pCurCommand;
+
+                *pBlendFactor = m_blendFactor[pCurUniformEntry->Type - VC4_UNIFORM_TYPE_BLEND_FACTOR_R];
+                MoveToNextCommand(pBlendFactor, pCurCommand, curCommandOffset);
+            }
+            break;
+        case VC4_UNIFORM_TYPE_BLEND_SAMPLE_MASK:
+            {
+                uint32_t *pSampleMask = (uint32_t *)pCurCommand;
+
+                // TODO: this must be color channel aware depending on RT format.
+                *pSampleMask = 0xFFFFFFFF;
+                MoveToNextCommand(pSampleMask, pCurCommand, curCommandOffset);
+            }
+            break;
+        default:
+            assert(false);  // Invalid values for pixel/fragment shader
+            break;
+        }
+    }
+}
+
+#endif
+
 void RosUmdDevice::WriteEpilog()
 {
     PBYTE   pCommandBuffer;
 
     m_commandBuffer.ReserveCommandBufferSpace(
         false,
-        3,
+        4,
         &pCommandBuffer);
 
     //
     // Write Flush All State, NOP and Halt commands
     //
-    pCommandBuffer[0] = VC4_CMD_FLUSH_ALL_STATE;
-    pCommandBuffer[1] = VC4_CMD_NOP;
-    pCommandBuffer[2] = VC4_CMD_HALT;
+    pCommandBuffer[0] = VC4_CMD_INCREMENT_SEMAPHORE;
+    pCommandBuffer[1] = VC4_CMD_FLUSH_ALL_STATE;
+    pCommandBuffer[2] = VC4_CMD_NOP;
+    pCommandBuffer[3] = VC4_CMD_HALT;
 
-    m_commandBuffer.CommitCommandBufferSpace(3);
+    m_commandBuffer.CommitCommandBufferSpace(4);
 
     //
     // Clear up state flag
@@ -1842,3 +2378,223 @@ void RosUmdDevice::CreateInternalBuffer(RosUmdResource * pRes, UINT size)
         MAKE_D3D10DDI_HRTRESOURCE(NULL));
 }
 
+void RosUmdDevice::SetPredication(D3D10DDI_HQUERY hQuery, BOOL bPredicateValue)
+{
+    //
+    // https://msdn.microsoft.com/en-us/library/windows/hardware/ff569547(v=vs.85).aspx
+    // per doc, hQuery can contain nullptr - supposed to save the predicate value for future use
+    //
+
+    if (nullptr == hQuery.pDrvPrivate)
+    {
+        m_bPredicateValue = bPredicateValue;
+    }
+    else
+    {
+        //
+        // TODO: Implement remaining query values other than null
+        //
+
+        assert(false);
+    }
+
+    //
+    // per MDSN Predication should set an error in the case one was seen
+    // D3D will interpret an error as critical
+    //
+    /*
+    HRESULT hr = S_OK;
+
+    if (FAILED(hr))
+    {
+    SetError(hr);
+    }
+    */
+}
+
+void RosUmdDevice::ResourceCopyRegion11_1(
+    RosUmdResource *pDestinationResource,
+    UINT DstSubresource,
+    UINT DstX,
+    UINT DstY,
+    UINT DstZ,
+    RosUmdResource * pSourceResource,
+    UINT SrcSubresource,
+    const D3D10_DDI_BOX* pSrcBox,
+    UINT copyFlags
+    )
+{
+    bool bCopy = true;
+    bool bCopyEntireSubresource = false;
+
+    //
+    // TODO: come back to philosophy if these need to be checked in FREE builds
+    //
+
+    assert(nullptr != pDestinationResource);
+    assert(nullptr != pSourceResource);
+
+    //
+    // https://msdn.microsoft.com/en-us/library/windows/hardware/hh439845(v=vs.85).aspx
+    //
+
+    if (nullptr == pSrcBox)
+    {
+        //
+        // when pSrcBox is null, copy the entire subresource
+        //
+
+        bCopyEntireSubresource = true;
+    }
+    else if (pSrcBox->left >= pSrcBox->right ||
+             pSrcBox->top >= pSrcBox->bottom ||
+             pSrcBox->front >= pSrcBox->back)
+    {
+        //
+        // pSrcBox is considered empty, don't do anything, and exit
+        //
+
+        return;
+    }
+    else
+    {
+        //
+        // TODO: the pSrcBox must not extend over the edges of the source subregion or the destination subregion
+        //
+    }
+
+    //
+    // both source and destination resources must be the same type of resource
+    //
+
+    if (pDestinationResource->m_primaryDesc.ModeDesc.Format != pSourceResource->m_primaryDesc.ModeDesc.Format)
+    {
+        return;
+    }
+
+    //
+    // both source and destination must have format types that are convertible to each other
+    //
+
+    if (pDestinationResource->m_format == pSourceResource->m_format)
+    {
+        bCopy = true;
+    }
+    else
+    {
+        bCopy = false;
+
+        //
+        // TOOD: Implement conversion check logic, or DDI for ResourceConvertRegion
+        //       ensure each source and destionation resource format in D3D11DDIARG_CREATERESOURCE.Format supports appropriate conversion
+        //
+
+        assert(false);
+    }
+
+    //
+    // the source and destination resource must not be currently mapped
+    //
+
+    if (pDestinationResource->IsMapped() || pSourceResource->IsMapped())
+    {
+        return;
+    }
+
+    //
+    // TODO: - Honor the copy flags
+    //
+
+    (copyFlags); //not used yet
+
+    //
+    // NOTE: for buffers, all coordinates are in bytes. for textures, all coordinates are in pixels
+    //
+
+    //
+    // ensure the destination resource not created with D3D10_DDI_USAGE_IMMUTABLE
+    //
+
+    if (pDestinationResource->m_usage & D3D10_DDI_USAGE_IMMUTABLE)
+    {
+        return;
+    }
+
+    //
+    // ensure either source or destination has D3D10_DDI_BIND_DEPTH_STENCIL in D3D11DDIARG_CREATERESOURCE.BindFlags OR is a multi - sampled resource :
+    //          then verify pSrcBox is NULL and DstX, DstY and DstZ are 0
+
+    if ((((pDestinationResource->m_bindFlags & D3D10_DDI_BIND_DEPTH_STENCIL) || pDestinationResource->IsMultisampled()) ||
+        ((pSourceResource->m_bindFlags & D3D10_DDI_BIND_DEPTH_STENCIL) || pSourceResource->IsMultisampled())) &&
+        (nullptr != pSrcBox || 0 != DstX || 0 != DstY || 0 != DstZ))
+    {
+        return;
+    }
+
+    //
+    // ensure sub resource indicies are in range
+    //
+
+    if (DstSubresource >= pDestinationResource->m_arraySize ||
+        SrcSubresource >= pSourceResource->m_arraySize)
+    {
+        return;
+    }
+
+    //
+    // TODO: ensure the source and destination resources are NOT part of the exact same subresource
+    //
+
+    //
+    // TODO: ensure alignment restrictions apply to coordinates
+    //
+
+    //
+    // TODO: ensure each source and desitnation resource format in D3D11DDIARG_CREATERESOURCE.Format is in the same typeless group
+    //
+
+    //
+    // ensure the source and destination resources have the same number of samples and quality level (except for single sampled resources, which only number of samples are the same)
+    //
+
+    if (pDestinationResource->m_sampleDesc.Count != pSourceResource->m_sampleDesc.Count ||
+        pDestinationResource->m_sampleDesc.Quality != pSourceResource->m_sampleDesc.Quality)
+    {
+        return;
+    }
+
+    //
+    // finally perform the copy or convert
+    //
+
+    if (bCopy)
+    {
+        //
+        // TODO: implement the copy
+        //
+
+        assert(false);
+    }
+    else
+    {
+        //
+        // TODO: convert path
+        //
+
+        assert(false);
+    }
+
+    //
+    // per MDSN ResourceCopyRegion should set an error in the case one was seen
+    // D3D will interpret an error as critical
+    //
+
+/*
+    HRESULT hr = S_OK;
+
+    if (FAILED(hr))
+    {
+        SetError(hr);
+    }
+*/
+}

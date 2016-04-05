@@ -1,12 +1,5 @@
 #pragma once
 
-#define assert( _exp ) ( ( _exp ) ? true : (\
-    OutputDebugStringW( L"Assertion Failed\n" ),\
-    OutputDebugStringW( #_exp L"\n" ),\
-    DebugBreak() ) ); __assume( _exp )
-
-#define AssertAndAssume(expression)     {assert(expression); __analysis_assume(expression);}
-
 #define IFC(expr) {hr = expr; if (FAILED(hr)){goto Cleanup;}}
 
 #pragma warning(disable : 4706)
@@ -56,6 +49,7 @@ UINT GetNumInstructionSrcOperands(D3D10_SB_OPCODE_TYPE OpCode);
 UINT GetNumInstructionDstOperands(D3D10_SB_OPCODE_TYPE OpCode);
 D3D11_SB_OPCODE_CLASS GetOpcodeClass(D3D10_SB_OPCODE_TYPE OpCode);
 TCHAR* GetOpcodeString(D3D10_SB_OPCODE_TYPE OpCode);
+void InitInstructionInfo();
 
 //*****************************************************************************
 //
@@ -1951,6 +1945,7 @@ public:
     DWORD CurrentInstructionLength(); // Number of DWORDS in the current instruction
     void Advance(UINT InstructionSize);
     UINT ParsedInstructionCount() {return m_NumParsedInstructions;}
+    bool IsValid() { return m_pShaderCode != nullptr; }
 protected:
     CShaderToken*   m_pCurrentToken;
     CShaderToken*   m_pShaderCode;

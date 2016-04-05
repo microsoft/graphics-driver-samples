@@ -1,0 +1,95 @@
+;++
+;
+; Copyright (c) 2010 Microsoft Corporation
+;
+; Module Name:
+;
+;    Ros.inf
+;
+; Abstract:
+;
+;    Inf file for the render only sample driver
+;
+;--
+
+[Version]
+Signature = "$Windows NT$"
+Class=Display
+ClassGuid={4D36E968-E325-11CE-BFC1-08002BE10318}
+Provider=%ManufacturerName%
+CatalogFile=roskmd.cat
+
+[SourceDisksNames]
+0=%RenderOnlySampleDisk%
+
+[SourceDisksFiles]
+roskmd.sys = 0
+rosumd.dll = 0
+
+[DestinationDirs]
+RenderOnlySample.Miniport = 12 ; drivers
+RenderOnlySample.UserMode = 11 ; system32
+
+[Manufacturer]
+%ManufacturerName%=RenderOnlySample.Mfg,NT$ARCH$
+
+[ControlFlags]
+ExcludeFromSelect=*
+
+[RenderOnlySample.Mfg.NT$ARCH$]
+%RenderOnlySample% = RenderOnlySample,ACPI\RENDERONLYSAMPLE
+%RenderOnlySample% = RenderOnlySample,ACPI\BCM2850
+
+[RenderOnlySample]
+FeatureScore=FB
+CopyFiles=RenderOnlySample.Miniport, RenderOnlySample.UserMode
+AddReg = RenderOnlySample_AddReg
+
+[RenderOnlySample.Miniport]
+roskmd.sys,,,0x100
+
+[RenderOnlySample.UserMode]
+rosumd.dll,,,0x4000
+
+[RenderOnlySample_AddReg]
+HKR,,UserModeDriverName,%REG_MULTI_SZ%,rosumd.dll,rosumd.dll,rosumd.dll,rosumd.dll
+HKLM,"SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Scheduler",EnablePreemption,%REG_DWORD%,0
+HKLM,"SYSTEM\CurrentControlSet\Control\GraphicsDrivers",TdrDebugMode,%REG_DWORD%,1
+HKLM,"SYSTEM\CurrentControlSet\Control\GraphicsDrivers\MemoryManager",DirectFlipMemoryRequirement,%REG_DWORD%,0
+
+; Service Installation
+
+[RenderOnlySample.Services]
+AddService = RenderOnlySample, 0x00000002, RenderOnlySample_Generic_Service_Inst, RenderOnlySample_EventLog_Inst
+
+[RenderOnlySample_EventLog_Inst]
+AddReg = RenderOnlySample_EventLog_AddReg
+
+[RenderOnlySample_EventLog_AddReg]
+HKR,,EventMessageFile,%REG_EXPAND_SZ%,"%%SystemRoot%%\System32\IoLogMsg.dll"
+HKR,,TypesSupported,%REG_DWORD%,7
+
+[RenderOnlySample_Generic_Service_Inst]
+ServiceType    = 1                  ; SERVICE_KERNEL_DRIVER
+StartType      = 3                  ; SERVICE_DEMAND_START - Must be demand start
+ErrorControl   = 0                  ; SERVICE_ERROR_IGNORE
+LoadOrderGroup = Video
+ServiceBinary  = %12%\roskmd.sys
+
+[Strings]
+
+;
+; Non-Localizable Strings
+;
+
+REG_MULTI_SZ  = 0x00010000
+REG_EXPAND_SZ = 0x00020000
+REG_DWORD     = 0x00010001
+
+;
+; Localizable Strings
+;
+
+RenderOnlySample="Render Only Sample Driver"
+RenderOnlySampleDisk = "Render Only Sample Disk"
+ManufacturerName="BartHouse"

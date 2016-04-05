@@ -156,6 +156,48 @@ typedef union _V3D_REG_SLCACTL
     UINT        Value;
 } V3D_REG_SLCACTL;
 
+// 0x0030   Interrupt Control
+typedef union _V3D_REG_INTCTL
+{
+    struct
+    {
+        UINT    INT_FRDONE      : 1;
+        UINT    INT_FLDONE      : 1;
+        UINT    INT_OUTOFMEM    : 1;
+        UINT    INT_SPILLUSE    : 1;
+    };
+
+    UINT        Value;
+} V3D_REG_INTCTL;
+
+// 0x0034   Interrupt Enables
+typedef union _V3D_REG_INTENA
+{
+    struct
+    {
+        UINT    EI_FRDONE   : 1;
+        UINT    EI_FLDONE   : 1;
+        UINT    EI_OUTOFMEM : 1;
+        UINT    EI_SPILLUSE : 1;
+    };
+
+    UINT        Value;
+} V3D_REG_INTENA;
+
+// 0x0038   Interrupt Disables
+typedef union _V3D_REG_INTDIS
+{
+    struct
+    {
+        UINT    DI_FRDONE   : 1;
+        UINT    DI_FLDONE   : 1;
+        UINT    DI_OUTOFMEM : 1;
+        UINT    DI_SPILLUSE : 1;
+    };
+
+    UINT        Value;
+} V3D_REG_INTDIS;
+
 // 0x0100   Control List Executor Thread 0 Control and Status
 typedef union _V3D_REG_CT0CS
 {
@@ -330,6 +372,14 @@ typedef struct _VC4StartTileBinng
 
 const VC4StartTileBinng vc4StartTileBinng = { VC4_CMD_START_TILE_BINNING };
 
+// Code: 8
+typedef struct _VC4WaitOnSempahore
+{
+    VC4_COMMAND_ID CommandCode;
+} VC4WaitOnSemaphore;
+
+const VC4WaitOnSemaphore vc4WaitOnSemaphore = { VC4_CMD_WAIT_ON_SEMAPHORE };
+
 // Code: 16
 typedef struct _VC4Branch
 {
@@ -402,6 +452,57 @@ typedef struct _VC4StoreTileBufferGeneral
 } VC4StoreTileBufferGeneral;
 
 const VC4StoreTileBufferGeneral vc4StoreTileBufferGeneral = { VC4_CMD_STORE_TILE_BUF_GENERAL, 0 };
+
+// Code: 29,    Rendering only
+typedef struct _VC4LoadTileBufferGeneral
+{
+    VC4_COMMAND_ID  CommandCode;
+    union
+    {
+        struct
+        {
+            USHORT  BufferToLoad                : 3;    // 0,1,2,3,4,5 = None, Color, Z/stencil, Z-only, VG-Mask, Full Dump
+            USHORT  Unused1                     : 1;
+            USHORT  Fortmat                     : 2;    // 0,1,2 = raster format, T-format, LT-format
+            USHORT  Unused2                     : 2;
+            USHORT  PixelColorFormat            : 2;    // 0,1,2 = rgba8888, bgr565 dithered, bgr565 no dither
+                                                        // Applies to non-HDR Color store only.
+            USHORT  Unused3                     : 6;
+        };
+        USHORT      UShort1;
+    };
+    union
+    {
+        struct
+        {
+            UINT    DisableColorBufferLoad      : 1;    // Applies to full dump mode only
+            UINT    DisableZStencilBufferLoad   : 1;
+            UINT    DisableVGMaskBufferLoad     : 1;
+            UINT    Unused4                     : 1;
+            UINT    MemoryBaseAddress           : 28;   // Address of frame/tile dump buffer, 16 bytes aligned
+        };
+        UINT        UInt3;
+    };
+} VC4LoadTileBufferGeneral;
+
+const VC4LoadTileBufferGeneral vc4LoadTileBufferGeneral = { VC4_CMD_LOAD_TILE_BUF_GENERAL, 0 };
+
+typedef enum _VC4TileBufferData
+{
+    VC4_TILE_BUFFER_NONE        = 0,
+    VC4_TILE_BUFFER_COLOR       = 1,
+    VC4_TILE_BUFFER_Z_STENCIL   = 2,
+    VC4_TILE_BUFFER_LOAD_NA     = 3,
+    VC4_TILE_BUFFER_VG_MASK     = 4,
+    VC4_TILE_BUFFER_FULL        = 5
+} VC4LoadTileBufferType;
+
+typedef enum _VC4TileBufferPixelFormat
+{
+    VC4_TILE_BUFFER_PIXEL_FORMAT_RGBA8888           = 0,
+    VC4_TILE_BUFFER_PIXEL_FORMAT_BGR565_DITHERED    = 1,
+    VC4_TILE_BUFFER_PIXEL_FORMAT_BGR565_NO_DITHER   = 2
+} VC4TileBufferPixelFormat;
 
 // Code: 32
 typedef struct _VC4IndexedPrimitiveList
@@ -477,9 +578,9 @@ typedef struct _VC4GLShaderStateRecord
     {
         struct
         {
-            USHORT  EnableClipping                  : 1;
-            USHORT  PointSizeIncluded               : 1;
             USHORT  FragmentShaderIsSingleThreaded  : 1;
+            USHORT  PointSizeIncluded               : 1;
+            USHORT  EnableClipping                  : 1;
         };
         USHORT      UShort1;
     };
@@ -557,7 +658,7 @@ typedef struct _VC4ConfigBits
         {
             USHORT  EnableForwardFacingPrimitive    : 1;
             USHORT  EnableReverseFacingPrimitive    : 1;
-            USHORT  ClosewisePrimitives             : 1;
+            USHORT  ClockwisePrimitives             : 1;
             USHORT  EnableDepthOffset               : 1;
             USHORT  AntialisedPointsAndLines        : 1;    // Not actually supported
             USHORT  CoverageReadType                : 1;    // (0 = 4*8-bit level, 1 = 16-bit mask)
@@ -712,6 +813,18 @@ typedef struct _VC4TileBinningModeConfig
 
 const VC4TileBinningModeConfig vc4TileBinningModeConfig = { VC4_CMD_TILE_BINNING_MODE_CONFIG, 0 };
 
+enum class VC4_NON_HDR_FRAME_BUFFER_COLOR_FORMAT {
+    BGR565D = 0,        // bgr565 dithered
+    RGBA8888 = 1,       // rgba8888
+    BGR565 = 2,         // bgr565 non-dithered
+};
+
+enum class VC4_MEMORY_FORMAT {
+    LINEAR = 0,
+    T_FORMAT = 1,
+    LT_FORMAT = 2,
+};
+
 // Code 113,    Rendering only
 typedef struct _VC4TileRenderingModeConfig
 {
@@ -858,11 +971,53 @@ typedef struct _VC4TextureType
     };
 } VC4TextureType;
 
+typedef enum _VC4TextureWrap
+{
+    VC4_TEX_REPEAT  = 0,
+    VC4_TEX_CLAMP   = 1,
+    VC4_TEX_MIRROR  = 2,
+    VC4_TEX_BORDER  = 3
+} VC4TextureWrap;
+
+typedef enum _VC4TextureMagFilter
+{
+    VC4_TEX_MAG_LINEAR  = 0,
+    VC4_TEX_MAG_NEAREST = 1
+} VC4TextureMagFilter;
+
+typedef enum _VC4TextureMinFilter
+{
+    VC4_TEX_MIN_LINEAR          = 0,
+    VC4_TEX_MIN_NEAREST         = 1,
+    VC4_TEX_MIN_NEAR_MIP_NEAR   = 2,
+    VC4_TEX_MIN_NEAR_MIP_LIN    = 3,
+    VC4_TEX_MIN_LIN_MIP_NEAR    = 4,
+    VC4_TEX_MIN_LIN_MIP_LIN     = 5,
+} VC4TextureMinFilter;
+
 //
 // Constants
 //
 
 const UINT VC4_BINNING_TILE_PIXELS  = 64;
+
+//
+// Constants related to tiled textures
+//
+
+const UINT VC4_1KB_SUB_TILE_WIDTH       = 16;
+const UINT VC4_1KB_SUB_TILE_HEIGHT      = 16;
+const UINT VC4_1KB_SUB_TILE_WIDTH_BYTES = 64;
+const UINT VC4_1KB_SUB_TILE_SIZE_BYTES  = 1024;
+
+const UINT VC4_4KB_TILE_WIDTH           = 32;
+const UINT VC4_4KB_TILE_HEIGHT          = 32;
+const UINT VC4_4KB_TILE_WIDTH_BYTES     = 128;
+const UINT VC4_4KB_TILE_SIZE_BYTES      = 4096;
+
+const UINT VC4_MICRO_TILE_WIDTH_BYTES   = 16;
+const UINT VC4_MICRO_TILE_HEIGHT        = 4;
+const UINT VC4_MICRO_TILE_SIZE_BYTES    = 64;
 
 //
 // VC4 bus address alias

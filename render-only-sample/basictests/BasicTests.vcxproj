@@ -30,7 +30,7 @@
     <ProjectGuid>{D0FBB74B-9DB6-4943-AB00-A488F7255D66}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>BasicTests</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.10240.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.10586.0</WindowsTargetPlatformVersion>
     <ProjectName>BasicTests</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />

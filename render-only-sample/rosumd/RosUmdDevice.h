@@ -7,15 +7,18 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 
-#include "d3dumddi_.h"
-#include <debugapi.h>
-
 #include "RosUmdCommandBuffer.h"
 #include "RosAllocation.h"
 #include "RosUmdUtil.h"
 #include "RosUmdDebug.h"
 
 #include "RosUmdResource.h"
+
+#include "RosUmdShader.h"
+
+#include "RosUmdBlendState.h"
+#include "RosUmdRasterizerState.h"
+#include "RosUmdDepthStencilState.h"
 
 #ifndef PAGE_SIZE
 #define PAGE_SIZE 4096
@@ -24,11 +27,9 @@
 class RosUmdAdapter;
 class RosUmdRenderTargetView;
 class RosUmdDepthStencilView;
-class RosUmdBlendState;
 class RosUmdShader;
 class RosUmdElementLayout;
-class RosUmdDepthStencilState;
-class RosUmdRasterizerState;
+
 class RosUmdSampler;
 class RosUmdShaderResourceView;
 
@@ -53,7 +54,7 @@ typedef union _RosUmdDeviceFlags
 // RosUmdDevice
 //
 //==================================================================================================================================
-class RosUmdDevice 
+class RosUmdDevice
 {
 public:
     explicit RosUmdDevice( RosUmdAdapter*, const D3D10DDIARG_CREATEDEVICE* );
@@ -63,13 +64,17 @@ public:
     void Teardown();
 
     static RosUmdDevice* CastFrom( D3D10DDI_HDEVICE );
+    static RosUmdDevice* CastFrom( DXGI_DDI_HDEVICE );
     D3D10DDI_HDEVICE CastTo() const;
 
 public:
 
     void CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResource, D3D10DDI_HRESOURCE hResource, D3D10DDI_HRTRESOURCE hRTResource);
+    void OpenResource(const D3D10DDIARG_OPENRESOURCE*, D3D10DDI_HRESOURCE, D3D10DDI_HRTRESOURCE);
     void DestroyResource(RosUmdResource * pResource);
     void ResourceCopy(RosUmdResource *pDestinationResource, RosUmdResource * pSourceResource);
+    void ResourceCopyRegion11_1(RosUmdResource *pDestinationResource, UINT DstSubresource, UINT DstX, UINT DstY, UINT DstZ, RosUmdResource * pSourceResource, UINT SrcSubresource, const D3D10_DDI_BOX* pSrcBox, UINT copyFlags);
+    void ConstantBufferUpdateSubresourceUP(RosUmdResource *pDestinationResource, UINT DstSubresource, _In_opt_ const D3D10_DDI_BOX *pDstBox, _In_ const VOID *pSysMemUP, UINT RowPitch, UINT DepthPitch, UINT CopyFlags);
 
     void CreatePixelShader(const UINT* pCode, D3D10DDI_HSHADER hShader, D3D10DDI_HRTSHADER hRTShader, const D3D11_1DDIARG_STAGE_IO_SIGNATURES* pSignatures);
     void CreateVertexShader(const UINT* pCode, D3D10DDI_HSHADER hShader, D3D10DDI_HRTSHADER hRTShader, const D3D11_1DDIARG_STAGE_IO_SIGNATURES* pSignatures);
@@ -82,11 +87,13 @@ public:
     void ResourceMap(RosUmdResource * pResource, UINT subResource, D3D10_DDI_MAP mapType, UINT mapFlags, D3D10DDI_MAPPED_SUBRESOURCE* pMappedSubRes);
     void ResourceUnmap(RosUmdResource * pResource, UINT subResource);
 
+    void SetPredication(D3D10DDI_HQUERY hQuery, BOOL bPredicateValue);
+
 public:
 
     void CheckFormatSupport(DXGI_FORMAT inFormat, UINT* pOutFormatSupport);
     void CheckCounterInfo(D3D10DDI_COUNTER_INFO* pOutCounterInfo);
-    void CheckMultisampleQualityLevels(DXGI_FORMAT inFormat, UINT inSampleCount, UINT* pOutNumQualityLevels);
+    void CheckMultisampleQualityLevels(DXGI_FORMAT inFormat, UINT inSampleCount, UINT inFlags, UINT* pOutNumQualityLevels);
 
 public:
 
@@ -100,6 +107,19 @@ public:
     void Render(D3DDDICB_RENDER * pRender);
     void DestroyContext(D3DDDICB_DESTROYCONTEXT * pDestroyContext);
 
+    HRESULT Present(DXGI_DDI_ARG_PRESENT* Args);
+    HRESULT RotateResourceIdentities(DXGI_DDI_ARG_ROTATE_RESOURCE_IDENTITIES* Args);
+    HRESULT SetDisplayMode(DXGI_DDI_ARG_SETDISPLAYMODE* Args);
+    HRESULT Present1(DXGI_DDI_ARG_PRESENT1* Args);
+
+    void CheckDirectFlipSupport(
+        D3D10DDI_HDEVICE hDevice,
+        D3D10DDI_HRESOURCE hResource1,
+        D3D10DDI_HRESOURCE hResource2,
+        UINT CheckDirectFlipFlags,
+        _Out_ BOOL *pSupported
+        );
+    
     //
     // User mode call backs
     //
@@ -108,8 +128,8 @@ public:
 
 public:
 
-    void SetException(std::exception & e);
-    void SetException(RosUmdException & e);
+    void SetException(const std::exception & e);
+    void SetException(const RosUmdException & e);
 
 public:
     HANDLE                          m_hContext;
@@ -195,7 +215,7 @@ public:
     void SetElementLayout(RosUmdElementLayout * pElementLayout);
     void SetDepthStencilState(RosUmdDepthStencilState * pDepthStencilState, UINT stencilRef);
     void SetRasterizerState(RosUmdRasterizerState * pRasterizerState);
-
+    void SetScissorRects(UINT NumScissorRects, UINT ClearScissorRects, const D3D10_DDI_RECT *pRects);
 
     RosUmdResource *                m_vertexBuffers[kMaxVertexBuffers];
     UINT                            m_vertexStrides[kMaxVertexBuffers];
@@ -254,6 +274,11 @@ public:
 
     RosUmdRasterizerState *         m_rasterizerState;
 
+    BOOL                            m_scissorRectSet;
+    D3D10_DDI_RECT                  m_scissorRect;
+
+    BOOL                            m_bPredicateValue;
+
 public:
 
     void CreateInternalBuffer(RosUmdResource * pRes, UINT size);
@@ -266,6 +291,18 @@ private:
 
     void RefreshPipelineState(UINT vertexOffset);
 
+#if VC4
+
+    void WriteUniforms(
+        BOOLEAN                     bPSUniform,
+        VC4_UNIFORM_FORMAT *        pUniformEntries,
+        UINT                        numUniformEntries,
+        BYTE *                     &pCurCommand,
+        UINT                       &curCommandOffset,
+        D3DDDI_PATCHLOCATIONLIST * &pCurPatchLocation);
+
+#endif
+
 public:
     void WriteEpilog();
 };
@@ -273,6 +310,11 @@ public:
 inline RosUmdDevice* RosUmdDevice::CastFrom(D3D10DDI_HDEVICE hDevice)
 {
     return static_cast< RosUmdDevice* >(hDevice.pDrvPrivate);
+}
+
+inline RosUmdDevice* RosUmdDevice::CastFrom(DXGI_DDI_HDEVICE hDevice)
+{
+    return reinterpret_cast< RosUmdDevice* >(hDevice);
 }
 
 inline D3D10DDI_HDEVICE RosUmdDevice::CastTo() const

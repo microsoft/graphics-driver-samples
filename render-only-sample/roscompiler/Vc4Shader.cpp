@@ -1,3 +1,4 @@
+#include "precomp.h"
 #include "roscompiler.h"
 
 HRESULT Vc4ShaderStorage::Initialize()
@@ -35,44 +36,42 @@ HRESULT Vc4ShaderStorage::Grow(uint32_t size)
 void Vc4Shader::Emit_Prologue_VS()
 {
     assert(this->uShaderType == D3D10_SB_VERTEX_SHADER);
-    
-    this->ShaderStorage.EnsureInstruction(this->cInput + 3); // +2 for vr_setup/vw_setup and NOP.
 
-    assert(cInput < 16); // VR_SETUP:NUM limitation, vpm only can read up to 16 values.
+    VC4_ASSERT(cInput < 16); // VR_SETUP:NUM limitation, vpm only can read up to 16 values.
 
     {
         Vc4Instruction Vc4Inst(vc4_load_immediate_32);
         Vc4Register vr_setup(VC4_QPU_ALU_REG_A, VC4_QPU_WADDR_VPMVCD_RD_SETUP);
-        Vc4Value value; value.i = MAKE_VR_SETUP(cInput, 1, true, false, VC4_QPU_32BIT_VECTOR, 0);
+        Vc4Register value; value.SetImmediateI(MAKE_VR_SETUP(cInput, 1, true, false, VC4_QPU_32BIT_VECTOR, 0));
         Vc4Inst.Vc4_a_LOAD32(vr_setup, value);
-        ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
+        Vc4Inst.Emit(CurrentStorage);
     }
 
     {
         Vc4Instruction Vc4Inst(vc4_load_immediate_32);
         Vc4Register vw_setup(VC4_QPU_ALU_REG_B, VC4_QPU_WADDR_VPMVCD_WR_SETUP);
-        Vc4Value value; value.i = MAKE_VW_SETUP(1, true, false, VC4_QPU_32BIT_VECTOR, 0);
+        Vc4Register value; value.SetImmediateI(MAKE_VW_SETUP(1, true, false, VC4_QPU_32BIT_VECTOR, 0));
         Vc4Inst.Vc4_a_LOAD32(vw_setup, value);
-        ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
+        Vc4Inst.Emit(CurrentStorage);
     }
 
     for (uint8_t iRegUsed = 0, iRegIndex = 0; iRegUsed < this->cInput; iRegIndex++)
     {
         Vc4Instruction Vc4Inst;
         Vc4Register raX = this->InputRegister[iRegIndex / 4][iRegIndex % 4];
-        if (raX.flags.valid)
+        if (raX.GetFlags().valid)
         {
-            assert(raX.mux == VC4_QPU_ALU_REG_A || raX.mux == VC4_QPU_ALU_REG_B);
-            Vc4Register vpm(raX.mux, VC4_QPU_RADDR_VPM);
+            assert(raX.GetMux() == VC4_QPU_ALU_REG_A || raX.GetMux() == VC4_QPU_ALU_REG_B);
+            Vc4Register vpm(raX.GetMux(), VC4_QPU_RADDR_VPM);
             Vc4Inst.Vc4_a_MOV(raX, vpm);
-            ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
+            Vc4Inst.Emit(CurrentStorage);
             iRegUsed++;
         }
     }
 
     { // Emit a NOP
         Vc4Instruction Vc4Inst;
-        ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
+        Vc4Inst.Emit(CurrentStorage);
     }
 }
 
@@ -80,85 +79,60 @@ void Vc4Shader::Emit_Prologue_PS()
 {
     assert(this->uShaderType == D3D10_SB_PIXEL_SHADER);
     
-    // assume all requires interpolation. 1 instruction for load, 1 instruction for interpolation, and 1 instruction to store back.
-    // +1 for NOP (after read all varying).
-    // +1 for sbwait (after interporation).
-    this->ShaderStorage.EnsureInstruction((this->cInput * 3) + 1 + 1);
-
-    // Issue mul inputs (from varying) with ra15 (W).
     for (uint8_t i = 0, iRegUsed = 0; iRegUsed < this->cInput; i++)
     {
         Vc4Register raX = this->InputRegister[i / 4][i % 4];
-        if (raX.flags.valid)
-        {
-            Vc4Instruction Vc4Inst;
-            assert(raX.mux == VC4_QPU_ALU_REG_A || raX.mux == VC4_QPU_ALU_REG_B);
-            Vc4Register varying(VC4_QPU_ALU_REG_B, VC4_QPU_RADDR_VERYING);
-            Vc4Register ra15(VC4_QPU_ALU_REG_A, 15);
-            Vc4Inst.Vc4_m_FMUL(raX, varying, ra15);
-            ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
-            iRegUsed++;
-        }
-    }
 
-    // Issue NOP.
-    {
-        Vc4Instruction Vc4Inst;
-        ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
-    }
-
-    // Issue add r5 to each input data to complete interpolation.
-    for (uint8_t iRegUsed = 0, iRegIndex = 0; iRegUsed < this->cInput; iRegIndex++)
-    {
-        Vc4Register raX = this->InputRegister[iRegIndex / 4][iRegIndex % 4];
-        if (raX.flags.valid && raX.flags.require_linear_conversion)
+        if (raX.GetFlags().valid)
         {
+            assert(raX.GetMux() == VC4_QPU_ALU_REG_A || raX.GetMux() == VC4_QPU_ALU_REG_B);
+
+            Vc4Register r0(VC4_QPU_ALU_R0, VC4_QPU_WADDR_ACC0);
+
+            // Issue mul inputs (from varying) with ra15 (W).
             {
                 Vc4Instruction Vc4Inst;
-                Vc4Register r1(VC4_QPU_ALU_REG_A, VC4_QPU_WADDR_ACC1);
+                Vc4Register varying(VC4_QPU_ALU_REG_B, VC4_QPU_RADDR_VERYING);
+                Vc4Register ra15(VC4_QPU_ALU_REG_A, 15);
+                Vc4Inst.Vc4_m_FMUL(r0, varying, ra15);
+                Vc4Inst.Emit(CurrentStorage);
+            }
+
+            // Issue add r5 to each input data to complete interpolation.
+            {
+                Vc4Instruction Vc4Inst;
                 Vc4Register r5(VC4_QPU_ALU_R5);
-                Vc4Inst.Vc4_a_FADD(r1, raX, r5);
-                ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
-            }
-        
-            {
-                Vc4Instruction Vc4Inst;
-                Vc4Register r1(VC4_QPU_ALU_R1);
-                Vc4Inst.Vc4_a_MOV(raX, r1);
-                ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
+                Vc4Inst.Vc4_a_FADD(raX, r0, r5);
+                Vc4Inst.Emit(CurrentStorage);
             }
 
             iRegUsed++;
         }
     }
-    
+
     { // Emit a NOP with 'sbwait'
         Vc4Instruction Vc4Inst;
         Vc4Inst.Vc4_Sig(VC4_QPU_SIG_WAIT_FOR_SCOREBOARD);
-        ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
+        Vc4Inst.Emit(CurrentStorage);
     }
 }
 
-void Vc4Shader::Emit_ShaderOutput_VS(boolean bVS, Vc4ShaderStorage *Storage)
+void Vc4Shader::Emit_ShaderOutput_VS(boolean bVS)
 {
     assert(this->uShaderType == D3D10_SB_VERTEX_SHADER);
-    
-    Storage->EnsureInstruction((bVS ? 0 : 4)                        // raw coordinate outputs X/Y/Z/W.
-                               + 8                                 // 2 fmul, 2 ftoi, 1 NOP and 1 mov.
-                               + (bVS ? (this->cOutput - 4) : 0)); // varying output
     
     Vc4Register vpm(VC4_QPU_ALU_REG_B, VC4_QPU_WADDR_VPM);
 
     Vc4Register pos[4]; // X/Y/Z/W.
     for (uint8_t iPos = 0; iPos < this->cOutput; iPos++)
     {
-        if (this->OutputRegister[iPos / 4][iPos % 4].flags.position)
+        if (this->OutputRegister[iPos / 4][iPos % 4].GetFlags().position)
         {
             for (uint8_t i = iPos; i < iPos + 4; i++)
             {
                 Vc4Register reg = this->OutputRegister[i / 4][i % 4];
-                assert(reg.flags.position);
-                pos[this->SwizzleMaskToIndex(reg.swizzleMask)] = reg;
+                assert(reg.GetFlags().position);
+                pos[this->SwizzleMaskToIndex(reg.GetSwizzleMask())] = reg;
             }
             break;
         }
@@ -173,106 +147,152 @@ void Vc4Shader::Emit_ShaderOutput_VS(boolean bVS, Vc4ShaderStorage *Storage)
             Vc4Register src = pos[i];
             Vc4Instruction Vc4Inst;
             Vc4Inst.Vc4_m_MOV(vpm, src);
-            Storage->EmitInstruction(Vc4Inst.GetInstruction());
+            Vc4Inst.Emit(CurrentStorage);
         }
     }
 
+    // calculate 1/W
+    {
+        // send W to sfu_recip.
+        {
+            Vc4Register sfu_recip((pos[3].GetMux() == VC4_QPU_ALU_REG_A ? VC4_QPU_ALU_REG_B : VC4_QPU_ALU_REG_A), VC4_QPU_WADDR_SFU_RECIP);
+            Vc4Instruction Vc4Inst;
+            Vc4Inst.Vc4_a_MOV(sfu_recip, pos[3]);
+            Vc4Inst.Emit(CurrentStorage);
+        }
+
+        // Issue 2 NOPs to wait result of sfu_recip.
+        for (uint8_t i = 0; i < 2; i++)
+        {
+            Vc4Instruction Vc4Inst;
+            Vc4Inst.Emit(CurrentStorage);
+        }
+    }
+
+    // Now, r4 is 1/W.
+    Vc4Register r4(VC4_QPU_ALU_R4);
+    
     // Ys/Xs
     {
         // scale by RT dimension (read from uniform). Result in r0/r1.
         {
             for (uint8_t i = 0; i < 2; i++)
             {
-                Vc4Register rX(VC4_QPU_ALU_REG_B, VC4_QPU_WADDR_ACC0 + i); // r0 and r1.
-                Vc4Register unif((pos[i].mux == VC4_QPU_ALU_REG_A ? VC4_QPU_ALU_REG_B : VC4_QPU_ALU_REG_A), VC4_QPU_RADDR_UNIFORM); // use opossit register file.
-                Vc4Instruction Vc4Inst;
-                 Vc4Inst.Vc4_m_FMUL(rX, pos[i], unif);
-                Storage->EmitInstruction(Vc4Inst.GetInstruction());
+                Vc4Register rX(VC4_QPU_ALU_R0 + i, VC4_QPU_WADDR_ACC0 + i); // r0 and r1.
+                
+                { // divide Xc/Yc by W.
+                    Vc4Instruction Vc4Inst;
+                    Vc4Inst.Vc4_m_FMUL(rX, pos[i], r4);
+                    Vc4Inst.Emit(CurrentStorage);
+                }
+
+                { // Scale Xc/Yc with viewport.
+                    Vc4Instruction Vc4Inst;
+                    Vc4Register unif((rX.GetMux() == VC4_QPU_ALU_REG_A ? VC4_QPU_ALU_REG_B : VC4_QPU_ALU_REG_A), VC4_QPU_RADDR_UNIFORM); // use opossit register file.
+                    Vc4Inst.Vc4_m_FMUL(rX, rX, unif);
+                    Vc4Inst.Emit(CurrentStorage);
+                    {
+                        VC4_UNIFORM_FORMAT u;
+                        u.Type = (i == 0 ? VC4_UNIFORM_TYPE_VIEWPORT_SCALE_X : VC4_UNIFORM_TYPE_VIEWPORT_SCALE_Y);
+                        this->AddUniformReference(u);
+                    }
+                }
             }
         }
 
-        // Convert r0/r1 to 16bits float and packed into pos[0]
+        // Convert r0/r1 to 16bits float and pack them into ra16, then output to vpm.
         {
             Vc4Register ra16(VC4_QPU_ALU_REG_A, 16);
+
             for (uint8_t i = 0; i < 2; i++)
             {
                 Vc4Register rX(VC4_QPU_ALU_R0 + i); // r0 and r1.
                 Vc4Instruction Vc4Inst;
                 Vc4Inst.Vc4_a_FTOI(ra16, rX); // REUSE ra16 as temp is no longer needed.
-                Vc4Inst.Vc4_a_Pack(VC4_QPU_PACK_A_16a + i);
-                Storage->EmitInstruction(Vc4Inst.GetInstruction());
+                Vc4Inst.Vc4_a_Pack(VC4_QPU_PACK_A_16a + i); // Pack to 16a or 16b.
+                Vc4Inst.Emit(CurrentStorage);
             }
 
             // Issue NOP as ra16 is just written.
             {
                 Vc4Instruction Vc4Inst;
-                ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
+                Vc4Inst.Emit(CurrentStorage);
             }
 
             // Output to vpm.
             {
                 Vc4Instruction Vc4Inst;
                 Vc4Inst.Vc4_m_MOV(vpm, ra16);
-                Storage->EmitInstruction(Vc4Inst.GetInstruction());
+                Vc4Inst.Emit(CurrentStorage);
             }
         }
     }
 
-    // Zc
-    {
+    // Zs
+    { // Zs = Zc / W // TODO: Z offset
         Vc4Instruction Vc4Inst;
-        Vc4Inst.Vc4_m_MOV(vpm, pos[2]);
-        Storage->EmitInstruction(Vc4Inst.GetInstruction());
+        Vc4Inst.Vc4_m_FMUL(vpm, pos[2], r4);
+        Vc4Inst.Emit(CurrentStorage);
     }
 
-    // 1/W // TODO: this must be 1/Wc
+    // 1/Wc
     {
-        Vc4Register w;
-        Vc4Instruction Vc4Inst;
-        Vc4Inst.Vc4_m_MOV(vpm, pos[3]);
-        Storage->EmitInstruction(Vc4Inst.GetInstruction());
+        // Move result of sfu_recip (come up at r4) to vpm.
+        {
+            Vc4Instruction Vc4Inst;
+            Vc4Inst.Vc4_m_MOV(vpm, r4);
+            Vc4Inst.Emit(CurrentStorage);
+        }
     }
 
     // Only VS emits "varying" (everything read from vpm except position data).
     if (bVS)
     {
-        for (uint8_t i = 0; i < this->cOutput; i++)
+        for (uint8_t i = 0, iRegUsed = 0; iRegUsed < this->cOutput; i++ )
         {
-            if (this->OutputRegister[i / 4][i % 4].flags.position == false)
+            Vc4Register src = this->OutputRegister[i / 4][i % 4];
+            if (src.GetFlags().valid)
             {
-                Vc4Register src = this->OutputRegister[i / 4][i % 4];
-                Vc4Instruction Vc4Inst;
-                Vc4Inst.Vc4_m_MOV(vpm, src);
-                Storage->EmitInstruction(Vc4Inst.GetInstruction());
+                if (src.GetFlags().linkage)
+                {
+                    Vc4Instruction Vc4Inst;
+                    Vc4Inst.Vc4_m_MOV(vpm, src);
+                    // Vc4Inst.Vc4_m_FMUL(vpm, src, r4);
+                    Vc4Inst.Emit(CurrentStorage);
+                }
+                iRegUsed++;
             }
         }
     }
 }
 
-void Vc4Shader::Emit_Epilogue(Vc4ShaderStorage *Storage)
+void Vc4Shader::Emit_Blending_PS()
+{
+    // Issue #29
+    assert(false);
+}
+
+void Vc4Shader::Emit_Epilogue()
 {
     assert(this->uShaderType == D3D10_SB_PIXEL_SHADER ||
            this->uShaderType == D3D10_SB_VERTEX_SHADER);
 
-    if (Storage == NULL)
-    {
-        Storage = &(this->ShaderStorage);
-    }
-
-    // +1 for thrend with color output.
-    // +2 for NOP(s) and unblock.
-    Storage->EnsureInstruction(3);
-
-    // output 'Z'.
     if (D3D10_SB_PIXEL_SHADER == this->uShaderType)
     {
-        if (true) // TODO: check if Z is enabled.
+        // output 'Z'.
+        if (UmdCompiler->GetDepthState()->DepthEnable)
         {
             Vc4Register tlb_z(VC4_QPU_ALU_REG_B, VC4_QPU_WADDR_TLB_Z);
             Vc4Register rb15(VC4_QPU_ALU_REG_B, 15); // reserved for Z
             Vc4Instruction Vc4Inst;
             Vc4Inst.Vc4_m_MOV(tlb_z, rb15);
-            Storage->EmitInstruction(Vc4Inst.GetInstruction());
+            Vc4Inst.Emit(CurrentStorage);
+        }
+
+        // output blending instructions.
+        if (UmdCompiler->GetBlendState()->RenderTarget[0].BlendEnable)
+        {
+            this->Emit_Blending_PS();
         }
     }
 
@@ -286,7 +306,7 @@ void Vc4Shader::Emit_Epilogue(Vc4ShaderStorage *Storage)
             Vc4Register tlb_c(VC4_QPU_ALU_REG_A, VC4_QPU_WADDR_TLB_COLOUR_ALL);
             Vc4Inst.Vc4_a_MOV(tlb_c, this->OutputRegister[0][0]);
         }
-        Storage->EmitInstruction(Vc4Inst.GetInstruction());
+        Vc4Inst.Emit(CurrentStorage);
     }
 
     // output 2 NOP(s) with 'sbdone' for last nop for pixel shader.
@@ -297,7 +317,78 @@ void Vc4Shader::Emit_Epilogue(Vc4ShaderStorage *Storage)
         {
             Vc4Inst.Vc4_Sig(VC4_QPU_SIG_SCOREBOARD_UNBLOCK);
         }
-        Storage->EmitInstruction(Vc4Inst.GetInstruction());
+        Vc4Inst.Emit(CurrentStorage);
+    }
+}
+
+void Vc4Shader::Emit_Mad(CInstruction &Inst)
+{
+    assert(this->uShaderType == D3D10_SB_PIXEL_SHADER ||
+           this->uShaderType == D3D10_SB_VERTEX_SHADER);
+
+    VC4_ASSERT(Inst.m_NumOperands == 4);
+
+    {
+        for (uint8_t i = 0, aCurrent = D3D10_SB_OPERAND_4_COMPONENT_MASK_X; i < 4; i++)
+        {
+            if (Inst.m_Operands[0].m_WriteMask & aCurrent)
+            {
+                Vc4Register accum(VC4_QPU_ALU_R3, VC4_QPU_WADDR_ACC3);
+                Vc4Register dst = Find_Vc4Register_M(Inst.m_Operands[0], aCurrent);
+
+                // perform mul first 2 operands
+                {
+                    Vc4Register src[2];
+                    this->Setup_SourceRegisters(Inst, 1, ARRAYSIZE(src), i, src);
+
+                    {
+                        Vc4Instruction Vc4Inst;
+                        Vc4Inst.Vc4_m_FMUL(accum, src[0], src[1]);
+                        Vc4Inst.Emit(CurrentStorage);
+                    }
+                }
+
+                Vc4Register _dst;
+                if (dst.GetFlags().packed)
+                {
+                    // pack has to be done at mul pipe, so result to r3, 
+                    // then use mul pipe to move to final dst (with pack).
+                    _dst = accum;
+                }
+                else
+                {
+                    _dst = dst;
+                }
+
+                // perform add with 3rd operand.
+                {
+                    Vc4Register src[1];
+                    this->Setup_SourceRegisters(Inst, 3, ARRAYSIZE(src), i, src);
+
+                    {
+                        Vc4Instruction Vc4Inst;
+                        Vc4Inst.Vc4_a_FADD(_dst, accum, src[0]);
+                        Vc4Inst.Emit(CurrentStorage);
+                    }
+                }
+
+                // move to destination (with packing).
+                if (dst.GetFlags().packed)
+                {
+                    Vc4Instruction Vc4Inst;
+                    Vc4Inst.Vc4_m_MOV(dst, accum);
+                    Vc4Inst.Vc4_m_Pack(dst.GetPack(i));
+                    Vc4Inst.Emit(CurrentStorage);
+                }
+            }
+
+            aCurrent <<= 1;
+        }
+    }
+
+    { // Emit a NOP
+        Vc4Instruction Vc4Inst;
+        Vc4Inst.Emit(CurrentStorage);
     }
 }
 
@@ -305,156 +396,215 @@ void Vc4Shader::Emit_Mov(CInstruction &Inst)
 {
     assert(this->uShaderType == D3D10_SB_PIXEL_SHADER ||
            this->uShaderType == D3D10_SB_VERTEX_SHADER);
-    
-    // max 4 mov(s) + 1 NOP.
-    this->ShaderStorage.EnsureInstruction(5);
 
-    assert(Inst.m_NumOperands == 2);
-
-    assert(Inst.m_Operands[0].m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
-    assert(Inst.m_Operands[0].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
-    assert(Inst.m_Operands[0].m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_MASK_MODE);
+    VC4_ASSERT(Inst.m_NumOperands == 2);
 
     {
         for (uint8_t i = 0, aCurrent = D3D10_SB_OPERAND_4_COMPONENT_MASK_X; i < 4; i++)
         {
             if (Inst.m_Operands[0].m_WriteMask & aCurrent)
             {
-                Vc4Register dst = Find_Vc4Register(Inst.m_Operands[0], aCurrent);
-                uint8_t pack = VC4_QPU_PACK_A_32;
-                if (dst.flags.packed)
-                {
-                    pack = VC4_QPU_PACK_MUL_8a + SwizzleMaskToIndex(aCurrent);
-                }
+                Vc4Register dst = Find_Vc4Register_M(Inst.m_Operands[0], aCurrent);
+                Vc4Register src[1];
+                Setup_SourceRegisters(Inst, 1, ARRAYSIZE(src), i , src);
 
-                switch (Inst.m_Operands[1].m_Type)
                 {
-                case D3D10_SB_OPERAND_TYPE_IMMEDIATE32:
-                {
-                    Vc4Instruction Vc4Inst(vc4_load_immediate_32);
-                    Vc4Value value;
-                    switch (Inst.m_Operands[1].m_NumComponents)
-                    {
-                    case D3D10_SB_OPERAND_1_COMPONENT:
-                        value.i = Inst.m_Operands[1].m_Value[0];
-                        break;
-                    case D3D10_SB_OPERAND_4_COMPONENT:
-                        value.i = Inst.m_Operands[1].m_Value[i];
-                        break;
-                    default:
-                        assert(false);
-                    }
-                    Vc4Inst.Vc4_m_LOAD32(dst, value);
-                    Vc4Inst.Vc4_m_Pack(pack);
-                    ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
-                    break;
-                }
-                case D3D10_SB_OPERAND_TYPE_IMMEDIATE64:
-                {
-                    // 64bit load is not supported.
-                    assert(false);
-                    break;
-                }
-                case D3D10_SB_OPERAND_TYPE_OUTPUT:
-                {
-                    // output can't be source of move.
-                    assert(false);
-                    break;
-                }
-                case D3D10_SB_OPERAND_TYPE_CONSTANT_BUFFER:
-                {
-                    // TODO:
-                    assert(false);
-                    break;
-                }
-                case D3D10_SB_OPERAND_TYPE_TEMP:
-                case D3D10_SB_OPERAND_TYPE_INPUT:
-                {
-                    assert(Inst.m_Operands[1].m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
-                    assert(Inst.m_Operands[1].m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_SWIZZLE_MODE);
-                    Vc4Register src = Find_Vc4Register(Inst.m_Operands[1], D3D10_SB_OPERAND_4_COMPONENT_MASK(Inst.m_Operands[1].m_Swizzle[i]));
                     Vc4Instruction Vc4Inst;
-                    Vc4Inst.Vc4_m_MOV(dst, src);
-                    Vc4Inst.Vc4_m_Pack(pack);
-                    ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
-                    break;
-                }
-                default:
-                    assert(false);
+                    Vc4Inst.Vc4_m_MOV(dst, src[0]);
+                    Vc4Inst.Vc4_m_Pack(dst.GetPack(i));
+                    Vc4Inst.Emit(CurrentStorage);
                 }
             }
+
             aCurrent <<= 1;
         }
     }
 
     { // Emit a NOP
         Vc4Instruction Vc4Inst;
-        ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
+        Vc4Inst.Emit(CurrentStorage);
     }
 }
 
-void Vc4Shader::Emit_Mul(CInstruction &Inst)
+void Vc4Shader::Emit_DPx(CInstruction &Inst)
+{
+    assert(this->uShaderType == D3D10_SB_PIXEL_SHADER ||
+           this->uShaderType == D3D10_SB_VERTEX_SHADER); 
+
+    VC4_ASSERT(Inst.m_NumOperands == 3);
+
+    {
+        // DP2 loop 2 times.
+        // DP3 loop 3 times.
+        // DP4 loop 4 times.
+        uint8_t c = (uint8_t)(Inst.m_OpCode - 13);
+
+        // where to accumulate result of mul.
+        Vc4Register accum(VC4_QPU_ALU_R3, VC4_QPU_WADDR_ACC3);
+
+        {
+            Vc4Register zero(VC4_QPU_ALU_REG_B, 0); // 0 as small immediate in raddr_b
+            Vc4Instruction Vc4Inst(vc4_alu_small_immediate);
+            Vc4Inst.Vc4_m_MOV(accum, zero);
+            Vc4Inst.Emit(CurrentStorage);
+        }
+           
+        for(uint8_t i = 0; i < c; i++)
+        {
+            Vc4Register temp(VC4_QPU_ALU_R1, VC4_QPU_WADDR_ACC1);
+            Vc4Register src[2];
+            Setup_SourceRegisters(Inst, 1, ARRAYSIZE(src), i, src);
+
+            {
+                Vc4Instruction Vc4Inst;
+                Vc4Inst.Vc4_m_FMUL(temp, src[0], src[1]);
+                if (i > 0)
+                {
+                    Vc4Inst.Vc4_a_FADD(accum, accum, temp);
+                }
+                Vc4Inst.Emit(CurrentStorage);
+            }
+
+            if (i+1 == c)
+            {
+                Vc4Instruction Vc4Inst;
+                Vc4Inst.Vc4_a_FADD(accum, accum, temp);
+                Vc4Inst.Emit(CurrentStorage);
+            }
+        }
+
+        // replicate ouput where specified.
+        for (uint8_t i = 0, aCurrent = D3D10_SB_OPERAND_4_COMPONENT_MASK_X; i < 4; i++)
+        {
+            if (Inst.m_Operands[0].m_WriteMask & aCurrent)
+            {
+                Vc4Register dst = Find_Vc4Register_M(Inst.m_Operands[0], aCurrent);
+                Vc4Instruction Vc4Inst;
+                Vc4Inst.Vc4_m_MOV(dst, accum);
+                Vc4Inst.Vc4_m_Pack(dst.GetPack(i));
+                Vc4Inst.Emit(CurrentStorage);
+            }
+     
+            aCurrent <<= 1;
+        }
+    }
+
+    { // Emit a NOP
+        Vc4Instruction Vc4Inst;
+        Vc4Inst.Emit(CurrentStorage);
+    }
+}
+
+void Vc4Shader::Emit_with_Add_pipe(CInstruction &Inst)
+{
+    assert(this->uShaderType == D3D10_SB_PIXEL_SHADER ||
+           this->uShaderType == D3D10_SB_VERTEX_SHADER);
+
+    VC4_ASSERT(Inst.m_NumOperands == 3);
+
+    {
+        for (uint8_t i = 0, aCurrent = D3D10_SB_OPERAND_4_COMPONENT_MASK_X; i < 4; i++)
+        {
+            if (Inst.m_Operands[0].m_WriteMask & aCurrent)
+            {
+                Vc4Register dst = Find_Vc4Register_M(Inst.m_Operands[0], aCurrent);
+
+                Vc4Register src[2];
+                this->Setup_SourceRegisters(Inst, 1, ARRAYSIZE(src), i, src);
+
+                Vc4Register _dst;
+                if (dst.GetFlags().packed)
+                {
+                    // pack has to be done at mul pipe, so result to r3, 
+                    // then use mul pipe to move to final dst (with pack).
+                    Vc4Register r3(VC4_QPU_ALU_R3, VC4_QPU_WADDR_ACC3);
+                    _dst = r3;
+                }
+                else
+                {
+                    _dst = dst;
+                }
+                
+                {
+                    Vc4Instruction Vc4Inst;
+                    switch (Inst.m_OpCode)
+                    {
+                    case D3D10_SB_OPCODE_ADD:
+                        Vc4Inst.Vc4_a_FADD(_dst, src[0], src[1]);
+                        break;
+                    case D3D10_SB_OPCODE_MAX:
+                        Vc4Inst.Vc4_a_FMAX(_dst, src[0], src[1]);
+                        break;
+                    case D3D10_SB_OPCODE_MIN:
+                        Vc4Inst.Vc4_a_FMIN(_dst, src[0], src[1]);
+                        break;
+                    case D3D10_SB_OPCODE_IADD:
+                        Vc4Inst.Vc4_a_IADD(_dst, src[0], src[1]);
+                        break;
+                    default:
+                        VC4_ASSERT(false);
+                    }
+                    Vc4Inst.Emit(CurrentStorage);
+                }
+
+                if (dst.GetFlags().packed)
+                {
+                    Vc4Instruction Vc4Inst;
+                    Vc4Inst.Vc4_m_MOV(dst, _dst);
+                    Vc4Inst.Vc4_m_Pack(dst.GetPack(i));
+                    Vc4Inst.Emit(CurrentStorage);
+                }
+            }
+
+            aCurrent <<= 1;
+        }
+    }
+
+    { // Emit a NOP
+        Vc4Instruction Vc4Inst;
+        Vc4Inst.Emit(CurrentStorage);
+    }
+}
+
+void Vc4Shader::Emit_with_Mul_pipe(CInstruction &Inst)
 {
     assert(this->uShaderType == D3D10_SB_PIXEL_SHADER ||
            this->uShaderType == D3D10_SB_VERTEX_SHADER);
     
-    assert(Inst.m_NumOperands == 3);
-
-    assert(Inst.m_Operands[0].m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
-    assert(Inst.m_Operands[0].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
-    assert(Inst.m_Operands[0].m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_MASK_MODE);
-    
-    // max 4 mul(s) + 1 NOP.
-    this->ShaderStorage.EnsureInstruction(5);
+    VC4_ASSERT(Inst.m_NumOperands == 3);
 
     {
         for (uint8_t i = 0, aCurrent = D3D10_SB_OPERAND_4_COMPONENT_MASK_X; i < 4; i++)
         {
             if (Inst.m_Operands[0].m_WriteMask & aCurrent)
             {
-                Vc4Register dst = Find_Vc4Register(Inst.m_Operands[0], aCurrent);
-                uint8_t pack = VC4_QPU_PACK_A_32;
-                if (dst.flags.packed)
-                {
-                    pack = VC4_QPU_PACK_MUL_8a + SwizzleMaskToIndex(aCurrent);
-                }
+                Vc4Register dst = Find_Vc4Register_M(Inst.m_Operands[0], aCurrent);
 
                 Vc4Register src[2];
-                for (uint8_t j = 1; j < 3; j++)
-                {
-                    switch (Inst.m_Operands[j].m_Type)
-                    {
-                    case D3D10_SB_OPERAND_TYPE_TEMP:
-                    case D3D10_SB_OPERAND_TYPE_INPUT:
-                        assert(Inst.m_Operands[j].m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
-                        assert(Inst.m_Operands[j].m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_SWIZZLE_MODE);
-                        src[j - 1] = Find_Vc4Register(Inst.m_Operands[j], D3D10_SB_OPERAND_4_COMPONENT_MASK(Inst.m_Operands[j].m_Swizzle[i]));
-                        break;
-                    case D3D10_SB_OPERAND_TYPE_CONSTANT_BUFFER:
-                    {
-                        Vc4Register unif(VC4_QPU_ALU_REG_B, VC4_QPU_RADDR_UNIFORM); // TODO: fix hardcoded REG_B. This is safe for now since _TEMP and _INPUT is always at REG_A file.
-                        src[j - 1] = unif;
-                        break;
-                    }
-                    default:
-                        assert(false);
-                    }
-                }
+                this->Setup_SourceRegisters(Inst, 1, ARRAYSIZE(src), i, src);
 
                 {
                     Vc4Instruction Vc4Inst;
-                    Vc4Inst.Vc4_m_FMUL(dst, src[0], src[1]);
-                    Vc4Inst.Vc4_m_Pack(pack);
-                    ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
+                    switch (Inst.m_OpCode)
+                    {
+                    case D3D10_SB_OPCODE_MUL:
+                        Vc4Inst.Vc4_m_FMUL(dst, src[0], src[1]);
+                        break;
+                    default:
+                        VC4_ASSERT(false);
+                    }
+                    Vc4Inst.Vc4_m_Pack(dst.GetPack(i));
+                    Vc4Inst.Emit(CurrentStorage);
                 }
             }
+
             aCurrent <<= 1;
         }
     }
 
     { // Emit a NOP
         Vc4Instruction Vc4Inst;
-        ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
+        Vc4Inst.Emit(CurrentStorage);
     }
 }
 
@@ -462,53 +612,57 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
 {
     assert(this->uShaderType == D3D10_SB_PIXEL_SHADER);
     
-    assert(Inst.m_NumOperands == 4);
+    VC4_ASSERT(Inst.m_NumOperands == 4);
 
     boolean bUnpack = false;
 
     Vc4Register o[4];
 
-    assert(Inst.m_Operands[0].m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
-    assert(Inst.m_Operands[0].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
+    VC4_ASSERT(Inst.m_Operands[0].m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
+    VC4_ASSERT(Inst.m_Operands[0].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
+    VC4_ASSERT(Inst.m_Operands[0].m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
+    VC4_ASSERT(Inst.m_Operands[0].m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_MASK_MODE);
+    VC4_ASSERT(Inst.m_Operands[0].m_WriteMask == (D3D10_SB_OPERAND_4_COMPONENT_MASK_R | D3D10_SB_OPERAND_4_COMPONENT_MASK_G | D3D10_SB_OPERAND_4_COMPONENT_MASK_B | D3D10_SB_OPERAND_4_COMPONENT_MASK_A));
     switch (Inst.m_Operands[0].m_Type)
     {
     case D3D10_SB_OPERAND_TYPE_OUTPUT:
-        assert(Inst.m_Operands[0].m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_MASK_MODE);
-        assert(Inst.m_Operands[0].m_WriteMask == (D3D10_SB_OPERAND_4_COMPONENT_MASK_R | D3D10_SB_OPERAND_4_COMPONENT_MASK_G | D3D10_SB_OPERAND_4_COMPONENT_MASK_B | D3D10_SB_OPERAND_4_COMPONENT_MASK_A));
-        o[0] = Find_Vc4Register(Inst.m_Operands[0], (Inst.m_Operands[0].m_WriteMask & D3D10_SB_OPERAND_4_COMPONENT_MASK_MASK));
-        assert(o[0].flags.packed);
+        o[0] = Find_Vc4Register_M(Inst.m_Operands[0], (Inst.m_Operands[0].m_WriteMask & D3D10_SB_OPERAND_4_COMPONENT_MASK_MASK));
+        VC4_ASSERT(o[0].GetFlags().packed);
         break;
     case D3D10_SB_OPERAND_TYPE_TEMP:
-        assert(Inst.m_Operands[0].m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_MASK_MODE);
-        assert(Inst.m_Operands[0].m_WriteMask == (D3D10_SB_OPERAND_4_COMPONENT_MASK_R | D3D10_SB_OPERAND_4_COMPONENT_MASK_G | D3D10_SB_OPERAND_4_COMPONENT_MASK_B | D3D10_SB_OPERAND_4_COMPONENT_MASK_A));
         for (uint8_t i = 0, aCurrent = D3D10_SB_OPERAND_4_COMPONENT_MASK_X; i < 4; i++)
         {
             if (Inst.m_Operands[0].m_WriteMask & aCurrent)
             {
-                o[i] = Find_Vc4Register(Inst.m_Operands[0], aCurrent);
+                o[i] = Find_Vc4Register_M(Inst.m_Operands[0], aCurrent);
             }
             aCurrent <<= 1;
         }
         bUnpack = true;
         break;
     default:
-        assert(false);
+        VC4_ASSERT(false);
     }
 
     // Resource
-    assert(Inst.m_Operands[2].m_Type == D3D10_SB_OPERAND_TYPE_RESOURCE);
-    assert(Inst.m_Operands[2].m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
-    assert(Inst.m_Operands[2].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
+    VC4_ASSERT(Inst.m_Operands[2].m_Type == D3D10_SB_OPERAND_TYPE_RESOURCE);
+    VC4_ASSERT(Inst.m_Operands[2].m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
+    VC4_ASSERT(Inst.m_Operands[2].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
+    VC4_ASSERT(Inst.m_Operands[2].m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
+    uint32_t resourceIndex = Inst.m_Operands[2].m_Index[0].m_RegIndex;
+    uint32_t texDimension = this->ResourceDimension[resourceIndex];
 
-    uint32_t texDimension = this->ResourceDimension[Inst.m_Operands[2].m_Index[0].m_RegIndex];
-
-    // Sampler
-    assert(Inst.m_Operands[3].m_Type == D3D10_SB_OPERAND_TYPE_SAMPLER);
-
+    DXGI_FORMAT texFormat = UmdCompiler->GetShaderResourceFormat((uint8_t)resourceIndex);
+    VC4_ASSERT((texFormat == DXGI_FORMAT_B8G8R8A8_UNORM) || (texFormat == DXGI_FORMAT_R8G8B8A8_UNORM));
+        
+    // TODO: more generic color channel swizzle support.
+    boolean bSwapColorChannel = (texFormat != DXGI_FORMAT_R8G8B8A8_UNORM);
+    
     // Texture coordinate
-    assert(Inst.m_Operands[1].m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
-    assert(Inst.m_Operands[1].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
-    assert(Inst.m_Operands[1].m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_SWIZZLE_MODE);
+    VC4_ASSERT(Inst.m_Operands[1].m_NumComponents == D3D10_SB_OPERAND_4_COMPONENT);
+    VC4_ASSERT(Inst.m_Operands[1].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
+    VC4_ASSERT(Inst.m_Operands[1].m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
+    VC4_ASSERT(Inst.m_Operands[1].m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_SWIZZLE_MODE);
 
     Vc4Register s;
     Vc4Register t;
@@ -517,13 +671,13 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
     switch (texDimension)
     {
     case D3D10_SB_RESOURCE_DIMENSION_TEXTURECUBE:
-        r = Find_Vc4Register(Inst.m_Operands[1], D3D10_SB_OPERAND_4_COMPONENT_MASK(Inst.m_Operands[1].m_Swizzle[2]));
+        r = Find_Vc4Register_M(Inst.m_Operands[1], D3D10_SB_OPERAND_4_COMPONENT_MASK(Inst.m_Operands[1].m_Swizzle[2]));
         __fallthrough;
     case D3D10_SB_RESOURCE_DIMENSION_TEXTURE2D:
-        t = Find_Vc4Register(Inst.m_Operands[1], D3D10_SB_OPERAND_4_COMPONENT_MASK(Inst.m_Operands[1].m_Swizzle[1]));
+        t = Find_Vc4Register_M(Inst.m_Operands[1], D3D10_SB_OPERAND_4_COMPONENT_MASK(Inst.m_Operands[1].m_Swizzle[1]));
         __fallthrough;
     case D3D10_SB_RESOURCE_DIMENSION_TEXTURE1D:
-        s = Find_Vc4Register(Inst.m_Operands[1], D3D10_SB_OPERAND_4_COMPONENT_MASK(Inst.m_Operands[1].m_Swizzle[0]));
+        s = Find_Vc4Register_M(Inst.m_Operands[1], D3D10_SB_OPERAND_4_COMPONENT_MASK(Inst.m_Operands[1].m_Swizzle[0]));
         break;
     case D3D10_SB_RESOURCE_DIMENSION_BUFFER:
     case D3D10_SB_RESOURCE_DIMENSION_TEXTURE3D:
@@ -534,80 +688,138 @@ void Vc4Shader::Emit_Sample(CInstruction &Inst)
     default:
         assert(false);
     }
-            
-    // + 3 or 2 or 1 to set texture coordinate.
-    // + 1 for sample instruction, 'ldtmu0', 
-    // + 1 or up to 4 for moving r4 to output register or unpacking r4 to other register(s).
-    // + 1 for NOP.
-    this->ShaderStorage.EnsureInstruction((r.flags.valid && t.flags.valid ? 3 : t.flags.valid ? 2 : 1) + 1 + (bUnpack ? 4 : 1) + 1);
-
+    
+    // Sampler
+    VC4_ASSERT(Inst.m_Operands[3].m_Type == D3D10_SB_OPERAND_TYPE_SAMPLER);
+    VC4_ASSERT(Inst.m_Operands[3].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
+    VC4_ASSERT(Inst.m_Operands[3].m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
+    uint32_t samplerIndex = Inst.m_Operands[3].m_Index[0].m_RegIndex;
+               
     // texture address : z
-    if (r.flags.valid)
+    if (r.GetFlags().valid)
     {
         Vc4Instruction Vc4Inst;
         Vc4Register tmu0_r(VC4_QPU_ALU_REG_A, VC4_QPU_WADDR_TMU0_R);
         Vc4Inst.Vc4_a_MOV(tmu0_r, r);
-        ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
+        Vc4Inst.Emit(CurrentStorage);
     }
 
     // texture address : y
-    if (t.flags.valid)
+    if (t.GetFlags().valid)
     {
         Vc4Instruction Vc4Inst;
         Vc4Register tmu0_t(VC4_QPU_ALU_REG_A, VC4_QPU_WADDR_TMU0_T);
         Vc4Inst.Vc4_a_MOV(tmu0_t, t);
-        ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
+        Vc4Inst.Emit(CurrentStorage);
     }
 
     // texture address : x and must write 's' at last.
-    assert(s.flags.valid);
+    assert(s.GetFlags().valid);
     {
         Vc4Instruction Vc4Inst;
         Vc4Register tmu0_s(VC4_QPU_ALU_REG_A, VC4_QPU_WADDR_TMU0_S);
         Vc4Inst.Vc4_a_MOV(tmu0_s, s);
-        ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
+        Vc4Inst.Emit(CurrentStorage);
+    }
+
+    // add uniform references.
+    {
+        {
+            VC4_UNIFORM_FORMAT u;
+            u.Type = VC4_UNIFORM_TYPE_SAMPLER_CONFIG_P0;
+            u.samplerConfiguration.samplerIndex = samplerIndex;
+            u.samplerConfiguration.resourceIndex = resourceIndex;
+            this->AddUniformReference(u);
+        }
+
+        {
+            VC4_UNIFORM_FORMAT u;
+            u.Type = VC4_UNIFORM_TYPE_SAMPLER_CONFIG_P1;
+            u.samplerConfiguration.samplerIndex = samplerIndex;
+            u.samplerConfiguration.resourceIndex = resourceIndex;
+            this->AddUniformReference(u);
+        }
+
+        if (r.GetFlags().valid) // only cube needs P2 config.
+        {
+            VC4_UNIFORM_FORMAT u;
+            u.Type = VC4_UNIFORM_TYPE_SAMPLER_CONFIG_P2;
+            u.samplerConfiguration.samplerIndex = samplerIndex;
+            u.samplerConfiguration.resourceIndex = resourceIndex;
+            this->AddUniformReference(u);
+        }
     }
 
     // Sample texture, result come up in r4.
     {
         Vc4Instruction Vc4Inst;
         Vc4Inst.Vc4_Sig(VC4_QPU_SIG_LOAD_TMU0);
-        ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
+        Vc4Inst.Emit(CurrentStorage);
     }
 
-    // TODO: Swizzle texture channel when texture format and RT format are different.
+    // Sample result is now at r4.
     Vc4Register r4(VC4_QPU_ALU_R4);
 
-    // Move result to r4 to output register.
+    // Move result at r4 to output register.
     if (Inst.m_Operands[0].m_Type == D3D10_SB_OPERAND_TYPE_OUTPUT)
     {
-        Vc4Instruction Vc4Inst;
-        Vc4Inst.Vc4_a_MOV(o[0], r4);
-        ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
-    }
-    else if (Inst.m_Operands[0].m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_MASK_MODE)
-    {
-        assert(bUnpack);
-        // Move each color channel in r4 to o[4].
-        for (uint8_t i = 0; i < 4; i++)
+        if (bSwapColorChannel == o[0].GetFlags().swap_color_channel)
         {
-            if (o[i].flags.valid)
+            Vc4Instruction Vc4Inst;
+            Vc4Inst.Vc4_a_MOV(o[0], r4);
+            Vc4Inst.Emit(CurrentStorage);
+        }
+        else
+        {
+            // R, G, B channel
+            for (uint8_t i = 0; i < 3; i++)
             {
                 Vc4Instruction Vc4Inst;
-                Vc4Inst.Vc4_m_MOV(o[i], r4);
+                Vc4Inst.Vc4_m_MOV(o[0], r4);
+                Vc4Inst.Vc4_m_Pack(VC4_QPU_PACK_MUL_8c - i);
                 Vc4Inst.Vc4_m_Unpack(VC4_QPU_UNPACK_8a + i, true); // Use R4 unpack.
-                ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
+                Vc4Inst.Emit(CurrentStorage);
+            }
+
+            // A channel
+            {
+                Vc4Instruction Vc4Inst;
+                Vc4Inst.Vc4_m_MOV(o[0], r4);
+                Vc4Inst.Vc4_m_Pack(VC4_QPU_PACK_MUL_8d);
+                Vc4Inst.Vc4_m_Unpack(VC4_QPU_UNPACK_8d, true); // Use R4 unpack.
+                Vc4Inst.Emit(CurrentStorage);
             }
         }
     }
     else
     {
-        assert(false);
+        // Move each color channel at r4 to o[i].
+        // R, G, B channel
+        for (uint8_t i = 0; i < 3; i++)
+        {
+            Vc4Register out = bSwapColorChannel ? o[2 - i] : o[i];
+            if (out.GetFlags().valid)
+            {
+                Vc4Instruction Vc4Inst;
+                Vc4Inst.Vc4_m_MOV(out, r4);
+                Vc4Inst.Vc4_m_Unpack(VC4_QPU_UNPACK_8a + i, true); // Use R4 unpack.
+                Vc4Inst.Emit(CurrentStorage);
+            }
+        }
+
+        // A channel
+        if (o[3].GetFlags().valid)
+        {
+            Vc4Instruction Vc4Inst;
+            Vc4Inst.Vc4_m_MOV(o[3], r4);
+            Vc4Inst.Vc4_m_Unpack(VC4_QPU_UNPACK_8d, true); // Use R4 unpack.
+            Vc4Inst.Emit(CurrentStorage);
+        }
     }
 
     { // Emit a NOP
         Vc4Instruction Vc4Inst;
-        ShaderStorage.EmitInstruction(Vc4Inst.GetInstruction());
+        Vc4Inst.Emit(CurrentStorage);
     }
 }
 
@@ -615,44 +827,50 @@ void Vc4Shader::HLSL_ParseDecl()
 {
     assert(this->uShaderType == D3D10_SB_PIXEL_SHADER ||
            this->uShaderType == D3D10_SB_VERTEX_SHADER);
-
+    assert(this->HLSLParser.IsValid());
+    
     boolean bDone = false;
     D3D10_SB_OPCODE_TYPE OpCode;
-    while (HLSL_PeekShaderInstructionOpCode(&OpCode) && !bDone)
+    while (HLSL_PeekShaderInstructionOpCode(this->HLSLParser, OpCode) && !bDone)
     { 
         CInstruction Inst;
         switch (OpCode)
         {
         case D3D10_SB_OPCODE_DCL_RESOURCE:
-            HLSL_GetShaderInstruction(&Inst);
-            assert(cResource < 8);
-            this->ResourceDimension[cResource++] = Inst.m_ResourceDecl.SRVInfo.Dimension;
+            HLSL_GetShaderInstruction(this->HLSLParser, Inst);
+            VC4_ASSERT(Inst.m_Operands[0].m_Index[0].m_RegIndex < ARRAYSIZE(this->ResourceDimension));
+            this->ResourceDimension[Inst.m_Operands[0].m_Index[0].m_RegIndex] = Inst.m_ResourceDecl.SRVInfo.Dimension;
+            cResources++;
             break;
         case D3D10_SB_OPCODE_DCL_CONSTANT_BUFFER:
-            HLSL_GetShaderInstruction(&Inst);
+            HLSL_GetShaderInstruction(this->HLSLParser, Inst);
+            // Issue 37: VC4 Find_Vc4Register_I needs to implement dynamic index support for constant buffers
+            VC4_ASSERT(Inst.m_ResourceDecl.CBInfo.AccessPattern == D3D10_SB_CONSTANT_BUFFER_IMMEDIATE_INDEXED);
             cConstants++;
             break;
         case D3D10_SB_OPCODE_DCL_SAMPLER:
-            HLSL_GetShaderInstruction(&Inst);
+            HLSL_GetShaderInstruction(this->HLSLParser, Inst);
             cSampler++;
             break;
         case D3D10_SB_OPCODE_DCL_INPUT:
         case D3D10_SB_OPCODE_DCL_INPUT_PS:
-            HLSL_GetShaderInstruction(&Inst);
+            HLSL_GetShaderInstruction(this->HLSLParser, Inst);
             if (Inst.m_OpCode == D3D10_SB_OPCODE_DCL_INPUT_PS)
             {
-                assert(Inst.m_InputPSDecl.InterpolationMode == D3D10_SB_INTERPOLATION_LINEAR); // PS input must be linear.
+                VC4_ASSERT(Inst.m_InputPSDecl.InterpolationMode == D3D10_SB_INTERPOLATION_LINEAR); // PS input must be linear.
             }
-            assert(Inst.m_NumOperands == 1);
-            assert(Inst.m_Operands[0].m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_MASK_MODE);
-            assert(Inst.m_Operands[0].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
-            assert(Inst.m_Operands[0].m_Index[0].m_RegIndex < 8);
-            assert(Inst.m_Operands[0].m_WriteMask & D3D10_SB_OPERAND_4_COMPONENT_MASK_MASK);
+            VC4_ASSERT(Inst.m_NumOperands == 1);
+            VC4_ASSERT(Inst.m_Operands[0].m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_MASK_MODE);
+            VC4_ASSERT(Inst.m_Operands[0].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
+            VC4_ASSERT(Inst.m_Operands[0].m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
+            VC4_ASSERT(Inst.m_Operands[0].m_Index[0].m_RegIndex < 8);
+            VC4_ASSERT(Inst.m_Operands[0].m_WriteMask & D3D10_SB_OPERAND_4_COMPONENT_MASK_MASK);
+
             for (uint8_t i = 0, aCurrent = D3D10_SB_OPERAND_4_COMPONENT_MASK_X; i < 4; i++)
             {
                 if (Inst.m_Operands[0].m_WriteMask & aCurrent)
                 {
-                    assert((ROS_VC4_INPUT_REGISTER_FILE_START + cInput) <= ROS_VC4_INPUT_REGISTER_FILE_END);
+                    VC4_ASSERT((ROS_VC4_INPUT_REGISTER_FILE_START + cInput) <= ROS_VC4_INPUT_REGISTER_FILE_END);
                     this->InputRegister[Inst.m_Operands[0].m_Index[0].m_RegIndex][i].flags.valid = true;
                     this->InputRegister[Inst.m_Operands[0].m_Index[0].m_RegIndex][i].flags.require_linear_conversion = (Inst.m_OpCode == D3D10_SB_OPCODE_DCL_INPUT_PS ? true : false);
                     this->InputRegister[Inst.m_Operands[0].m_Index[0].m_RegIndex][i].addr = ROS_VC4_INPUT_REGISTER_FILE_START + cInput++;
@@ -664,28 +882,33 @@ void Vc4Shader::HLSL_ParseDecl()
             break;
         case D3D10_SB_OPCODE_DCL_OUTPUT:
         case D3D10_SB_OPCODE_DCL_OUTPUT_SIV:
-            HLSL_GetShaderInstruction(&Inst);
-            assert(Inst.m_NumOperands == 1);
-            assert(Inst.m_Operands[0].m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_MASK_MODE);
-            assert(Inst.m_Operands[0].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
+            HLSL_GetShaderInstruction(this->HLSLParser, Inst);
+            VC4_ASSERT(Inst.m_NumOperands == 1);
+            VC4_ASSERT(Inst.m_Operands[0].m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_MASK_MODE);
+            VC4_ASSERT(Inst.m_Operands[0].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
+            VC4_ASSERT(Inst.m_Operands[0].m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
             if (this->uShaderType == D3D10_SB_PIXEL_SHADER)
             {
                 // only support single 8888RGBA colour output from pixel shader.
-                assert(Inst.m_Operands[0].m_WriteMask == (D3D10_SB_OPERAND_4_COMPONENT_MASK_R | D3D10_SB_OPERAND_4_COMPONENT_MASK_G | D3D10_SB_OPERAND_4_COMPONENT_MASK_B | D3D10_SB_OPERAND_4_COMPONENT_MASK_A));
-                assert(Inst.m_Operands[0].m_Index[0].m_RegIndex == 0);
-                assert(cOutput == 0);
+                VC4_ASSERT(Inst.m_Operands[0].m_WriteMask == (D3D10_SB_OPERAND_4_COMPONENT_MASK_R | D3D10_SB_OPERAND_4_COMPONENT_MASK_G | D3D10_SB_OPERAND_4_COMPONENT_MASK_B | D3D10_SB_OPERAND_4_COMPONENT_MASK_A));
+                VC4_ASSERT(Inst.m_Operands[0].m_Index[0].m_RegIndex == 0);
+                VC4_ASSERT(cOutput == 0);
                 this->OutputRegister[0][0].flags.valid = true;
                 this->OutputRegister[0][0].flags.color = true;
                 this->OutputRegister[0][0].flags.packed = true; // RGBA components are packed in single register (see above WriteMask assert).
-                this->OutputRegister[0][0].addr = VC4_QPU_WADDR_ACC0;
-                this->OutputRegister[0][0].mux = VC4_QPU_ALU_R0; // Pixel output is fixed at R0.
+                this->OutputRegister[0][0].addr = ROS_VC4_OUTPUT_REGISTER_FILE_START;
+                this->OutputRegister[0][0].mux = ROS_VC4_OUTPUT_REGISTER_FILE;
                 this->OutputRegister[0][0].swizzleMask = (uint8_t)(Inst.m_Operands[0].m_WriteMask & D3D10_SB_OPERAND_4_COMPONENT_MASK_MASK);
+                // TODO: more generic color channel swizzle support.
+                DXGI_FORMAT texFormat = UmdCompiler->GetRenderTargetFormat(0);
+                VC4_ASSERT((texFormat == DXGI_FORMAT_B8G8R8A8_UNORM) || (texFormat == DXGI_FORMAT_R8G8B8A8_UNORM));
+                this->OutputRegister[0][0].flags.swap_color_channel = (texFormat != DXGI_FORMAT_R8G8B8A8_UNORM);
                 cOutput++;
             }
             else
             {
-                assert(this->uShaderType == D3D10_SB_VERTEX_SHADER);
-                assert(Inst.m_Operands[0].m_Index[0].m_RegIndex < 8);
+                VC4_ASSERT(this->uShaderType == D3D10_SB_VERTEX_SHADER);
+                VC4_ASSERT(Inst.m_Operands[0].m_Index[0].m_RegIndex < 8);
                 bool bPos;
                 uint8_t aMask;
                 if ((Inst.m_OpCode == D3D10_SB_OPCODE_DCL_OUTPUT_SIV) && (Inst.m_InputDeclSIV.Name == D3D10_SB_NAME_POSITION))
@@ -697,14 +920,14 @@ void Vc4Shader::HLSL_ParseDecl()
                 {
                     bPos = false;
                     aMask = (Inst.m_Operands[0].m_WriteMask & D3D10_SB_OPERAND_4_COMPONENT_MASK_MASK);
+                    VC4_ASSERT(aMask);
                 }
-                assert(aMask);
 
                 for (uint8_t i = 0, aCurrent = D3D10_SB_OPERAND_4_COMPONENT_MASK_X; i < 4; i++)
                 {
                     if (aMask & aCurrent)
                     {
-                        assert((ROS_VC4_OUTPUT_REGISTER_FILE_START + cOutput) <= ROS_VC4_OUTPUT_REGISTER_FILE_END);
+                        VC4_ASSERT((ROS_VC4_OUTPUT_REGISTER_FILE_START + cOutput) <= ROS_VC4_OUTPUT_REGISTER_FILE_END);
                         this->OutputRegister[Inst.m_Operands[0].m_Index[0].m_RegIndex][i].flags.valid = true;
                         this->OutputRegister[Inst.m_Operands[0].m_Index[0].m_RegIndex][i].flags.position = bPos;
                         this->OutputRegister[Inst.m_Operands[0].m_Index[0].m_RegIndex][i].addr = ROS_VC4_OUTPUT_REGISTER_FILE_START + cOutput++;
@@ -716,20 +939,24 @@ void Vc4Shader::HLSL_ParseDecl()
             }
             break;
         case D3D10_SB_OPCODE_DCL_TEMPS:
-            HLSL_GetShaderInstruction(&Inst);
+            HLSL_GetShaderInstruction(this->HLSLParser, Inst);
             // Temp register doesn't have swizzle mask, so assume all 4 components to be used.
             // TODO: AllocateRegister(); Currently temps are allocated at ra16~ra31.
             //       since currently reserve temp to ra16~31, so only upto 4 temps are allowed.
-            assert(Inst.m_TempsDecl.NumTemps <= 4);
+            VC4_ASSERT(Inst.m_TempsDecl.NumTemps <= 4);
             for (uint8_t i = 0; i < Inst.m_TempsDecl.NumTemps * 4; i++)
             {
-                assert((ROS_VC4_INPUT_REGISTER_FILE_START + cTemp) <= ROS_VC4_TEMP_REGISTER_FILE_END);
+                VC4_ASSERT((ROS_VC4_TEMP_REGISTER_FILE_START + cTemp) <= ROS_VC4_TEMP_REGISTER_FILE_END);
                 this->TempRegister[i / 4][i % 4].flags.valid = true;
                 this->TempRegister[i / 4][i % 4].flags.temp = true;
                 this->TempRegister[i / 4][i % 4].addr = ROS_VC4_TEMP_REGISTER_FILE_START + cTemp++;
                 this->TempRegister[i / 4][i % 4].mux = ROS_VC4_TEMP_REGISTER_FILE;
                 this->TempRegister[i / 4][i % 4].swizzleMask = D3D10_SB_OPERAND_4_COMPONENT_MASK_X << (i % 4);
             }
+            break;
+        case D3D10_SB_OPCODE_DCL_GLOBAL_FLAGS:
+            HLSL_GetShaderInstruction(this->HLSLParser, Inst);
+            // TODO:
             break;
         case D3D10_SB_OPCODE_DCL_INDEX_RANGE:
         case D3D10_SB_OPCODE_DCL_GS_OUTPUT_PRIMITIVE_TOPOLOGY:
@@ -741,16 +968,56 @@ void Vc4Shader::HLSL_ParseDecl()
         case D3D10_SB_OPCODE_DCL_INPUT_PS_SIV:
         case D3D10_SB_OPCODE_DCL_OUTPUT_SGV:
         case D3D10_SB_OPCODE_DCL_INDEXABLE_TEMP:
-        case D3D10_SB_OPCODE_DCL_GLOBAL_FLAGS:
-            HLSL_GetShaderInstruction(&Inst);
-            assert(false); // TODO
+            HLSL_GetShaderInstruction(this->HLSLParser, Inst);
+            VC4_ASSERT(false); // TODO
             __fallthrough;
         default:
             if (OpCode >= D3D10_SB_OPCODE_RESERVED0)
             {
-                assert(false); // only 10.0 opcode is supported.
+                VC4_ASSERT(false); // only 10.0 opcode is supported.
             }
             bDone = true;
+        }
+    }
+}
+
+void Vc4Shader::HLSL_Link_PS()
+{
+    assert(this->uShaderType == D3D10_SB_VERTEX_SHADER);
+    assert(this->HLSLDownstreamParser.IsValid());
+
+    boolean bDone = false, bFound = false;
+    CInstruction Inst;
+    while (HLSL_GetShaderInstruction(this->HLSLDownstreamParser, Inst) && !bDone)
+    {
+        switch (Inst.m_OpCode)
+        {
+        case D3D10_SB_OPCODE_DCL_INPUT_PS:
+            VC4_ASSERT(Inst.m_InputPSDecl.InterpolationMode == D3D10_SB_INTERPOLATION_LINEAR); // PS input must be linear.
+            VC4_ASSERT(Inst.m_NumOperands == 1);
+            VC4_ASSERT(Inst.m_Operands[0].m_ComponentSelection == D3D10_SB_OPERAND_4_COMPONENT_MASK_MODE);
+            VC4_ASSERT(Inst.m_Operands[0].m_IndexDimension == D3D10_SB_OPERAND_INDEX_1D);
+            VC4_ASSERT(Inst.m_Operands[0].m_IndexType[0] == D3D10_SB_OPERAND_INDEX_IMMEDIATE32);
+            VC4_ASSERT(Inst.m_Operands[0].m_Index[0].m_RegIndex < 8);
+            VC4_ASSERT(Inst.m_Operands[0].m_WriteMask & D3D10_SB_OPERAND_4_COMPONENT_MASK_MASK);
+
+            for (uint8_t i = 0, aCurrent = D3D10_SB_OPERAND_4_COMPONENT_MASK_X; i < 4; i++)
+            {
+                if (Inst.m_Operands[0].m_WriteMask & aCurrent)
+                {
+                    VC4_ASSERT(this->OutputRegister[Inst.m_Operands[0].m_Index[0].m_RegIndex][i].flags.valid);
+                    this->OutputRegister[Inst.m_Operands[0].m_Index[0].m_RegIndex][i].flags.linkage = true;
+                }
+                aCurrent <<= 1;
+            }
+            bFound = true;
+
+            break;
+        default:
+            if (bFound)
+            {
+                bDone = true;
+            }
         }
     }
 }
@@ -759,78 +1026,93 @@ HRESULT Vc4Shader::Translate_VS()
 {
     assert(this->uShaderType == D3D10_SB_VERTEX_SHADER);
 
-    HRESULT hr = this->ShaderStorage.Initialize(); // VS
-    if (FAILED(hr))
-    {
-        return hr;
-    }
-
-    hr = this->ShaderStorageAux.Initialize(); // CS
-    if (FAILED(hr))
-    {
-        return hr;
-    }
-
+    this->SetCurrentStorage(this->ShaderStorage, this->ShaderUniform);
     this->HLSL_ParseDecl();
+    this->HLSL_Link_PS();  
     this->Emit_Prologue_VS();
 
     {
         CInstruction Inst;
-        while (HLSL_GetShaderInstruction(&Inst))
+        assert(Inst.m_bSaturate == false); // saturate is not supported.
+        while (HLSL_GetShaderInstruction(this->HLSLParser, Inst))
         {
+            // Need to add support for D3D10_SB_OPCODE_IADD - Issue #38
             switch (Inst.m_OpCode)
             {
+            case D3D10_SB_OPCODE_ADD:
+            case D3D10_SB_OPCODE_MAX:
+            case D3D10_SB_OPCODE_MIN:
+            case D3D10_SB_OPCODE_IADD:
+                this->Emit_with_Add_pipe(Inst);
+                break;
+            case D3D10_SB_OPCODE_DP2:
+            case D3D10_SB_OPCODE_DP3:
+            case D3D10_SB_OPCODE_DP4:
+                this->Emit_DPx(Inst);
+                break;
+            case D3D10_SB_OPCODE_MAD:
+                this->Emit_Mad(Inst);
+                break;
             case D3D10_SB_OPCODE_MOV:
                 this->Emit_Mov(Inst);
+                break;
+            case D3D10_SB_OPCODE_MUL:
+                this->Emit_with_Mul_pipe(Inst);
                 break;
             case D3D10_SB_OPCODE_RET:
                 break;
             default:
-                assert(false);
+                VC4_ASSERT(false);
             }
         }
     }
 
-    this->ShaderStorageAux.CopyFrom(&(this->ShaderStorage)); // Copy VS to CS.
-    
-    this->Emit_ShaderOutput_VS(true, &(this->ShaderStorage)); // VS
-    this->Emit_ShaderOutput_VS(false, &(this->ShaderStorageAux)); // CS
+    this->ShaderStorageAux->CopyFrom(*this->ShaderStorage); // Copy VS to CS.
+    this->ShaderUniformAux->CopyFrom(*this->ShaderUniform); // Copy VS uniform to CS.
 
-    this->Emit_Epilogue(&(this->ShaderStorage)); // VS
-    this->Emit_Epilogue(&(this->ShaderStorageAux)); // CS
-    
-#if DBG
-    Vc4Disasm().Run((const VC4_QPU_INSTRUCTION*)this->ShaderStorage.GetStorage(), this->ShaderStorage.GetStorageUsedSize(), TEXT("VC4 Vertex shader"));
-    Vc4Disasm().Run((const VC4_QPU_INSTRUCTION*)this->ShaderStorageAux.GetStorage(), this->ShaderStorageAux.GetStorageUsedSize(), TEXT("VC4 Coordinate shader"));
-#endif   
+    this->Emit_ShaderOutput_VS(true);  // VS
+    this->Emit_Epilogue(); // VS
 
+    this->SetCurrentStorage(this->ShaderStorageAux, this->ShaderUniformAux); // switch to CS storage.
+    this->Emit_ShaderOutput_VS(false); // CS
+    this->Emit_Epilogue(); // CS
+    
     return S_OK;
 }
 
 HRESULT Vc4Shader::Translate_PS()
 {
     assert(this->uShaderType == D3D10_SB_PIXEL_SHADER);
-        
-    HRESULT hr = this->ShaderStorage.Initialize();
-    if (FAILED(hr))
-    {
-        return hr;
-    }
-    
+
+    this->SetCurrentStorage(this->ShaderStorage, this->ShaderUniform);
     this->HLSL_ParseDecl();
     this->Emit_Prologue_PS();
 
     {
         CInstruction Inst;
-        while (HLSL_GetShaderInstruction(&Inst))
+        assert(Inst.m_bSaturate == false); // saturate is not supported.
+        while (HLSL_GetShaderInstruction(this->HLSLParser, Inst))
         {
             switch (Inst.m_OpCode)
             {
+            case D3D10_SB_OPCODE_ADD:
+            case D3D10_SB_OPCODE_MAX:
+            case D3D10_SB_OPCODE_MIN:
+                this->Emit_with_Add_pipe(Inst);
+                break;
+            case D3D10_SB_OPCODE_DP2:
+            case D3D10_SB_OPCODE_DP3:
+            case D3D10_SB_OPCODE_DP4:
+                this->Emit_DPx(Inst);
+                break;
+            case D3D10_SB_OPCODE_MAD:
+                this->Emit_Mad(Inst);
+                break;
             case D3D10_SB_OPCODE_MOV:
                 this->Emit_Mov(Inst);
                 break;
             case D3D10_SB_OPCODE_MUL:
-                this->Emit_Mul(Inst);
+                this->Emit_with_Mul_pipe(Inst);
                 break;
             case D3D10_SB_OPCODE_RET:
                 break;
@@ -838,16 +1120,12 @@ HRESULT Vc4Shader::Translate_PS()
                 this->Emit_Sample(Inst);
                 break;
             default:
-                assert(false);
+                VC4_ASSERT(false);
             }
         }
     }
         
-    this->Emit_Epilogue(&(this->ShaderStorage));
-
-#if DBG
-    Vc4Disasm().Run((const VC4_QPU_INSTRUCTION*)this->ShaderStorage.GetStorage(), this->ShaderStorage.GetStorageUsedSize(), TEXT("VC4 Fragment shader"));
-#endif
+    this->Emit_Epilogue();
 
     return S_OK;
 }

@@ -10,6 +10,8 @@
 #include <exception>
 #include <memory>
 
+#include "BitmapDecode.h"
+
 //using namespace DirectX;
 
 //
@@ -324,14 +326,21 @@ private:
 class D3DDefaultTexture
 {
 public:
-
+    
     D3DDefaultTexture(std::shared_ptr<D3DDevice> & inDevice, int inWidth, int inHeight)
     {
+        ULONG texWidth, texHeight, resSize;
+        PVOID pRes;
+        BYTE* pTexels = NULL;
+
+        pRes = LoadResource(1010, &resSize);
+        LoadBMP((BYTE*)pRes, &texWidth, &texHeight, &pTexels);
+        
         D3D11_TEXTURE2D_DESC desc;
 
         desc.CPUAccessFlags = 0;
-        desc.Width = inWidth;
-        desc.Height = inHeight;
+        desc.Width = texWidth;
+        desc.Height = texHeight;
         desc.MipLevels = 1;
         desc.ArraySize = 1;
         desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -340,6 +349,10 @@ public:
         desc.Usage = D3D11_USAGE_DEFAULT;
         desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
         desc.MiscFlags = 0;
+
+
+
+        /*/
 
         DWORD * pTexels = new DWORD[inWidth*inHeight];
         if (!pTexels)
@@ -360,6 +373,8 @@ public:
                 pTexels[j*inWidth + i] =  checkerColors[((i >> 3 & 0x1) ^ (j >> 3 & 0x1))];
             }
         }
+
+        */
 
         D3D11_SUBRESOURCE_DATA initData;
 
@@ -395,6 +410,24 @@ public:
     ~D3DDefaultTexture()
     {
         // do nothing
+    }
+
+    PVOID LoadResource(INT Name, DWORD *pdwSize)
+    {
+        HRSRC hRsrc = ::FindResourceEx(NULL, RT_RCDATA, MAKEINTRESOURCE(Name), 0);
+        if (hRsrc == NULL)
+        {
+            __debugbreak();
+            return NULL;
+        }
+        HGLOBAL hRes = ::LoadResource(NULL, hRsrc);
+        if (hRes == NULL)
+        {
+            __debugbreak();
+            return NULL;
+        }
+        *pdwSize = ::SizeofResource(NULL, hRsrc);
+        return (LockResource(hRes));
     }
 
     ID3D11Texture2D * GetTexture() { return m_pTexture; }
@@ -613,6 +646,18 @@ public:
     {
 #if VC4
 
+#if 1
+        SimpleVertex vertices[] =
+        {
+            //     X,      Y,    Z,    W,    U,    V // See Input layout.
+            { -1.50f,  1.50f, 0.0f, 2.0f, 0.0f, 0.0f },
+            {  1.50f,  1.50f, 0.0f, 2.0f, 1.0f, 0.0f },
+            { -1.50f, -1.50f, 0.0f, 2.0f, 0.0f, 1.0f },
+            {  1.50f, -1.50f, 0.0f, 2.0f, 1.0f, 1.0f }
+        };
+
+#else
+
         SimpleVertex vertices[] =
         {
             //     X,      Y,    Z,    W,    U,    V // See Input layout.
@@ -621,6 +666,8 @@ public:
             { -0.75f, -0.75f, 0.0f, 1.0f, 0.0f, 1.0f },
             {  0.75f, -0.75f, 0.0f, 1.0f, 1.0f, 1.0f }
         };
+
+#endif
 
 #else
 
@@ -633,6 +680,40 @@ public:
 
 #endif
 
+#if 0
+        {
+            DirectX::XMMATRIX mWorld;
+            DirectX::XMMATRIX mView;
+            DirectX::XMMATRIX mProjection;
+
+            mWorld = DirectX::XMMatrixRotationY(15.0f);
+
+            DirectX::XMVECTOR Eye = DirectX::XMVectorSet(0.0f, 0.0f, -2.0f, 0.0f);
+            DirectX::XMVECTOR At = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
+            DirectX::XMVECTOR Up = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+            mView = DirectX::XMMatrixLookAtLH(Eye, At, Up);
+
+            mProjection = DirectX::XMMatrixPerspectiveFovLH(DirectX::XM_PIDIV2, (FLOAT)kWidth / (FLOAT)kHeight, 0.01f, 100.0f);
+
+            for (uint8_t i = 0; i < ARRAYSIZE(vertices); i++)
+            {
+                DirectX::XMVECTOR v = DirectX::XMVectorSet(vertices[i].x, vertices[i].y, vertices[i].z, vertices[i].w);
+
+                v = DirectX::XMVector4Transform(v, mWorld);
+                v = DirectX::XMVector4Transform(v, mView);
+                v = DirectX::XMVector4Transform(v, mProjection);
+
+                DirectX::XMFLOAT4 f4;
+                DirectX::XMStoreFloat4(&f4, v);
+
+                vertices[i].x = f4.x;
+                vertices[i].y = f4.y;
+                vertices[i].z = 0.0f;
+                vertices[i].w = f4.w;
+            }
+        }
+#endif
+        
         D3D11_BUFFER_DESC bd;
         ZeroMemory(&bd, sizeof(bd));
         bd.Usage = D3D11_USAGE_DEFAULT;
@@ -807,6 +888,45 @@ private:
     D3DPointer<ID3D11DepthStencilState> m_pDepthStencilState;
 };
 
+class D3DRasterState
+{
+public:
+
+    D3DRasterState(std::shared_ptr<D3DDevice> &inDevice)
+    {
+        D3D11_RASTERIZER_DESC rd;
+
+        memset(&rd, 0, sizeof(rd));
+        rd.FillMode = D3D11_FILL_SOLID;
+        rd.CullMode = D3D11_CULL_NONE;
+        rd.DepthClipEnable = TRUE;
+
+        HRESULT hr;
+        ID3D11RasterizerState*  pRasterState;
+
+        hr = inDevice->GetDevice()->CreateRasterizerState(&rd, &pRasterState);
+        if (FAILED(hr))
+        {
+            throw std::exception("Unable to create Depth Stencil State");
+        }
+
+        m_pRasterState = pRasterState;
+    }
+
+    ~D3DRasterState()
+    {
+        // do nothing
+    }
+
+    ID3D11RasterizerState* GetRasterState() { return m_pRasterState; }
+
+private:
+
+    ID3D11RasterizerState*  m_pRasterState;
+};
+
+#if 0
+
 class D3DConstantBuffer
 {
 public:
@@ -859,6 +979,8 @@ private:
     D3DPointer<ID3D11Buffer> m_pConstantBuffer;
 
 };
+
+#endif
 
 class D3DPSConstantBuffer
 {
@@ -926,6 +1048,8 @@ public:
 
         ID3D11DepthStencilView * pDepthStencilView = m_pDepthStencilBuffer->GetDepthStencilView();
 
+        m_pRasterState = std::unique_ptr<D3DRasterState>(new D3DRasterState(m_pDevice));
+
         // Set render target and depth stencil buffer
 
         m_pDevice->GetContext()->OMSetRenderTargets(1, &pRenderTargetView, pDepthStencilView);
@@ -943,7 +1067,11 @@ public:
 
         m_pVertexShader = std::unique_ptr<D3DVertexShader>(new D3DVertexShader(m_pDevice));
 
+#if 0
+
         m_pConstantBuffer = std::unique_ptr<D3DConstantBuffer>(new D3DConstantBuffer(m_pDevice));
+
+#endif
 
         m_pDevice->GetContext()->IASetInputLayout(m_pVertexShader->GetVertexLayout());
 
@@ -975,6 +1103,9 @@ public:
         // Set depth stencil state
         m_pDevice->GetContext()->OMSetDepthStencilState(m_pDepthStencilState->GetDepthStencilState(), 0);
 
+        // Set raster state
+        m_pDevice->GetContext()->RSSetState(m_pRasterState->GetRasterState());
+
         m_pTexture = std::unique_ptr<D3DTexture>(new D3DTexture(m_pDevice, kWidth, kHeight));
     }
 
@@ -990,8 +1121,12 @@ public:
 
         m_pDevice->GetContext()->VSSetShader(m_pVertexShader->GetVertexShader(), nullptr, 0);
 
+#if 0
+
         ID3D11Buffer *    pConstantBuffer = m_pConstantBuffer->GetConstantBuffer();
         m_pDevice->GetContext()->VSSetConstantBuffers(0, 1, &pConstantBuffer);
+
+#endif
 
         m_pDevice->GetContext()->PSSetShader(m_pPixelShader->GetPixelShader(), nullptr, 0);
 
@@ -1000,6 +1135,29 @@ public:
 
         ID3D11Buffer *  pPSConstantBuffer = m_pPSConstantBuffer->GetConstantBuffer();
         m_pDevice->GetContext()->PSSetConstantBuffers(0, 1, &pPSConstantBuffer);
+
+#if 0
+
+        for (UINT i = 0; i < 100; i++)
+        {
+            m_pDevice->GetContext()->Draw(3, 0);
+
+            m_pDevice->GetContext()->Flush();
+
+            m_pDevice->GetContext()->Draw(3, 1);
+        }
+
+#endif
+
+#if 0
+        for (UINT i = 0; i < 100; i++)
+        {
+            m_pDevice->GetContext()->Draw(4, 0);
+
+            m_pDevice->GetContext()->Flush();
+        }
+
+#endif
 
 #if 1
 
@@ -1034,7 +1192,12 @@ private:
     std::unique_ptr<D3DIndexBuffer>         m_pIndexBuffer;
     std::unique_ptr<D3DTexture>             m_pTexture;
     std::unique_ptr<D3DDepthStencilState>   m_pDepthStencilState;
+    std::unique_ptr<D3DRasterState>         m_pRasterState;
+#if 0
+
     std::unique_ptr<D3DConstantBuffer>      m_pConstantBuffer;
+
+#endif
     std::unique_ptr<D3DPSConstantBuffer>    m_pPSConstantBuffer;
     std::unique_ptr<D3DDefaultTexture>      m_pDefaultTexture;
 };

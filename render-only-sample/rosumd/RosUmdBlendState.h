@@ -1,7 +1,5 @@
 #pragma once
 
-#include "d3dumddi_.h"
-
 class RosUmdBlendState
 {
 public:
@@ -14,6 +12,11 @@ public:
 
     static RosUmdBlendState* CastFrom(D3D10DDI_HBLENDSTATE);
     D3D10DDI_HBLENDSTATE CastTo() const;
+
+    const D3D11_1_DDI_BLEND_DESC *GetDesc()
+    {
+        return &m_desc;
+    }
 
 private:
 

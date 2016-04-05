@@ -5,6 +5,11 @@
 // Copyright (C) Microsoft Corporation
 //
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#include "precomp.h"
+
+#include "RosUmdLogging.h"
+#include "RosUmdShader.tmh"
+
 #include "RosUmdDevice.h"
 #include "RosUmdShader.h"
 
@@ -35,6 +40,17 @@ RosUmdShader::Update()
 {
 
 }
+
+#if VC4
+
+VC4_UNIFORM_FORMAT *
+RosUmdShader::GetShaderUniformFormat(
+    UINT Type, UINT *pUniformFormatEntries)
+{
+    return m_pCompiler->GetShaderUniformFormat(Type, pUniformFormatEntries);
+}
+
+#endif
 
 void
 RosUmdPipelineShader::Standup(
@@ -72,20 +88,52 @@ RosUmdPipelineShader::Update()
 
     assert(m_pCode != NULL);
 
+    const UINT *ShaderLinkage[2] = { NULL, NULL }; // Downstream, Upstream.
+
+    switch (m_ProgramType)
+    {
+    case D3D10_SB_VERTEX_SHADER:
+        assert(m_pDevice->m_pixelShader);
+        ShaderLinkage[0] = m_pDevice->m_pixelShader->GetHLSLCode();
+        break;
+    case D3D10_SB_PIXEL_SHADER:
+        assert(m_pDevice->m_vertexShader);
+        ShaderLinkage[1] = m_pDevice->m_vertexShader->GetHLSLCode();
+        break;
+    default:
+        assert(false);
+    };
+
     m_pCompiler = RosCompilerCreate(m_ProgramType,
                                     m_pCode,
+                                    ShaderLinkage[0], // Downstream
+                                    ShaderLinkage[1], // Upstream
+                                    m_pDevice->m_blendState->GetDesc(),
+                                    m_pDevice->m_depthStencilState->GetDesc(),
+                                    m_pDevice->m_rasterizerState->GetDesc(),
+                                    (const RosUmdRenderTargetView **)&m_pDevice->m_renderTargetViews[0],
+                                    (const RosUmdShaderResourceView **)&m_pDevice->m_psResourceViews[0],
                                     m_numInputSignatureEntries,
                                     m_pInputSignatureEntries,
                                     m_numOutputSignatureEntries,
                                     m_pOutputSignatureEntries,
                                     0,
                                     NULL);
-
-    if (m_pCompiler &&
-        m_pCompiler->Compile(&m_hwShaderCodeSize,
-                             &m_vc4CoordinateShaderOffset) &&
-        m_hwShaderCodeSize)
+    if (m_pCompiler == NULL)
     {
+        throw RosUmdException(E_OUTOFMEMORY);
+    }
+
+    HRESULT hr;
+    if (FAILED(hr = m_pCompiler->Compile()))
+    {
+        throw RosUmdException(hr);
+    }
+
+    {
+        m_hwShaderCodeSize = m_pCompiler->GetShaderCodeSize();
+        assert(m_hwShaderCodeSize != 0);
+           
         m_pDevice->CreateInternalBuffer(
             &m_hwShaderCode,
             ROUND_TO_PAGES(m_hwShaderCodeSize)); // TODO: for now, for easier debugging, round allocation size to PAGE size aligned.
@@ -102,9 +150,9 @@ RosUmdPipelineShader::Update()
 
             if (mappedSubRes.pData)
             {
-                UINT* pShaderCode = (UINT *)mappedSubRes.pData;
-
-                RtlCopyMemory(pShaderCode, m_pCompiler->GetShaderCode(), m_hwShaderCodeSize);
+                m_pCompiler->GetShaderCode(
+                    mappedSubRes.pData, 
+                    &m_vc4CoordinateShaderOffset);
 
                 m_hwShaderCode.Unmap(
                     m_pDevice,
@@ -115,8 +163,7 @@ RosUmdPipelineShader::Update()
         }
     }
 
-    // TODO: error ?
-    __debugbreak();
+    throw RosUmdException(E_FAIL);
 }
 
 void

@@ -1,95 +1,200 @@
+#include "precomp.h"
 #include "roscompiler.h"
 
-void __stdcall InitInstructionInfo();
-void __stdcall VC4_InitializeName();
-
-void __stdcall InitializeShaderCompilerLibrary()
+void InitializeShaderCompilerLibrary()
 {
     InitInstructionInfo();
 }
 
 RosCompiler* RosCompilerCreate(D3D10_SB_TOKENIZED_PROGRAM_TYPE ProgramType,
-                               UINT *pCode,
+                               const UINT *pCode,
+                               const UINT *pLinkageDownstreamCode,
+                               const UINT *pLinkageUpstreamCode,
+                               const D3D11_1_DDI_BLEND_DESC* pBlendState,
+                               const D3D10_DDI_DEPTH_STENCIL_DESC* pDepthState,
+                               const D3D11_1_DDI_RASTERIZER_DESC* pRasterState,
+                               const RosUmdRenderTargetView** ppRenderTargetView,
+                               const RosUmdShaderResourceView** ppShaderResouceView,
                                UINT numInputSignatureEntries,
-                               D3D11_1DDIARG_SIGNATURE_ENTRY *pInputSignatureEntries,
+                               const D3D11_1DDIARG_SIGNATURE_ENTRY *pInputSignatureEntries,
                                UINT numOutputSignatureEntries,
-                               D3D11_1DDIARG_SIGNATURE_ENTRY *pOutputSignatureEntries,
+                               const D3D11_1DDIARG_SIGNATURE_ENTRY *pOutputSignatureEntries,
                                UINT numPatchConstantSignatureEntries,
-                               D3D11_1DDIARG_SIGNATURE_ENTRY *pPatchConstantSignatureEntries)
+                               const D3D11_1DDIARG_SIGNATURE_ENTRY *pPatchConstantSignatureEntries)
 {
-    return new RosCompiler(
+    RosCompiler *pCompiler = new RosCompiler(
         ProgramType,
         pCode,
+        pLinkageDownstreamCode,
+        pLinkageUpstreamCode,
+        pBlendState,
+        pDepthState,
+        pRasterState,
+        ppRenderTargetView,
+        ppShaderResouceView,
         numInputSignatureEntries,
         pInputSignatureEntries,
         numOutputSignatureEntries,
         pOutputSignatureEntries,
         numPatchConstantSignatureEntries,
         pPatchConstantSignatureEntries);
+    if (pCompiler)
+    {
+        if (FAILED(pCompiler->InitializeStorage()))
+        {
+            delete pCompiler;
+            pCompiler = NULL;
+        }
+    }
+    return pCompiler;
 }
 
 RosCompiler::RosCompiler(D3D10_SB_TOKENIZED_PROGRAM_TYPE ProgramType,
-                         UINT *pCode,
+                         const UINT *pCode,
+                         const UINT *pLinkageDownstreamCode,
+                         const UINT *pLinkageUpstreamCode,
+                         const D3D11_1_DDI_BLEND_DESC* pBlendState,
+                         const D3D10_DDI_DEPTH_STENCIL_DESC* pDepthState,
+                         const D3D11_1_DDI_RASTERIZER_DESC* pRasterState,
+                         const RosUmdRenderTargetView** ppRenderTargetView,
+                         const RosUmdShaderResourceView** ppShaderResouceView,
                          UINT numInputSignatureEntries,
-                         D3D11_1DDIARG_SIGNATURE_ENTRY *pInputSignatureEntries,
+                         const D3D11_1DDIARG_SIGNATURE_ENTRY *pInputSignatureEntries,
                          UINT numOutputSignatureEntries,
-                         D3D11_1DDIARG_SIGNATURE_ENTRY *pOutputSignatureEntries,
+                         const D3D11_1DDIARG_SIGNATURE_ENTRY *pOutputSignatureEntries,
                          UINT numPatchConstantSignatureEntries,
-                         D3D11_1DDIARG_SIGNATURE_ENTRY *pPatchConstantSignatureEntries) :
+                         const D3D11_1DDIARG_SIGNATURE_ENTRY *pPatchConstantSignatureEntries) :
     m_ProgramType(ProgramType),
     m_pCode(pCode),
+    m_pDownstreamCode(pLinkageDownstreamCode),
+    m_pUpstreamCode(pLinkageUpstreamCode),
+    m_pBlendState(pBlendState),
+    m_pDepthState(pDepthState),
+    m_pRasterState(pRasterState),
+    m_ppRenderTargetView(ppRenderTargetView),
+    m_ppShaderResouceView(ppShaderResouceView),
     m_numInputSignatureEntries(numInputSignatureEntries),
     m_pInputSignatureEntries(pInputSignatureEntries),
     m_numOutputSignatureEntries(numOutputSignatureEntries),
     m_pOutputSignatureEntries(pOutputSignatureEntries),
     m_numPatchConstantSignatureEntries(numPatchConstantSignatureEntries),
     m_pPatchConstantSignatureEntries(pPatchConstantSignatureEntries),
-    m_pHwCode(NULL),
-    m_HwCodeSize(0)
+    m_cShaderInput(0),
+    m_cShaderOutput(0)
 {
 }
 
 RosCompiler::~RosCompiler() 
 {
-    delete[] m_pHwCode;
 }
 
-BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize,
-                             UINT * pCoordinateShaderOffset)
+HRESULT RosCompiler::Compile()
 {
-    assert(puiShaderCodeSize);
-    *puiShaderCodeSize = 0;
+    HRESULT hr = E_NOTIMPL;
 
     assert(m_pCode);
     assert(m_ProgramType == (D3D10_SB_TOKENIZED_PROGRAM_TYPE)((m_pCode[0] & D3D10_SB_TOKENIZED_PROGRAM_TYPE_MASK) >> D3D10_SB_TOKENIZED_PROGRAM_TYPE_SHIFT));
-
+    
 #if DBG
+    // Disassemble HLSL
     Disassemble_Signatures();
     Disassemble_HLSL();
 #endif // DBG
 
 #if VC4
-    Vc4Shader Vc4ShaderCompiler;
+    Vc4Shader Vc4ShaderCompiler(this);
+
+    // Set HLSL bytecode.
     Vc4ShaderCompiler.SetShaderCode(m_pCode);
-    Vc4ShaderCompiler.Translate();
-    
-    m_HwCodeSize = Vc4ShaderCompiler.GetVc4ShaderCodeSize();
-
-    m_pHwCode = new BYTE[m_HwCodeSize];
-    memset(m_pHwCode, 0, m_HwCodeSize);
-
-    Vc4ShaderCompiler.GetVc4ShaderCode(m_pHwCode, m_HwCodeSize);
-
-    if (D3D10_SB_VERTEX_SHADER == m_ProgramType)
+    if (m_pDownstreamCode)
     {
-        *pCoordinateShaderOffset = (m_HwCodeSize / 2);
+        Vc4ShaderCompiler.SetDownstreamShaderCode(m_pDownstreamCode);
     }
-    *puiShaderCodeSize = m_HwCodeSize;
+    if (m_pUpstreamCode)
+    {
+        Vc4ShaderCompiler.SetUpstreamShaderCode(m_pUpstreamCode);
+    }
+
+    switch (m_ProgramType)
+    {
+    case D3D10_SB_VERTEX_SHADER:
+        // Set output hw shader storage.
+        // for vertex shader.
+        Vc4ShaderCompiler.SetShaderStorage(
+            &m_Storage[ROS_VERTEX_SHADER_STORAGE],
+            &m_Storage[ROS_VERTEX_SHADER_UNIFORM_STORAGE]);
+        // for coordinate shader
+        Vc4ShaderCompiler.SetShaderStorageAux(
+            &m_Storage[ROS_COORDINATE_SHADER_STORAGE],
+            &m_Storage[ROS_COORDINATE_SHADER_UNIFORM_STORAGE]);
+
+        try
+        {
+            // Compile shader
+            hr = Vc4ShaderCompiler.Translate_VS();
+        }
+        catch (RosCompilerException & e)
+        {
+            hr = e.GetError();
+        }
+
+        if (SUCCEEDED(hr))
+        {
+            m_cShaderInput = Vc4ShaderCompiler.GetInputCount();
+            m_cShaderOutput = Vc4ShaderCompiler.GetOutputCount();
+
+#if DBG
+            // Disassemble h/w shader.
+            Disassemble_HW(m_Storage[ROS_VERTEX_SHADER_STORAGE], TEXT("VC4 Vertex shader"));
+            Dump_UniformTable(m_Storage[ROS_VERTEX_SHADER_UNIFORM_STORAGE], TEXT("VC4 Vertex shader Uniform"));
+
+            Disassemble_HW(m_Storage[ROS_COORDINATE_SHADER_STORAGE], TEXT("VC4 Coordinate shader"));
+            Dump_UniformTable(m_Storage[ROS_COORDINATE_SHADER_UNIFORM_STORAGE], TEXT("VC4 Coordinate shader Uniform"));
+#endif // DBG
+        }
+
+        break;
+
+    case D3D10_SB_PIXEL_SHADER:
+        // Set output hw shader storage.
+        Vc4ShaderCompiler.SetShaderStorage(
+            &m_Storage[ROS_PIXEL_SHADER_STORAGE],
+            &m_Storage[ROS_PIXEL_SHADER_UNIFORM_STORAGE]);;
+
+        try
+        {
+            // Compile shader
+            hr = Vc4ShaderCompiler.Translate_PS();
+        }
+        catch (RosCompilerException & e)
+        {
+            hr = e.GetError();
+        }
+
+        if (SUCCEEDED(hr))
+        {
+            m_cShaderInput = Vc4ShaderCompiler.GetInputCount();
+            m_cShaderOutput = Vc4ShaderCompiler.GetOutputCount();
+
+#if DBG
+            // Disassemble h/w shader.
+            Disassemble_HW(m_Storage[ROS_PIXEL_SHADER_STORAGE], TEXT("VC4 Pixel shader"));
+            Dump_UniformTable(m_Storage[ROS_PIXEL_SHADER_UNIFORM_STORAGE], TEXT("VC4 Vertex shader Uniform"));
+#endif // DBG
+
+        }
+
+        break;
+
+    default:
+        assert(false);
+    }
 #else
     assert(false);
 #endif // VC4
 
-   return TRUE;
+    return hr;
+}
 
 #if 0
 
@@ -97,11 +202,6 @@ BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize,
 // #define PASSTHROUGH_CVS 1
 // #define SIMPLETRANS_CVS 1
 #define CUBETEST_CVFS   1
-
-    if (D3D10_SB_VERTEX_SHADER == m_ProgramType)
-    {
-        // Implement vertex shader compiling
-#if VC4
        
 #if SHAREDTEX_CVS
 
@@ -368,28 +468,6 @@ BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize,
 
 #endif
 
-        m_HwCodeSize = sizeof(vertexShader) + sizeof(coordinateShader);
-
-        m_pHwCode = new BYTE[m_HwCodeSize];
-
-        CopyMemory(m_pHwCode, vertexShader, sizeof(vertexShader));
-        CopyMemory(m_pHwCode + sizeof(vertexShader), coordinateShader, sizeof(coordinateShader));
-
-#if DBG
-        Disassemble_HW();
-#endif // DBG
-
-        *pCoordinateShaderOffset = sizeof(vertexShader);
-        *puiShaderCodeSize = m_HwCodeSize;
-        return TRUE;
-#else
-        __debugbreak();
-#endif
-    }
-    else if (D3D10_SB_PIXEL_SHADER == m_ProgramType)
-    {
-#if VC4
-
 #if CUBETEST_CVFS
 
 #if 1
@@ -445,46 +523,6 @@ BOOLEAN RosCompiler::Compile(UINT * puiShaderCodeSize,
 
 #endif
 
-        m_HwCodeSize = sizeof(PS);
-        m_pHwCode = new BYTE[m_HwCodeSize];
-
-        CopyMemory(m_pHwCode, &PS[0], m_HwCodeSize);
-
-#if DBG
-        Disassemble_HW();
-#endif // DBG
-
-        *puiShaderCodeSize = m_HwCodeSize;
-        return TRUE;
-#else
-        __debugbreak();
-#endif
-    }
-    else
-    {
-        __debugbreak();
-    }
-   
-    return FALSE;
 #endif // 0
-}
 
-BYTE * RosCompiler::GetShaderCode()
-{
-    return m_pHwCode;
-}
-
-UINT RosCompiler::GetInputSignature(D3D11_1DDIARG_SIGNATURE_ENTRY ** ppInputSignatureEntries)
-{
-    *ppInputSignatureEntries = m_pInputSignatureEntries;
-
-    return m_numInputSignatureEntries;
-}
-
-UINT RosCompiler::GetOutputSignature(D3D11_1DDIARG_SIGNATURE_ENTRY ** ppOutputSignatureEntries)
-{
-    *ppOutputSignatureEntries = m_pOutputSignatureEntries;
-
-    return m_numOutputSignatureEntries;
-}
 

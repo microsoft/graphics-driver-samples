@@ -1,7 +1,23 @@
-#pragma once
+#ifndef _ROSUMDLOGGING_H_
+#define _ROSUMDLOGGING_H_
 
-#include <debugapi.h>
-#include <stdio.h>
+//
+// Tracing GUID - D124564D-F51F-402D-A86E-7E2247D30AF3
+//
+#define WPP_CONTROL_GUIDS \
+    WPP_DEFINE_CONTROL_GUID(ROSUMD, (D124564D,F51F,402D,A86E,7E2247D30AF3), \
+        WPP_DEFINE_BIT(ROS_TRACING_DEFAULT) \
+        WPP_DEFINE_BIT(ROS_TRACING_PRESENT) \
+        WPP_DEFINE_BIT(ROS_TRACING_VIDPN) \
+        WPP_DEFINE_BIT(ROS_TRACING_DEBUG) \
+        WPP_DEFINE_BIT(ROS_TRACING_BUGCHECK) \
+    )
+
+#define WPP_LEVEL_FLAGS_LOGGER(level,flags) WPP_LEVEL_LOGGER(flags)
+#define WPP_LEVEL_FLAGS_ENABLED(level, flags) \
+    (WPP_LEVEL_ENABLED(flags) && WPP_CONTROL(WPP_BIT_ ## flags).Level >= level)
+
+#include <RosLogging.h>
 
 class RosUmdLogging
 {
@@ -29,3 +45,5 @@ public:
     }
 
 };
+
+#endif // _ROSUMDLOGGING_H_

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "d3dumddi_.h"
-
 
 class RosUmdRasterizerState
 {
@@ -17,6 +15,11 @@ public:
 
     static RosUmdRasterizerState* CastFrom(D3D10DDI_HRASTERIZERSTATE);
     D3D10DDI_HRASTERIZERSTATE CastTo() const;
+
+    const D3D11_1_DDI_RASTERIZER_DESC *GetDesc()
+    {
+        return &m_desc;
+    }
 
 private:
 

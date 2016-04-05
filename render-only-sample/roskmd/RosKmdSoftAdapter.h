@@ -32,4 +32,6 @@ protected:
         OUT_PULONG              NumberOfVideoPresentSources,
         OUT_PULONG              NumberOfChildren);
 
+    virtual BOOLEAN InterruptRoutine(
+        IN_ULONG        MessageNumber);
 };

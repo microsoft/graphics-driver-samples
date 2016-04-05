@@ -1,8 +1,12 @@
+#include "precomp.h"
+
+#include "RosUmdLogging.h"
+#include "RosUmdDeviceDdi.tmh"
+
 #include "RosUmdDeviceDdi.h"
 #include "RosUmdDevice.h"
 #include "RosUmdResource.h"
 #include "RosUmdDebug.h"
-#include "RosUmdLogging.h"
 #include "RosUmdRasterizerState.h"
 #include "RosUmdDepthStencilState.h"
 #include "RosUmdSampler.h"
@@ -15,17 +19,13 @@
 
 #include "RosContext.h"
 
-#include <exception>
-#include <typeinfo>
-#include <new>
-
 //
 // Ddi Tables
 //
 
-const D3D11_1DDI_DEVICEFUNCS RosUmdDeviceDdi::s_deviceFuncs11_1 =
+const D3DWDDM1_3DDI_DEVICEFUNCS RosUmdDeviceDdi::s_deviceFuncsWDDM1_3 =
 {
-    RosUmdDeviceDdi::DefaultConstantBufferUpdateSubresourceUP11_1_Default,
+    RosUmdDeviceDdi::DdiConstantBufferUpdateSubresourceUP11_1,
     RosUmdDeviceDdi::DdiVsSetConstantBuffers11_1,
     RosUmdDeviceDdi::DdiPSSetShaderResources,
     RosUmdDeviceDdi::DdiPsSetShader,
@@ -64,15 +64,15 @@ const D3D11_1DDI_DEVICEFUNCS RosUmdDeviceDdi::s_deviceFuncs11_1 =
     RosUmdDeviceDdi::DdiSetRasterizerState,
     RosUmdDeviceDdi::QueryEnd_Default,
     RosUmdDeviceDdi::QueryBegin_Default,
-    RosUmdDeviceDdi::ResourceCopyRegion11_1_Default,
+    RosUmdDeviceDdi::DdiResourceCopyRegion11_1,
     RosUmdDeviceDdi::ResourceUpdateSubresourceUP11_1_Default,
     RosUmdDeviceDdi::SOSetTargets_Default,
     RosUmdDeviceDdi::DrawAuto_Dirty,
     RosUmdDeviceDdi::DdiSetViewports,
-    RosUmdDeviceDdi::SetScissorRects_Default,
+    RosUmdDeviceDdi::DdiSetScissorRects,
     RosUmdDeviceDdi::DdiClearRenderTargetView,
     RosUmdDeviceDdi::DdiClearDepthStencilView,
-    RosUmdDeviceDdi::SetPredication_Default,
+    RosUmdDeviceDdi::DdiSetPredication,
     RosUmdDeviceDdi::QueryGetData_Default,
     RosUmdDeviceDdi::DdiFlush,
     RosUmdDeviceDdi::GenerateMips_Default,
@@ -84,9 +84,9 @@ const D3D11_1DDI_DEVICEFUNCS RosUmdDeviceDdi::s_deviceFuncs11_1 =
     RosUmdDeviceDdi::ResourceIsStagingBusy_Default,
     RosUmdDeviceDdi::RelocateDeviceFuncs11_1_Default,
     RosUmdDeviceDdi::DdiCalcPrivateResourceSize,
-    RosUmdDeviceDdi::CalcPrivateOpenedResourceSize_Default,
+    RosUmdDeviceDdi::DdiCalcPrivateOpenedResourceSize,
     RosUmdDeviceDdi::DdiCreateResource,
-    RosUmdDeviceDdi::OpenResource_Default,
+    RosUmdDeviceDdi::DdiOpenResource,
     RosUmdDeviceDdi::DdiDestroyResource,
     RosUmdDeviceDdi::DdiCalcPrivateShaderResourceViewSize11,
     RosUmdDeviceDdi::DdiCreateShaderResourceView11,
@@ -130,7 +130,7 @@ const D3D11_1DDI_DEVICEFUNCS RosUmdDeviceDdi::s_deviceFuncs11_1 =
     RosUmdDeviceDdi::DdiDestroyDevice,
     RosUmdDeviceDdi::SetTextFilter_Default,
     RosUmdDeviceDdi::DdiResourceCopy,
-    RosUmdDeviceDdi::ResourceCopyRegion11_1_Default,
+    RosUmdDeviceDdi::DdiResourceCopyRegion11_1,
 
     RosUmdDeviceDdi::DrawIndexedInstancedIndirect_Dirty,
     RosUmdDeviceDdi::DrawInstancedIndirect_Dirty,
@@ -182,23 +182,39 @@ const D3D11_1DDI_DEVICEFUNCS RosUmdDeviceDdi::s_deviceFuncs11_1 =
     RosUmdDeviceDdi::Discard_Default,
     RosUmdDeviceDdi::AssignDebugBinary_Default,
     RosUmdDeviceDdi::DynamicConstantBufferMapNoOverwrite_Default,
-    NULL, // PFND3D11_1DDI_CHECKDIRECTFLIPSUPPORT
+    RosUmdDeviceDdi::CheckDirectFlipSupport,
     RosUmdDeviceDdi::ClearView_Default,
+    NULL, // PFND3DWDDM1_3DDI_UPDATETILEMAPPINGS
+    NULL, // PFND3DWDDM1_3DDI_COPYTILEMAPPINGS
+    NULL, // PFND3DWDDM1_3DDI_COPYTILES
+    NULL, // PFND3DWDDM1_3DDI_UPDATETILES
+    NULL, // PFND3DWDDM1_3DDI_TILEDRESOURCEBARRIER
+    NULL, // PFND3DWDDM1_3DDI_GETMIPPACKING
+    NULL, // PFND3DWDDM1_3DDI_RESIZETILEPOOL
+    NULL, // PFND3DWDDM1_3DDI_SETMARKER
+    NULL, // PFND3DWDDM1_3DDI_SETMARKERMODE
 };
 
-const DXGI1_2_DDI_BASE_FUNCTIONS RosUmdDeviceDdi::s_dxgiDeviceFuncs3 =
+const DXGI1_3_DDI_BASE_FUNCTIONS RosUmdDeviceDdi::s_dxgiDeviceFuncs4 =
 {
-    NULL, // RosUmdDeviceDdi::Present,          //Present
+    RosUmdDeviceDdi::Present,
     NULL, // RosUmdDeviceDdi::GetGammaCaps,     //GetGammaCaps
-    NULL, // RosUmdDeviceDdi::SetDisplayMode,   //SetDisplayMode
-    NULL, // RosUmdDeviceDdi::SetResourcePriority,
+    RosUmdDeviceDdi::SetDisplayMode,
+    RosUmdDeviceDdi::SetResourcePriority,
     NULL, // RosUmdDeviceDdi::QueryResourceResidency,
-    NULL, // RosUmdDeviceDdi::RotateResourceIdentities,
+    RosUmdDeviceDdi::RotateResourceIdentities,
     NULL, // RosUmdDeviceDdi::Blt,
-    NULL, // RosUmdDeviceDdi::ResolveSharedResource,
+    RosUmdDeviceDdi::ResolveSharedResource,
     NULL, // RosUmdDeviceDdi::Blt1,
     NULL, // pfnOfferResources
     NULL, // pfnReclaimResources
+    NULL, // pfnGetMultiplaneOverlayCaps
+    NULL, // pfnGetMultiplaneOverlayGroupCaps
+    NULL, // pfnReserved1
+    NULL, // pfnPresentMultiplaneOverlay
+    NULL, // pfnReserved2
+    RosUmdDeviceDdi::Present1, // pfnPresent1
+    NULL, // pfnCheckPresentDurationSupport
 };
 
 //
@@ -208,8 +224,6 @@ const DXGI1_2_DDI_BASE_FUNCTIONS RosUmdDeviceDdi::s_dxgiDeviceFuncs3 =
 void APIENTRY RosUmdDeviceDdi::DdiDestroyDevice(
     D3D10DDI_HDEVICE hDevice)
 {
-    RosUmdLogging::Entry(__FUNCTION__);
-
     RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
 
     try {
@@ -221,8 +235,6 @@ void APIENTRY RosUmdDeviceDdi::DdiDestroyDevice(
     {
         // do nothing
     }
-
-    RosUmdLogging::Exit(__FUNCTION__);
 }
 
 void APIENTRY RosUmdDeviceDdi::DdiCreateResource(
@@ -231,8 +243,6 @@ void APIENTRY RosUmdDeviceDdi::DdiCreateResource(
     D3D10DDI_HRESOURCE hResource,
     D3D10DDI_HRTRESOURCE hRTResource)
 {
-    RosUmdLogging::Entry(__FUNCTION__);
-
     RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
 
     try {
@@ -243,31 +253,41 @@ void APIENTRY RosUmdDeviceDdi::DdiCreateResource(
     {
         pRosUmdDevice->SetException(e);
     }
+}
 
-    RosUmdLogging::Exit(__FUNCTION__);
+void APIENTRY RosUmdDeviceDdi::DdiOpenResource(
+    D3D10DDI_HDEVICE hDevice,
+    const D3D10DDIARG_OPENRESOURCE* Args,
+    D3D10DDI_HRESOURCE hResource,
+    D3D10DDI_HRTRESOURCE hRTResource)
+{
+    RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
+
+    try {
+        pRosUmdDevice->OpenResource(Args, hResource, hRTResource);
+    }
+
+    catch (const std::exception & e)
+    {
+        pRosUmdDevice->SetException(e);
+    }
 }
 
 void APIENTRY RosUmdDeviceDdi::DdiDestroyResource(
     D3D10DDI_HDEVICE hDevice,
     D3D10DDI_HRESOURCE hResource)
-{
-    RosUmdLogging::Entry(__FUNCTION__);
-
+{   
     RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
 
     RosUmdResource * pResource = (RosUmdResource *)hResource.pDrvPrivate;
 
     pRosUmdDevice->DestroyResource(pResource);
-
-    RosUmdLogging::Exit(__FUNCTION__);
 }
 
 SIZE_T APIENTRY RosUmdDeviceDdi::DdiCalcPrivateShaderResourceViewSize11(
-    D3D10DDI_HDEVICE, 
+    D3D10DDI_HDEVICE,
     const D3D11DDIARG_CREATESHADERRESOURCEVIEW*)
 {
-    RosUmdLogging::Call(__FUNCTION__);
-
     return sizeof(RosUmdShaderResourceView);
 }
 
@@ -277,23 +297,15 @@ void APIENTRY RosUmdDeviceDdi::DdiCreateShaderResourceView11(
     D3D10DDI_HSHADERRESOURCEVIEW hShaderResourceView,
     D3D10DDI_HRTSHADERRESOURCEVIEW hRTShaderResourceView)
 {
-    RosUmdLogging::Entry(__FUNCTION__);
-
     new(hShaderResourceView.pDrvPrivate) RosUmdShaderResourceView(pCreate, hRTShaderResourceView);
-
-    RosUmdLogging::Exit(__FUNCTION__);
 }
 
 void APIENTRY RosUmdDeviceDdi::DdiDestroyShaderResourceView(
     D3D10DDI_HDEVICE,
     D3D10DDI_HSHADERRESOURCEVIEW hShaderResourceView)
 {
-    RosUmdLogging::Entry(__FUNCTION__);
-
     RosUmdShaderResourceView * pShaderResourceView = RosUmdShaderResourceView::CastFrom(hShaderResourceView);
     pShaderResourceView->~RosUmdShaderResourceView();
-
-    RosUmdLogging::Exit(__FUNCTION__);
 }
 
 void APIENTRY RosUmdDeviceDdi::DdiResourceCopy(
@@ -301,8 +313,6 @@ void APIENTRY RosUmdDeviceDdi::DdiResourceCopy(
     D3D10DDI_HRESOURCE hDestinationResource,
     D3D10DDI_HRESOURCE hSourceResource)
 {
-    RosUmdLogging::Entry(__FUNCTION__);
-
     RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
     RosUmdResource * pDestinationResource = (RosUmdResource *)hDestinationResource.pDrvPrivate;
     RosUmdResource * pSourceResource = (RosUmdResource *)hSourceResource.pDrvPrivate;
@@ -316,8 +326,30 @@ void APIENTRY RosUmdDeviceDdi::DdiResourceCopy(
     {
         pRosUmdDevice->SetException(e);
     }
+}
 
-    RosUmdLogging::Exit(__FUNCTION__);
+void APIENTRY RosUmdDeviceDdi::DdiConstantBufferUpdateSubresourceUP11_1(
+    D3D10DDI_HDEVICE   hDevice,
+    D3D10DDI_HRESOURCE hDstResource,
+    UINT               DstSubresource,
+    _In_opt_ const D3D10_DDI_BOX  *pDstBox,
+    _In_     const VOID           *pSysMemUP,
+    UINT               RowPitch,
+    UINT               DepthPitch,
+    UINT               CopyFlags)
+{
+    RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
+    RosUmdResource * pResource = (RosUmdResource *)hDstResource.pDrvPrivate;
+
+    try
+    {
+       pRosUmdDevice->ConstantBufferUpdateSubresourceUP(pResource, DstSubresource, pDstBox, pSysMemUP, RowPitch, DepthPitch, CopyFlags);
+    }
+
+    catch (std::exception & e)
+    {
+        pRosUmdDevice->SetException(e);
+    }
 }
 
 void APIENTRY RosUmdDeviceDdi::DdiStagingResourceMap(
@@ -328,8 +360,6 @@ void APIENTRY RosUmdDeviceDdi::DdiStagingResourceMap(
     UINT mapFlags,
     D3D10DDI_MAPPED_SUBRESOURCE* pMappedSubRes)
 {
-    RosUmdLogging::Entry(__FUNCTION__);
-
     RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
     RosUmdResource * pResource = (RosUmdResource *)hResource.pDrvPrivate;
 
@@ -342,8 +372,6 @@ void APIENTRY RosUmdDeviceDdi::DdiStagingResourceMap(
     {
         pRosUmdDevice->SetException(e);
     }
-
-    RosUmdLogging::Exit(__FUNCTION__);
 }
 
 void APIENTRY RosUmdDeviceDdi::DdiStagingResourceUnmap(
@@ -351,8 +379,6 @@ void APIENTRY RosUmdDeviceDdi::DdiStagingResourceUnmap(
     D3D10DDI_HRESOURCE hResource,
     UINT subResource)
 {
-    RosUmdLogging::Entry(__FUNCTION__);
-
     RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
     RosUmdResource * pResource = (RosUmdResource *)hResource.pDrvPrivate;
 
@@ -365,14 +391,10 @@ void APIENTRY RosUmdDeviceDdi::DdiStagingResourceUnmap(
     {
         pRosUmdDevice->SetException(e);
     }
-
-    RosUmdLogging::Exit(__FUNCTION__);
 }
 
 BOOL APIENTRY RosUmdDeviceDdi::DdiFlush(D3D10DDI_HDEVICE hDevice, UINT flushFlags)
 {
-    RosUmdLogging::Entry(__FUNCTION__);
-
     RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
 
     BOOL bSuccess = TRUE;
@@ -388,8 +410,6 @@ BOOL APIENTRY RosUmdDeviceDdi::DdiFlush(D3D10DDI_HDEVICE hDevice, UINT flushFlag
         bSuccess = FALSE;
     }
 
-    RosUmdLogging::Exit(__FUNCTION__);
-
     return bSuccess;
 }
 
@@ -398,8 +418,6 @@ void APIENTRY RosUmdDeviceDdi::DdiCheckFormatSupport(
     DXGI_FORMAT Format,
     UINT* pFormatSupport)
 {
-    // RosUmdLogging::Call(__FUNCTION__);
-
     RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
 
     pRosUmdDevice->CheckFormatSupport(Format, pFormatSupport);
@@ -409,8 +427,6 @@ void APIENTRY RosUmdDeviceDdi::DdiCheckCounterInfo(
     D3D10DDI_HDEVICE hDevice,
     D3D10DDI_COUNTER_INFO* pCounterInfo)
 {
-    RosUmdLogging::Call(__FUNCTION__);
-
     RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
     pRosUmdDevice->CheckCounterInfo(pCounterInfo);
 }
@@ -419,20 +435,24 @@ void APIENTRY RosUmdDeviceDdi::DdiCheckMultisampleQualityLevels(
     D3D10DDI_HDEVICE hDevice,
     DXGI_FORMAT Format,
     UINT SampleCount,
+    UINT Flags,
     UINT* pNumQualityLevels)
 {
-    // RosUmdLogging::Call(__FUNCTION__);
-
     RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
-    pRosUmdDevice->CheckMultisampleQualityLevels(Format, SampleCount, pNumQualityLevels);
+    pRosUmdDevice->CheckMultisampleQualityLevels(Format, SampleCount, Flags, pNumQualityLevels);
 }
 
 SIZE_T APIENTRY RosUmdDeviceDdi::DdiCalcPrivateResourceSize(
     D3D10DDI_HDEVICE,
     const D3D11DDIARG_CREATERESOURCE*)
 {
-    RosUmdLogging::Call(__FUNCTION__);
+    return sizeof(RosUmdResource);
+}
 
+SIZE_T RosUmdDeviceDdi::DdiCalcPrivateOpenedResourceSize(
+    D3D10DDI_HDEVICE,
+    const D3D10DDIARG_OPENRESOURCE*)
+{
     return sizeof(RosUmdResource);
 }
 
@@ -444,29 +464,23 @@ SIZE_T APIENTRY RosUmdDeviceDdi::DdiCalcRasterizerStateSize(
     D3D10DDI_HDEVICE,
     const D3D11_1_DDI_RASTERIZER_DESC*)
 {
-    RosUmdLogging::Call(__FUNCTION__);
-
-    return sizeof(RosUmdRasterizerState); 
+    return sizeof(RosUmdRasterizerState);
 }
 
 void APIENTRY RosUmdDeviceDdi::DdiCreateRasterizerState(
     D3D10DDI_HDEVICE,
     const D3D11_1_DDI_RASTERIZER_DESC* desc,
     D3D10DDI_HRASTERIZERSTATE hRasterizerState,
-    D3D10DDI_HRTRASTERIZERSTATE hRTRasterizerState) 
-{ 
-    RosUmdLogging::Call(__FUNCTION__);
-
+    D3D10DDI_HRTRASTERIZERSTATE hRTRasterizerState)
+{
     RosUmdRasterizerState* pRasterizerState = new (hRasterizerState.pDrvPrivate) RosUmdRasterizerState(desc, hRTRasterizerState);
     pRasterizerState; // unused
 }
 
 void APIENTRY RosUmdDeviceDdi::DdiDestroyRasterizerState(
     D3D10DDI_HDEVICE hDevice,
-    D3D10DDI_HRASTERIZERSTATE hRasterizerState) 
+    D3D10DDI_HRASTERIZERSTATE hRasterizerState)
 {
-    RosUmdLogging::Call(__FUNCTION__); 
-
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     RosUmdRasterizerState * pRasterizerState = RosUmdRasterizerState::CastFrom(hRasterizerState);
 
@@ -475,14 +489,23 @@ void APIENTRY RosUmdDeviceDdi::DdiDestroyRasterizerState(
 }
 
 void APIENTRY RosUmdDeviceDdi::DdiSetRasterizerState(
-    D3D10DDI_HDEVICE hDevice, 
+    D3D10DDI_HDEVICE hDevice,
     D3D10DDI_HRASTERIZERSTATE hRasterizerState)
 {
-    RosUmdLogging::Call(__FUNCTION__); 
-
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     RosUmdRasterizerState * pRasterizerState = RosUmdRasterizerState::CastFrom(hRasterizerState);
     pDevice->SetRasterizerState(pRasterizerState);
+}
+
+void APIENTRY RosUmdDeviceDdi::DdiSetScissorRects(
+    _In_       D3D10DDI_HDEVICE hDevice,
+    _In_       UINT             NumScissorRects,
+    _In_       UINT             ClearScissorRects,
+    _In_ const D3D10_DDI_RECT   *pRects
+    )
+{
+    RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
+    pDevice->SetScissorRects(NumScissorRects, ClearScissorRects, pRects);
 }
 
 //
@@ -490,26 +513,22 @@ void APIENTRY RosUmdDeviceDdi::DdiSetRasterizerState(
 //
 
 SIZE_T APIENTRY RosUmdDeviceDdi::DdiCalcPrivateDepthStencilStateSize(
-    D3D10DDI_HDEVICE hDevice, 
+    D3D10DDI_HDEVICE hDevice,
     const D3D10_DDI_DEPTH_STENCIL_DESC* desc)
-{ 
-    RosUmdLogging::Call(__FUNCTION__);
-
+{
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     pDevice; // unused
     desc; // unused
 
-    return sizeof(RosUmdDepthStencilState); 
+    return sizeof(RosUmdDepthStencilState);
 }
 
 void APIENTRY RosUmdDeviceDdi::DdiCreateDepthStencilState(
     D3D10DDI_HDEVICE hDevice,
     const D3D10_DDI_DEPTH_STENCIL_DESC* desc,
     D3D10DDI_HDEPTHSTENCILSTATE hDepthStencilState,
-    D3D10DDI_HRTDEPTHSTENCILSTATE hRTDepthStencilState) 
-{ 
-    RosUmdLogging::Call(__FUNCTION__); 
-
+    D3D10DDI_HRTDEPTHSTENCILSTATE hRTDepthStencilState)
+{
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     pDevice; // unused
 
@@ -519,10 +538,8 @@ void APIENTRY RosUmdDeviceDdi::DdiCreateDepthStencilState(
 
 void APIENTRY RosUmdDeviceDdi::DdiDestroyDepthStencilState(
     D3D10DDI_HDEVICE hDevice,
-    D3D10DDI_HDEPTHSTENCILSTATE hDepthStencilState) 
-{ 
-    RosUmdLogging::Call(__FUNCTION__); 
-
+    D3D10DDI_HDEPTHSTENCILSTATE hDepthStencilState)
+{
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     RosUmdDepthStencilState * pDepthStencilState = RosUmdDepthStencilState::CastFrom(hDepthStencilState);
 
@@ -534,10 +551,8 @@ void APIENTRY RosUmdDeviceDdi::DdiDestroyDepthStencilState(
 void APIENTRY RosUmdDeviceDdi::DdiSetDepthStencilState(
     D3D10DDI_HDEVICE hDevice,
     D3D10DDI_HDEPTHSTENCILSTATE hDepthStencilState,
-    UINT StencilRef) 
-{ 
-    RosUmdLogging::Call(__FUNCTION__); 
-
+    UINT StencilRef)
+{
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     RosUmdDepthStencilState * pDepthStencilState = RosUmdDepthStencilState::CastFrom(hDepthStencilState);
     pDevice->SetDepthStencilState(pDepthStencilState, StencilRef);
@@ -548,11 +563,9 @@ void APIENTRY RosUmdDeviceDdi::DdiSetDepthStencilState(
 //
 
 SIZE_T APIENTRY RosUmdDeviceDdi::DdiCalcPrivateSamplerSize(
-    D3D10DDI_HDEVICE hDevice, 
+    D3D10DDI_HDEVICE hDevice,
     const D3D10_DDI_SAMPLER_DESC* desc)
-{ 
-    RosUmdLogging::Call(__FUNCTION__); 
-
+{
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     pDevice; // unused
     desc; // unused
@@ -563,11 +576,9 @@ SIZE_T APIENTRY RosUmdDeviceDdi::DdiCalcPrivateSamplerSize(
 void APIENTRY RosUmdDeviceDdi::DdiCreateSampler(
     D3D10DDI_HDEVICE hDevice,
     const D3D10_DDI_SAMPLER_DESC* desc,
-    D3D10DDI_HSAMPLER hSampler, 
+    D3D10DDI_HSAMPLER hSampler,
     D3D10DDI_HRTSAMPLER hRTSampler)
 {
-    RosUmdLogging::Call(__FUNCTION__); 
-
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     pDevice; // unusd
 
@@ -578,9 +589,7 @@ void APIENTRY RosUmdDeviceDdi::DdiCreateSampler(
 void APIENTRY RosUmdDeviceDdi::DdiDestroySampler(
     D3D10DDI_HDEVICE hDevice,
     D3D10DDI_HSAMPLER hSampler)
-{ 
-    RosUmdLogging::Call(__FUNCTION__);
-
+{
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     pDevice; // unusd
 
@@ -589,13 +598,11 @@ void APIENTRY RosUmdDeviceDdi::DdiDestroySampler(
 }
 
 void APIENTRY RosUmdDeviceDdi::DdiPSSetSamplers(
-    D3D10DDI_HDEVICE hDevice, 
-    UINT Offset, 
+    D3D10DDI_HDEVICE hDevice,
+    UINT Offset,
     UINT NumSamplers,
-    const D3D10DDI_HSAMPLER* phSamplers) 
-{ 
-    RosUmdLogging::Call(__FUNCTION__);
-
+    const D3D10DDI_HSAMPLER* phSamplers)
+{
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     pDevice->SetPixelSamplers(Offset, NumSamplers, phSamplers);
 }
@@ -606,8 +613,6 @@ void APIENTRY RosUmdDeviceDdi::DdiVSSetSamplers(
     UINT NumSamplers,
     const D3D10DDI_HSAMPLER* phSamplers)
 {
-    RosUmdLogging::Call(__FUNCTION__);
-
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     pDevice->SetVertexSamplers(Offset, NumSamplers, phSamplers);
 }
@@ -618,8 +623,6 @@ void APIENTRY RosUmdDeviceDdi::DdiGSSetSamplers(
     UINT NumSamplers,
     const D3D10DDI_HSAMPLER* phSamplers)
 {
-    RosUmdLogging::Call(__FUNCTION__);
-
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     pDevice->SetGeometrySamplers(Offset, NumSamplers, phSamplers);
 }
@@ -630,8 +633,6 @@ void APIENTRY RosUmdDeviceDdi::DdiCSSetSamplers(
     UINT NumSamplers,
     const D3D10DDI_HSAMPLER* phSamplers)
 {
-    RosUmdLogging::Call(__FUNCTION__);
-
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     pDevice->SetComputeSamplers(Offset, NumSamplers, phSamplers);
 }
@@ -642,8 +643,6 @@ void APIENTRY RosUmdDeviceDdi::DdiHSSetSamplers(
     UINT NumSamplers,
     const D3D10DDI_HSAMPLER* phSamplers)
 {
-    RosUmdLogging::Call(__FUNCTION__);
-
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     pDevice->SetHullSamplers(Offset, NumSamplers, phSamplers);
 }
@@ -654,8 +653,6 @@ void APIENTRY RosUmdDeviceDdi::DdiDSSetSamplers(
     UINT NumSamplers,
     const D3D10DDI_HSAMPLER* phSamplers)
 {
-    RosUmdLogging::Call(__FUNCTION__);
-
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     pDevice->SetDomainSamplers(Offset, NumSamplers, phSamplers);
 }
@@ -665,11 +662,9 @@ void APIENTRY RosUmdDeviceDdi::DdiDSSetSamplers(
 //
 
 SIZE_T APIENTRY RosUmdDeviceDdi::DdiCalcPrivateElementLayoutSize(
-    D3D10DDI_HDEVICE hDevice, 
-    const D3D10DDIARG_CREATEELEMENTLAYOUT* pCreate) 
-{ 
-    RosUmdLogging::Call(__FUNCTION__); 
-
+    D3D10DDI_HDEVICE hDevice,
+    const D3D10DDIARG_CREATEELEMENTLAYOUT* pCreate)
+{
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     pDevice; // unused
     pCreate; // unused
@@ -682,9 +677,7 @@ void APIENTRY RosUmdDeviceDdi::DdiCreateElementLayout(
     const D3D10DDIARG_CREATEELEMENTLAYOUT* pCreate,
     D3D10DDI_HELEMENTLAYOUT hElementLayout,
     D3D10DDI_HRTELEMENTLAYOUT hRTElementLayout)
-{ 
-    RosUmdLogging::Call(__FUNCTION__);
-
+{
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     pDevice; // unused
 
@@ -695,9 +688,7 @@ void APIENTRY RosUmdDeviceDdi::DdiCreateElementLayout(
 void APIENTRY RosUmdDeviceDdi::DdiDestroyElementLayout(
     D3D10DDI_HDEVICE hDevice,
     D3D10DDI_HELEMENTLAYOUT hElementLayout)
-{ 
-    RosUmdLogging::Call(__FUNCTION__); 
-
+{
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     pDevice; // unused
 
@@ -714,8 +705,6 @@ void APIENTRY RosUmdDeviceDdi::DdiPsSetConstantBuffers11_1(
     const UINT* pFirstConstant,
     const UINT* pNumConstants)
 {
-    RosUmdLogging::Call(__FUNCTION__);
-    
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
 
     pDevice->PsSetConstantBuffers11_1(offset, numBuffers, phBuffers, pFirstConstant, pNumConstants);
@@ -724,8 +713,6 @@ void APIENTRY RosUmdDeviceDdi::DdiIaSetInputLayout(
     D3D10DDI_HDEVICE hDevice,
     D3D10DDI_HELEMENTLAYOUT hElementLayout)
 {
-    RosUmdLogging::Call(__FUNCTION__);
-
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     RosUmdElementLayout * pElementLayout = RosUmdElementLayout::CastFrom(hElementLayout);
     pDevice->SetElementLayout(pElementLayout);
@@ -739,9 +726,7 @@ SIZE_T APIENTRY RosUmdDeviceDdi::DdiCalcPrivateShaderSize(
     D3D10DDI_HDEVICE hDevice,
     const UINT* pCode,
     const D3D11_1DDIARG_STAGE_IO_SIGNATURES* pSignatures)
-{ 
-    RosUmdLogging::Call(__FUNCTION__);
-
+{
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     pDevice; // unused
     pCode; // unused
@@ -757,8 +742,6 @@ void APIENTRY RosUmdDeviceDdi::DdiCreatePixelShader(
     D3D10DDI_HRTSHADER hRTShader,
     const D3D11_1DDIARG_STAGE_IO_SIGNATURES* pSignatures)
 {
-    RosUmdLogging::Entry(__FUNCTION__);
-
     RosUmdDevice * pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
 
     try
@@ -770,8 +753,6 @@ void APIENTRY RosUmdDeviceDdi::DdiCreatePixelShader(
     {
         pRosUmdDevice->SetException(e);
     }
-
-    RosUmdLogging::Exit(__FUNCTION__);
 }
 
 void APIENTRY RosUmdDeviceDdi::DdiCreateVertexShader(
@@ -781,8 +762,6 @@ void APIENTRY RosUmdDeviceDdi::DdiCreateVertexShader(
     D3D10DDI_HRTSHADER hRTShader,
     const D3D11_1DDIARG_STAGE_IO_SIGNATURES* pSignatures)
 {
-    RosUmdLogging::Entry(__FUNCTION__);
-
     RosUmdDevice * pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
 
     try
@@ -794,8 +773,6 @@ void APIENTRY RosUmdDeviceDdi::DdiCreateVertexShader(
     {
         pRosUmdDevice->SetException(e);
     }
-
-    RosUmdLogging::Exit(__FUNCTION__);
 }
 
 void APIENTRY RosUmdDeviceDdi::DdiCreateGeometryShader(
@@ -805,8 +782,6 @@ void APIENTRY RosUmdDeviceDdi::DdiCreateGeometryShader(
     D3D10DDI_HRTSHADER hRTShader,
     const D3D11_1DDIARG_STAGE_IO_SIGNATURES* pSignatures)
 {
-    RosUmdLogging::Entry(__FUNCTION__);
-
     RosUmdDevice * pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
 
     try
@@ -818,8 +793,6 @@ void APIENTRY RosUmdDeviceDdi::DdiCreateGeometryShader(
     {
         pRosUmdDevice->SetException(e);
     }
-
-    RosUmdLogging::Exit(__FUNCTION__);
 }
 
 void APIENTRY RosUmdDeviceDdi::DdiCreateComputeShader(
@@ -828,8 +801,6 @@ void APIENTRY RosUmdDeviceDdi::DdiCreateComputeShader(
     D3D10DDI_HSHADER hShader,
     D3D10DDI_HRTSHADER hRTShader)
 {
-    RosUmdLogging::Entry(__FUNCTION__);
-
     RosUmdDevice * pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
 
     try
@@ -841,17 +812,13 @@ void APIENTRY RosUmdDeviceDdi::DdiCreateComputeShader(
     {
         pRosUmdDevice->SetException(e);
     }
-
-    RosUmdLogging::Exit(__FUNCTION__);
 }
 
 SIZE_T APIENTRY RosUmdDeviceDdi::DdiCalcPrivateTessellationShaderSize(
-    D3D10DDI_HDEVICE hDevice, 
-    const UINT* pCode, 
-    const D3D11_1DDIARG_TESSELLATION_IO_SIGNATURES* pSignatures) 
+    D3D10DDI_HDEVICE hDevice,
+    const UINT* pCode,
+    const D3D11_1DDIARG_TESSELLATION_IO_SIGNATURES* pSignatures)
 {
-    RosUmdLogging::Call(__FUNCTION__);
-
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
 
     pDevice; // unused
@@ -862,14 +829,12 @@ SIZE_T APIENTRY RosUmdDeviceDdi::DdiCalcPrivateTessellationShaderSize(
 }
 
 void APIENTRY RosUmdDeviceDdi::DdiCreateHullShader(
-    D3D10DDI_HDEVICE hDevice, 
+    D3D10DDI_HDEVICE hDevice,
     const UINT* pCode,
     D3D10DDI_HSHADER hShader,
     D3D10DDI_HRTSHADER hRTShader,
     const D3D11_1DDIARG_TESSELLATION_IO_SIGNATURES* pSignatures)
-{ 
-    RosUmdLogging::Entry(__FUNCTION__);
-
+{
     RosUmdDevice * pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
 
     try
@@ -881,8 +846,6 @@ void APIENTRY RosUmdDeviceDdi::DdiCreateHullShader(
     {
         pRosUmdDevice->SetException(e);
     }
-
-    RosUmdLogging::Exit(__FUNCTION__);
 }
 
 void APIENTRY RosUmdDeviceDdi::DdiCreateDomainShader(
@@ -891,9 +854,7 @@ void APIENTRY RosUmdDeviceDdi::DdiCreateDomainShader(
     D3D10DDI_HSHADER hShader,
     D3D10DDI_HRTSHADER hRTShader,
     const D3D11_1DDIARG_TESSELLATION_IO_SIGNATURES* pSignatures)
-{ 
-    RosUmdLogging::Entry(__FUNCTION__);
-
+{
     RosUmdDevice * pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
 
     try
@@ -905,16 +866,12 @@ void APIENTRY RosUmdDeviceDdi::DdiCreateDomainShader(
     {
         pRosUmdDevice->SetException(e);
     }
-
-    RosUmdLogging::Exit(__FUNCTION__);
 }
 
 void APIENTRY RosUmdDeviceDdi::DdiDestroyShader(
     D3D10DDI_HDEVICE hDevice,
-    D3D10DDI_HSHADER hShader) 
-{ 
-    RosUmdLogging::Call(__FUNCTION__);
-
+    D3D10DDI_HSHADER hShader)
+{
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
 
     pDevice->DestroyShader(hShader);
@@ -926,43 +883,34 @@ void APIENTRY RosUmdDeviceDdi::DdiPSSetShaderResources(
     UINT numViews,
     const D3D10DDI_HSHADERRESOURCEVIEW* pShaderResourceViews)
 {
-    RosUmdLogging::Call(__FUNCTION__);
-
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
 
     pDevice->PSSetShaderResources(offset, numViews, pShaderResourceViews);
 }
 
-void APIENTRY RosUmdDeviceDdi::DdiPsSetShader(D3D10DDI_HDEVICE hDevice, D3D10DDI_HSHADER hShader) { 
-    RosUmdLogging::Call(__FUNCTION__); 
-
+void APIENTRY RosUmdDeviceDdi::DdiPsSetShader(D3D10DDI_HDEVICE hDevice, D3D10DDI_HSHADER hShader)
+{
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     RosUmdShader * pShader = RosUmdShader::CastFrom(hShader);
     pDevice->SetPixelShader(pShader);
 }
 
-void APIENTRY RosUmdDeviceDdi::DdiVsSetShader(D3D10DDI_HDEVICE hDevice, D3D10DDI_HSHADER hShader) 
+void APIENTRY RosUmdDeviceDdi::DdiVsSetShader(D3D10DDI_HDEVICE hDevice, D3D10DDI_HSHADER hShader)
 {
-    RosUmdLogging::Call(__FUNCTION__); 
-
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     RosUmdShader * pShader = RosUmdShader::CastFrom(hShader);
     pDevice->SetVertexShader(pShader);
 }
 
-void APIENTRY RosUmdDeviceDdi::DdiGsSetShader(D3D10DDI_HDEVICE hDevice, D3D10DDI_HSHADER hShader) 
+void APIENTRY RosUmdDeviceDdi::DdiGsSetShader(D3D10DDI_HDEVICE hDevice, D3D10DDI_HSHADER hShader)
 {
-    RosUmdLogging::Call(__FUNCTION__); 
-
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     RosUmdShader * pShader = RosUmdShader::CastFrom(hShader);
     pDevice->SetGeometryShader(pShader);
 }
 
-void APIENTRY RosUmdDeviceDdi::DdiHsSetShader(D3D10DDI_HDEVICE hDevice, D3D10DDI_HSHADER hShader) 
+void APIENTRY RosUmdDeviceDdi::DdiHsSetShader(D3D10DDI_HDEVICE hDevice, D3D10DDI_HSHADER hShader)
 {
-    RosUmdLogging::Call(__FUNCTION__); 
-
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     RosUmdShader * pShader = RosUmdShader::CastFrom(hShader);
     pDevice->SetHullShader(pShader);
@@ -970,17 +918,13 @@ void APIENTRY RosUmdDeviceDdi::DdiHsSetShader(D3D10DDI_HDEVICE hDevice, D3D10DDI
 
 void APIENTRY RosUmdDeviceDdi::DdiDsSetShader(D3D10DDI_HDEVICE hDevice, D3D10DDI_HSHADER hShader)
 {
-    RosUmdLogging::Call(__FUNCTION__); 
-
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     RosUmdShader * pShader = RosUmdShader::CastFrom(hShader);
     pDevice->SetDomainShader(pShader);
 }
 
 void APIENTRY RosUmdDeviceDdi::DdiCsSetShader(D3D10DDI_HDEVICE hDevice, D3D10DDI_HSHADER hShader)
-{ 
-    RosUmdLogging::Call(__FUNCTION__); 
-
+{
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     RosUmdShader * pShader = RosUmdShader::CastFrom(hShader);
 
@@ -992,11 +936,9 @@ void APIENTRY RosUmdDeviceDdi::DdiCsSetShader(D3D10DDI_HDEVICE hDevice, D3D10DDI
 //
 
 SIZE_T APIENTRY RosUmdDeviceDdi::DdiCalcPrivateBlendStateSize(
-    D3D10DDI_HDEVICE hDevice, 
+    D3D10DDI_HDEVICE hDevice,
     const D3D11_1_DDI_BLEND_DESC* desc)
-{ 
-    RosUmdLogging::Call(__FUNCTION__); 
-
+{
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     pDevice; // unused
     desc; // unused
@@ -1005,13 +947,11 @@ SIZE_T APIENTRY RosUmdDeviceDdi::DdiCalcPrivateBlendStateSize(
 }
 
 void APIENTRY RosUmdDeviceDdi::DdiCreateBlendState(
-    D3D10DDI_HDEVICE hDevice, 
+    D3D10DDI_HDEVICE hDevice,
     const D3D11_1_DDI_BLEND_DESC* desc,
-    D3D10DDI_HBLENDSTATE hBlendState, 
+    D3D10DDI_HBLENDSTATE hBlendState,
     D3D10DDI_HRTBLENDSTATE hRTBlendState)
-{ 
-    RosUmdLogging::Call(__FUNCTION__); 
-
+{
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     pDevice; // unused
 
@@ -1023,9 +963,7 @@ void APIENTRY RosUmdDeviceDdi::DdiCreateBlendState(
 void APIENTRY RosUmdDeviceDdi::DdiDestroyBlendState(
     D3D10DDI_HDEVICE hDevice,
     D3D10DDI_HBLENDSTATE hBlendState)
-{ 
-    RosUmdLogging::Call(__FUNCTION__);
-
+{
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     pDevice; // unused
 
@@ -1034,13 +972,11 @@ void APIENTRY RosUmdDeviceDdi::DdiDestroyBlendState(
 }
 
 void APIENTRY RosUmdDeviceDdi::DdiSetBlendState(
-    D3D10DDI_HDEVICE hDevice, 
-    D3D10DDI_HBLENDSTATE hBlendState, 
-    const FLOAT pBlendFactor[4], 
+    D3D10DDI_HDEVICE hDevice,
+    D3D10DDI_HBLENDSTATE hBlendState,
+    const FLOAT pBlendFactor[4],
     UINT sampleMask)
-{ 
-    RosUmdLogging::Call(__FUNCTION__); 
-
+{
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     RosUmdBlendState * pBlendState = RosUmdBlendState::CastFrom(hBlendState);
     pDevice->SetBlendState(pBlendState, pBlendFactor, sampleMask);
@@ -1051,7 +987,7 @@ void APIENTRY RosUmdDeviceDdi::DdiSetBlendState(
 //
 
 SIZE_T APIENTRY RosUmdDeviceDdi::DdiCalcPrivateRenderTargetViewSize(
-    D3D10DDI_HDEVICE hDevice, 
+    D3D10DDI_HDEVICE hDevice,
     const D3D10DDIARG_CREATERENDERTARGETVIEW* pCreate)
 {
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
@@ -1091,8 +1027,6 @@ SIZE_T APIENTRY RosUmdDeviceDdi::DdiCalcPrivateDepthStencilViewSize11(
     D3D10DDI_HDEVICE,
     const D3D11DDIARG_CREATEDEPTHSTENCILVIEW*)
 {
-    RosUmdLogging::Call(__FUNCTION__);
-
     return sizeof(RosUmdDepthStencilView);
 }
 
@@ -1102,8 +1036,6 @@ void APIENTRY RosUmdDeviceDdi::DdiCreateDepthStencilView11(
     D3D10DDI_HDEPTHSTENCILVIEW hDepthStencilView,
     D3D10DDI_HRTDEPTHSTENCILVIEW hRTDepthStencilView)
 {
-    RosUmdLogging::Call(__FUNCTION__);
-
     RosUmdDepthStencilView * pDepthStencilView = new(hDepthStencilView.pDrvPrivate) RosUmdDepthStencilView(pCreate, hRTDepthStencilView);
     pDepthStencilView;  // unused
 }
@@ -1112,8 +1044,6 @@ void APIENTRY RosUmdDeviceDdi::DdiDestroyDepthStencilView(
     D3D10DDI_HDEVICE,
     D3D10DDI_HDEPTHSTENCILVIEW hDepthStencilView)
 {
-    RosUmdLogging::Call(__FUNCTION__);
-
     RosUmdDepthStencilView * pDepthStencilView = RosUmdDepthStencilView::CastFrom(hDepthStencilView);
     pDepthStencilView->~RosUmdDepthStencilView();
 }
@@ -1135,8 +1065,6 @@ void APIENTRY RosUmdDeviceDdi::DdiClearDepthStencilView(
     FLOAT depthValue,
     UINT8 stencilValue)
 {
-    RosUmdLogging::Call(__FUNCTION__);
-    
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     RosUmdDepthStencilView * pDepthStencilView = RosUmdDepthStencilView::CastFrom(hDepthStencilView);
 
@@ -1168,8 +1096,8 @@ void APIENTRY RosUmdDeviceDdi::DdiSetRenderTargets(
 
 void APIENTRY RosUmdDeviceDdi::DdiSetViewports(
     D3D10DDI_HDEVICE hDevice,
-    UINT numViewports, 
-    UINT clearViewports, 
+    UINT numViewports,
+    UINT clearViewports,
     const D3D10_DDI_VIEWPORT* pViewports)
 {
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
@@ -1181,7 +1109,7 @@ void APIENTRY RosUmdDeviceDdi::DdiSetViewports(
 //
 
 void APIENTRY RosUmdDeviceDdi::DdiIaSetTopology(
-    D3D10DDI_HDEVICE hDevice, 
+    D3D10DDI_HDEVICE hDevice,
     D3D10_DDI_PRIMITIVE_TOPOLOGY topology)
 {
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
@@ -1193,7 +1121,7 @@ void APIENTRY RosUmdDeviceDdi::DdiIaSetTopology(
 //
 
 void APIENTRY RosUmdDeviceDdi::DdiDraw(
-    D3D10DDI_HDEVICE hDevice, 
+    D3D10DDI_HDEVICE hDevice,
     UINT vertexCount,
     UINT startVertexLocation)
 {
@@ -1220,11 +1148,9 @@ void APIENTRY RosUmdDeviceDdi::DdiIaSetVertexBuffers(
     UINT startBuffer,
     UINT numBuffers,
     const D3D10DDI_HRESOURCE* phBuffers,
-    const UINT* pStrides, 
+    const UINT* pStrides,
     const UINT* pOffsets)
 {
-    RosUmdLogging::Call(__FUNCTION__); 
-
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     pDevice->SetVertexBuffers(startBuffer, numBuffers, phBuffers, pStrides, pOffsets);
 }
@@ -1239,8 +1165,6 @@ void APIENTRY RosUmdDeviceDdi::DdiIaSetIndexBuffer(
     DXGI_FORMAT hIndexFormat,
     UINT offset)
 {
-    RosUmdLogging::Call(__FUNCTION__);
-
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
     pDevice->SetIndexBuffer(hIndexBuffer, hIndexFormat, offset);
 }
@@ -1253,8 +1177,6 @@ void APIENTRY RosUmdDeviceDdi::DdiDynamicIABufferMapNoOverwrite(
     UINT mapFlags,
     D3D10DDI_MAPPED_SUBRESOURCE* pMappedSubRes)
 {
-    RosUmdLogging::Entry(__FUNCTION__);
-
     RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
     RosUmdResource * pResource = (RosUmdResource *)hResource.pDrvPrivate;
 
@@ -1267,8 +1189,6 @@ void APIENTRY RosUmdDeviceDdi::DdiDynamicIABufferMapNoOverwrite(
     {
         pRosUmdDevice->SetException(e);
     }
-
-    RosUmdLogging::Exit(__FUNCTION__);
 }
 
 void APIENTRY RosUmdDeviceDdi::DdiDynamicIABufferMapDiscard(
@@ -1279,8 +1199,6 @@ void APIENTRY RosUmdDeviceDdi::DdiDynamicIABufferMapDiscard(
     UINT mapFlags,
     D3D10DDI_MAPPED_SUBRESOURCE* pMappedSubRes)
 {
-    RosUmdLogging::Entry(__FUNCTION__);
-
     RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
     RosUmdResource * pResource = (RosUmdResource *)hResource.pDrvPrivate;
 
@@ -1293,8 +1211,6 @@ void APIENTRY RosUmdDeviceDdi::DdiDynamicIABufferMapDiscard(
     {
         pRosUmdDevice->SetException(e);
     }
-
-    RosUmdLogging::Exit(__FUNCTION__);
 }
 
 void APIENTRY RosUmdDeviceDdi::DdiDynamicIABufferUnmap(
@@ -1302,8 +1218,6 @@ void APIENTRY RosUmdDeviceDdi::DdiDynamicIABufferUnmap(
     D3D10DDI_HRESOURCE hResource,
     UINT subResource)
 {
-    RosUmdLogging::Entry(__FUNCTION__);
-
     RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
     RosUmdResource * pResource = (RosUmdResource *)hResource.pDrvPrivate;
 
@@ -1316,20 +1230,16 @@ void APIENTRY RosUmdDeviceDdi::DdiDynamicIABufferUnmap(
     {
         pRosUmdDevice->SetException(e);
     }
-
-    RosUmdLogging::Exit(__FUNCTION__);
 }
 
 void APIENTRY RosUmdDeviceDdi::DdiVsSetConstantBuffers11_1(
     D3D10DDI_HDEVICE hDevice,
     UINT startBuffer,
-    UINT numberBuffers, 
+    UINT numberBuffers,
     const D3D10DDI_HRESOURCE *  phResources,
     const UINT *    pFirstConstant,
     const UINT *    pNumberConstants)
 {
-    RosUmdLogging::Call(__FUNCTION__);
-
     RosUmdDevice * pDevice = RosUmdDevice::CastFrom(hDevice);
 
     pDevice->VsSetConstantBuffers11_1(startBuffer, numberBuffers, phResources, pFirstConstant, pNumberConstants);
@@ -1343,8 +1253,6 @@ void APIENTRY RosUmdDeviceDdi::DdiDynamicConstantBufferMapDiscard(
     UINT mapFlags,
     D3D10DDI_MAPPED_SUBRESOURCE* pMappedSubRes)
 {
-    RosUmdLogging::Entry(__FUNCTION__);
-
     RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
     RosUmdResource * pResource = (RosUmdResource *)hResource.pDrvPrivate;
 
@@ -1357,8 +1265,6 @@ void APIENTRY RosUmdDeviceDdi::DdiDynamicConstantBufferMapDiscard(
     {
         pRosUmdDevice->SetException(e);
     }
-
-    RosUmdLogging::Exit(__FUNCTION__);
 }
 
 void APIENTRY RosUmdDeviceDdi::DdiDynamicConstantBufferUnmap(
@@ -1366,8 +1272,6 @@ void APIENTRY RosUmdDeviceDdi::DdiDynamicConstantBufferUnmap(
     D3D10DDI_HRESOURCE hResource,
     UINT subResource)
 {
-    RosUmdLogging::Entry(__FUNCTION__);
-
     RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
     RosUmdResource * pResource = (RosUmdResource *)hResource.pDrvPrivate;
 
@@ -1380,7 +1284,133 @@ void APIENTRY RosUmdDeviceDdi::DdiDynamicConstantBufferUnmap(
     {
         pRosUmdDevice->SetException(e);
     }
-
-    RosUmdLogging::Exit(__FUNCTION__);
 }
 
+HRESULT RosUmdDeviceDdi::Present(DXGI_DDI_ARG_PRESENT* pPresentData)
+{
+    RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(pPresentData->hDevice);
+    HRESULT hr = pRosUmdDevice->Present(pPresentData);
+    if (FAILED(hr))
+    {
+        pRosUmdDevice->SetError(hr);
+    }
+
+    return hr;
+}
+
+HRESULT RosUmdDeviceDdi::RotateResourceIdentities(
+    DXGI_DDI_ARG_ROTATE_RESOURCE_IDENTITIES* Args)
+{
+    RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(Args->hDevice);
+    HRESULT hr = pRosUmdDevice->RotateResourceIdentities(Args);
+    if (FAILED(hr))
+    {
+        pRosUmdDevice->SetError(hr);
+    }
+    
+    return hr;
+}
+
+HRESULT RosUmdDeviceDdi::SetDisplayMode(
+    DXGI_DDI_ARG_SETDISPLAYMODE* pDisplayModeData)
+{
+    RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(pDisplayModeData->hDevice);
+    HRESULT hr = pRosUmdDevice->SetDisplayMode(pDisplayModeData);
+    if (FAILED(hr))
+    {
+        pRosUmdDevice->SetError(hr);
+    }
+
+    return hr;
+}
+
+HRESULT RosUmdDeviceDdi::Present1(DXGI_DDI_ARG_PRESENT1* pPresentData)
+{
+    RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(pPresentData->hDevice);
+    HRESULT hr = pRosUmdDevice->Present1(pPresentData);
+    if (FAILED(hr))
+    {
+        pRosUmdDevice->SetError(hr);
+    }
+
+    return hr;
+}
+
+_Use_decl_annotations_
+void RosUmdDeviceDdi::CheckDirectFlipSupport(
+    D3D10DDI_HDEVICE hDevice,
+    D3D10DDI_HRESOURCE hResource1,
+    D3D10DDI_HRESOURCE hResource2,
+    UINT CheckDirectFlipFlags,
+    BOOL *pSupported
+    )
+{
+    RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
+    pRosUmdDevice->CheckDirectFlipSupport(
+        hDevice,
+        hResource1,
+        hResource2,
+        CheckDirectFlipFlags,
+        pSupported);
+}
+
+void APIENTRY RosUmdDeviceDdi::DdiSetPredication(
+    D3D10DDI_HDEVICE hDevice,
+    D3D10DDI_HQUERY hQuery,
+    BOOL bPredicateValue
+    )
+{
+    RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
+    
+    try
+    {
+        pRosUmdDevice->SetPredication(hQuery, bPredicateValue);
+    }
+    catch (std::exception & e)
+    {
+        pRosUmdDevice->SetException(e);
+    }
+}
+
+void APIENTRY RosUmdDeviceDdi::DdiResourceCopyRegion11_1(
+    D3D10DDI_HDEVICE hDevice,
+    D3D10DDI_HRESOURCE hDstResource,
+    UINT DstSubresource,
+    UINT DstX,
+    UINT DstY,
+    UINT DstZ,
+    D3D10DDI_HRESOURCE hSrcResource,
+    UINT SrcSubresource,
+    const D3D10_DDI_BOX* pSrcBox,
+    UINT copyFlags
+    )
+{
+    RosUmdDevice* pRosUmdDevice = RosUmdDevice::CastFrom(hDevice);
+    RosUmdResource * pDestinationResource = (RosUmdResource *) hDstResource.pDrvPrivate;
+    RosUmdResource * pSourceResource = (RosUmdResource *) hSrcResource.pDrvPrivate;
+
+    try
+    {
+        pRosUmdDevice->ResourceCopyRegion11_1(pDestinationResource, DstSubresource, DstX, DstY, DstZ, pSourceResource, SrcSubresource, pSrcBox, copyFlags);
+    }
+
+    catch (std::exception & e)
+    {
+        pRosUmdDevice->SetException(e);
+    }
+}
+
+void APIENTRY RosUmdDeviceDdi::DdiResourceCopyRegion(
+    D3D10DDI_HDEVICE hDevice,
+    D3D10DDI_HRESOURCE hDstResource,
+    UINT DstSubresource,
+    UINT DstX,
+    UINT DstY,
+    UINT DstZ,
+    D3D10DDI_HRESOURCE hSrcResource,
+    UINT SrcSubresource,
+    const D3D10_DDI_BOX* pSrcBox
+    )
+{
+    DdiResourceCopyRegion11_1(hDevice, hDstResource, DstSubresource, DstX, DstY, DstZ, hSrcResource, SrcSubresource, pSrcBox, 0);
+}

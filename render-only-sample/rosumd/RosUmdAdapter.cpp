@@ -1,9 +1,12 @@
+#include "precomp.h"
+
+#include "RosUmdLogging.h"
+#include "RosUmdAdapter.tmh"
+
 #include "RosUmdAdapter.h"
 #include "RosUmdDevice.h"
-#include "RosUmdLogging.h"
 #include "RosAdapter.h"
 
-#include <new>
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -92,7 +95,7 @@ HRESULT APIENTRY RosUmdAdapter::CreateDevice(
         return e.m_hr;
     }
 
-    return DXGI_STATUS_NO_REDIRECTION;
+    return S_OK;
 }
 
 //----------------------------------------------------------------------------------------------------------------------------------
@@ -122,7 +125,7 @@ SIZE_T APIENTRY RosUmdAdapter::CalcPrivateDeviceSize(
 // List of DDIs ref is compatible with.
 const UINT64 c_aSupportedVersions[] =
 {
-    D3D11_1_DDI_SUPPORTED
+    D3DWDDM1_3_DDI_SUPPORTED
 };
 
 HRESULT APIENTRY RosUmdAdapter::GetSupportedVersions(
@@ -180,10 +183,13 @@ HRESULT APIENTRY RosUmdAdapter::GetCaps(
 
             D3D11DDI_3DPIPELINESUPPORT_CAPS* pData = static_cast< D3D11DDI_3DPIPELINESUPPORT_CAPS* >( pCaps->pData );
             // Ref11 supports pipeline levels 9.1, 9.2, 9.3, 10, 10.1, 11, 11.1
-            pData->Caps = D3D11DDI_ENCODE_3DPIPELINESUPPORT_CAP( D3D11_1DDI_3DPIPELINELEVEL_11_1 ) |
+            pData->Caps =
+#if !VC4 // VC4 only supports up to FL9_3.
+                D3D11DDI_ENCODE_3DPIPELINESUPPORT_CAP( D3D11_1DDI_3DPIPELINELEVEL_11_1 ) |
                 D3D11DDI_ENCODE_3DPIPELINESUPPORT_CAP( D3D11DDI_3DPIPELINELEVEL_11_0 ) |
                 D3D11DDI_ENCODE_3DPIPELINESUPPORT_CAP( D3D11DDI_3DPIPELINELEVEL_10_1 ) |
                 D3D11DDI_ENCODE_3DPIPELINESUPPORT_CAP( D3D11DDI_3DPIPELINELEVEL_10_0 ) |
+#endif // !VC4
                 D3D11DDI_ENCODE_3DPIPELINESUPPORT_CAP( D3D11_1DDI_3DPIPELINELEVEL_9_3 ) | // 9_x are not interesting for IHVs implementing this DDI.
                 D3D11DDI_ENCODE_3DPIPELINESUPPORT_CAP( D3D11_1DDI_3DPIPELINELEVEL_9_2 ) | // For hardware, these levels go through the D3D9 DDI.
                 D3D11DDI_ENCODE_3DPIPELINESUPPORT_CAP( D3D11_1DDI_3DPIPELINELEVEL_9_1 )
