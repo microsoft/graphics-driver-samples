@@ -561,9 +561,11 @@ void RosUmdResource::CopyTFormatToLinear (
                 tileCoord.ByteOffset() +
                 offsetWithinMicrotile;
             NT_ASSERT((src + VC4_MICRO_TILE_WIDTH_BYTES) <= srcEnd);
+            UNREFERENCED_PARAMETER(srcEnd);
 
             BYTE* dest = destRow + x;
             NT_ASSERT((dest + VC4_MICRO_TILE_WIDTH_BYTES) <= destEnd);
+            UNREFERENCED_PARAMETER(destEnd);
 
             memcpy(dest, src, VC4_MICRO_TILE_WIDTH_BYTES);
         }
