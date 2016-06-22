@@ -12,6 +12,8 @@ All code within this project is covered by the MIT license with Microsoft as the
 
 If you wish to get involved in the project, please email grfxdrvsamples@microsoft.com and include how you wish to contribute.
 
+This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+
 # Sample Graphics Driver Status
 
 The sample driver builds and installs on a raspberry pi 2 and supports a variety of operations.  The driver is still in the early stages of development.  The driver is capable of some basic D3D rendering including the ability to run a canonical demo application called Dolphin.
