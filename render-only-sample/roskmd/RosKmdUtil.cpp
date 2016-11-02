@@ -225,6 +225,58 @@ FILE * __cdecl __acrt_iob_func(unsigned)
 #endif // USE_SIMPENROSE
 
 ROS_NONPAGED_SEGMENT_BEGIN; //================================================
+
+void* __cdecl operator new (
+    size_t Size,
+    POOL_TYPE PoolType,
+    ROS_ALLOC_TAG Tag
+    ) throw ()
+{
+    if (!Size) Size = 1;
+    return ExAllocatePoolWithTag(PoolType, Size, ULONG(Tag));
+} // operator new ( size_t, POOL_TYPE, ROS_ALLOC_TAG )
+
+void __cdecl operator delete ( void* Ptr ) throw ()
+{
+    if (Ptr) ExFreePool(Ptr);
+} // operator delete ( void* )
+
+void __cdecl operator delete (void* Ptr, size_t) throw ()
+{
+    if (Ptr) ExFreePool(Ptr);
+} // operator delete (void*, size_t)
+
+void* __cdecl operator new[] (
+    size_t Size,
+    POOL_TYPE PoolType,
+    ROS_ALLOC_TAG Tag
+    ) throw ()
+{
+    if (!Size) Size = 1;
+    return ExAllocatePoolWithTag(PoolType, Size, ULONG(Tag));
+} // operator new[] ( size_t, POOL_TYPE, ROS_ALLOC_TAG )
+
+void __cdecl operator delete[] ( void* Ptr ) throw ()
+{
+    if (Ptr) ExFreePool(Ptr);
+} // operator delete[] ( void* )
+
+void* __cdecl operator new ( size_t, void* Ptr ) throw ()
+{
+    return Ptr;
+} // operator new ( size_t, void* )
+
+void __cdecl operator delete ( void*, void* ) throw ()
+{} // void operator delete ( void*, void* )
+
+void* __cdecl operator new[] ( size_t, void* Ptr ) throw ()
+{
+    return Ptr;
+} // operator new[] ( size_t, void* )
+
+void __cdecl operator delete[] ( void*, void* ) throw ()
+{} // void operator delete[] ( void*, void* )
+
 ROS_NONPAGED_SEGMENT_END; //==================================================
 ROS_PAGED_SEGMENT_BEGIN; //===================================================
 
@@ -232,17 +284,17 @@ _Use_decl_annotations_
 DXGI_FORMAT DxgiFormatFromD3dDdiFormat (D3DDDIFORMAT Format)
 {
     PAGED_CODE();
-    
+
     switch (Format)
     {
     case D3DDDIFMT_A8:
         return DXGI_FORMAT_A8_UNORM;
     case D3DDDIFMT_L8:
         // Map D3D9 L8 format to D3D11 R8 - see shader converter EmitSamplerSwizzle()
-        return DXGI_FORMAT_R8_UNORM;  
+        return DXGI_FORMAT_R8_UNORM;
     case D3DDDIFMT_L16:
         // Map D3D9 L16 format to D3D11 R16 - see shader converter EmitSamplerSwizzle()
-        return DXGI_FORMAT_R16_UNORM;  
+        return DXGI_FORMAT_R16_UNORM;
     case D3DDDIFMT_R5G6B5:
         return DXGI_FORMAT_B5G6R5_UNORM;
     case D3DDDIFMT_A1R5G5B5:

@@ -91,56 +91,31 @@ __forceinline NTSTATUS RosSanitizeNtstatus (
 // Default memory allocation and object construction for C++ modules
 //
 
-__forceinline void* __cdecl operator new (
+void* __cdecl operator new (
     size_t Size,
     POOL_TYPE PoolType,
     ROS_ALLOC_TAG Tag
-    ) throw ()
-{
-    if (!Size) Size = 1;
-    return ExAllocatePoolWithTag(PoolType, Size, ULONG(Tag));
-} // operator new ( size_t, POOL_TYPE, ROS_ALLOC_TAG )
+    ) throw ();
 
-__forceinline void __cdecl operator delete ( void* Ptr ) throw ()
-{
-    if (Ptr) ExFreePool(Ptr);
-} // operator delete ( void* )
+void __cdecl operator delete ( void* Ptr ) throw ();
 
-__forceinline void __cdecl operator delete (void* Ptr, size_t) throw ()
-{
-    if (Ptr) ExFreePool(Ptr);
-} // operator delete (void*, size_t)
+void __cdecl operator delete (void* Ptr, size_t) throw ();
 
-__forceinline void* __cdecl operator new[] (
+void* __cdecl operator new[] (
     size_t Size,
     POOL_TYPE PoolType,
     ROS_ALLOC_TAG Tag
-    ) throw ()
-{
-    if (!Size) Size = 1;
-    return ExAllocatePoolWithTag(PoolType, Size, ULONG(Tag));
-} // operator new[] ( size_t, POOL_TYPE, ROS_ALLOC_TAG )
+    ) throw ();
 
-__forceinline void __cdecl operator delete[] ( void* Ptr ) throw ()
-{
-    if (Ptr) ExFreePool(Ptr);
-} // operator delete[] ( void* )
+void __cdecl operator delete[] ( void* Ptr ) throw ();
 
-__forceinline void* __cdecl operator new ( size_t, void* Ptr ) throw ()
-{
-    return Ptr;
-} // operator new ( size_t, void* )
+void* __cdecl operator new ( size_t, void* Ptr ) throw ();
 
-__forceinline void __cdecl operator delete ( void*, void* ) throw ()
-{} // void operator delete ( void*, void* )
+void __cdecl operator delete ( void*, void* ) throw ();
 
-__forceinline void* __cdecl operator new[] ( size_t, void* Ptr ) throw ()
-{
-    return Ptr;
-} // operator new[] ( size_t, void* )
+void* __cdecl operator new[] ( size_t, void* Ptr ) throw ();
 
-__forceinline void __cdecl operator delete[] ( void*, void* ) throw ()
-{} // void operator delete[] ( void*, void* )
+void __cdecl operator delete[] ( void*, void* ) throw ();
 
 //
 // class ROS_FINALLY
