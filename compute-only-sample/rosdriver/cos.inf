@@ -1,0 +1,94 @@
+;++
+;
+; Copyright (c) 2018 Microsoft Corporation
+;
+; Module Name:
+;
+;    cos.inf
+;
+; Abstract:
+;
+;    Inf file for the compute only sample driver
+;
+;--
+
+[Version]
+Signature = "$Windows NT$"
+Class=Display
+ClassGuid={4D36E968-E325-11CE-BFC1-08002BE10318}
+Provider=%ManufacturerName%
+CatalogFile=coskmd.cat
+
+[SourceDisksNames]
+0=%ComputeOnlySampleDisk%
+
+[SourceDisksFiles]
+coskmd.sys = 0
+cosumd.dll = 0
+
+[DestinationDirs]
+ComputeOnlySample.Miniport = 12 ; drivers
+ComputeOnlySample.UserMode = 11 ; system32
+
+[Manufacturer]
+%ManufacturerName%=ComputeOnlySample.Mfg,NT$ARCH$
+
+[ControlFlags]
+ExcludeFromSelect=*
+
+[ComputeOnlySample.Mfg.NT$ARCH$]
+%ComputeOnlySample% = ComputeOnlySample,ACPI\COMPUTEONLYSAMPLE
+
+[ComputeOnlySample]
+FeatureScore=FB
+CopyFiles=ComputeOnlySample.Miniport, ComputeOnlySample.UserMode
+AddReg = ComputeOnlySample_AddReg
+
+[ComputeOnlySample.Miniport]
+coskmd.sys,,,0x100
+
+[ComputeOnlySample.UserMode]
+cosumd.dll,,,0x4000
+
+[ComputeOnlySample_AddReg]
+HKR,,UserModeDriverName,%REG_MULTI_SZ%,cosumd.dll,cosumd.dll,cosumd.dll,cosumd.dll
+HKLM,"SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Scheduler",EnablePreemption,%REG_DWORD%,0
+HKLM,"SYSTEM\CurrentControlSet\Control\GraphicsDrivers",TdrDebugMode,%REG_DWORD%,1
+HKLM,"SYSTEM\CurrentControlSet\Control\GraphicsDrivers\MemoryManager",DirectFlipMemoryRequirement,%REG_DWORD%,0
+
+; Service Installation
+
+[ComputeOnlySample.Services]
+AddService = ComputeOnlySample, 0x00000002, ComputeOnlySample_Generic_Service_Inst, ComputeOnlySample_EventLog_Inst
+
+[ComputeOnlySample_EventLog_Inst]
+AddReg = ComputeOnlySample_EventLog_AddReg
+
+[ComputeOnlySample_EventLog_AddReg]
+HKR,,EventMessageFile,%REG_EXPAND_SZ%,"%%SystemRoot%%\System32\IoLogMsg.dll"
+HKR,,TypesSupported,%REG_DWORD%,7
+
+[ComputeOnlySample_Generic_Service_Inst]
+ServiceType    = 1                  ; SERVICE_KERNEL_DRIVER
+StartType      = 3                  ; SERVICE_DEMAND_START - Must be demand start
+ErrorControl   = 0                  ; SERVICE_ERROR_IGNORE
+LoadOrderGroup = Video
+ServiceBinary  = %12%\coskmd.sys
+
+[Strings]
+
+;
+; Non-Localizable Strings
+;
+
+REG_MULTI_SZ  = 0x00010000
+REG_EXPAND_SZ = 0x00020000
+REG_DWORD     = 0x00010001
+
+;
+; Localizable Strings
+;
+
+ComputeOnlySample="Compute Only Sample Driver"
+ComputeOnlySampleDisk = "Compute Only Sample Disk"
+ManufacturerName="BartHouse"

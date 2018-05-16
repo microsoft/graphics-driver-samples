@@ -1,0 +1,20 @@
+#include <windows.h>
+
+#ifndef DBG
+#define DX_RUNTIME_VERSION 1
+#endif
+
+#define DX_VER_FILETYPE VFT_DLL
+#define DX_VER_FILESUBTYPE VFT2_UNKNOWN
+#define DX_VER_FILEDESCRIPTIONSTR "Render Only Sample"
+
+#ifdef DBG
+#define DX_VER_FILEDESCRIPTION_STR DX_VER_FILEDESCRIPTIONSTR " Debug"
+#else
+#define DX_VER_FILEDESCRIPTION_STR DX_VER_FILEDESCRIPTIONSTR
+#endif
+
+#define DX_VER_INTERNALNAME_STR "RenderOnlySample.dll"
+#define DX_VER_ORIGINALFILENAME_STR DX_VER_INTERNALNAME_STR
+
+#include "D3DVerInfo.h"
