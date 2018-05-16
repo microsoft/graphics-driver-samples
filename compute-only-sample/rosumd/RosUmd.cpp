@@ -18,6 +18,8 @@ BOOL WINAPI DllMain(
 {
     lpvReserved; // unused
 
+    DebugBreak();
+
     // Warning, do not call outside of this module, except for functions located in kernel32.dll. BUT, do not call LoadLibrary nor
     // FreeLibrary, either. Nor, call malloc nor new; use HeapAlloc directly.
 

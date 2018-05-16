@@ -1,11 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.24720.0
+# Visual Studio 15
+VisualStudioVersion = 15.0.27428.2037
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "roskmd", "roskmd\roskmd.vcxproj", "{65CF1498-21A7-4356-8C3A-3642958DEF34}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "coskmd", "roskmd\roskmd.vcxproj", "{65CF1498-21A7-4356-8C3A-3642958DEF34}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "rosumd", "rosumd\rosumd.vcxproj", "{B87732A7-0D66-4692-96E2-2772BF77C3FC}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cosumd", "rosumd\rosumd.vcxproj", "{B87732A7-0D66-4692-96E2-2772BF77C3FC}"
 	ProjectSection(ProjectDependencies) = postProject
 		{98E16C06-7E74-4A0C-A5E6-24219CAE527D} = {98E16C06-7E74-4A0C-A5E6-24219CAE527D}
 	EndProjectSection
@@ -18,13 +18,15 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		WorkItems.txt = WorkItems.txt
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "roscompiler", "roscompiler\roscompiler.vcxproj", "{98E16C06-7E74-4A0C-A5E6-24219CAE527D}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "coscompiler", "roscompiler\roscompiler.vcxproj", "{98E16C06-7E74-4A0C-A5E6-24219CAE527D}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CubeTest", "CubeTest\CubeTest.vcxproj", "{E462FE3C-960B-4A75-A57D-9C4705ECC8D9}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RosDriver", "rosdriver\RosDriver.vcxproj", "{593E30CD-93AD-432A-B6A1-B59F85C77ACC}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cosDriver", "rosdriver\RosDriver.vcxproj", "{593E30CD-93AD-432A-B6A1-B59F85C77ACC}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RosTest", "rostest\RosTest.vcxproj", "{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cosTest", "rostest\RosTest.vcxproj", "{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "coscon", "coscon\coscon.vcxproj", "{ED90BF96-654B-48AE-9E6E-4094267F88B3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -164,8 +166,25 @@ Global
 		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Release|x64.Build.0 = Release|x64
 		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Release|x86.ActiveCfg = Release|Win32
 		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Release|x86.Build.0 = Release|Win32
+		{ED90BF96-654B-48AE-9E6E-4094267F88B3}.Debug|Any CPU.ActiveCfg = Debug|Win32
+		{ED90BF96-654B-48AE-9E6E-4094267F88B3}.Debug|ARM.ActiveCfg = Debug|Win32
+		{ED90BF96-654B-48AE-9E6E-4094267F88B3}.Debug|ARM64.ActiveCfg = Debug|Win32
+		{ED90BF96-654B-48AE-9E6E-4094267F88B3}.Debug|x64.ActiveCfg = Debug|x64
+		{ED90BF96-654B-48AE-9E6E-4094267F88B3}.Debug|x64.Build.0 = Debug|x64
+		{ED90BF96-654B-48AE-9E6E-4094267F88B3}.Debug|x86.ActiveCfg = Debug|Win32
+		{ED90BF96-654B-48AE-9E6E-4094267F88B3}.Debug|x86.Build.0 = Debug|Win32
+		{ED90BF96-654B-48AE-9E6E-4094267F88B3}.Release|Any CPU.ActiveCfg = Release|Win32
+		{ED90BF96-654B-48AE-9E6E-4094267F88B3}.Release|ARM.ActiveCfg = Release|Win32
+		{ED90BF96-654B-48AE-9E6E-4094267F88B3}.Release|ARM64.ActiveCfg = Release|Win32
+		{ED90BF96-654B-48AE-9E6E-4094267F88B3}.Release|x64.ActiveCfg = Release|x64
+		{ED90BF96-654B-48AE-9E6E-4094267F88B3}.Release|x64.Build.0 = Release|x64
+		{ED90BF96-654B-48AE-9E6E-4094267F88B3}.Release|x86.ActiveCfg = Release|Win32
+		{ED90BF96-654B-48AE-9E6E-4094267F88B3}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {3286F849-3548-4BDC-8569-5EECBADC13E7}
 	EndGlobalSection
 EndGlobal
