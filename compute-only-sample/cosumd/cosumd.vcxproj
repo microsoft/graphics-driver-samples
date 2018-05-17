@@ -150,6 +150,7 @@
     <ClInclude Include="..\coscommon\CosAllocation.h" />
     <ClInclude Include="..\coscommon\CosGpuCommand.h" />
     <ClInclude Include="..\coscompiler\coscompiler.h" />
+    <ClInclude Include="CosUmdUnorderedAccessView.h" />
     <ClInclude Include="d3dumddi_.h" />
     <ClInclude Include="pixel.hpp" />
     <ClInclude Include="CosContext.h" />

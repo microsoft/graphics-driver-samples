@@ -16,6 +16,7 @@
 #include "CosUmdRenderTargetView.h"
 #include "CosUmdDepthStencilView.h"
 #include "CosUmdShaderResourceView.h"
+#include "CosUmdUnorderedAccessView.h"
 
 #include "CosContext.h"
 
@@ -166,8 +167,8 @@ const D3DWDDM1_3DDI_DEVICEFUNCS CosUmdDeviceDdi::s_deviceFuncsWDDM1_3 =
     CosUmdDeviceDdi::DdiCSSetSamplers,
     CosUmdDeviceDdi::CsSetConstantBuffers11_1_Default,
     CosUmdDeviceDdi::CalcPrivateUnorderedAccessViewSize_Default,
-    CosUmdDeviceDdi::CreateUnorderedAccessView_Default,
-    CosUmdDeviceDdi::DestroyUnorderedAccessView_Default,
+    CosUmdDeviceDdi::DdiCreateUnorderedAccessView,
+    CosUmdDeviceDdi::DdiDestroyUnorderedAccessView,
     CosUmdDeviceDdi::ClearUnorderedAccessViewUint_Default,
     CosUmdDeviceDdi::ClearUnorderedAccessViewFloat_Default,
     CosUmdDeviceDdi::CSSetUnorderedAccessViews_Default,
@@ -1413,4 +1414,28 @@ void APIENTRY CosUmdDeviceDdi::DdiResourceCopyRegion(
     )
 {
     DdiResourceCopyRegion11_1(hDevice, hDstResource, DstSubresource, DstX, DstY, DstZ, hSrcResource, SrcSubresource, pSrcBox, 0);
+}
+
+void APIENTRY CosUmdDeviceDdi::DdiCreateUnorderedAccessView(
+    D3D10DDI_HDEVICE hDevice,
+    const D3D11DDIARG_CREATEUNORDEREDACCESSVIEW* pCreate,
+    D3D11DDI_HUNORDEREDACCESSVIEW hUnorderedAccessView,
+    D3D11DDI_HRTUNORDEREDACCESSVIEW hRTUnorderedAccessView)
+{
+    CosUmdDevice * pDevice = CosUmdDevice::CastFrom(hDevice);
+    pDevice;
+
+    CosUmdUnorderedAccessView * pUnorderedAccessView = new(hUnorderedAccessView.pDrvPrivate) CosUmdUnorderedAccessView(pCreate, hRTUnorderedAccessView);
+    pUnorderedAccessView;
+}
+
+void APIENTRY CosUmdDeviceDdi::DdiDestroyUnorderedAccessView(
+    D3D10DDI_HDEVICE hDevice,
+    D3D11DDI_HUNORDEREDACCESSVIEW hUnorderedAccessView) 
+{
+    CosUmdDevice * pDevice = CosUmdDevice::CastFrom(hDevice);
+    pDevice; // unused
+
+    CosUmdUnorderedAccessView * pUnorderedAccessView = CosUmdUnorderedAccessView::CastFrom(hUnorderedAccessView);
+    pUnorderedAccessView->~CosUmdUnorderedAccessView();
 }
