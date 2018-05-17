@@ -1,4 +1,0 @@
-Questions should be added as issues to GitHub project.
-
-
-

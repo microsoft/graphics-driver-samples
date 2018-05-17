@@ -3,28 +3,16 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27428.2037
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "coskmd", "roskmd\roskmd.vcxproj", "{65CF1498-21A7-4356-8C3A-3642958DEF34}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "coskmd", "coskmd\coskmd.vcxproj", "{65CF1498-21A7-4356-8C3A-3642958DEF34}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cosumd", "rosumd\rosumd.vcxproj", "{B87732A7-0D66-4692-96E2-2772BF77C3FC}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cosumd", "cosumd\cosumd.vcxproj", "{B87732A7-0D66-4692-96E2-2772BF77C3FC}"
 	ProjectSection(ProjectDependencies) = postProject
 		{98E16C06-7E74-4A0C-A5E6-24219CAE527D} = {98E16C06-7E74-4A0C-A5E6-24219CAE527D}
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{3A4F1AE9-E3A6-4180-8FB1-4EA9305A67EE}"
-	ProjectSection(SolutionItems) = preProject
-		Governance.txt = Governance.txt
-		Notes.txt = Notes.txt
-		Questions.txt = Questions.txt
-		WorkItems.txt = WorkItems.txt
-	EndProjectSection
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "coscompiler", "coscompiler\coscompiler.vcxproj", "{98E16C06-7E74-4A0C-A5E6-24219CAE527D}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "coscompiler", "roscompiler\roscompiler.vcxproj", "{98E16C06-7E74-4A0C-A5E6-24219CAE527D}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CubeTest", "CubeTest\CubeTest.vcxproj", "{E462FE3C-960B-4A75-A57D-9C4705ECC8D9}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cosDriver", "rosdriver\RosDriver.vcxproj", "{593E30CD-93AD-432A-B6A1-B59F85C77ACC}"
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cosTest", "rostest\RosTest.vcxproj", "{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cosDriver", "cosdriver\cosDriver.vcxproj", "{593E30CD-93AD-432A-B6A1-B59F85C77ACC}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "coscon", "coscon\coscon.vcxproj", "{ED90BF96-654B-48AE-9E6E-4094267F88B3}"
 EndProject
@@ -108,22 +96,6 @@ Global
 		{98E16C06-7E74-4A0C-A5E6-24219CAE527D}.Release|x86.ActiveCfg = Release|Win32
 		{98E16C06-7E74-4A0C-A5E6-24219CAE527D}.Release|x86.Build.0 = Release|Win32
 		{98E16C06-7E74-4A0C-A5E6-24219CAE527D}.Release|x86.Deploy.0 = Release|Win32
-		{E462FE3C-960B-4A75-A57D-9C4705ECC8D9}.Debug|Any CPU.ActiveCfg = Debug|Win32
-		{E462FE3C-960B-4A75-A57D-9C4705ECC8D9}.Debug|ARM.ActiveCfg = Debug|arm
-		{E462FE3C-960B-4A75-A57D-9C4705ECC8D9}.Debug|ARM.Build.0 = Debug|arm
-		{E462FE3C-960B-4A75-A57D-9C4705ECC8D9}.Debug|ARM64.ActiveCfg = Debug|Win32
-		{E462FE3C-960B-4A75-A57D-9C4705ECC8D9}.Debug|x64.ActiveCfg = Debug|x64
-		{E462FE3C-960B-4A75-A57D-9C4705ECC8D9}.Debug|x64.Build.0 = Debug|x64
-		{E462FE3C-960B-4A75-A57D-9C4705ECC8D9}.Debug|x86.ActiveCfg = Debug|Win32
-		{E462FE3C-960B-4A75-A57D-9C4705ECC8D9}.Debug|x86.Build.0 = Debug|Win32
-		{E462FE3C-960B-4A75-A57D-9C4705ECC8D9}.Release|Any CPU.ActiveCfg = Release|Win32
-		{E462FE3C-960B-4A75-A57D-9C4705ECC8D9}.Release|ARM.ActiveCfg = Release|arm
-		{E462FE3C-960B-4A75-A57D-9C4705ECC8D9}.Release|ARM.Build.0 = Release|arm
-		{E462FE3C-960B-4A75-A57D-9C4705ECC8D9}.Release|ARM64.ActiveCfg = Release|Win32
-		{E462FE3C-960B-4A75-A57D-9C4705ECC8D9}.Release|x64.ActiveCfg = Release|x64
-		{E462FE3C-960B-4A75-A57D-9C4705ECC8D9}.Release|x64.Build.0 = Release|x64
-		{E462FE3C-960B-4A75-A57D-9C4705ECC8D9}.Release|x86.ActiveCfg = Release|Win32
-		{E462FE3C-960B-4A75-A57D-9C4705ECC8D9}.Release|x86.Build.0 = Release|Win32
 		{593E30CD-93AD-432A-B6A1-B59F85C77ACC}.Debug|Any CPU.ActiveCfg = Debug|Win32
 		{593E30CD-93AD-432A-B6A1-B59F85C77ACC}.Debug|ARM.ActiveCfg = Debug|ARM
 		{593E30CD-93AD-432A-B6A1-B59F85C77ACC}.Debug|ARM.Build.0 = Debug|ARM
@@ -150,22 +122,6 @@ Global
 		{593E30CD-93AD-432A-B6A1-B59F85C77ACC}.Release|x86.ActiveCfg = Release|Win32
 		{593E30CD-93AD-432A-B6A1-B59F85C77ACC}.Release|x86.Build.0 = Release|Win32
 		{593E30CD-93AD-432A-B6A1-B59F85C77ACC}.Release|x86.Deploy.0 = Release|Win32
-		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Debug|Any CPU.ActiveCfg = Debug|Win32
-		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Debug|ARM.ActiveCfg = Debug|ARM
-		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Debug|ARM.Build.0 = Debug|ARM
-		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Debug|ARM64.ActiveCfg = Debug|Win32
-		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Debug|x64.ActiveCfg = Debug|x64
-		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Debug|x64.Build.0 = Debug|x64
-		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Debug|x86.ActiveCfg = Debug|Win32
-		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Debug|x86.Build.0 = Debug|Win32
-		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Release|Any CPU.ActiveCfg = Release|Win32
-		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Release|ARM.ActiveCfg = Release|ARM
-		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Release|ARM.Build.0 = Release|ARM
-		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Release|ARM64.ActiveCfg = Release|Win32
-		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Release|x64.ActiveCfg = Release|x64
-		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Release|x64.Build.0 = Release|x64
-		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Release|x86.ActiveCfg = Release|Win32
-		{5E7D4E14-5AF2-48AB-A551-33C8865A3C47}.Release|x86.Build.0 = Release|Win32
 		{ED90BF96-654B-48AE-9E6E-4094267F88B3}.Debug|Any CPU.ActiveCfg = Debug|Win32
 		{ED90BF96-654B-48AE-9E6E-4094267F88B3}.Debug|ARM.ActiveCfg = Debug|Win32
 		{ED90BF96-654B-48AE-9E6E-4094267F88B3}.Debug|ARM64.ActiveCfg = Debug|Win32
