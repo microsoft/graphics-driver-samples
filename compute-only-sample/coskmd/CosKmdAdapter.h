@@ -11,7 +11,6 @@
 
 #include "CosKmdAllocation.h"
 #include "CosKmdGlobal.h"
-#include "Vc4Display.h"
 
 #pragma warning(disable:4201)   // nameless struct/union
 
@@ -408,7 +407,9 @@ protected:
     BYTE                        m_deviceId[MAX_DEVICE_ID_LENGTH];
     ULONG                       m_deviceIdLength;
 
+#if 0
     VC4_DISPLAY                 m_display;
+#endif
 
 #if !VC4
 

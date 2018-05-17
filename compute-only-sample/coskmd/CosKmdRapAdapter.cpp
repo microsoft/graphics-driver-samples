@@ -1,4 +1,4 @@
-#include "precomp.h"
+#include "CosKmd.h"
 
 #include "CosKmdLogging.h"
 #include "CosKmdRapAdapter.tmh"
@@ -248,26 +248,8 @@ CosKmdRapAdapter::Start(
     auto stopDisplay = COS_FINALLY::DoUnless([&]
     {
         PAGED_CODE();
-        m_display.StopDevice();
     }, true);   // cleanup action disabled by default
 
-    if (!CosKmdGlobal::IsRenderOnly())
-    {
-        // initialize display components
-        status = m_display.StartDevice(
-                _RENDERER_CM_RESOURCE_COUNT,    // FirstResourceIndex
-                NumberOfVideoPresentSources,
-                NumberOfChildren);
-        if (!NT_SUCCESS(status))
-        {
-            COS_LOG_ERROR(
-                "Failed to initialize display subsystem. (status=%!STATUS!)",
-                status);
-            return status;
-        }
-        stopDisplay.DoNot(false);   // arm the cleanup action
-    }
-    else
     {
         //
         // Render only device has no VidPn source and target
@@ -295,11 +277,6 @@ NTSTATUS CosKmdRapAdapter::Stop ()
     UNREFERENCED_PARAMETER(status);
     
     COS_LOG_TRACE("Stopping CosKmdRapAdapter");
-
-    if (!CosKmdGlobal::IsRenderOnly())
-    {
-        m_display.StopDevice();
-    }
 
     // disable interrupts
 #if VC4
@@ -853,10 +830,12 @@ BOOLEAN CosKmdRapAdapter::InterruptRoutine(ULONG MessageNumber)
         return TRUE;
 #endif
     
+    MessageNumber;
+
     if (CosKmdGlobal::IsRenderOnly())
         return FALSE;
     
-    return m_display.InterruptRoutine(MessageNumber);
+    return FALSE;
 }
 
 #if VC4

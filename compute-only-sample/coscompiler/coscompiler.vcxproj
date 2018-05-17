@@ -66,7 +66,7 @@
   <!-- Common configuration to debug/release -->
   <ItemDefinitionGroup>
     <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>precomp.h</PrecompiledHeaderFile>
       <WarningLevel>Level4</WarningLevel>
       <TreatWarningAsError>true</TreatWarningAsError>
@@ -100,29 +100,18 @@
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="precomp.h" />
-    <ClInclude Include="..\coscommon\Vc4Qpu.h" />
     <ClInclude Include="d3dumddi_.h" />
     <ClInclude Include="DisasmBase.hpp" />
     <ClInclude Include="HLSLBinary.hpp" />
     <ClInclude Include="HLSLDisasm.hpp" />
     <ClInclude Include="coscompiler.h" />
     <ClInclude Include="coscompilerdebug.h" />
-    <ClInclude Include="Vc4Disasm.hpp" />
-    <ClInclude Include="Vc4Emit.hpp" />
-    <ClInclude Include="Vc4Shader.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="precomp.cpp">
-      <PrecompiledHeader>Create</PrecompiledHeader>
-    </ClCompile>
     <ClCompile Include="DisasmBase.cpp" />
     <ClCompile Include="HLSLBinary.cpp" />
     <ClCompile Include="HLSLDisasm.cpp" />
     <ClCompile Include="coscompiler.cpp" />
-    <ClCompile Include="Vc4Disasm.cpp" />
-    <ClCompile Include="Vc4Emit.cpp" />
-    <ClCompile Include="Vc4Shader.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

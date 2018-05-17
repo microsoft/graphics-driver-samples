@@ -1,5 +1,5 @@
 
-#include "precomp.h"
+#include "CosUmd.h"
 
 #undef WPP_MACRO_USE_KM_VERSION_FOR_UM
 #include "CosUmdLogging.h"

@@ -35,9 +35,6 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="precomp.cpp">
-      <PrecompiledHeader>Create</PrecompiledHeader>
-    </ClCompile>
     <ClCompile Include="CosKmdAcpi.cpp" />
     <ClCompile Include="CosKmdAdapter.cpp" />
     <ClCompile Include="CosKmdContext.cpp" />
@@ -49,15 +46,10 @@
     <ClCompile Include="CosKmdUtil.cpp" />
     <ClCompile Include="CosKmdPower.cpp" />
     <ClCompile Include="CosKmdLogging.cpp" />
-    <ClCompile Include="Vc4Debug.cpp" />
-    <ClCompile Include="Vc4Display.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\coscommon\CosAllocation.h" />
     <ClInclude Include="..\coscommon\CosGpuCommand.h" />
-    <ClInclude Include="..\coscommon\Vc4Ddi.h" />
-    <ClInclude Include="..\coscommon\Vc4Hw.h" />
-    <ClInclude Include="..\coscommon\Vc4Mailbox.h" />
     <ClInclude Include="CosKmd.h" />
     <ClInclude Include="CosKmdAcpi.h" />
     <ClInclude Include="CosKmdAdapter.h" />
@@ -71,10 +63,6 @@
     <ClInclude Include="CosKmdSoftAdapter.h" />
     <ClInclude Include="CosKmdUtil.h" />
     <ClInclude Include="CosKmdLogging.h" />
-    <ClInclude Include="Vc4Debug.h" />
-    <ClInclude Include="Vc4Display.h" />
-    <ClInclude Include="Vc4Hvs.h" />
-    <ClInclude Include="Vc4PixelValve.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{65CF1498-21A7-4356-8C3A-3642958DEF34}</ProjectGuid>
@@ -143,7 +131,7 @@
   <!-- Settings in the following ItemDefinitionGroup are inherited by all configurations -->
   <ItemDefinitionGroup>
     <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>precomp.h</PrecompiledHeaderFile>
       <WppEnabled>true</WppEnabled>
       <WppRecorderEnabled>true</WppRecorderEnabled>

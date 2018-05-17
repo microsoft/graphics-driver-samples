@@ -5,7 +5,7 @@
 // Copyright (C) Microsoft Corporation
 //
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include "precomp.h"
+#include "CosUmd.h"
 
 #include "CosUmdLogging.h"
 #include "CosUmdDevice.tmh"
@@ -315,7 +315,7 @@ void CosUmdDevice::CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResou
         }
         else if (pResource->m_resourceDimension == D3D10DDIRESOURCE_TEXTURE2D)
         {
-            if (pResource->m_hwLayout == CosHwLayout::Linear)
+            assert(pResource->m_hwLayout == CosHwLayout::Linear);
             {
                 BYTE *  pSrc = (BYTE *)pCreateResource->pInitialDataUP[0].pSysMem;
                 BYTE *  pDst = (BYTE *)lock.pData;
@@ -328,16 +328,6 @@ void CosUmdDevice::CreateResource(const D3D11DDIARG_CREATERESOURCE* pCreateResou
                     pSrc += pCreateResource->pInitialDataUP[0].SysMemPitch;
                     pDst += destPitch;
                 }
-            }
-            else
-            {
-                // Texture tiled mode support
-                BYTE * pSrc = (BYTE *)pCreateResource->pInitialDataUP[0].pSysMem;
-                BYTE * pDst = (BYTE *)lock.pData;
-                UINT  rowStride = pCreateResource->pInitialDataUP[0].SysMemPitch;
-
-                // Swizzle texture to HW format
-                pResource->ConvertBitmapTo4kTileBlocks(pSrc, pDst, rowStride);
             }
         }
         else
@@ -467,22 +457,6 @@ void CosUmdDevice::ResourceCopy(
                     switch (pDestinationResource->m_hwLayout) {
                     case CosHwLayout::Tiled:
                         NT_ASSERT(false); // not implemented
-                        break;
-                    default:
-                        NT_ASSERT(false);
-                    }
-                    break;
-                case CosHwLayout::Tiled:
-                    switch (pDestinationResource->m_hwLayout) {
-                    case CosHwLayout::Linear:
-                        // Tiled to linear
-                        CosUmdResource::CopyTFormatToLinear(
-                            sourceLock.pData,
-                            pSourceResource->WidthInTiles(),
-                            pSourceResource->HeightInTiles(),
-                            destinationLock.pData,
-                            pDestinationResource->Pitch(),
-                            pDestinationResource->m_mip0Info.TexelHeight);
                         break;
                     default:
                         NT_ASSERT(false);
@@ -2367,6 +2341,7 @@ void CosUmdDevice::WriteEpilog()
         4,
         &pCommandBuffer);
 
+#if VC4
     //
     // Write Flush All State, NOP and Halt commands
     //
@@ -2376,6 +2351,7 @@ void CosUmdDevice::WriteEpilog()
     pCommandBuffer[3] = VC4_CMD_HALT;
 
     m_commandBuffer.CommitCommandBufferSpace(4);
+#endif
 
     //
     // Clear up state flag

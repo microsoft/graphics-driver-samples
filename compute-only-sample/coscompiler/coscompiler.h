@@ -1,10 +1,13 @@
 #pragma once
 
+#include <windows.h>
+#include <ntassert.h>
+#include "d3dumddi_.h"
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <tchar.h>
-#include <windows.h>
 
 #include "coscompilerdebug.h"
 #include "DisasmBase.hpp"

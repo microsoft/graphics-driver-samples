@@ -2,7 +2,9 @@
 
 #pragma warning(disable:4201)
 
+#if VC4
 #include "Vc4Hw.h"
+#endif
 
 enum GpuCommandId
 {

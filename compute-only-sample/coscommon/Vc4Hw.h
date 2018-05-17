@@ -1,5 +1,7 @@
 #pragma once
 
+#error should not be used
+
 #pragma warning(disable : 4201)
 
 #include <wingdi.h>

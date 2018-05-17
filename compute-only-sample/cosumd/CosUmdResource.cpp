@@ -5,7 +5,7 @@
 // Copyright (C) Microsoft Corporation
 //
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include "precomp.h"
+#include "CosUmd.h"
 
 #include "CosUmdLogging.h"
 #include "CosUmdResource.tmh"
@@ -16,7 +16,9 @@
 
 #include "CosContext.h"
 
+#if VC4
 #include "Vc4Hw.h"
+#endif
 
 CosUmdResource::CosUmdResource() :
     m_signature(_SIGNATURE::CONSTRUCTED),
@@ -397,6 +399,7 @@ bool CosUmdResource::CanRotateFrom(const CosUmdResource* Other) const
            (m_hwSizeBytes == Other->m_hwSizeBytes);
 }
 
+#if VC4
 // Form 1k sub-tile block
 BYTE *CosUmdResource::Form1kSubTileBlock(BYTE *pInputBuffer, BYTE *pOutBuffer, UINT rowStride)
 {
@@ -571,6 +574,7 @@ void CosUmdResource::CopyTFormatToLinear (
         }
     }
 }
+#endif
 
 CosUmdResource::_LayoutRequirements CosUmdResource::Get2dTextureLayoutRequirements (
     UINT BindFlags,
@@ -580,50 +584,20 @@ CosUmdResource::_LayoutRequirements CosUmdResource::Get2dTextureLayoutRequiremen
     CosHwLayout hwLayout;
     UINT pitchAlign, heightAlign;
 
+    Format;
+
     switch (BindFlags)
     {
     case 0:
-        // non-bindable resources (e.g. staging resources) must be pitch-aligned
-        // to microtile width so that we can copy efficiently between T-format
-        // and linear resources
-        hwLayout = CosHwLayout::Linear;
-        pitchAlign = VC4_MICRO_TILE_WIDTH_BYTES;
-        heightAlign = 1;
-        break;
-
     case D3D10_DDI_BIND_RENDER_TARGET:
     case D3D10_DDI_BIND_RENDER_TARGET | D3D10_DDI_BIND_SHADER_RESOURCE:
-        // non-displayable render targets use T-Format, and must be aligned
-        // to the binning tile size
-        hwLayout = CosHwLayout::Tiled;
-        pitchAlign = VC4_BINNING_TILE_PIXELS * CPixel::BytesPerPixel(Format);
-        heightAlign = VC4_BINNING_TILE_PIXELS;
-        break;
-
-    //case D3D10_DDI_BIND_RENDER_TARGET:
     case D3D10_DDI_BIND_RENDER_TARGET | D3D10_DDI_BIND_PRESENT:
     case D3D10_DDI_BIND_RENDER_TARGET | D3D10_DDI_BIND_SHADER_RESOURCE | D3D10_DDI_BIND_PRESENT:
-        // displayable render target uses linear (raster) format, and must be
-        // aligned to binning tile size
-        hwLayout = CosHwLayout::Linear;
-        pitchAlign = VC4_BINNING_TILE_PIXELS * CPixel::BytesPerPixel(Format);
-        heightAlign = VC4_BINNING_TILE_PIXELS;
-        break;
-
     case D3D10_DDI_BIND_SHADER_RESOURCE:
     case D3D10_DDI_BIND_DEPTH_STENCIL:
-        // bindable textures and depth stencils use T-Format and must be
-        // aligned to the t-format tile size
-        // XXX: Disable tiled format until issue #48 is fixed.
-        hwLayout = CosHwLayout::Linear; // CosHwLayout::Tiled;
-        pitchAlign = VC4_4KB_TILE_WIDTH_BYTES;
-        heightAlign = VC4_4KB_TILE_HEIGHT;
-        break;
-
     case D3D10_DDI_BIND_PRESENT:
-        // display-only surfaces use linear format with no alignment requirement
         hwLayout = CosHwLayout::Linear;
-        pitchAlign = CPixel::BytesPerPixel(Format);
+        pitchAlign = 1;
         heightAlign = 1;
         break;
 

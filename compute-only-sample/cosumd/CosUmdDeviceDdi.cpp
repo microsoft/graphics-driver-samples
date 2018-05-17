@@ -1,4 +1,4 @@
-#include "precomp.h"
+#include "CosUmd.h"
 
 #include "CosUmdLogging.h"
 #include "CosUmdDeviceDdi.tmh"

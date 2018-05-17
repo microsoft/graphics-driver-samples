@@ -1,9 +1,8 @@
-#include "precomp.h"
+#include "CosKmd.h"
 
 #include "CosKmdLogging.h"
 #include "CosKmdPower.tmh"
 
-#include "CosKmd.h"
 #include "CosKmdAdapter.h"
 #include "CosKmdAllocation.h"
 #include "CosKmdContext.h"
@@ -19,6 +18,10 @@ CosKmAdapter::SetPowerState(
     IN_DEVICE_POWER_STATE   DevicePowerState,
     IN_POWER_ACTION         ActionType)
 {
+    DeviceUid;
+    DevicePowerState;
+    ActionType;
+
     if (DeviceUid == DISPLAY_ADAPTER_HW_ID)
     {
         m_AdapterPowerDState = DevicePowerState;
@@ -30,7 +33,7 @@ CosKmAdapter::SetPowerState(
         return STATUS_SUCCESS;
     }
 
-    return m_display.SetPowerState(DeviceUid, DevicePowerState, ActionType);
+    return STATUS_SUCCESS;
 }
 
 NTSTATUS

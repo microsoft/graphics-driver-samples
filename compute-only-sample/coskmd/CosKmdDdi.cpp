@@ -1,9 +1,8 @@
-#include "precomp.h"
+#include "CosKmd.h"
 
 #include "CosKmdLogging.h"
 #include "CosKmdDdi.tmh"
 
-#include "CosKmd.h"
 #include "CosKmdAdapter.h"
 #include "CosKmdDevice.h"
 #include "CosKmdAllocation.h"

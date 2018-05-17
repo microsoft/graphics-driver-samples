@@ -1,6 +1,4 @@
-
-#include "precomp.h"
-
+#include "CosUmd.h"
 #include "CosUmdLogging.h"
 #include "pixlib.tmh"
 

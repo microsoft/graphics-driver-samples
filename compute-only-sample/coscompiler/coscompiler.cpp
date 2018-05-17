@@ -1,4 +1,3 @@
-#include "precomp.h"
 #include "coscompiler.h"
 
 void InitializeShaderCompilerLibrary()

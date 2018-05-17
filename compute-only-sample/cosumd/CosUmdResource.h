@@ -115,6 +115,7 @@ public:
         return m_hwWidthPixels * CPixel::BytesPerPixel(m_format);
     }
 
+#if VC4
     // Width in T-format 4k tiles
     UINT WidthInTiles () const
     {
@@ -163,9 +164,11 @@ public:
         UINT DestPitch,
         UINT DestHeight
         );
+#endif
 
 private:
 
+#if 0
     // Tiled textures support
     BYTE *Form1kSubTileBlock(
         BYTE *pInputBuffer,
@@ -177,6 +180,7 @@ private:
         BYTE *pOutBuffer,
         UINT rowStride,
         BOOLEAN OddRow);
+#endif
 
     struct _LayoutRequirements {
         CosHwLayout Layout;
@@ -213,6 +217,7 @@ inline D3D10DDI_HRESOURCE CosUmdResource::CastTo() const
     return MAKE_D3D10DDI_HRESOURCE(const_cast< CosUmdResource* >(this));
 }
 
+#if 0
 //
 // struct TileCoord
 //
@@ -285,3 +290,4 @@ struct TileCoord {
         return (Xm % _Ms) + (Ym % _Ms) * _Ms;
     }
 };
+#endif

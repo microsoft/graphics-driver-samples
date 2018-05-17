@@ -1,4 +1,4 @@
-#include "precomp.h"
+#include "CosKmd.h"
 
 #include "CosKmdLogging.h"
 #include "CosKmdContext.tmh"

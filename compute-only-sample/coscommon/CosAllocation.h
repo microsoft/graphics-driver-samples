@@ -5,7 +5,9 @@
 #include <wingdi.h>
 #include <d3d10umddi.h>
 
+#if VC4
 #include <Vc4Hw.h>
+#endif
 
 enum CosHwLayout
 {
@@ -53,6 +55,7 @@ struct CosAllocationGroupExchange
     int     m_dummy;
 };
 
+#if VC4
 inline
 VC4_NON_HDR_FRAME_BUFFER_COLOR_FORMAT
 Vc4FrameBufferColorFormatFromDxgiFormat (
@@ -125,3 +128,5 @@ inline VC4TextureDataType Vc4TextureTypeFromDxgiFormat (
         return VC4_TEX_RGBA32R;
     }
 }
+
+#endif 

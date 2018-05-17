@@ -145,12 +145,10 @@
     <ClCompile Include="CosUmdLogging.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="precomp.h" />
+    <ClInclude Include="CosUmd.h" />
     <ClInclude Include="..\coscommon\CosAdapter.h" />
     <ClInclude Include="..\coscommon\CosAllocation.h" />
     <ClInclude Include="..\coscommon\CosGpuCommand.h" />
-    <ClInclude Include="..\coscommon\Vc4Ddi.h" />
-    <ClInclude Include="..\coscommon\Vc4Hw.h" />
     <ClInclude Include="..\coscompiler\coscompiler.h" />
     <ClInclude Include="d3dumddi_.h" />
     <ClInclude Include="pixel.hpp" />

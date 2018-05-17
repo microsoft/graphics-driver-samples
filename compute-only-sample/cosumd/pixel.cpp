@@ -8,7 +8,6 @@
  *
  ***************************************************************************/
 
-#include "precomp.h"
 #include "pixel.hpp"
 
 #ifndef DXPIXELVER

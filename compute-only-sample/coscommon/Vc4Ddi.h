@@ -1,5 +1,7 @@
 #pragma once
 
+#error should not be used
+
 //
 // VC4 DDI definitions
 //

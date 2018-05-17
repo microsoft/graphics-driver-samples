@@ -1,4 +1,7 @@
 #pragma once
+
+#error Should not be used
+
 #include <stdio.h>
 #include <stdint.h>
 #include <tchar.h>

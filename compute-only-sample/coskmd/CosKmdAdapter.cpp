@@ -1,10 +1,9 @@
 
-#include "precomp.h"
+#include "CosKmd.h"
 
 #include "CosKmdLogging.h"
 #include "CosKmdAdapter.tmh"
 
-#include "CosKmd.h"
 #include "CosKmdAdapter.h"
 #include "CosKmdRapAdapter.h"
 #include "CosKmdSoftAdapter.h"
@@ -16,9 +15,11 @@
 #include "CosGpuCommand.h"
 #include "CosKmdAcpi.h"
 #include "CosKmdUtil.h"
+#if 0
 #include "Vc4Hw.h"
 #include "Vc4Ddi.h"
 #include "Vc4Mailbox.h"
+#endif
 
 void * CosKmAdapter::operator new(size_t size)
 {
@@ -30,8 +31,7 @@ void CosKmAdapter::operator delete(void * ptr)
     ExFreePool(ptr);
 }
 
-CosKmAdapter::CosKmAdapter(IN_CONST_PDEVICE_OBJECT PhysicalDeviceObject, OUT_PPVOID MiniportDeviceContext) :
-    m_display(PhysicalDeviceObject, m_DxgkInterface, m_DxgkStartInfo, m_deviceInfo)
+CosKmAdapter::CosKmAdapter(IN_CONST_PDEVICE_OBJECT PhysicalDeviceObject, OUT_PPVOID MiniportDeviceContext)
 {
     m_magic = kMagic;
     m_pPhysicalDevice = PhysicalDeviceObject;
@@ -677,6 +677,9 @@ CosKmAdapter::DispatchIoRequest(
     IN_ULONG                    VidPnSourceId,
     IN_PVIDEO_REQUEST_PACKET    VideoRequestPacket)
 {
+    VidPnSourceId;
+    VideoRequestPacket;
+
     if (CosKmdGlobal::IsRenderOnly())
     {
         COS_LOG_WARNING(
@@ -685,7 +688,7 @@ CosKmAdapter::DispatchIoRequest(
         return STATUS_NOT_SUPPORTED;
     }
 
-    return m_display.DispatchIoRequest(VidPnSourceId, VideoRequestPacket);
+    return STATUS_NOT_SUPPORTED;
 }
 
 NTSTATUS
@@ -1515,13 +1518,16 @@ CosKmAdapter::QueryChildRelations(
     INOUT_PDXGK_CHILD_DESCRIPTOR    ChildRelations,
     IN_ULONG                        ChildRelationsSize)
 {
+    ChildRelations;
+    ChildRelationsSize;
+
     if (CosKmdGlobal::IsRenderOnly())
     {
         COS_ASSERTION("QueryChildRelations() is not supported by render-only driver.");
         return STATUS_NOT_IMPLEMENTED;
     }
 
-    return m_display.QueryChildRelations(ChildRelations, ChildRelationsSize);
+    return STATUS_NOT_IMPLEMENTED;
 }
 
 NTSTATUS
@@ -1529,13 +1535,16 @@ CosKmAdapter::QueryChildStatus(
     IN_PDXGK_CHILD_STATUS   ChildStatus,
     IN_BOOLEAN              NonDestructiveOnly)
 {
+    ChildStatus;
+    NonDestructiveOnly;
+
     if (CosKmdGlobal::IsRenderOnly())
     {
         COS_ASSERTION("QueryChildStatus() is not supported by render-only driver.");
         return STATUS_NOT_IMPLEMENTED;
     }
 
-    return m_display.QueryChildStatus(ChildStatus, NonDestructiveOnly);
+    return STATUS_NOT_IMPLEMENTED;
 }
 
 NTSTATUS
@@ -1543,13 +1552,16 @@ CosKmAdapter::QueryDeviceDescriptor(
     IN_ULONG                        ChildUid,
     INOUT_PDXGK_DEVICE_DESCRIPTOR   pDeviceDescriptor)
 {
+    ChildUid;
+    pDeviceDescriptor;
+
     if (CosKmdGlobal::IsRenderOnly())
     {
         COS_ASSERTION("QueryChildStatus() is not supported by render-only driver.");
         return STATUS_NOT_IMPLEMENTED;
     }
 
-    return m_display.QueryDeviceDescriptor(ChildUid, pDeviceDescriptor);
+    return STATUS_NOT_IMPLEMENTED;
 }
 
 NTSTATUS
@@ -1822,8 +1834,10 @@ NTSTATUS CosKmAdapter::SetVidPnSourceAddress (
     const DXGKARG_SETVIDPNSOURCEADDRESS* SetVidPnSourceAddressPtr
     )
 {
+    SetVidPnSourceAddressPtr;
+
     NT_ASSERT(!CosKmdGlobal::IsRenderOnly());
-    return m_display.SetVidPnSourceAddress(SetVidPnSourceAddressPtr);
+    return STATUS_NOT_SUPPORTED;
 }
 
 COS_NONPAGED_SEGMENT_END; //==================================================
@@ -2031,11 +2045,13 @@ NTSTATUS CosKmAdapter::SetPointerPosition (
     const DXGKARG_SETPOINTERPOSITION* SetPointerPositionPtr
     )
 {
+    SetPointerPositionPtr;
+
     PAGED_CODE();
     COS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     NT_ASSERT(!CosKmdGlobal::IsRenderOnly());
-    return m_display.SetPointerPosition(SetPointerPositionPtr);
+    return STATUS_NOT_SUPPORTED;
 }
 
 _Use_decl_annotations_
@@ -2043,11 +2059,13 @@ NTSTATUS CosKmAdapter::SetPointerShape (
     const DXGKARG_SETPOINTERSHAPE* SetPointerShapePtr
     )
 {
+    SetPointerShapePtr;
+
     PAGED_CODE();
     COS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     NT_ASSERT(!CosKmdGlobal::IsRenderOnly());
-    return m_display.SetPointerShape(SetPointerShapePtr);
+    return STATUS_NOT_SUPPORTED;
 }
 
 _Use_decl_annotations_
@@ -2058,8 +2076,10 @@ NTSTATUS CosKmAdapter::IsSupportedVidPn (
     PAGED_CODE();
     COS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
+    IsSupportedVidPnPtr;
+
     NT_ASSERT(!CosKmdGlobal::IsRenderOnly());
-    return m_display.IsSupportedVidPn(IsSupportedVidPnPtr);
+    return STATUS_NOT_SUPPORTED;
 }
 
 _Use_decl_annotations_
@@ -2070,8 +2090,10 @@ NTSTATUS CosKmAdapter::RecommendFunctionalVidPn (
     PAGED_CODE();
     COS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
+    RecommendFunctionalVidPnPtr;
+
     NT_ASSERT(!CosKmdGlobal::IsRenderOnly());
-    return m_display.RecommendFunctionalVidPn(RecommendFunctionalVidPnPtr);
+    return STATUS_NOT_SUPPORTED;
 }
 
 _Use_decl_annotations_
@@ -2082,8 +2104,10 @@ NTSTATUS CosKmAdapter::EnumVidPnCofuncModality (
     PAGED_CODE();
     COS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
+    EnumCofuncModalityPtr;
+
     NT_ASSERT(!CosKmdGlobal::IsRenderOnly());
-    return m_display.EnumVidPnCofuncModality(EnumCofuncModalityPtr);
+    return STATUS_NOT_SUPPORTED;
 }
 
 _Use_decl_annotations_
@@ -2094,8 +2118,10 @@ NTSTATUS CosKmAdapter::SetVidPnSourceVisibility (
     PAGED_CODE();
     COS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
+    SetVidPnSourceVisibilityPtr;
+
     NT_ASSERT(!CosKmdGlobal::IsRenderOnly());
-    return m_display.SetVidPnSourceVisibility(SetVidPnSourceVisibilityPtr);
+    return STATUS_NOT_SUPPORTED;
 }
 
 _Use_decl_annotations_
@@ -2106,8 +2132,10 @@ NTSTATUS CosKmAdapter::CommitVidPn (
     PAGED_CODE();
     COS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
+    CommitVidPnPtr;
+
     NT_ASSERT(!CosKmdGlobal::IsRenderOnly());
-    return m_display.CommitVidPn(CommitVidPnPtr);
+    return STATUS_NOT_SUPPORTED;
 }
 
 _Use_decl_annotations_
@@ -2118,8 +2146,10 @@ NTSTATUS CosKmAdapter::UpdateActiveVidPnPresentPath (
     PAGED_CODE();
     COS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
+    UpdateActiveVidPnPresentPathPtr;
+
     NT_ASSERT(!CosKmdGlobal::IsRenderOnly());
-    return m_display.UpdateActiveVidPnPresentPath(UpdateActiveVidPnPresentPathPtr);
+    return STATUS_NOT_SUPPORTED;
 }
 
 _Use_decl_annotations_
@@ -2130,8 +2160,10 @@ NTSTATUS CosKmAdapter::RecommendMonitorModes (
     PAGED_CODE();
     COS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
+    RecommendMonitorModesPtr;
+
     NT_ASSERT(!CosKmdGlobal::IsRenderOnly());
-    return m_display.RecommendMonitorModes(RecommendMonitorModesPtr);
+    return STATUS_NOT_SUPPORTED;
 }
 
 _Use_decl_annotations_
@@ -2153,8 +2185,11 @@ NTSTATUS CosKmAdapter::ControlInterrupt (
     PAGED_CODE();
     COS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
+    InterruptType;
+    EnableInterrupt;
+
     NT_ASSERT(!CosKmdGlobal::IsRenderOnly());
-    return m_display.ControlInterrupt(InterruptType, EnableInterrupt);
+    return STATUS_NOT_SUPPORTED;
 }
 
 _Use_decl_annotations_
@@ -2165,8 +2200,10 @@ NTSTATUS CosKmAdapter::QueryVidPnHWCapability (
     PAGED_CODE();
     COS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
+    VidPnHWCapsPtr;
+
     NT_ASSERT(!CosKmdGlobal::IsRenderOnly());
-    return m_display.QueryVidPnHWCapability(VidPnHWCapsPtr);
+    return STATUS_NOT_SUPPORTED;
 }
 
 _Use_decl_annotations_
@@ -2193,10 +2230,11 @@ NTSTATUS CosKmAdapter::StopDeviceAndReleasePostDisplayOwnership (
     PAGED_CODE();
     COS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
+    DisplayInfoPtr;
+    TargetId;
+
     NT_ASSERT(!CosKmdGlobal::IsRenderOnly());
-    return m_display.StopDeviceAndReleasePostDisplayOwnership(
-            TargetId,
-            DisplayInfoPtr);
+    return STATUS_NOT_SUPPORTED;
 }
 
 
