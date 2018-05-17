@@ -76,7 +76,7 @@
   <!-- Common configuration to debug/release -->
   <ItemDefinitionGroup>
     <ClCompile>
-      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PrecompiledHeaderFile>precomp.h</PrecompiledHeaderFile>
       <WarningLevel>Level4</WarningLevel>
       <TreatWarningAsError>true</TreatWarningAsError>
@@ -133,19 +133,16 @@
     <None Include="RosUmd.def" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="precomp.cpp">
-      <PrecompiledHeader>Create</PrecompiledHeader>
-    </ClCompile>
     <ClCompile Include="pixlib.cpp" />
-    <ClCompile Include="RosUmd.cpp" />
-    <ClCompile Include="RosUmdAdapter.cpp" />
-    <ClCompile Include="RosUmdCommandBuffer.cpp" />
-    <ClCompile Include="RosUmdDevice.cpp" />
-    <ClCompile Include="RosUmdDeviceDdi.cpp" />
-    <ClCompile Include="RosUmdResource.cpp" />
-    <ClCompile Include="RosUmdShader.cpp" />
-    <ClCompile Include="RosUmdUtil.cpp" />
-    <ClCompile Include="RosUmdLogging.cpp" />
+    <ClCompile Include="CosUmd.cpp" />
+    <ClCompile Include="CosUmdAdapter.cpp" />
+    <ClCompile Include="CosUmdCommandBuffer.cpp" />
+    <ClCompile Include="CosUmdDevice.cpp" />
+    <ClCompile Include="CosUmdDeviceDdi.cpp" />
+    <ClCompile Include="CosUmdResource.cpp" />
+    <ClCompile Include="CosUmdShader.cpp" />
+    <ClCompile Include="CosUmdUtil.cpp" />
+    <ClCompile Include="CosUmdLogging.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="precomp.h" />

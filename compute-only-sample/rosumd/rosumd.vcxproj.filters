@@ -110,37 +110,34 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="RosUmd.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="RosUmdAdapter.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="RosUmdDevice.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="RosUmdCommandBuffer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="pixlib.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="RosUmdResource.cpp">
+    <ClCompile Include="CosUmd.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="RosUmdDeviceDdi.cpp">
+    <ClCompile Include="CosUmdAdapter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="RosUmdUtil.cpp">
+    <ClCompile Include="CosUmdCommandBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="RosUmdShader.cpp">
+    <ClCompile Include="CosUmdDevice.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="RosUmdLogging.cpp">
+    <ClCompile Include="CosUmdDeviceDdi.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="precomp.cpp">
+    <ClCompile Include="CosUmdLogging.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CosUmdResource.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CosUmdShader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CosUmdUtil.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

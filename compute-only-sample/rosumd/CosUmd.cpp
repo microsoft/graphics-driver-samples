@@ -18,8 +18,6 @@ BOOL WINAPI DllMain(
 {
     lpvReserved; // unused
 
-    DebugBreak();
-
     // Warning, do not call outside of this module, except for functions located in kernel32.dll. BUT, do not call LoadLibrary nor
     // FreeLibrary, either. Nor, call malloc nor new; use HeapAlloc directly.
 
@@ -28,9 +26,7 @@ BOOL WINAPI DllMain(
     case( DLL_PROCESS_ATTACH ):
         {
             WPP_INIT_TRACING(L"RosUmd");
-            
-//            ROS_LOG_TRACE("RosUmd was loaded. (hmod = 0x%p)", hmod);
-            
+                        
             InitializeShaderCompilerLibrary();
             g_hDLL = hmod;
         } break;
