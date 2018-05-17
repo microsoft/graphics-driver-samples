@@ -1,7 +1,6 @@
 // coscon.cpp : Defines the entry point for the console application.
 //
 
-
 #include <windows.h>
 #include <d3d11_1.h>
 #include <dxgi1_3.h>

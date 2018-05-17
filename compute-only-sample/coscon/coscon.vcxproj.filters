@@ -28,6 +28,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="ComputeShader.hlsl" />
+    <None Include="ComputeShader.hlsl" />
   </ItemGroup>
 </Project>
