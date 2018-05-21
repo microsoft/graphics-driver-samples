@@ -11,21 +11,6 @@
 #include "CosKmdResource.h"
 #include "CosKmdUtil.h"
 
-
-
-// TODO(bhouse) CosKmdPnpDispatch appears to be unused
-NTSTATUS
-CosKmdPnpDispatch(
-    __in struct _DEVICE_OBJECT *DeviceObject,
-    __inout struct _IRP *pIrp)
-{
-    DeviceObject;
-    pIrp;
-
-    return STATUS_NOT_SUPPORTED;
-}
-
-
 NTSTATUS __stdcall
 CosKmdDdi::DdiAddAdapter(
     IN_CONST_PDEVICE_OBJECT     PhysicalDeviceObject,
@@ -584,6 +569,7 @@ CosKmdDdi::DdiResetDevice(
 
 COS_NONPAGED_SEGMENT_BEGIN; //================================================
 
+#if 0
 _Use_decl_annotations_
 NTSTATUS CosKmdDisplayDdi::DdiSetVidPnSourceAddress (
     HANDLE const hAdapter,
@@ -593,6 +579,7 @@ NTSTATUS CosKmdDisplayDdi::DdiSetVidPnSourceAddress (
     return CosKmAdapter::Cast(hAdapter)->SetVidPnSourceAddress(
             SetVidPnSourceAddressPtr);
 }
+#endif
 
 COS_NONPAGED_SEGMENT_END; //==================================================
 COS_PAGED_SEGMENT_BEGIN; //===================================================
@@ -626,6 +613,7 @@ NTSTATUS CosKmdDdi::DdiQueryDependentEngineGroup (
     return CosKmAdapter::Cast(hAdapter)->QueryDependentEngineGroup(ArgsPtr);
 }
 
+#if 0
 //
 // CosKmdDisplayDdi
 //
@@ -797,5 +785,6 @@ NTSTATUS CosKmdDisplayDdi::DdiStopDeviceAndReleasePostDisplayOwnership (
             TargetId,
             DisplayInfoPtr);
 }
+#endif
 
 COS_PAGED_SEGMENT_END; //=====================================================

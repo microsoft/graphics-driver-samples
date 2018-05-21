@@ -14,11 +14,6 @@
 #include "CosGpuCommand.h"
 #include "CosKmdAcpi.h"
 #include "CosKmdUtil.h"
-#if 0
-#include "Vc4Hw.h"
-#include "Vc4Ddi.h"
-#include "Vc4Mailbox.h"
-#endif
 
 void * CosKmAdapter::operator new(size_t size)
 {
@@ -48,18 +43,6 @@ CosKmAdapter::CosKmAdapter(IN_CONST_PDEVICE_OBJECT PhysicalDeviceObject, OUT_PPV
     m_deviceIdLength = 0;
 
     m_flags.m_value = 0;
-
-#if VC4
-
-#if GPU_CACHE_WORKAROUND
-
-    m_rtSizeJitter = 0;
-
-#endif
-
-    m_busAddressOffset = 0;
-
-#endif
 
     *MiniportDeviceContext = this;
 }
@@ -368,7 +351,7 @@ CosKmAdapter::Start(
     //
     // Sample for 1.3 model currently
     //
-    m_WDDMVersion = DXGKDDI_WDDMv1_3;
+    m_WDDMVersion = DXGKDDI_WDDMv2;
 
     m_NumNodes = C_COSD_GPU_ENGINE_COUNT;
 
@@ -667,14 +650,6 @@ CosKmAdapter::DispatchIoRequest(
     VidPnSourceId;
     VideoRequestPacket;
 
-    if (CosKmdGlobal::IsRenderOnly())
-    {
-        COS_LOG_WARNING(
-            "Unsupported IO Control Code. (VideoRequestPacketPtr->IoControlCode = 0x%lx)",
-            VideoRequestPacket->IoControlCode);
-        return STATUS_NOT_SUPPORTED;
-    }
-
     return STATUS_NOT_SUPPORTED;
 }
 
@@ -683,38 +658,6 @@ CosKmAdapter::SubmitCommand(
     IN_CONST_PDXGKARG_SUBMITCOMMAND     pSubmitCommand)
 {
     NTSTATUS        Status = STATUS_SUCCESS;
-
-#if VC4
-
-    if (!pSubmitCommand->Flags.Paging)
-    {
-        //
-        // Patch DMA buffer self-reference
-        //
-        COSDMABUFINFO  *pDmaBufInfo = (COSDMABUFINFO *)pSubmitCommand->pDmaBufferPrivateData;
-        BYTE           *pDmaBuf = pDmaBufInfo->m_pDmaBuffer;
-        UINT            dmaBufPhysicalAddress;
-
-        //
-        // Need to record DMA buffer physical address for fully pre-patched DMA buffer
-        //
-        pDmaBufInfo->m_DmaBufferPhysicalAddress = pSubmitCommand->DmaBufferPhysicalAddress;
-
-        dmaBufPhysicalAddress = GetAperturePhysicalAddress(
-            pSubmitCommand->DmaBufferPhysicalAddress.LowPart);
-
-        for (UINT i = 0; i < pDmaBufInfo->m_DmaBufState.m_NumDmaBufSelfRef; i++)
-        {
-            D3DDDI_PATCHLOCATIONLIST   *pPatchLoc = &pDmaBufInfo->m_DmaBufSelfRef[i];
-
-            *((UINT *)(pDmaBuf + pPatchLoc->PatchOffset)) =
-                dmaBufPhysicalAddress +
-                m_busAddressOffset +
-                pPatchLoc->AllocationOffset;
-        }
-    }
-
-#endif
 
     // NOTE: pCosKmContext will be NULL for paging operations
     CosKmContext *pCosKmContext = (CosKmContext *)pSubmitCommand->hContext;
@@ -812,7 +755,7 @@ CosKmAdapter::CreateAllocation(
     pAllocationInfo->AllocationPriority = D3DDDI_ALLOCATIONPRIORITY_NORMAL;
     pAllocationInfo->EvictionSegmentSet = 0; // don't use apperture for eviction
 
-    pAllocationInfo->Flags.Value = 0;
+    pAllocationInfo->FlagsWddm2.Value = 0;
 
     //
     // Allocations should be marked CPU visible unless they are shared or
@@ -820,13 +763,16 @@ CosKmAdapter::CreateAllocation(
     // Shared allocations (including the primary) cannot be CPU visible unless
     // they are exclusively located in an aperture segment.
     //
-    pAllocationInfo->Flags.CpuVisible =
+    pAllocationInfo->FlagsWddm2.CpuVisible =
         !((pCosAllocation->m_miscFlags & D3D10_DDI_RESOURCE_MISC_SHARED) ||
           (pCosAllocation->m_bindFlags & D3D10_DDI_BIND_PRESENT));
 
     // Allocations that will be flipped, such as the primary allocation,
     // cannot be cached.
-    pAllocationInfo->Flags.Cached = pAllocationInfo->Flags.CpuVisible;
+    // NOTE: we can not allow CPU visibilty of a shared allocation because the
+    //       OS can not atomically update the mapping across the shared
+    //       processes when it is moved from video memory to system memory.
+    pAllocationInfo->FlagsWddm2.Cached = pAllocationInfo->Flags.CpuVisible;
 
     pAllocationInfo->HintedBank.Value = 0;
     pAllocationInfo->MaximumRenamingListLength = 0;
@@ -1016,46 +962,6 @@ CosKmAdapter::QueryAdapterInfo(
         //
         pDriverCaps->FlipCaps.FlipOnVSyncMmIo = TRUE;
 
-        if (!CosKmdGlobal::IsRenderOnly())
-        {
-            //
-            // The hardware can store at most one pending flip operation.
-            //
-            pDriverCaps->MaxQueuedFlipOnVSync = 1;
-
-            //
-            // FlipOnVSyncWithNoWait - we don't have to wait for the next VSync
-            // to program in the new source address. We can program in the new
-            // source address and return immediately, and it will take
-            // effect at the next vsync.
-            //
-            pDriverCaps->FlipCaps.FlipOnVSyncWithNoWait = TRUE;
-
-            //
-            // We do not support the scheduling of a flip command to take effect
-            // after two, three, or four vertical syncs.
-            //
-            pDriverCaps->FlipCaps.FlipInterval = FALSE;
-
-            //
-            // The address we program into hardware does not take effect until
-            // the next vsync.
-            //
-            pDriverCaps->FlipCaps.FlipImmediateMmIo = FALSE;
-
-            //
-            // WDDM 1.3 and later drivers must set this to TRUE.
-            // In an independent flip, the DWM user-mode present call is skipped
-            // and DxgkDdiPresent and DxgkDdiSetVidPnSourceAddress are called.
-            //
-            pDriverCaps->FlipCaps.FlipIndependent = TRUE;
-
-            //
-            // TODO[jordanrh] VSyncPowerSaveAware
-            // https://msdn.microsoft.com/en-us/library/windows/hardware/ff569520(v=vs.85).aspx
-            //
-        }
-
         //
         // TODO[bhouse] SchedulingCaps
         //
@@ -1241,6 +1147,74 @@ CosKmAdapter::QueryAdapterInfo(
 #else
             pSegmentDesc[1].Size = m_localVidMemSegmentSize;
 #endif
+
+        }
+    }
+    break;
+
+    case DXGKQAITYPE_QUERYSEGMENT4:
+    {
+
+        if (pQueryAdapterInfo->OutputDataSize < sizeof(DXGK_QUERYSEGMENTOUT4))
+        {
+            COS_ASSERTION(
+                "Output buffer is too small. (pQueryAdapterInfo->OutputDataSize=%d, sizeof(DXGK_QUERYSEGMENTOUT4)=%d)",
+                pQueryAdapterInfo->OutputDataSize,
+                sizeof(DXGK_QUERYSEGMENTOUT4));
+            return STATUS_BUFFER_TOO_SMALL;
+        }
+
+        DXGK_QUERYSEGMENTOUT4   *pSegmentInfo = (DXGK_QUERYSEGMENTOUT4*)pQueryAdapterInfo->pOutputData;
+
+        if (!pSegmentInfo[0].pSegmentDescriptor)
+        {
+            pSegmentInfo->NbSegment = 2;
+        }
+        else
+        {
+            //
+            // Private data size should be the maximum of UMD and KMD and the same size must
+            // be reported in DxgkDdiCreateContext for paging engine
+            //
+            pSegmentInfo->PagingBufferPrivateDataSize = sizeof(COSUMDDMAPRIVATEDATA2);
+
+            pSegmentInfo->PagingBufferSegmentId = COSD_SEGMENT_APERTURE;
+            pSegmentInfo->PagingBufferSize = PAGE_SIZE;
+
+            //
+            // Fill out aperture segment descriptor
+            //
+            DXGK_SEGMENTDESCRIPTOR4 *pApertureSegmentDesc = (DXGK_SEGMENTDESCRIPTOR4 *) pSegmentInfo->pSegmentDescriptor;
+
+            memset(pApertureSegmentDesc, 0, sizeof(*pApertureSegmentDesc));
+
+            pApertureSegmentDesc->Flags.Aperture = TRUE;
+            pApertureSegmentDesc->Flags.CacheCoherent = TRUE;
+
+            //
+            // TODO[bhouse] BaseAddress should never be used.  Do we need to set this still?
+            //
+
+            pApertureSegmentDesc->BaseAddress.QuadPart = COSD_SEGMENT_APERTURE_BASE_ADDRESS;
+
+            pApertureSegmentDesc->Size = kApertureSegmentSize;
+
+            // TODO [bhouse] Do we need to set commit limit?
+            pApertureSegmentDesc->CommitLimit = kApertureSegmentSize;
+
+            //
+            // Setup local video memory segment
+            //
+            DXGK_SEGMENTDESCRIPTOR4 *pLocalVidMemSegmentDesc = (DXGK_SEGMENTDESCRIPTOR4 *) (pSegmentInfo->pSegmentDescriptor + pSegmentInfo->SegmentDescriptorStride);
+
+            memset(pLocalVidMemSegmentDesc, 0, sizeof(*pLocalVidMemSegmentDesc));
+
+            pLocalVidMemSegmentDesc->BaseAddress.QuadPart = 0LL; // Gpu base physical address
+            pLocalVidMemSegmentDesc->Flags.CpuVisible = true;
+            pLocalVidMemSegmentDesc->Flags.CacheCoherent = true;
+            pLocalVidMemSegmentDesc->Flags.DirectFlip = true;
+            pLocalVidMemSegmentDesc->CpuTranslatedAddress = CosKmdGlobal::s_videoMemoryPhysicalAddress; // cpu base physical address
+            pLocalVidMemSegmentDesc->Size = kVidMemSegementSize;
 
         }
     }
@@ -1508,12 +1482,6 @@ CosKmAdapter::QueryChildRelations(
     ChildRelations;
     ChildRelationsSize;
 
-    if (CosKmdGlobal::IsRenderOnly())
-    {
-        COS_ASSERTION("QueryChildRelations() is not supported by render-only driver.");
-        return STATUS_NOT_IMPLEMENTED;
-    }
-
     return STATUS_NOT_IMPLEMENTED;
 }
 
@@ -1525,12 +1493,6 @@ CosKmAdapter::QueryChildStatus(
     ChildStatus;
     NonDestructiveOnly;
 
-    if (CosKmdGlobal::IsRenderOnly())
-    {
-        COS_ASSERTION("QueryChildStatus() is not supported by render-only driver.");
-        return STATUS_NOT_IMPLEMENTED;
-    }
-
     return STATUS_NOT_IMPLEMENTED;
 }
 
@@ -1541,12 +1503,6 @@ CosKmAdapter::QueryDeviceDescriptor(
 {
     ChildUid;
     pDeviceDescriptor;
-
-    if (CosKmdGlobal::IsRenderOnly())
-    {
-        COS_ASSERTION("QueryChildStatus() is not supported by render-only driver.");
-        return STATUS_NOT_IMPLEMENTED;
-    }
 
     return STATUS_NOT_IMPLEMENTED;
 }

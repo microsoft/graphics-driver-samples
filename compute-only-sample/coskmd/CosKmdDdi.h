@@ -243,6 +243,7 @@ public: // PAGED
 
 };
 
+#if 0
 //
 // DDIs that don't have to be registered in render only mode.
 //
@@ -275,4 +276,6 @@ public: // PAGED
 private: // PAGED
 
 };
+
+#endif
 

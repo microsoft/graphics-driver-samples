@@ -317,32 +317,6 @@ NTSTATUS CosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
     DriverInitializationData.DxgkDdiCalibrateGpuClock = CosKmdDdi::DdiCalibrateGpuClock;
     DriverInitializationData.DxgkDdiSetStablePowerState = CosKmdDdi::DdiSetStablePowerState;
 
-
-    //
-    // Register display subsystem DDIS.
-    // Refer to adapterdisplay.cxx:ADAPTER_DISPLAY::CreateDisplayCore() for
-    // required DDIs.
-    //
-    if (!IsRenderOnly())
-    {
-        DriverInitializationData.DxgkDdiSetPalette = CosKmdDisplayDdi::DdiSetPalette;
-        DriverInitializationData.DxgkDdiSetPointerPosition = CosKmdDisplayDdi::DdiSetPointerPosition;
-        DriverInitializationData.DxgkDdiSetPointerShape = CosKmdDisplayDdi::DdiSetPointerShape;
-    
-        DriverInitializationData.DxgkDdiIsSupportedVidPn = CosKmdDisplayDdi::DdiIsSupportedVidPn;
-        DriverInitializationData.DxgkDdiRecommendFunctionalVidPn = CosKmdDisplayDdi::DdiRecommendFunctionalVidPn;
-        DriverInitializationData.DxgkDdiEnumVidPnCofuncModality = CosKmdDisplayDdi::DdiEnumVidPnCofuncModality;
-        DriverInitializationData.DxgkDdiSetVidPnSourceAddress = CosKmdDisplayDdi::DdiSetVidPnSourceAddress;
-        DriverInitializationData.DxgkDdiSetVidPnSourceVisibility = CosKmdDisplayDdi::DdiSetVidPnSourceVisibility;
-        DriverInitializationData.DxgkDdiCommitVidPn = CosKmdDisplayDdi::DdiCommitVidPn;
-        DriverInitializationData.DxgkDdiUpdateActiveVidPnPresentPath = CosKmdDisplayDdi::DdiUpdateActiveVidPnPresentPath;
-
-        DriverInitializationData.DxgkDdiRecommendMonitorModes = CosKmdDisplayDdi::DdiRecommendMonitorModes;
-        DriverInitializationData.DxgkDdiGetScanLine = CosKmdDisplayDdi::DdiGetScanLine;
-        DriverInitializationData.DxgkDdiQueryVidPnHWCapability = CosKmdDisplayDdi::DdiQueryVidPnHWCapability;
-        DriverInitializationData.DxgkDdiStopDeviceAndReleasePostDisplayOwnership = CosKmdDisplayDdi::DdiStopDeviceAndReleasePostDisplayOwnership;
-    }
-
     Status = DxgkInitialize(pDriverObject, pRegistryPath, &DriverInitializationData);
 
     if (!NT_SUCCESS(Status))
