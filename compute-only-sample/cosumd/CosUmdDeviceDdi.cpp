@@ -163,16 +163,16 @@ const D3DWDDM1_3DDI_DEVICEFUNCS CosUmdDeviceDdi::s_deviceFuncsWDDM1_3 =
     CosUmdDeviceDdi::CsSetShaderWithInterfaces_Default,
     CosUmdDeviceDdi::DdiCreateComputeShader,
     CosUmdDeviceDdi::DdiCsSetShader,
-    CosUmdDeviceDdi::CSSetShaderResources_Default,
+    CosUmdDeviceDdi::CSSetShaderResources,
     CosUmdDeviceDdi::DdiCSSetSamplers,
     CosUmdDeviceDdi::CsSetConstantBuffers11_1_Default,
-    CosUmdDeviceDdi::CalcPrivateUnorderedAccessViewSize_Default,
+    CosUmdDeviceDdi::DdiCalcPrivateUnorderedAccessViewSize,
     CosUmdDeviceDdi::DdiCreateUnorderedAccessView,
     CosUmdDeviceDdi::DdiDestroyUnorderedAccessView,
-    CosUmdDeviceDdi::ClearUnorderedAccessViewUint_Default,
-    CosUmdDeviceDdi::ClearUnorderedAccessViewFloat_Default,
-    CosUmdDeviceDdi::CSSetUnorderedAccessViews_Default,
-    CosUmdDeviceDdi::Dispatch_Dirty,
+    CosUmdDeviceDdi::ClearUnorderedAccessViewUint,
+    CosUmdDeviceDdi::ClearUnorderedAccessViewFloat,
+    CosUmdDeviceDdi::CSSetUnorderedAccessViews,
+    CosUmdDeviceDdi::Dispatch,
     CosUmdDeviceDdi::DispatchIndirect_Dirty,
     CosUmdDeviceDdi::SetResourceMinLOD_Default,
     CosUmdDeviceDdi::CopyStructureCount_Default,
@@ -1416,6 +1416,15 @@ void APIENTRY CosUmdDeviceDdi::DdiResourceCopyRegion(
     DdiResourceCopyRegion11_1(hDevice, hDstResource, DstSubresource, DstX, DstY, DstZ, hSrcResource, SrcSubresource, pSrcBox, 0);
 }
 
+//
+// Unordered Acciew View
+//
+
+SIZE_T APIENTRY CosUmdDeviceDdi::DdiCalcPrivateUnorderedAccessViewSize(D3D10DDI_HDEVICE, const D3D11DDIARG_CREATEUNORDEREDACCESSVIEW*)
+{
+    return sizeof(CosUmdUnorderedAccessView);
+}
+
 void APIENTRY CosUmdDeviceDdi::DdiCreateUnorderedAccessView(
     D3D10DDI_HDEVICE hDevice,
     const D3D11DDIARG_CREATEUNORDEREDACCESSVIEW* pCreate,
@@ -1438,4 +1447,54 @@ void APIENTRY CosUmdDeviceDdi::DdiDestroyUnorderedAccessView(
 
     CosUmdUnorderedAccessView * pUnorderedAccessView = CosUmdUnorderedAccessView::CastFrom(hUnorderedAccessView);
     pUnorderedAccessView->~CosUmdUnorderedAccessView();
+}
+
+void APIENTRY CosUmdDeviceDdi::CSSetShaderResources(
+    D3D10DDI_HDEVICE hDevice,
+    UINT offset,
+    UINT numViews, 
+    const D3D10DDI_HSHADERRESOURCEVIEW* pShaderResourceViews)
+{
+    CosUmdDevice * pDevice = CosUmdDevice::CastFrom(hDevice);
+
+    pDevice->CSSetShaderResources(offset, numViews, pShaderResourceViews);
+}
+
+void APIENTRY CosUmdDeviceDdi::CSSetUnorderedAccessViews(
+    D3D10DDI_HDEVICE hDevice,
+    UINT offset,
+    UINT numViews,
+    const D3D11DDI_HUNORDEREDACCESSVIEW* pUnorderedAccessViews,
+    const UINT* pUnorderedAccessViewsInitialCounts)
+{
+    CosUmdDevice * pDevice = CosUmdDevice::CastFrom(hDevice);
+
+    pDevice->CSSetUnorderedAccessViews(offset, numViews, pUnorderedAccessViews, pUnorderedAccessViewsInitialCounts);
+}
+
+void APIENTRY CosUmdDeviceDdi::ClearUnorderedAccessViewUint(
+    D3D10DDI_HDEVICE hDevice, 
+    D3D11DDI_HUNORDEREDACCESSVIEW hUnorderdAccessView,
+    const UINT clearColor[4])
+{
+    CosUmdDevice * pDevice = CosUmdDevice::CastFrom(hDevice);
+    CosUmdUnorderedAccessView * pUnorderedAccessView = CosUmdUnorderedAccessView::CastFrom(hUnorderdAccessView);
+    pDevice->ClearUnorderedAccessView(pUnorderedAccessView, clearColor);
+}
+
+void APIENTRY CosUmdDeviceDdi::ClearUnorderedAccessViewFloat(
+    D3D10DDI_HDEVICE hDevice, 
+    D3D11DDI_HUNORDEREDACCESSVIEW hUnorderdAccessView,
+    const FLOAT clearColor[4])
+{
+    CosUmdDevice * pDevice = CosUmdDevice::CastFrom(hDevice);
+    CosUmdUnorderedAccessView * pUnorderedAccessView = CosUmdUnorderedAccessView::CastFrom(hUnorderdAccessView);
+    pDevice->ClearUnorderedAccessView(pUnorderedAccessView, clearColor);
+}
+
+void APIENTRY CosUmdDeviceDdi::Dispatch(D3D10DDI_HDEVICE hDevice, UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ)
+{
+    CosUmdDevice * pDevice = CosUmdDevice::CastFrom(hDevice);
+
+    pDevice->Dispatch(threadGroupCountX, threadGroupCountY, threadGroupCountZ);
 }

@@ -371,6 +371,12 @@ BufType g_vBuf[2][NUM_ELEMENTS];
 
 int main()
 {
+    int dbgFlags = _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG);
+
+    dbgFlags |= _CRTDBG_CHECK_ALWAYS_DF;
+
+    _CrtSetDbgFlag(dbgFlags);
+
     std::wstring cosDriverString = L"Compute Only Sample Driver";
     std::wstring brdDriverString = L"Microsoft Basic Render Driver";
     std::list<std::wstring> adapterList;

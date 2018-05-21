@@ -27,7 +27,7 @@ public:
     static void APIENTRY DrawInstancedIndirect_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT) { CosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY DrawInstancedIndirect_Dirty(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT) { CosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY Dispatch_Default(D3D10DDI_HDEVICE, UINT, UINT, UINT) { CosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
-    static void APIENTRY Dispatch_Dirty(D3D10DDI_HDEVICE, UINT, UINT, UINT) { CosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
+    static void APIENTRY Dispatch(D3D10DDI_HDEVICE, UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ);
     static void APIENTRY DispatchIndirect_Default(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT) { CosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY DispatchIndirect_Dirty(D3D10DDI_HDEVICE, D3D10DDI_HRESOURCE, UINT) { CosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY DdiIaSetVertexBuffers(D3D10DDI_HDEVICE, UINT, UINT, const D3D10DDI_HRESOURCE*, const UINT*, const UINT*);
@@ -63,8 +63,8 @@ public:
 
     static void APIENTRY DdiSetPredication(D3D10DDI_HDEVICE, D3D10DDI_HQUERY, BOOL); 
     static void APIENTRY SetTextFilter_Default(D3D10DDI_HDEVICE, UINT, UINT) { CosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
-    static void APIENTRY ClearUnorderedAccessViewUint_Default(D3D10DDI_HDEVICE, D3D11DDI_HUNORDEREDACCESSVIEW, const UINT[4]) { CosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
-    static void APIENTRY ClearUnorderedAccessViewFloat_Default(D3D10DDI_HDEVICE, D3D11DDI_HUNORDEREDACCESSVIEW, const FLOAT[4]) { CosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
+    static void APIENTRY ClearUnorderedAccessViewUint(D3D10DDI_HDEVICE, D3D11DDI_HUNORDEREDACCESSVIEW, const UINT[4]);
+    static void APIENTRY ClearUnorderedAccessViewFloat(D3D10DDI_HDEVICE, D3D11DDI_HUNORDEREDACCESSVIEW, const FLOAT[4]);
     static void APIENTRY DdiClearDepthStencilView(D3D10DDI_HDEVICE, D3D10DDI_HDEPTHSTENCILVIEW, UINT, FLOAT, UINT8);
     static void APIENTRY Flush_Default(D3D10DDI_HDEVICE) { CosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static BOOL APIENTRY DdiFlush(D3D10DDI_HDEVICE, UINT);
@@ -135,7 +135,7 @@ public:
 //    static void APIENTRY SetRenderTargets_Preamble(D3D10DDI_HDEVICE, const D3D10DDI_HRENDERTARGETVIEW*, UINT, UINT, D3D10DDI_HDEPTHSTENCILVIEW) { CosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
 //    static void APIENTRY SetRenderTargets11_Preamble(D3D10DDI_HDEVICE, const D3D10DDI_HRENDERTARGETVIEW*, UINT, UINT, D3D10DDI_HDEPTHSTENCILVIEW, const D3D11DDI_HUNORDEREDACCESSVIEW*, const UINT*, UINT, UINT, UINT, UINT) { CosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     
-    static SIZE_T APIENTRY CalcPrivateUnorderedAccessViewSize_Default(D3D10DDI_HDEVICE, const D3D11DDIARG_CREATEUNORDEREDACCESSVIEW*) { CosUmdLogging::Call(__FUNCTION__); return 0; }
+    static SIZE_T APIENTRY DdiCalcPrivateUnorderedAccessViewSize(D3D10DDI_HDEVICE, const D3D11DDIARG_CREATEUNORDEREDACCESSVIEW*);
     static void APIENTRY DdiCreateUnorderedAccessView(D3D10DDI_HDEVICE, const D3D11DDIARG_CREATEUNORDEREDACCESSVIEW*, D3D11DDI_HUNORDEREDACCESSVIEW, D3D11DDI_HRTUNORDEREDACCESSVIEW);
     static void APIENTRY DdiDestroyUnorderedAccessView(D3D10DDI_HDEVICE, D3D11DDI_HUNORDEREDACCESSVIEW);
     static SIZE_T APIENTRY CalcPrivateDepthStencilViewSize_Default(D3D10DDI_HDEVICE, const D3D10DDIARG_CREATEDEPTHSTENCILVIEW*) { CosUmdLogging::Call(__FUNCTION__); return 0; }
@@ -242,11 +242,11 @@ public:
     static void APIENTRY DsSetConstantBuffers11_1_Default(D3D10DDI_HDEVICE, UINT, UINT, const D3D10DDI_HRESOURCE*, const UINT*, const UINT*) { CosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY DsSetConstantBuffers_Preamble(D3D10DDI_HDEVICE, UINT, UINT, const D3D10DDI_HRESOURCE*) { CosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY DsSetConstantBuffers11_1_Preamble(D3D10DDI_HDEVICE, UINT, UINT, const D3D10DDI_HRESOURCE*, const UINT*, const UINT*) { CosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
-    static void APIENTRY CSSetShaderResources_Default(D3D10DDI_HDEVICE, UINT, UINT, const D3D10DDI_HSHADERRESOURCEVIEW*) { CosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
-    static void APIENTRY CSSetShaderResources11_1_Default(D3D10DDI_HDEVICE, UINT, UINT, const D3D10DDI_HSHADERRESOURCEVIEW*, const UINT*, const UINT*) { CosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
+    static void APIENTRY CSSetShaderResources(D3D10DDI_HDEVICE, UINT, UINT, const D3D10DDI_HSHADERRESOURCEVIEW*);
+//    static void APIENTRY CSSetShaderResources11_1_Default(D3D10DDI_HDEVICE, UINT, UINT, const D3D10DDI_HSHADERRESOURCEVIEW*, const UINT*, const UINT*) { CosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY CSSetShaderResources_Preamble(D3D10DDI_HDEVICE, UINT, UINT, const D3D10DDI_HSHADERRESOURCEVIEW*) { CosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY CSSetShaderResources11_1_Preamble(D3D10DDI_HDEVICE, UINT, UINT, const D3D10DDI_HSHADERRESOURCEVIEW*, const UINT*, const UINT*) { CosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
-    static void APIENTRY CSSetUnorderedAccessViews_Default(D3D10DDI_HDEVICE, UINT, UINT, const D3D11DDI_HUNORDEREDACCESSVIEW*, const UINT*) { CosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
+    static void APIENTRY CSSetUnorderedAccessViews(D3D10DDI_HDEVICE, UINT, UINT, const D3D11DDI_HUNORDEREDACCESSVIEW*, const UINT*);
     static void APIENTRY CSSetUnorderedAccessViews_Preamble(D3D10DDI_HDEVICE, UINT, UINT, const D3D11DDI_HUNORDEREDACCESSVIEW*, const UINT*) { CosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY CsSetConstantBuffers_Default(D3D10DDI_HDEVICE, UINT, UINT, const D3D10DDI_HRESOURCE*) { CosUmdLogging::Call(__FUNCTION__); __debugbreak(); }
     static void APIENTRY CsSetConstantBuffers11_1_Default(D3D10DDI_HDEVICE, UINT, UINT, const D3D10DDI_HRESOURCE*, const UINT*, const UINT*) { CosUmdLogging::Call(__FUNCTION__); __debugbreak(); }

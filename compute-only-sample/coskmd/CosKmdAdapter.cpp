@@ -5,7 +5,6 @@
 #include "CosKmdAdapter.tmh"
 
 #include "CosKmdAdapter.h"
-#include "CosKmdRapAdapter.h"
 #include "CosKmdSoftAdapter.h"
 #include "CosKmdAllocation.h"
 #include "CosKmdContext.h"
@@ -88,22 +87,10 @@ CosKmAdapter::AddAdapter(
         return status;
     }
 
-    CosKmAdapter  *pCosKmAdapter = nullptr;
-    if (wcscmp(deviceID, L"ACPI\\VEN_BCM&DEV_2850") == 0)
-    {
-        pCosKmAdapter = new CosKmdRapAdapter(PhysicalDeviceObject, MiniportDeviceContext);
-        if (!pCosKmAdapter) {
-            COS_LOG_LOW_MEMORY("Failed to allocate CosKmdRapAdapter.");
-            return STATUS_NO_MEMORY;
-        }
-    }
-    else
-    {
-        pCosKmAdapter = new CosKmdSoftAdapter(PhysicalDeviceObject, MiniportDeviceContext);
-        if (!pCosKmAdapter) {
-            COS_LOG_LOW_MEMORY("Failed to allocate CosKmdSoftAdapter.");
-            return STATUS_NO_MEMORY;
-        }
+    CosKmAdapter  *pCosKmAdapter = new CosKmdSoftAdapter(PhysicalDeviceObject, MiniportDeviceContext);
+    if (!pCosKmAdapter) {
+        COS_LOG_LOW_MEMORY("Failed to allocate CosKmdSoftAdapter.");
+        return STATUS_NO_MEMORY;
     }
 
     return STATUS_SUCCESS;

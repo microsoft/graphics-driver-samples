@@ -17,6 +17,7 @@
 #include "CosUmdDeviceDdi.h"
 #include "CosUmdRenderTargetView.h"
 #include "CosUmdDepthStencilView.h"
+#include "CosUmdUnorderedAccessView.h"
 #include "CosUmdBlendState.h"
 #include "CosUmdSampler.h"
 #include "CosUmdShader.h"
@@ -1305,6 +1306,36 @@ void CosUmdDevice::SetComputeSamplers(UINT Offset, UINT NumSamplers, const D3D10
         m_computeSamplers[i] = CosUmdSampler::CastFrom(phSamplers[i]);
     }
 }
+
+void CosUmdDevice::CSSetShaderResources(UINT offset, UINT numViews, const D3D10DDI_HSHADERRESOURCEVIEW * phShaderResourceViews)
+{
+    for (UINT i = 0; i < numViews; i++)
+    {
+        m_csResourceViews[offset + i] = CosUmdShaderResourceView::CastFrom(phShaderResourceViews[i]);
+    }
+}
+
+void CosUmdDevice::CSSetUnorderedAccessViews(UINT offset, UINT numViews, const D3D11DDI_HUNORDEREDACCESSVIEW* pUnorderedAccessViews, const UINT *pUAVInitialCounts)
+{
+    pUAVInitialCounts;
+    for (UINT i = 0; i < numViews; i++)
+    {
+        m_csUnorderedAccessViews[offset + i] = CosUmdUnorderedAccessView::CastFrom(pUnorderedAccessViews[i]);
+    }
+}
+
+void CosUmdDevice::ClearUnorderedAccessView(CosUmdUnorderedAccessView * pUnorderdAccessView, const UINT clearColor[4])
+{
+    pUnorderdAccessView;
+    clearColor;
+}
+
+void CosUmdDevice::ClearUnorderedAccessView(CosUmdUnorderedAccessView * pUnorderdAccessView, const float clearColor[4])
+{
+    pUnorderdAccessView;
+    clearColor;
+}
+
 
 void CosUmdDevice::SetElementLayout(CosUmdElementLayout * pElementLayout)
 {
@@ -2599,4 +2630,11 @@ void CosUmdDevice::ResourceCopyRegion11_1(
         SetError(hr);
     }
 */
+}
+
+void CosUmdDevice::Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ)
+{
+    threadGroupCountX;
+    threadGroupCountY;
+    threadGroupCountZ;
 }

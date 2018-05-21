@@ -41,7 +41,6 @@
     <ClCompile Include="CosKmdDdi.cpp" />
     <ClCompile Include="CosKmdDevice.cpp" />
     <ClCompile Include="CosKmdGlobal.cpp" />
-    <ClCompile Include="CosKmdRapAdapter.cpp" />
     <ClCompile Include="CosKmdSoftAdapter.cpp" />
     <ClCompile Include="CosKmdUtil.cpp" />
     <ClCompile Include="CosKmdPower.cpp" />
@@ -58,7 +57,6 @@
     <ClInclude Include="CosKmdDdi.h" />
     <ClInclude Include="CosKmdDevice.h" />
     <ClInclude Include="CosKmdGlobal.h" />
-    <ClInclude Include="CosKmdRapAdapter.h" />
     <ClInclude Include="CosKmdResource.h" />
     <ClInclude Include="CosKmdSoftAdapter.h" />
     <ClInclude Include="CosKmdUtil.h" />

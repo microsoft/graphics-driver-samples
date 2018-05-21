@@ -63,8 +63,6 @@ CosKmdGlobal::DdiControlEtwLogging(
 extern "C" __control_entrypoint(DeviceDriver)
     NTSTATUS DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN UNICODE_STRING* pRegistryPath)
 {
-    DbgBreakPoint();
-
     return CosKmdGlobal::DriverEntry(pDriverObject, pRegistryPath);
 }
 

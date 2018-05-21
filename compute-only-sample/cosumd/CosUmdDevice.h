@@ -32,6 +32,7 @@ class CosUmdElementLayout;
 
 class CosUmdSampler;
 class CosUmdShaderResourceView;
+class CosUmdUnorderedAccessView;
 
 typedef union _CosUmdDeviceFlags
 {
@@ -177,6 +178,22 @@ public:
     void ClearRenderTargetView(CosUmdRenderTargetView * pRenderTargetView, FLOAT clearColor[4]);
     void ClearDepthStencilView(CosUmdDepthStencilView * pDepthStencilView, UINT clearFlags, FLOAT depth, UINT8 stencil);
 
+    //
+    // Unordered Access Views (UAVs)
+    //
+
+    void ClearUnorderedAccessView(CosUmdUnorderedAccessView * pUnorderedAccessView, const UINT clearColor[4]);
+    void ClearUnorderedAccessView(CosUmdUnorderedAccessView * pUnorderedAccessView, const float clearColor[4]);
+    void CSSetUnorderedAccessViews(UINT StartSlot, UINT NumUAVs, const D3D11DDI_HUNORDEREDACCESSVIEW* pUnorderedAccessViews, const UINT *pUAVInitialCounts);
+
+public:
+
+    //
+    // Compute Support
+    //
+
+    void Dispatch(UINT threadGroupCountX, UINT threadGroupCountY, UINT threadGroupCountZ);
+
 public:
 
     //
@@ -212,6 +229,7 @@ public:
     void SetHullSamplers(UINT Offset, UINT NumSamplers, const D3D10DDI_HSAMPLER* phSamplers);
     void SetComputeShader(CosUmdShader * pShader);
     void SetComputeSamplers(UINT Offset, UINT NumSamplers, const D3D10DDI_HSAMPLER* phSamplers);
+    void CSSetShaderResources(UINT, UINT, const D3D10DDI_HSHADERRESOURCEVIEW*);
     void SetElementLayout(CosUmdElementLayout * pElementLayout);
     void SetDepthStencilState(CosUmdDepthStencilState * pDepthStencilState, UINT stencilRef);
     void SetRasterizerState(CosUmdRasterizerState * pRasterizerState);
@@ -266,6 +284,8 @@ public:
 
     CosUmdShader *                  m_computeShader;
     CosUmdSampler *                 m_computeSamplers[kMaxSamplers];
+    CosUmdShaderResourceView *      m_csResourceViews[kMaxShaderResourceViews];
+    CosUmdUnorderedAccessView *     m_csUnorderedAccessViews[kMaxShaderResourceViews];
 
     CosUmdElementLayout *           m_elementLayout;
 
