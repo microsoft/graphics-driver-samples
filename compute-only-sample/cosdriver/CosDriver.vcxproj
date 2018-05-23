@@ -42,6 +42,10 @@
       <Project>{65cf1498-21a7-4356-8c3a-3642958def34}</Project>
       <LinkLibraryDependencies>false</LinkLibraryDependencies>
     </ProjectReference>
+    <ProjectReference Include="..\cosumd12\cosumd12.vcxproj">
+      <Project>{22563f11-4342-46b7-aaf7-db4e57838879}</Project>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
     <ProjectReference Include="..\cosumd\cosumd.vcxproj">
       <Project>{b87732a7-0d66-4692-96e2-2772bf77c3fc}</Project>
       <LinkLibraryDependencies>false</LinkLibraryDependencies>

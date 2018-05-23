@@ -25,6 +25,7 @@ CatalogFile=coskmd.cat
 [SourceDisksFiles]
 coskmd.sys = 0
 cosumd.dll = 0
+cosumd12.dll = 0
 
 [DestinationDirs]
 ComputeOnlySample.Miniport = 12 ; drivers
@@ -48,10 +49,11 @@ AddReg = ComputeOnlySample_AddReg
 coskmd.sys,,,0x100
 
 [ComputeOnlySample.UserMode]
+cosumd12.dll,,,0x4000
 cosumd.dll,,,0x4000
 
 [ComputeOnlySample_AddReg]
-HKR,,UserModeDriverName,%REG_MULTI_SZ%,cosumd.dll,cosumd.dll,cosumd.dll,cosumd.dll
+HKR,,UserModeDriverName,%REG_MULTI_SZ%,cosumd.dll,cosumd.dll,cosumd.dll,cosumd12.dll
 HKLM,"SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Scheduler",EnablePreemption,%REG_DWORD%,0
 HKLM,"SYSTEM\CurrentControlSet\Control\GraphicsDrivers",TdrDebugMode,%REG_DWORD%,1
 HKLM,"SYSTEM\CurrentControlSet\Control\GraphicsDrivers\MemoryManager",DirectFlipMemoryRequirement,%REG_DWORD%,0
