@@ -358,17 +358,19 @@ private:
 
 };
 
-class D3DStructuredBuffer
-{
+class D3DInputBuffer;
+class D3DOutputBuffer;
+
+class D3DBuffer {
+
 public:
-
-    D3DStructuredBuffer(D3DDevice & inDevice, UINT uElementSize, UINT uCount, void * pSrc = NULL)
+    D3DBuffer(D3DDevice & inDevice, UINT uSize, D3D12_HEAP_TYPE inHeapType = D3D12_HEAP_TYPE_DEFAULT,
+        D3D12_RESOURCE_STATES inInitialState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS,
+        D3D12_RESOURCE_FLAGS inResourceFlags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)
     {
-        UINT64 bufferSize = uElementSize * uCount;
-
         D3D12_HEAP_PROPERTIES heapProperties;
 
-        heapProperties.Type = D3D12_HEAP_TYPE_DEFAULT;
+        heapProperties.Type = inHeapType;
         heapProperties.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN;
         heapProperties.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN;
         heapProperties.CreationNodeMask = 0;
@@ -378,7 +380,7 @@ public:
 
         resourceDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
         resourceDesc.Alignment = 0;
-        resourceDesc.Width = bufferSize;
+        resourceDesc.Width = uSize;
         resourceDesc.Height = 1;
         resourceDesc.DepthOrArraySize = 1;
         resourceDesc.MipLevels = 1;
@@ -386,83 +388,109 @@ public:
         resourceDesc.SampleDesc.Count = 1;
         resourceDesc.SampleDesc.Quality = 0;
         resourceDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
-        resourceDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+        resourceDesc.Flags = inResourceFlags;
 
         ID3D12Resource * pBuffer;
 
         OutputDebugStringA("creating structured buffer\n");
 
         HRESULT hr = inDevice.GetDevice()->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
-            D3D12_RESOURCE_STATE_UNORDERED_ACCESS, NULL, IID_PPV_ARGS(&pBuffer));
+            inInitialState, NULL, IID_PPV_ARGS(&pBuffer));
 
         if (FAILED(hr)) throw std::exception("Unable to create structed buffer");
 
         m_pBuffer = pBuffer;
+        m_initialState = inInitialState;
+    }
 
-        ID3D12Resource * pInputBuffer;
+    void CopyFrom(ID3D12GraphicsCommandList * inCommandList, D3DInputBuffer & inBuffer);
+    void CopyTo(ID3D12GraphicsCommandList * inCommandList, D3DOutputBuffer & outBuffer);
 
-        heapProperties.Type = D3D12_HEAP_TYPE_UPLOAD;
-        resourceDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+    void StartStateTracking()
+    {
+        m_currentState = m_initialState;
+    }
 
-        OutputDebugStringA("creating structured input buffer\n");
+    void SetState(ID3D12GraphicsCommandList * pCommandList, D3D12_RESOURCE_STATES inNewState)
+    {
+        if (inNewState != m_currentState)
+        {
+            D3D12_RESOURCE_BARRIER barrier;
+            barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+            barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+            barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
 
-        hr = inDevice.GetDevice()->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
-            D3D12_RESOURCE_STATE_GENERIC_READ, NULL, IID_PPV_ARGS(&pInputBuffer));
+            barrier.Transition.pResource = m_pBuffer;
 
-        if (FAILED(hr)) throw std::exception("Unable to create structed input buffer");
+            barrier.Transition.StateBefore = m_currentState;
+            barrier.Transition.StateAfter = inNewState;
 
-        m_pInputBuffer = pInputBuffer;
+            pCommandList->ResourceBarrier(1, &barrier);
 
-        ID3D12Resource * pOutputBuffer;
-
-        heapProperties.Type = D3D12_HEAP_TYPE_READBACK;
-
-        OutputDebugStringA("creating structured output buffer\n");
-
-        hr = inDevice.GetDevice()->CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE, &resourceDesc,
-            D3D12_RESOURCE_STATE_COPY_DEST, NULL, IID_PPV_ARGS(&pOutputBuffer));
-
-        if (FAILED(hr)) throw std::exception("Unable to create structed output buffer");
-
-        m_pOutputBuffer = pOutputBuffer;
-
-        if (pSrc != NULL) {
-            void * pDst;
-            D3D12_RANGE range = { 0, 0 };
-            m_pInputBuffer->Map(0, &range, &pDst);
-            memcpy(pDst, pSrc, bufferSize);
-            m_pInputBuffer->Unmap(0, NULL);
+            m_currentState = inNewState;
         }
     }
 
-    void GetOutput( UINT uElementSize, UINT uCount, void * pDst)
+    ID3D12Resource * Get() { return m_pBuffer; }
+
+protected:
+
+    D3DPointer<ID3D12Resource>  m_pBuffer;
+    D3D12_RESOURCE_STATES       m_initialState;
+    D3D12_RESOURCE_STATES       m_currentState;
+};
+
+
+class D3DInputBuffer : public D3DBuffer
+{
+public:
+    D3DInputBuffer(D3DDevice & inDevice, UINT inSize, void * inData) :
+        D3DBuffer(inDevice, inSize, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_FLAG_NONE)
     {
-        UINT64 bufferSize = uElementSize * uCount;
-        D3D12_RANGE range = { 0, bufferSize };
-        void * pSrc;
-        m_pOutputBuffer->Map(0, &range, &pSrc);
-        memcpy(pDst, pSrc, bufferSize);
-
-        range.End = 0;
-        m_pOutputBuffer->Unmap(0, &range);
+        void * pDst;
+        D3D12_RANGE range = { 0, 0 };
+        m_pBuffer->Map(0, &range, &pDst);
+        memcpy(pDst, inData, inSize);
+        m_pBuffer->Unmap(0, NULL);
     }
+};
 
-    ~D3DStructuredBuffer()
+class D3DOutputBuffer : public D3DBuffer
+{
+public:
+    D3DOutputBuffer(D3DDevice & inDevice, UINT inSize, void * inData = NULL) :
+        D3DBuffer(inDevice, inSize,  D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_FLAG_NONE)
     {
         // do nothing
     }
 
-    ID3D12Resource * GetBuffer() { return m_pBuffer; }
-    ID3D12Resource * GetInputBuffer() { return m_pInputBuffer; }
-    ID3D12Resource * GetOutputBuffer() { return m_pOutputBuffer; }
+    void Read( UINT inSize, void * pDst)
+    {
+        D3D12_RANGE range = { 0, inSize };
+        void * pSrc;
+        m_pBuffer->Map(0, &range, &pSrc);
+        memcpy(pDst, pSrc, inSize);
 
-private:
-
-    D3DPointer<ID3D12Resource> m_pBuffer;
-    D3DPointer<ID3D12Resource> m_pInputBuffer;
-    D3DPointer<ID3D12Resource> m_pOutputBuffer;
+        range.End = 0;
+        m_pBuffer->Unmap(0, &range);
+    }
 
 };
+
+void D3DBuffer::CopyFrom(ID3D12GraphicsCommandList * inCommandList, D3DInputBuffer & inBuffer)
+{
+    SetState(inCommandList, D3D12_RESOURCE_STATE_COPY_DEST);
+    inCommandList->CopyResource(Get(), inBuffer.Get());
+    SetState(inCommandList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+}
+
+void D3DBuffer::CopyTo(ID3D12GraphicsCommandList * inCommandList, D3DOutputBuffer & outBuffer)
+{
+    SetState(inCommandList, D3D12_RESOURCE_STATE_COPY_SOURCE);
+    inCommandList->CopyResource(outBuffer.Get(), Get());
+    SetState(inCommandList, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+}
+
 
 
 struct BufType
@@ -473,8 +501,6 @@ struct BufType
 
 #define NUM_ELEMENTS     1024
 #define THREADS_IN_GROUP 4      // Expressed in the shader
-
-BufType g_vBuf[2][NUM_ELEMENTS];
 
 int main()
 {
@@ -521,18 +547,24 @@ int main()
         printf("done.\n");
 
         printf("Creating buffers ... ");
-        for (int j = 0; j < 2; j++) {
-            for (int i = 0; i < NUM_ELEMENTS; i++) {
-                g_vBuf[j][i].i = i;
-                g_vBuf[j][i].f = (float)i;
-            }
+
+        BufType initialData[NUM_ELEMENTS];
+
+        for (int i = 0; i < NUM_ELEMENTS; i++) {
+            initialData[i].i = i;
+            initialData[i].f = (float)i;
         }
 
-        D3DStructuredBuffer inputA(computeDevice, sizeof(BufType), NUM_ELEMENTS, g_vBuf[0]);
-        D3DStructuredBuffer inputB(computeDevice, sizeof(BufType), NUM_ELEMENTS, g_vBuf[1]);
-        D3DStructuredBuffer output(computeDevice, sizeof(BufType), NUM_ELEMENTS);
-        printf("done.\n");
+        UINT uSize = sizeof(BufType) * NUM_ELEMENTS;
 
+        D3DInputBuffer input(computeDevice, uSize, initialData);
+
+        D3DBuffer a(computeDevice, uSize);
+        D3DBuffer b(computeDevice, uSize);
+        D3DBuffer result(computeDevice, uSize);
+
+        D3DOutputBuffer output(computeDevice, uSize);
+        printf("done.\n");
 
         printf("Running shader ... ");
 
@@ -548,89 +580,16 @@ int main()
         pCommandList->SetPipelineState(pPipelineState);
         pCommandList->SetComputeRootSignature(pRootSignature);
 
-        pCommandList->SetComputeRootUnorderedAccessView(0, inputA.GetBuffer()->GetGPUVirtualAddress());
-        pCommandList->SetComputeRootUnorderedAccessView(1, inputB.GetBuffer()->GetGPUVirtualAddress());
-        pCommandList->SetComputeRootUnorderedAccessView(2, output.GetBuffer()->GetGPUVirtualAddress());
+        pCommandList->SetComputeRootUnorderedAccessView(0, a.Get()->GetGPUVirtualAddress());
+        pCommandList->SetComputeRootUnorderedAccessView(1, b.Get()->GetGPUVirtualAddress());
+        pCommandList->SetComputeRootUnorderedAccessView(2, result.Get()->GetGPUVirtualAddress());
 
-#if 1
-        D3D12_RESOURCE_BARRIER copyBarrier;
-        copyBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-        copyBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-        copyBarrier.Transition.pResource = inputA.GetBuffer();
-        copyBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-        copyBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
-        copyBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-
-        D3D12_RESOURCE_BARRIER uaBarrier = copyBarrier;
-        uaBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-        uaBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-
-        pCommandList->ResourceBarrier(1, &copyBarrier);
-        pCommandList->CopyResource(inputA.GetBuffer(), inputA.GetInputBuffer());
-        pCommandList->ResourceBarrier(1, &uaBarrier);
-
-        copyBarrier.Transition.pResource = inputB.GetBuffer();
-        uaBarrier.Transition.pResource = inputB.GetBuffer();
-
-        pCommandList->ResourceBarrier(1, &copyBarrier);
-        pCommandList->CopyResource(inputB.GetBuffer(), inputB.GetInputBuffer());
-        pCommandList->ResourceBarrier(1, &uaBarrier);
+        a.CopyFrom(pCommandList, input);
+        b.CopyFrom(pCommandList, input);
 
         pCommandList->Dispatch(NUM_ELEMENTS/THREADS_IN_GROUP, 1, 1);
 
-        copyBarrier.Transition.pResource = output.GetBuffer();
-        copyBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
-        uaBarrier.Transition.pResource = output.GetBuffer();
-        uaBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE;
-
-        pCommandList->ResourceBarrier(1, &copyBarrier);
-        pCommandList->CopyResource(output.GetOutputBuffer(), output.GetBuffer());
-        pCommandList->ResourceBarrier(1, &uaBarrier);
-#else
-
-        // inputA::inputBuffer GENERIC_READ
-        // inputA::outputBuffer COPY_DEST
-        // inputA::buffer UNORDERED_ACCESS
-
-        // output::inputBuffer GENERIC_READ
-        // output::outputBuffer COPY_DEST
-        // output::buffer UNORDERED_ACCESS
-
-        D3D12_RESOURCE_BARRIER barrier;
-        barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-        barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-        barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-
-        barrier.Transition.pResource = inputA.GetBuffer();
-        barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-        barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
-
-        // inputA::buffer UNORDERED_ACCESS -> COPY_DEST
-        pCommandList->ResourceBarrier(1, &barrier);
-
-        pCommandList->CopyResource(inputA.GetBuffer(), inputA.GetInputBuffer());
-
-        barrier.Transition.pResource = inputB.GetBuffer();
-
-        // inputA::buffer UNORDERED_ACCESS -> COPY_DEST
-        pCommandList->ResourceBarrier(1, &barrier);
-
-        pCommandList->CopyResource(inputA.GetBuffer(), inputA.GetInputBuffer());
-
-        // inputA::buffer COPY_DEST -> UNORDERED_ACCESS
-
-        barrier.Transition.pResource = inputA.GetBuffer();
-        barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
-        barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE;
-
-        // inputA::buffer UNORDERED_ACCESS -> COPY_SOURCE
-        pCommandList->ResourceBarrier(1, &barrier);
-
-        // inputA::buffer COPY_SOURCE
-        // output::outputBuffer COPY_DEST
-        pCommandList->CopyResource(output.GetOutputBuffer(), inputA.GetBuffer());
-
-#endif
+        result.CopyTo(pCommandList, output);
 
         pCommandList->Close();
 
@@ -650,18 +609,20 @@ int main()
             WaitForSingleObject(hEvent, INFINITE);
         }
 
-        BufType result[NUM_ELEMENTS];
-        output.GetOutput(sizeof(BufType), NUM_ELEMENTS, result);
+        printf("done\n");
+
+        BufType results[NUM_ELEMENTS];
+        output.Read(uSize, results);
 
         printf("checking results ... ");
         for (int i = 0; i < NUM_ELEMENTS; i++) {
-            if (result[i].i != i * 2) {
-                printf("Bad integer result %d at index %d\n", result[i].i, i);
+            if (results[i].i != i * 2) {
+                printf("Bad integer result %d at index %d\n", results[i].i, i);
                 break;
             }
 
-            if (result[i].f != (float) (i * 2)) {
-                printf("Bad float result %f at index %d\n", result[i].f, i);
+            if (results[i].f != (float) (i * 2)) {
+                printf("Bad float result %f at index %d\n", results[i].f, i);
                 break;
             }
         }
