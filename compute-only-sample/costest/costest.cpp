@@ -401,6 +401,7 @@ public:
 
         m_pBuffer = pBuffer;
         m_initialState = inInitialState;
+        m_currentState = inInitialState;
     }
 
     void CopyFrom(ID3D12GraphicsCommandList * inCommandList, D3DInputBuffer & inBuffer);
@@ -583,6 +584,9 @@ int main()
         pCommandList->SetComputeRootUnorderedAccessView(0, a.Get()->GetGPUVirtualAddress());
         pCommandList->SetComputeRootUnorderedAccessView(1, b.Get()->GetGPUVirtualAddress());
         pCommandList->SetComputeRootUnorderedAccessView(2, result.Get()->GetGPUVirtualAddress());
+
+        a.StartStateTracking();
+        b.StartStateTracking();
 
         a.CopyFrom(pCommandList, input);
         b.CopyFrom(pCommandList, input);
