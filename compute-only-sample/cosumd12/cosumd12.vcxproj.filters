@@ -35,7 +35,16 @@
     <ClCompile Include="CosUmd12Device.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="CosUmd12DeviceDDI.cpp">
+    <ClCompile Include="CosUmd12CommandQueueDdi.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CosUmd12ComputeCommandListDddi.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CosUmd12DeviceDdi.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CosUmd12DxgiDdi.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

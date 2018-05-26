@@ -296,8 +296,40 @@ HRESULT APIENTRY CosUmd12Adapter::FillDdiTable(D3D12DDI_HADAPTER hAdapter, D3D12
             break;
         }
         case D3D12DDI_TABLE_TYPE_COMMAND_LIST_3D:
+        {
+            if (uTableNum == D3D12_COMMAND_LIST_TYPE_COMPUTE)
+            {
+                memcpy(pTable, (void*) &g_CosUmd12ComputeCommandList_Ddi_0033, sizeof(g_CosUmd12ComputeCommandList_Ddi_0033));
+            }
+            else
+            {
+                DebugBreak();
+            }
+        }
         case D3D12DDI_TABLE_TYPE_COMMAND_QUEUE_3D:
+        {
+            if (tableSize < sizeof(g_CosUmd12CommandQueue_Ddi_0001))
+            {
+                hr = E_INVALIDARG;
+            }
+            else
+            {
+                memcpy(pTable, (void *) &g_CosUmd12CommandQueue_Ddi_0001, sizeof(g_CosUmd12CommandQueue_Ddi_0001));
+            }
+            break;            
+        }
         case D3D12DDI_TABLE_TYPE_DXGI:
+        {
+            if (tableSize < sizeof(g_CosUmd12Dxgi_Ddi))
+            {
+                hr = E_INVALIDARG;
+            }
+            else
+            {
+                memcpy(pTable, (void *) &g_CosUmd12Dxgi_Ddi, sizeof(g_CosUmd12Dxgi_Ddi));
+            }
+            break;            
+        }
         case D3D12DDI_TABLE_TYPE_0020_DEVICE_VIDEO:
         case D3D12DDI_TABLE_TYPE_0020_DEVICE_CORE_VIDEO:
         case D3D12DDI_TABLE_TYPE_0020_EXTENDED_FEATURES:

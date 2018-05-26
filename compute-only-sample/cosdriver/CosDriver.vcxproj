@@ -82,7 +82,7 @@
   <PropertyGroup />
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <PreBuildEvent>
-      <Command>copy /y $(OutDir)cosumd12.dll $(OutDir)cosDriver</Command>
+      <Command>mkdir $(OutDir) &amp; copy /y $(OutDir)cosumd12.dll $(OutDir)cosDriver</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
