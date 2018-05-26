@@ -287,6 +287,7 @@ HRESULT APIENTRY CosUmd12Adapter::FillDdiTable(D3D12DDI_HADAPTER hAdapter, D3D12
         {
             if (tableSize < sizeof(g_CosUmd12Device_Ddi_0033))
             {
+                assert(0);
                 hr = E_INVALIDARG;
             }
             else
@@ -315,6 +316,7 @@ HRESULT APIENTRY CosUmd12Adapter::FillDdiTable(D3D12DDI_HADAPTER hAdapter, D3D12
         {
             if (tableSize < sizeof(g_CosUmd12CommandQueue_Ddi_0001))
             {
+                assert(0);
                 hr = E_INVALIDARG;
             }
             else
@@ -327,6 +329,7 @@ HRESULT APIENTRY CosUmd12Adapter::FillDdiTable(D3D12DDI_HADAPTER hAdapter, D3D12
         {
             if (tableSize < sizeof(g_CosUmd12Dxgi_Ddi))
             {
+                assert(0);
                 hr = E_INVALIDARG;
             }
             else
@@ -335,9 +338,22 @@ HRESULT APIENTRY CosUmd12Adapter::FillDdiTable(D3D12DDI_HADAPTER hAdapter, D3D12
             }
             break;            
         }
+        case D3D12DDI_TABLE_TYPE_0020_EXTENDED_FEATURES:
+        {
+            if (tableSize < sizeof(g_CosUmd12ExtendedFeatures_Ddi_0020))
+            {
+                assert(0);
+                hr = E_INVALIDARG;
+            }
+            else
+            {
+                memcpy(pTable, (void *) &g_CosUmd12ExtendedFeatures_Ddi_0020, sizeof(g_CosUmd12ExtendedFeatures_Ddi_0020));
+            }
+            break;            
+        }
+
         case D3D12DDI_TABLE_TYPE_0020_DEVICE_VIDEO:
         case D3D12DDI_TABLE_TYPE_0020_DEVICE_CORE_VIDEO:
-        case D3D12DDI_TABLE_TYPE_0020_EXTENDED_FEATURES:
         case D3D12DDI_TABLE_TYPE_0020_PASS_EXPERIMENT:
         case D3D12DDI_TABLE_TYPE_0021_SHADERCACHE_CALLBACKS:
         case D3D12DDI_TABLE_TYPE_0022_COMMAND_QUEUE_VIDEO_DECODE:

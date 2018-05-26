@@ -50,5 +50,8 @@
     <ClCompile Include="CosUmd12CommandListDddi.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="CosUmd12ExtendedFeaturesDdi.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

@@ -165,6 +165,7 @@
     <ClCompile Include="CosUmd12Device.cpp" />
     <ClCompile Include="CosUmd12DeviceDdi.cpp" />
     <ClCompile Include="CosUmd12DxgiDdi.cpp" />
+    <ClCompile Include="CosUmd12ExtendedFeaturesDdi.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
