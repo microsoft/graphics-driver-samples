@@ -28,7 +28,7 @@ There is only one active project coordinator who oversees all aspects of the pro
 
 ##Microsoft Developer
 
-Individual microsoft developers contribute source to the project following the submission process outlined below without further review.
+Individual Microsoft developers contribute source to the project following the submission process outlined below without further review.
 
 ##Solo Developer
 
