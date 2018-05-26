@@ -531,13 +531,11 @@ int main()
     try {
 
         std::wstring driverString = cosDriverString;
-//        std::wstring driverString = amdDriverString;
 
         findIter = std::find(adapterList.begin(), adapterList.end(), driverString);
 
         if (findIter == adapterList.end())
             driverString = brdDriverString;
-
 
         printf("Creating device on %S ... ", driverString.c_str());
         D3DDevice computeDevice(driverString);

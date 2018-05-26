@@ -43,6 +43,8 @@ typedef union _CosUmdDeviceFlags
 
 #endif
 
+extern D3D12DDI_DEVICE_FUNCS_CORE_0033 g_CosUmd12Device_Ddi_0033;
+
 class CosUmd12Device
 {
 public:
@@ -55,6 +57,10 @@ public:
     static CosUmd12Device* CastFrom( D3D10DDI_HDEVICE );
     static CosUmd12Device* CastFrom( DXGI_DDI_HDEVICE );
     D3D10DDI_HDEVICE CastTo() const;
+
+
+public:
+
 
 #if 0
 public:
@@ -123,21 +129,22 @@ public:
 
 public:
     HANDLE                          m_hContext;
+#endif
 
-    CosUmdAdapter*                  m_pAdapter;
+    CosUmd12Adapter*                m_pAdapter;
     UINT                            m_Interface;
+    D3D12DDI_HRTDEVICE              m_hRTDevice;
+
+    const D3D12DDI_CORELAYER_DEVICECALLBACKS_0003*   m_pUMCallbacks;
+    const D3DDDI_DEVICECALLBACKS*   m_pKMCallbacks;
+#if 0
     D3D11DDI_3DPIPELINELEVEL        m_PipelineLevel;
 
-    // Pointer to function table that contains the callbacks to the runtime. Runtime is free to change pointers, so do not cache
-    // function pointers themselves.
     const D3DDDI_DEVICECALLBACKS*   m_pMSKTCallbacks;
 
-    const D3D11DDI_CORELAYER_DEVICECALLBACKS*   m_pMSUMCallbacks;
     const DXGI_DDI_BASE_CALLBACKS*              m_pDXGICallbacks;
 
     // Handle for runtime device to use with runtime callbacks.
-    D3D10DDI_HRTDEVICE              m_hRTDevice;
-    D3D10DDI_HRTCORELAYER           m_hRTCoreLayer;
 
     // Pointer to function table that runtime will use. Driver is free to change function pointers while the driver has context
     // within one of these entry points.

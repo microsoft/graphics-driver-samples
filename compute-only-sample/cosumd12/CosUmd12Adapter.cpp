@@ -90,7 +90,7 @@ SIZE_T APIENTRY CosUmd12Adapter::CalcPrivateDeviceSize(
 // List of DDIs ref is compatible with.
 const UINT64 c_aSupportedVersions[] =
 {
-    D3DWDDM2_3_DDI_SUPPORTED
+    D3D12DDI_SUPPORTED_0034
 };
 
 HRESULT APIENTRY CosUmd12Adapter::GetSupportedVersions(
@@ -123,6 +123,8 @@ HRESULT APIENTRY CosUmd12Adapter::GetCaps(
     D3D12DDI_HADAPTER hAdapter,
     const D3D12DDIARG_GETCAPS* pCaps )
 {
+    HRESULT hr = S_OK;
+
     hAdapter;
 
     switch (pCaps->Type)
@@ -153,29 +155,17 @@ HRESULT APIENTRY CosUmd12Adapter::GetCaps(
         D3D11DDI_THREADING_CAPS* pData = static_cast<D3D11DDI_THREADING_CAPS*>(pCaps->pData);
         pData->Caps = 0;
     } return S_OK;
+#endif
 
-    case (D3D11DDICAPS_3DPIPELINESUPPORT):
+    case (D3D12DDICAPS_TYPE_3DPIPELINESUPPORT):
     {
-        if (pCaps->DataSize != sizeof(D3D11DDI_3DPIPELINESUPPORT_CAPS))
-        {
-            return E_UNEXPECTED;
-        }
+        assert(pCaps->DataSize == sizeof(D3D12DDI_3DPIPELINELEVEL));
+        D3D12DDI_3DPIPELINELEVEL* pPipelineCaps = (D3D12DDI_3DPIPELINELEVEL*)pCaps->pData;
+        *pPipelineCaps = D3D12DDI_3DPIPELINELEVEL_12_1;
+        break;
+    }
 
-        D3D11DDI_3DPIPELINESUPPORT_CAPS* pData = static_cast<D3D11DDI_3DPIPELINESUPPORT_CAPS*>(pCaps->pData);
-        // Ref11 supports pipeline levels 9.1, 9.2, 9.3, 10, 10.1, 11, 11.1
-        pData->Caps =
-#if !VC4 // VC4 only supports up to FL9_3.
-            D3D11DDI_ENCODE_3DPIPELINESUPPORT_CAP(D3D11_1DDI_3DPIPELINELEVEL_11_1) |
-            D3D11DDI_ENCODE_3DPIPELINESUPPORT_CAP(D3D11DDI_3DPIPELINELEVEL_11_0) |
-            D3D11DDI_ENCODE_3DPIPELINESUPPORT_CAP(D3D11DDI_3DPIPELINELEVEL_10_1) |
-            D3D11DDI_ENCODE_3DPIPELINESUPPORT_CAP(D3D11DDI_3DPIPELINELEVEL_10_0) |
-#endif // !VC4
-            D3D11DDI_ENCODE_3DPIPELINESUPPORT_CAP(D3D11_1DDI_3DPIPELINELEVEL_9_3) | // 9_x are not interesting for IHVs implementing this DDI.
-            D3D11DDI_ENCODE_3DPIPELINESUPPORT_CAP(D3D11_1DDI_3DPIPELINELEVEL_9_2) | // For hardware, these levels go through the D3D9 DDI.
-            D3D11DDI_ENCODE_3DPIPELINESUPPORT_CAP(D3D11_1DDI_3DPIPELINELEVEL_9_1)
-            ;
-    } return S_OK;
-
+#if 0
     case (D3D11DDICAPS_SHADER):
     {
         if (pCaps->DataSize != sizeof(D3D11DDI_SHADER_CAPS))
@@ -187,6 +177,47 @@ HRESULT APIENTRY CosUmd12Adapter::GetCaps(
         pData->Caps = D3D11DDICAPS_SHADER_DOUBLES | D3D11DDICAPS_SHADER_COMPUTE_PLUS_RAW_AND_STRUCTURED_BUFFERS_IN_SHADER_4_X;
         pData->Caps |= D3D11DDICAPS_SHADER_DEBUGGABLE;
     } return S_OK;
+#endif
+
+    case D3D12DDICAPS_TYPE_D3D12_OPTIONS:
+    {
+        // TODO: Review these options with Amar/D3D Team in the context of compute only
+
+        assert(pCaps->DataSize == sizeof(D3D12DDI_D3D12_OPTIONS_DATA_0033));
+        D3D12DDI_D3D12_OPTIONS_DATA_0033* pOptions = (D3D12DDI_D3D12_OPTIONS_DATA_0033*)pCaps->pData;
+
+        // TODO: Find out what is required to meet D3D12DDI_RESOURCE_BINDING_TIER_1
+        pOptions->ResourceBindingTier = D3D12DDI_RESOURCE_BINDING_TIER_1;
+
+        pOptions->TiledResourcesTier = D3D12DDI_TILED_RESOURCES_TIER_NOT_SUPPORTED;
+
+        pOptions->CrossNodeSharingTier = D3D12DDI_CROSS_NODE_SHARING_TIER_NOT_SUPPORTED;
+
+        pOptions->VPAndRTArrayIndexFromAnyShaderFeedingRasterizerSupportedWithoutGSEmulation = FALSE;
+
+        pOptions->OutputMergerLogicOp = FALSE;
+
+        // TODO: Find out what is required to meet D3D12DDI_RESOURCE_HEAP_TIER_1
+        pOptions->ResourceHeapTier = D3D12DDI_RESOURCE_HEAP_TIER_1;
+
+        pOptions->DepthBoundsTestSupported = FALSE;
+
+        pOptions->ProgrammableSamplePositionsTier = D3D12DDI_PROGRAMMABLE_SAMPLE_POSITIONS_TIER_NOT_SUPPORTED;
+
+        pOptions->CopyQueueTimestampQueriesSupported = false;
+
+        // TODO: What are these flags?
+        pOptions->WriteBufferImmediateQueueFlags = D3D12DDI_COMMAND_QUEUE_FLAG_3D | D3D12DDI_COMMAND_QUEUE_FLAG_COMPUTE; //TODO: Copy Support
+
+        pOptions->ViewInstancingTier = D3D12DDI_VIEW_INSTANCING_TIER_NOT_SUPPORTED; //TODO: Support
+
+        pOptions->BarycentricsSupported = false;
+
+        pOptions->ConservativeRasterizationTier = D3D12DDI_CONSERVATIVE_RASTERIZATION_TIER_NOT_SUPPORTED;
+
+        break;
+    }
+
     case (D3D11_1DDICAPS_D3D11_OPTIONS):
     {
         if (pCaps->DataSize != sizeof(D3D11_1DDI_D3D11_OPTIONS_DATA))
@@ -197,6 +228,8 @@ HRESULT APIENTRY CosUmd12Adapter::GetCaps(
         pData->AssignDebugBinarySupport = TRUE;
         pData->OutputMergerLogicOp = TRUE;
     } return S_OK;
+
+#if 0
     case (D3D11_1DDICAPS_ARCHITECTURE_INFO):
     {
         if (pCaps->DataSize != sizeof(D3D11_1DDI_ARCHITECTURE_INFO_DATA))
@@ -218,15 +251,15 @@ HRESULT APIENTRY CosUmd12Adapter::GetCaps(
     } return S_OK;
 #endif
 
-        case 123213:
         default:
         {
             DebugBreak();
-            return E_NOTIMPL;
+            hr = E_NOTIMPL;
+            break;
         }
     }
 
-    return S_OK;
+    return hr;
 
 }
 
@@ -250,7 +283,38 @@ HRESULT APIENTRY CosUmd12Adapter::FillDdiTable(D3D12DDI_HADAPTER hAdapter, D3D12
     HRESULT hr = S_OK;
 
     switch (tableType) {
-        case 28938213:
+        case D3D12DDI_TABLE_TYPE_DEVICE_CORE:
+        {
+            if (tableSize < sizeof(g_CosUmd12Device_Ddi_0033))
+            {
+                hr = E_INVALIDARG;
+            }
+            else
+            {
+                memcpy(pTable, (void *) &g_CosUmd12Device_Ddi_0033, sizeof(g_CosUmd12Device_Ddi_0033));
+            }
+            break;
+        }
+        case D3D12DDI_TABLE_TYPE_COMMAND_LIST_3D:
+        case D3D12DDI_TABLE_TYPE_COMMAND_QUEUE_3D:
+        case D3D12DDI_TABLE_TYPE_DXGI:
+        case D3D12DDI_TABLE_TYPE_0020_DEVICE_VIDEO:
+        case D3D12DDI_TABLE_TYPE_0020_DEVICE_CORE_VIDEO:
+        case D3D12DDI_TABLE_TYPE_0020_EXTENDED_FEATURES:
+        case D3D12DDI_TABLE_TYPE_0020_PASS_EXPERIMENT:
+        case D3D12DDI_TABLE_TYPE_0021_SHADERCACHE_CALLBACKS:
+        case D3D12DDI_TABLE_TYPE_0022_COMMAND_QUEUE_VIDEO_DECODE:
+        case D3D12DDI_TABLE_TYPE_0022_COMMAND_LIST_VIDEO_DECODE:
+        case D3D12DDI_TABLE_TYPE_0022_COMMAND_QUEUE_VIDEO_PROCESS:
+        case D3D12DDI_TABLE_TYPE_0022_COMMAND_LIST_VIDEO_PROCESS:
+        case D3D12DDI_TABLE_TYPE_0030_DEVICE_CONTENT_PROTECTION_RESOURCES:
+        case D3D12DDI_TABLE_TYPE_0030_CONTENT_PROTECTION_CALLBACKS:
+        case D3D12DDI_TABLE_TYPE_0030_DEVICE_CONTENT_PROTECTION_STREAMING:
+        {
+            DebugBreak();
+            hr = E_UNEXPECTED;
+        }
+
         default:
         {
             DebugBreak();
@@ -268,23 +332,24 @@ VOID APIENTRY CosUmd12Adapter::DestroyDevice(D3D12DDI_HDEVICE hDevice)
     pDevice->~CosUmd12Device();
 }
 
-
-__declspec(dllexport) HRESULT APIENTRY OpenAdapter12( D3D12DDIARG_OPENADAPTER* pArgs )
+extern "C"
 {
-    DebugBreak();
-
-    CosUmd12Adapter* pAdapter = new CosUmd12Adapter;
-    if( NULL == pAdapter )
+    __declspec(dllexport) HRESULT APIENTRY OpenAdapter12(D3D12DDIARG_OPENADAPTER* pArgs)
     {
-        return E_OUTOFMEMORY;
+        CosUmd12Adapter* pAdapter = new CosUmd12Adapter;
+
+        if( NULL == pAdapter )
+        {
+            return E_OUTOFMEMORY;
+        }
+
+        HRESULT hr = pAdapter->Open(pArgs);
+
+        if (hr != S_OK) {
+            pAdapter->Close();
+            delete pAdapter;
+        }
+
+        return hr;
     }
-
-    HRESULT hr = pAdapter->Open(pArgs);
-
-    if (hr != S_OK) {
-        pAdapter->Close();
-        delete pAdapter;
-    }
-
-    return hr;
 }

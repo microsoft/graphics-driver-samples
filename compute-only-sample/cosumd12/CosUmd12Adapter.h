@@ -24,6 +24,7 @@ public:
     CosUmd12Adapter();
     ~CosUmd12Adapter();
 
+public:
     HRESULT Open( D3D12DDIARG_OPENADAPTER* pArgs );
     void Close();
     static CosUmd12Adapter* CastFrom( D3D10DDI_HADAPTER );

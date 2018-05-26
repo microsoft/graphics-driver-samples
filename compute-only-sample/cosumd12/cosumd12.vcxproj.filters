@@ -35,5 +35,8 @@
     <ClCompile Include="CosUmd12Device.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="CosUmd12DeviceDDI.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

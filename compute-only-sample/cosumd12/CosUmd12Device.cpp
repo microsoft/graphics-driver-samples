@@ -36,27 +36,21 @@
 
 CosUmd12Device::CosUmd12Device(
     CosUmd12Adapter* pAdapter,
-    const D3D12DDIARG_CREATEDEVICE_0003* pArgs)
-#if 0
-    : m_hContext(NULL),
+    const D3D12DDIARG_CREATEDEVICE_0003* pArgs) :
     m_pAdapter(pAdapter),
     m_Interface(pArgs->Interface),
     m_hRTDevice(pArgs->hRTDevice),
-    m_hRTCoreLayer(pArgs->hRTCoreLayer),
+    m_pUMCallbacks(pArgs->p12UMCallbacks),
+    m_pKMCallbacks(pArgs->pKTCallbacks)
+#if 0
+    : m_hContext(NULL),
     m_bPredicateValue(FALSE)
 #endif
 {
+    assert(pArgs->hDrvDevice.pDrvPrivate == (void *) this);
+
+    assert(m_Interface == D3D12DDI_INTERFACE_VERSION_R3);
 #if 0
-    // Location of function table for runtime callbacks. Can not change these function pointers, as they are runtime-owned;
-    // but the pointer should be saved. Do not cache function pointers, as the runtime may change the table entries at will.
-    m_pMSKTCallbacks = pArgs->pKTCallbacks;
-
-    // Currently only support WDDM1.3 DDI
-    assert(m_Interface == D3DWDDM1_3_DDI_INTERFACE_VERSION);
-    m_pMSUMCallbacks = pArgs->p11UMCallbacks;
-
-    // Can change these function pointers in this table whenever the UM Driver has context. That's why the UM Driver can
-    // hold onto this pointer.
 
     // Immediately fill out the Device function table with default methods.
     m_PipelineLevel = D3D11DDI_EXTRACT_3DPIPELINELEVEL_FROM_FLAGS(pArgs->Flags);

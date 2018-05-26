@@ -45,6 +45,7 @@
     <ProjectReference Include="..\cosumd12\cosumd12.vcxproj">
       <Project>{22563f11-4342-46b7-aaf7-db4e57838879}</Project>
       <LinkLibraryDependencies>false</LinkLibraryDependencies>
+      <CopyLocalSatelliteAssemblies>false</CopyLocalSatelliteAssemblies>
     </ProjectReference>
     <ProjectReference Include="..\cosumd\cosumd.vcxproj">
       <Project>{b87732a7-0d66-4692-96e2-2772bf77c3fc}</Project>
@@ -79,6 +80,11 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <PreBuildEvent>
+      <Command>copy /y $(OutDir)cosumd12.dll $(OutDir)cosDriver</Command>
+    </PreBuildEvent>
+  </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
