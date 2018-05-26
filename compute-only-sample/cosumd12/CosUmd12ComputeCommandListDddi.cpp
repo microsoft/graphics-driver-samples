@@ -55,18 +55,6 @@ void APIENTRY CosUmd12ComputeCommandList_Ddi_ClearUnorderedAccessViewUint_0003(
 	DebugBreak();
 }
 
-void APIENTRY Ddi_CopyCommandList_ClearUnorderedAccessViewUint_0003(
-    D3D12DDI_HCOMMANDLIST CommandList,
-    D3D12DDI_GPU_DESCRIPTOR_HANDLE ViewGPUHandleInCurrentHeap,
-    D3D12DDI_CPU_DESCRIPTOR_HANDLE ViewCPUHandle,
-    D3D12DDI_HRESOURCE Resource,
-    const UINT Values[4],
-    UINT NumRects,
-    _In_reads_(NumRects) const D3D12DDI_RECT* pRects)
-{
-	DebugBreak();
-}
-
 void APIENTRY CosUmd12ComputeCommandList_Ddi_ClearUnorderedAccessViewFloat_0003(
     D3D12DDI_HCOMMANDLIST CommandList,
     D3D12DDI_GPU_DESCRIPTOR_HANDLE ViewGPUHandleInCurrentHeap,

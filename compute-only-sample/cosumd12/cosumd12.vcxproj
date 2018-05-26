@@ -159,6 +159,7 @@
       <PreprocessToFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</PreprocessToFile>
     </ClCompile>
     <ClCompile Include="CosUmd12Adapter.cpp" />
+    <ClCompile Include="CosUmd12CommandListDddi.cpp" />
     <ClCompile Include="CosUmd12CommandQueueDdi.cpp" />
     <ClCompile Include="CosUmd12ComputeCommandListDddi.cpp" />
     <ClCompile Include="CosUmd12Device.cpp" />

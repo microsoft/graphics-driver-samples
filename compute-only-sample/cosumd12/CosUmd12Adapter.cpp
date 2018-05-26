@@ -301,10 +301,15 @@ HRESULT APIENTRY CosUmd12Adapter::FillDdiTable(D3D12DDI_HADAPTER hAdapter, D3D12
             {
                 memcpy(pTable, (void*) &g_CosUmd12ComputeCommandList_Ddi_0033, sizeof(g_CosUmd12ComputeCommandList_Ddi_0033));
             }
+            else if (uTableNum == D3D12_COMMAND_LIST_TYPE_DIRECT || uTableNum == D3D12_COMMAND_LIST_TYPE_BUNDLE)
+            {
+                memcpy(pTable, (void*) &g_CosUmd12CommandList_Ddi_0033, sizeof(g_CosUmd12CommandList_Ddi_0033));
+            }
             else
             {
                 DebugBreak();
             }
+            break;
         }
         case D3D12DDI_TABLE_TYPE_COMMAND_QUEUE_3D:
         {
