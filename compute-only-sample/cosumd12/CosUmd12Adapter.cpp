@@ -269,7 +269,6 @@ HRESULT APIENTRY CosUmd12Adapter::GetCaps(
 
         case D3D12DDICAPS_TYPE_0011_SHADER_MODELS:
         {
-            DebugBreak();
             if (pCaps->DataSize < sizeof(D3D12DDI_D3D12_SHADER_MODELS_DATA_0011)) {
                 hr = E_UNEXPECTED;
             } else {
@@ -303,7 +302,7 @@ HRESULT APIENTRY CosUmd12Adapter::GetCaps(
 
         default:
         {
-            DebugBreak();
+            STOP_IN_FUNCTION();
             hr = E_NOTIMPL;
             break;
         }
@@ -358,7 +357,7 @@ HRESULT APIENTRY CosUmd12Adapter::FillDdiTable(D3D12DDI_HADAPTER hAdapter, D3D12
             }
             else
             {
-                DebugBreak();
+                STOP_IN_FUNCTION();
             }
             break;
         }
@@ -414,13 +413,13 @@ HRESULT APIENTRY CosUmd12Adapter::FillDdiTable(D3D12DDI_HADAPTER hAdapter, D3D12
         case D3D12DDI_TABLE_TYPE_0030_CONTENT_PROTECTION_CALLBACKS:
         case D3D12DDI_TABLE_TYPE_0030_DEVICE_CONTENT_PROTECTION_STREAMING:
         {
-            DebugBreak();
+            STOP_IN_FUNCTION();
             hr = E_UNEXPECTED;
         }
 
         default:
         {
-            DebugBreak();
+            STOP_IN_FUNCTION();
             hr = E_UNEXPECTED;
         }
     }

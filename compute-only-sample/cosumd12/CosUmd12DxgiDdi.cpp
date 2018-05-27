@@ -3,7 +3,7 @@
 HRESULT APIENTRY Ddi_Dxgi_Present(
     DXGI_DDI_ARG_PRESENT* pDesc)
 {
-    DebugBreak();
+    STOP_IN_FUNCTION();
     return E_NOTIMPL;
 }
 
@@ -11,125 +11,125 @@ HRESULT APIENTRY Ddi_Dxgi_Present(
 HRESULT APIENTRY Ddi_Dxgi_GetGammaCaps(
     DXGI_DDI_ARG_GET_GAMMA_CONTROL_CAPS* pCaps)
 {
-    DebugBreak();
+    STOP_IN_FUNCTION();
     return E_NOTIMPL;
 }
 
 HRESULT APIENTRY Ddi_Dxgi_SetDisplayMode(
     DXGI_DDI_ARG_SETDISPLAYMODE* pArgs)
 {
-    DebugBreak();
+    STOP_IN_FUNCTION();
     return E_NOTIMPL;
 }
 
 HRESULT APIENTRY Ddi_Dxgi_SetResourcePriority(
     DXGI_DDI_ARG_SETRESOURCEPRIORITY* pPriority)
 {
-    DebugBreak();
+    STOP_IN_FUNCTION();
     return E_NOTIMPL;
 }
 
 HRESULT APIENTRY Ddi_Dxgi_QueryResourceResidency(DXGI_DDI_ARG_QUERYRESOURCERESIDENCY* pArgs)
 {
-    DebugBreak();
+    STOP_IN_FUNCTION();
     return E_NOTIMPL;
 }
 
 HRESULT APIENTRY Ddi_Dxgi_RotateResourceIdentities(
     DXGI_DDI_ARG_ROTATE_RESOURCE_IDENTITIES* pDesc)
 {
-    DebugBreak();
+    STOP_IN_FUNCTION();
     return E_NOTIMPL;
 }
 
 HRESULT APIENTRY Ddi_Dxgi_Blt(
     DXGI_DDI_ARG_BLT* pBlt)
 {
-    DebugBreak();
+    STOP_IN_FUNCTION();
     return E_NOTIMPL;
 }
 
 HRESULT APIENTRY Ddi_Dxgi_ResolveSharedResource(
     DXGI_DDI_ARG_RESOLVESHAREDRESOURCE* pResolve)
 {
-    DebugBreak();
+    STOP_IN_FUNCTION();
     return E_NOTIMPL;
 }
 
 HRESULT APIENTRY Ddi_Dxgi_Blt1(
     DXGI_DDI_ARG_BLT1* pBlt)
 {
-    DebugBreak();
+    STOP_IN_FUNCTION();
     return E_NOTIMPL;
 }
 
 HRESULT APIENTRY Ddi_Dxgi_OfferResources(
     DXGI_DDI_ARG_OFFERRESOURCES* pOffer)
 {
-    DebugBreak();
+    STOP_IN_FUNCTION();
     return E_NOTIMPL;
 }
 
 HRESULT APIENTRY Ddi_Dxgi_ReclaimResources(
     DXGI_DDI_ARG_RECLAIMRESOURCES* pReclaim)
 {   
-    DebugBreak();
+    STOP_IN_FUNCTION();
     return E_NOTIMPL;
 }
 
 HRESULT APIENTRY Ddi_Dxgi_GetMultiplaneOverlayCaps(
     DXGI_DDI_ARG_GETMULTIPLANEOVERLAYCAPS* pCaps)
 {
-    DebugBreak();
+    STOP_IN_FUNCTION();
     return E_NOTIMPL;
 }
 
 HRESULT APIENTRY Ddi_Dxgi_GetMultiplaneOverlayGroupCaps(
     DXGI_DDI_ARG_GETMULTIPLANEOVERLAYGROUPCAPS* pCaps)
 {
-    DebugBreak();
+    STOP_IN_FUNCTION();
     return E_NOTIMPL;
 }
 
 HRESULT APIENTRY Ddi_Dxgi_PresentMultiplaneOverlay(
     DXGI_DDI_ARG_PRESENTMULTIPLANEOVERLAY* pDesc)
 {
-    DebugBreak();
+    STOP_IN_FUNCTION();
     return E_NOTIMPL;
 }
 
 HRESULT APIENTRY Ddi_Dxgi_Present1(
     DXGI_DDI_ARG_PRESENT1* pDesc)
 {
-    DebugBreak();
+    STOP_IN_FUNCTION();
     return E_NOTIMPL;
 }
 
 HRESULT APIENTRY Ddi_Dxgi_CheckPresentDurationSupport(
     DXGI_DDI_ARG_CHECKPRESENTDURATIONSUPPORT* pSupport)
 {
-    DebugBreak();
+    STOP_IN_FUNCTION();
     return E_NOTIMPL;
 }
 
 HRESULT APIENTRY Ddi_Dxgi_TrimResidencySet(
     DXGI_DDI_ARG_TRIMRESIDENCYSET* pDesc)
 {
-    DebugBreak();
+    STOP_IN_FUNCTION();
     return E_NOTIMPL;
 }
 
 HRESULT APIENTRY Ddi_Dxgi_CheckMultiplaneOverlayColorSpaceSupport(
     DXGI_DDI_ARG_CHECKMULTIPLANEOVERLAYCOLORSPACESUPPORT* pSupport)
 {
-    DebugBreak();
+    STOP_IN_FUNCTION();
     return E_NOTIMPL;
 }
 
 HRESULT APIENTRY Ddi_Dxgi_PresentMultiplaneOverlay1(
     DXGI_DDI_ARG_PRESENTMULTIPLANEOVERLAY1* pDesc)
 {
-    DebugBreak();
+    STOP_IN_FUNCTION();
     return E_NOTIMPL;
 }
 
