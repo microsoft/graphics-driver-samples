@@ -130,21 +130,22 @@ HRESULT APIENTRY CosUmd12Adapter::GetCaps(
     switch (pCaps->Type)
     {
 
-    #if 0
     case D3D12DDICAPS_TYPE_TEXTURE_LAYOUT:
-        {
-            if (pCaps->DataSize != sizeof(D3D12DDI_TEXTURE_LAYOUT_CAPS_0001))
-                return E_UNEXPECTED;
-
-            D3D12DDI_TEXTURE_LAYOUT_CAPS_0001* pData = static_cast<D3D12DDI_TEXTURE_LAYOUT_CAPS_0001*>(pCaps->pData);
-
-            pData->Supports64KStandardSwizzle = FALSE;
-            pData->DeviceDependentLayoutCount = 0;
-            pData->DeviceDependentSwizzleCount = 0;
-            pData->SupportsRowMajorTexture = FALSE;
+    {
+        if (pCaps->DataSize != sizeof(D3D12DDI_TEXTURE_LAYOUT_CAPS_0026)) {
+            hr = E_UNEXPECTED;
+        } else {
+            D3D12DDI_TEXTURE_LAYOUT_CAPS_0026* pLayoutCaps = (D3D12DDI_TEXTURE_LAYOUT_CAPS_0026*)pCaps->pData;
+            pLayoutCaps->DeviceDependentLayoutCount = 0;
+            pLayoutCaps->DeviceDependentSwizzleCount = 0;
+            pLayoutCaps->Supports64KStandardSwizzle = FALSE;
+            pLayoutCaps->SupportsRowMajorTexture = TRUE;
+            pLayoutCaps->IndexableSwizzlePatterns = FALSE;
         }
         break;
+    }
 
+#if 0
     case (D3D11DDICAPS_THREADING):
     {
         if (pCaps->DataSize != sizeof(D3D11DDI_THREADING_CAPS))
