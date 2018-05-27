@@ -165,19 +165,28 @@ HRESULT APIENTRY CosUmd12Adapter::GetCaps(
         break;
     }
 
-#if 0
-    case (D3D11DDICAPS_SHADER):
+    case (D3D12DDICAPS_TYPE_SHADER):
     {
-        if (pCaps->DataSize != sizeof(D3D11DDI_SHADER_CAPS))
+        if (pCaps->DataSize != sizeof(D3D12DDI_SHADER_CAPS_0015))
         {
+            assert(0);
             return E_UNEXPECTED;
         }
 
-        D3D11DDI_SHADER_CAPS* pData = static_cast<D3D11DDI_SHADER_CAPS*>(pCaps->pData);
-        pData->Caps = D3D11DDICAPS_SHADER_DOUBLES | D3D11DDICAPS_SHADER_COMPUTE_PLUS_RAW_AND_STRUCTURED_BUFFERS_IN_SHADER_4_X;
-        pData->Caps |= D3D11DDICAPS_SHADER_DEBUGGABLE;
+        // TODO: Research these caps
+        D3D12DDI_SHADER_CAPS_0015* pShaderCaps = (D3D12DDI_SHADER_CAPS_0015*)pCaps->pData;
+        pShaderCaps->MinPrecision = D3D12DDI_SHADER_MIN_PRECISION_NONE;
+        pShaderCaps->DoubleOps = FALSE;
+        pShaderCaps->ShaderSpecifiedStencilRef = FALSE;
+        pShaderCaps->TypedUAVLoadAdditionalFormats = FALSE;
+        pShaderCaps->ROVs = FALSE;
+        pShaderCaps->WaveOps = FALSE;
+        pShaderCaps->WaveLaneCountMin = 1;
+        pShaderCaps->WaveLaneCountMax = 1;
+        pShaderCaps->TotalLaneCount = 1;
+        pShaderCaps->Int64Ops = FALSE;
+
     } return S_OK;
-#endif
 
     case D3D12DDICAPS_TYPE_D3D12_OPTIONS:
     {
