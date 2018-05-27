@@ -161,7 +161,7 @@ HRESULT APIENTRY CosUmd12Adapter::GetCaps(
     {
         assert(pCaps->DataSize == sizeof(D3D12DDI_3DPIPELINELEVEL));
         D3D12DDI_3DPIPELINELEVEL* pPipelineCaps = (D3D12DDI_3DPIPELINELEVEL*)pCaps->pData;
-        *pPipelineCaps = D3D12DDI_3DPIPELINELEVEL_12_1;
+        *pPipelineCaps = D3D12DDI_3DPIPELINELEVEL_12_1; // TODO Is pipeline level == feature level?
         break;
     }
 
@@ -169,24 +169,24 @@ HRESULT APIENTRY CosUmd12Adapter::GetCaps(
     {
         if (pCaps->DataSize != sizeof(D3D12DDI_SHADER_CAPS_0015))
         {
-            assert(0);
-            return E_UNEXPECTED;
+            hr = E_UNEXPECTED;
+        } else {
+            // TODO: Research these caps
+            D3D12DDI_SHADER_CAPS_0015* pShaderCaps = (D3D12DDI_SHADER_CAPS_0015*)pCaps->pData;
+            pShaderCaps->MinPrecision = D3D12DDI_SHADER_MIN_PRECISION_NONE;
+            pShaderCaps->DoubleOps = FALSE;
+            pShaderCaps->ShaderSpecifiedStencilRef = FALSE;
+            pShaderCaps->TypedUAVLoadAdditionalFormats = TRUE; // FL 12.0+ must support
+            pShaderCaps->ROVs = TRUE; // FL 12.1+ must support
+            pShaderCaps->WaveOps = FALSE;
+            pShaderCaps->WaveLaneCountMin = 4;  // min required support is 4
+            pShaderCaps->WaveLaneCountMax = 4;
+            pShaderCaps->TotalLaneCount = 4;
+            pShaderCaps->Int64Ops = FALSE;
         }
 
-        // TODO: Research these caps
-        D3D12DDI_SHADER_CAPS_0015* pShaderCaps = (D3D12DDI_SHADER_CAPS_0015*)pCaps->pData;
-        pShaderCaps->MinPrecision = D3D12DDI_SHADER_MIN_PRECISION_NONE;
-        pShaderCaps->DoubleOps = FALSE;
-        pShaderCaps->ShaderSpecifiedStencilRef = FALSE;
-        pShaderCaps->TypedUAVLoadAdditionalFormats = FALSE;
-        pShaderCaps->ROVs = FALSE;
-        pShaderCaps->WaveOps = FALSE;
-        pShaderCaps->WaveLaneCountMin = 1;
-        pShaderCaps->WaveLaneCountMax = 1;
-        pShaderCaps->TotalLaneCount = 1;
-        pShaderCaps->Int64Ops = FALSE;
-
-    } return S_OK;
+        break;
+    }
 
     case D3D12DDICAPS_TYPE_D3D12_OPTIONS:
     {
@@ -196,15 +196,15 @@ HRESULT APIENTRY CosUmd12Adapter::GetCaps(
         D3D12DDI_D3D12_OPTIONS_DATA_0033* pOptions = (D3D12DDI_D3D12_OPTIONS_DATA_0033*)pCaps->pData;
 
         // TODO: Find out what is required to meet D3D12DDI_RESOURCE_BINDING_TIER_1
-        pOptions->ResourceBindingTier = D3D12DDI_RESOURCE_BINDING_TIER_1;
+        pOptions->ResourceBindingTier = D3D12DDI_RESOURCE_BINDING_TIER_2; // FL 12.0+  must report tier+
 
-        pOptions->TiledResourcesTier = D3D12DDI_TILED_RESOURCES_TIER_NOT_SUPPORTED;
+        pOptions->TiledResourcesTier = D3D12DDI_TILED_RESOURCES_TIER_2; // FL 12.0+ must report tier 2+
 
         pOptions->CrossNodeSharingTier = D3D12DDI_CROSS_NODE_SHARING_TIER_NOT_SUPPORTED;
 
         pOptions->VPAndRTArrayIndexFromAnyShaderFeedingRasterizerSupportedWithoutGSEmulation = FALSE;
 
-        pOptions->OutputMergerLogicOp = FALSE;
+        pOptions->OutputMergerLogicOp = TRUE;   //  feature level 11.1+ must report support
 
         // TODO: Find out what is required to meet D3D12DDI_RESOURCE_HEAP_TIER_1
         pOptions->ResourceHeapTier = D3D12DDI_RESOURCE_HEAP_TIER_1;
@@ -222,32 +222,38 @@ HRESULT APIENTRY CosUmd12Adapter::GetCaps(
 
         pOptions->BarycentricsSupported = false;
 
-        pOptions->ConservativeRasterizationTier = D3D12DDI_CONSERVATIVE_RASTERIZATION_TIER_NOT_SUPPORTED;
+        pOptions->ConservativeRasterizationTier = D3D12DDI_CONSERVATIVE_RASTERIZATION_TIER_1; // FL12.1+ must support tier1+
 
         break;
     }
 
+#if 0
     case (D3D11_1DDICAPS_D3D11_OPTIONS):
     {
         if (pCaps->DataSize != sizeof(D3D11_1DDI_D3D11_OPTIONS_DATA))
         {
-            return E_UNEXPECTED;
+            hr = E_UNEXPECTED;
+        } else {
+            D3D11_1DDI_D3D11_OPTIONS_DATA* pData = static_cast<D3D11_1DDI_D3D11_OPTIONS_DATA*>(pCaps->pData);
+            pData->AssignDebugBinarySupport = TRUE;
+            pData->OutputMergerLogicOp = TRUE;
         }
-        D3D11_1DDI_D3D11_OPTIONS_DATA* pData = static_cast<D3D11_1DDI_D3D11_OPTIONS_DATA*>(pCaps->pData);
-        pData->AssignDebugBinarySupport = TRUE;
-        pData->OutputMergerLogicOp = TRUE;
     } return S_OK;
+#endif
+
+    case (D3D12DDICAPS_TYPE_ARCHITECTURE_INFO):
+    {
+        if (pCaps->DataSize != sizeof(D3D12DDI_ARCHITECTURE_INFO_DATA))
+        {
+            hr = E_UNEXPECTED;
+        } else {
+            D3D12DDI_ARCHITECTURE_INFO_DATA* pData = static_cast<D3D12DDI_ARCHITECTURE_INFO_DATA*>(pCaps->pData);
+            pData->TileBasedDeferredRenderer = FALSE;
+        }
+        break;
+    }
 
 #if 0
-    case (D3D11_1DDICAPS_ARCHITECTURE_INFO):
-    {
-        if (pCaps->DataSize != sizeof(D3D11_1DDI_ARCHITECTURE_INFO_DATA))
-        {
-            return E_UNEXPECTED;
-        }
-        D3D11_1DDI_ARCHITECTURE_INFO_DATA* pData = static_cast<D3D11_1DDI_ARCHITECTURE_INFO_DATA*>(pCaps->pData);
-        pData->TileBasedDeferredRenderer = FALSE;
-    } return S_OK;
     case (D3D11_1DDICAPS_SHADER_MIN_PRECISION_SUPPORT):
     {
         if (pCaps->DataSize != sizeof(D3D11_DDI_SHADER_MIN_PRECISION_SUPPORT_DATA))
@@ -259,6 +265,40 @@ HRESULT APIENTRY CosUmd12Adapter::GetCaps(
         pData->AllOtherStagesMinPrecision = D3D11_DDI_SHADER_MIN_PRECISION_10_BIT | D3D11_DDI_SHADER_MIN_PRECISION_16_BIT;
     } return S_OK;
 #endif
+
+        case D3D12DDICAPS_TYPE_0011_SHADER_MODELS:
+        {
+            DebugBreak();
+            if (pCaps->DataSize < sizeof(D3D12DDI_D3D12_SHADER_MODELS_DATA_0011)) {
+                hr = E_UNEXPECTED;
+            } else {
+                D3D12DDI_D3D12_SHADER_MODELS_DATA_0011* pModelCaps = (D3D12DDI_D3D12_SHADER_MODELS_DATA_0011*)pCaps->pData;
+
+                static const D3D12DDI_SHADER_MODEL supportedModels[] =
+                {
+                    D3D12DDI_SHADER_MODEL_5_1_RELEASE_0011,
+                };
+
+                if (pModelCaps->pShaderModelsSupported != nullptr)
+                {
+                    CopyMemory(pModelCaps->pShaderModelsSupported, supportedModels, sizeof(supportedModels));
+                }
+                *pModelCaps->pNumShaderModelsSupported = _countof(supportedModels);
+            }
+            break;
+        }
+
+        case D3D12DDICAPS_TYPE_0023_UMD_BASED_COMMAND_QUEUE_PRIORITY:
+        {
+            if (pCaps->DataSize < sizeof(D3D12DDICAPS_UMD_BASED_COMMAND_QUEUE_PRIORITY_DATA_0023)) {
+                hr = E_UNEXPECTED;
+            } else {
+                D3D12DDICAPS_UMD_BASED_COMMAND_QUEUE_PRIORITY_DATA_0023* pData = 
+                    (D3D12DDICAPS_UMD_BASED_COMMAND_QUEUE_PRIORITY_DATA_0023*)pCaps->pData;
+                pData->SupportedQueueFlagsForGlobalRealtimeQueues = D3D12DDI_COMMAND_QUEUE_FLAG_NONE;
+            }
+            break;
+        }
 
         default:
         {
