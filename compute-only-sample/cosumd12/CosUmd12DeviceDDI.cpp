@@ -5,7 +5,106 @@ void APIENTRY CosUmd12Device_Ddi_CheckFormatSupport(
     DXGI_FORMAT Format,
     _Out_ UINT* pFlags)
 {
-    DebugBreak();
+    // TODO: Review format support
+
+    *pFlags = D3D10_DDI_FORMAT_SUPPORT_NOT_SUPPORTED;
+
+    switch( Format )
+    {
+    case DXGI_FORMAT_R32G32B32_TYPELESS:
+    case DXGI_FORMAT_R32G32B32_FLOAT:
+    case DXGI_FORMAT_R32G32B32_UINT:
+    case DXGI_FORMAT_R32G32B32_SINT:
+    case DXGI_FORMAT_Y210:
+    case DXGI_FORMAT_Y216:
+    case DXGI_FORMAT_AYUV:
+    case DXGI_FORMAT_P016:
+    case DXGI_FORMAT_NV11:
+        return;
+    }
+
+    const UINT SupportEverything = D3D10_DDI_FORMAT_SUPPORT_SHADER_SAMPLE |
+        D3D10_DDI_FORMAT_SUPPORT_RENDERTARGET |
+        D3D10_DDI_FORMAT_SUPPORT_BLENDABLE |
+        D3D10_DDI_FORMAT_SUPPORT_MULTISAMPLE_RENDERTARGET |
+        D3D10_DDI_FORMAT_SUPPORT_MULTISAMPLE_LOAD;
+
+    const UINT SupportNoMSAA = D3D10_DDI_FORMAT_SUPPORT_SHADER_SAMPLE |
+        D3D10_DDI_FORMAT_SUPPORT_RENDERTARGET |
+        D3D10_DDI_FORMAT_SUPPORT_BLENDABLE;
+
+    const UINT SupportNoMSAANoRT = D3D10_DDI_FORMAT_SUPPORT_SHADER_SAMPLE |
+        D3D10_DDI_FORMAT_SUPPORT_BLENDABLE;
+
+    const UINT SupportMSAALoad = SupportNoMSAANoRT | D3D10_DDI_FORMAT_SUPPORT_MULTISAMPLE_LOAD;
+
+    const UINT SupportSampleOnly = D3D10_DDI_FORMAT_SUPPORT_SHADER_SAMPLE;
+
+    switch( Format )
+    {
+    case DXGI_FORMAT_R32G32B32A32_TYPELESS:
+    case DXGI_FORMAT_R32G32B32_TYPELESS:
+    case DXGI_FORMAT_R16G16B16A16_TYPELESS:
+        break;
+
+    case DXGI_FORMAT_R32G32B32_FLOAT:
+        *pFlags = SupportSampleOnly;
+        break;
+
+    case DXGI_FORMAT_R32G32B32_UINT:
+    case DXGI_FORMAT_R32G32B32_SINT:
+        *pFlags = SupportNoMSAA;
+        break;
+
+    case DXGI_FORMAT_X24_TYPELESS_G8_UINT:
+    case DXGI_FORMAT_X32_TYPELESS_G8X24_UINT:
+        *pFlags =SupportNoMSAANoRT;
+        break;
+
+    case DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS:
+    case DXGI_FORMAT_R24_UNORM_X8_TYPELESS:
+    case DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM:
+    case DXGI_FORMAT_BC1_TYPELESS:
+    case DXGI_FORMAT_BC1_UNORM:
+    case DXGI_FORMAT_BC1_UNORM_SRGB:
+    case DXGI_FORMAT_BC2_TYPELESS:
+    case DXGI_FORMAT_BC2_UNORM:
+    case DXGI_FORMAT_BC2_UNORM_SRGB:
+    case DXGI_FORMAT_BC3_TYPELESS:
+    case DXGI_FORMAT_BC3_UNORM:
+    case DXGI_FORMAT_BC3_UNORM_SRGB:
+    case DXGI_FORMAT_BC4_TYPELESS:
+    case DXGI_FORMAT_BC4_UNORM:
+    case DXGI_FORMAT_BC4_SNORM:
+    case DXGI_FORMAT_BC5_TYPELESS:
+    case DXGI_FORMAT_BC5_UNORM:
+    case DXGI_FORMAT_BC5_SNORM:
+    case DXGI_FORMAT_BC6H_TYPELESS:
+    case DXGI_FORMAT_BC6H_UF16:
+    case DXGI_FORMAT_BC6H_SF16:
+    case DXGI_FORMAT_BC7_TYPELESS:
+    case DXGI_FORMAT_BC7_UNORM:
+    case DXGI_FORMAT_BC7_UNORM_SRGB:
+    case DXGI_FORMAT_R9G9B9E5_SHAREDEXP:
+    case DXGI_FORMAT_R8G8_B8G8_UNORM:
+    case DXGI_FORMAT_G8R8_G8B8_UNORM:
+    case DXGI_FORMAT_Y410:
+    case DXGI_FORMAT_Y416:
+    case DXGI_FORMAT_420_OPAQUE:
+    case DXGI_FORMAT_YUY2:
+    case DXGI_FORMAT_AI44:
+    case DXGI_FORMAT_IA44:
+    case DXGI_FORMAT_P8:
+    case DXGI_FORMAT_A8P8:
+    case DXGI_FORMAT_NV12:
+    case DXGI_FORMAT_R1_UNORM:
+        *pFlags = SupportSampleOnly;
+        break;
+
+    default:
+        *pFlags = SupportEverything;
+        break;
+    }
 }
 
 void APIENTRY CosUmd12Device_Ddi_CheckMultisampleQualityLevels(
@@ -17,6 +116,7 @@ void APIENTRY CosUmd12Device_Ddi_CheckMultisampleQualityLevels(
 {
     DebugBreak();
 }
+
 void APIENTRY CosUmd12Device_Ddi_GetMipPacking(
     D3D12DDI_HDEVICE Device,
     D3D12DDI_HRESOURCE TiledResource,
