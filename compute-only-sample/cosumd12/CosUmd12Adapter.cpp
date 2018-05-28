@@ -131,6 +131,7 @@ HRESULT APIENTRY CosUmd12Adapter::GetCaps(
     {
 
     case D3D12DDICAPS_TYPE_TEXTURE_LAYOUT:
+    case D3D12DDICAPS_TYPE_0022_TEXTURE_LAYOUT:
     {
         if (pCaps->DataSize != sizeof(D3D12DDI_TEXTURE_LAYOUT_CAPS_0026)) {
             hr = E_UNEXPECTED;
@@ -297,6 +298,58 @@ HRESULT APIENTRY CosUmd12Adapter::GetCaps(
                     (D3D12DDICAPS_UMD_BASED_COMMAND_QUEUE_PRIORITY_DATA_0023*)pCaps->pData;
                 pData->SupportedQueueFlagsForGlobalRealtimeQueues = D3D12DDI_COMMAND_QUEUE_FLAG_NONE;
             }
+            break;
+        }
+
+        case D3D12DDICAPS_TYPE_MEMORY_ARCHITECTURE:
+        {
+            ASSERT(pCaps->DataSize == sizeof(D3D12DDI_MEMORY_ARCHITECTURE_CAPS));
+            D3D12DDI_MEMORY_ARCHITECTURE_CAPS* pMemoryCaps = (D3D12DDI_MEMORY_ARCHITECTURE_CAPS*)pCaps->pData;
+            pMemoryCaps->UMA = TRUE;
+            pMemoryCaps->IOCoherent = TRUE;
+            pMemoryCaps->CacheCoherent = TRUE;
+            break;
+        }
+
+        case D3D12DDICAPS_TYPE_TEXTURE_LAYOUT_SETS:
+        {
+            ASSERT(pCaps->pInfo != nullptr);
+            const UINT* pInfo = (UINT*)pCaps->pInfo;
+            if (pInfo[0] == D3D12DDI_TL_ROW_MAJOR &&
+                pInfo[1] == D3D12DDI_FUNCUNIT_COMBINED)
+            {
+                ASSERT(pCaps->DataSize == sizeof(D3D12DDI_ROW_MAJOR_LAYOUT_CAPS));
+                const UINT textureAlignment = 1;
+                D3D12DDI_ROW_MAJOR_LAYOUT_CAPS* pLayoutCaps = (D3D12DDI_ROW_MAJOR_LAYOUT_CAPS*)pCaps->pData;
+                pLayoutCaps->SubCaps[0].MaxElementSize = 0xFFFF;
+                pLayoutCaps->SubCaps[0].BaseOffsetAlignment = textureAlignment;
+                pLayoutCaps->SubCaps[0].PitchAlignment = textureAlignment;
+                pLayoutCaps->SubCaps[0].DepthPitchAlignment = textureAlignment;
+                ZeroMemory(&pLayoutCaps->SubCaps[1], sizeof(D3D12DDI_ROW_MAJOR_LAYOUT_SUB_CAPS));
+                pLayoutCaps->Flags = D3D12DDI_ROW_MAJOR_LAYOUT_FLAG_NONE;
+            }
+            else
+            {
+                hr = E_NOTIMPL;
+            }
+            break;
+        }
+
+        case D3D12DDICAPS_TYPE_0022_CPU_PAGE_TABLE_FALSE_POSITIVES:
+        {
+            // TODO: What is this?
+            ASSERT(pCaps->DataSize == sizeof(D3D12DDI_COMMAND_QUEUE_FLAGS));
+            D3D12DDI_COMMAND_QUEUE_FLAGS* pFlags = (D3D12DDI_COMMAND_QUEUE_FLAGS*)pCaps->pData;
+            *pFlags = D3D12DDI_COMMAND_QUEUE_FLAG_COMPUTE;
+            break;
+        }
+
+        case D3D12DDICAPS_TYPE_GPUVA_CAPS:
+        {
+            // TODO: Learn about this caps call - do we have to support it?
+            ASSERT(pCaps->DataSize == sizeof(D3D12DDI_GPUVA_CAPS_0004));
+            D3D12DDI_GPUVA_CAPS_0004* pCpuVaCaps = (D3D12DDI_GPUVA_CAPS_0004*)pCaps->pData;
+            pCpuVaCaps->MaxGPUVirtualAddressBitsPerResource = 20;   // TOOD: Should come from kernel - we currently allocate 1Meg (2^20) for video memory
             break;
         }
 

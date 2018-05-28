@@ -152,7 +152,18 @@
   <ItemGroup>
     <ClInclude Include="CosUmd12.h" />
     <ClInclude Include="CosUmd12Adapter.h" />
+    <ClInclude Include="CosUmd12BlendState.h" />
+    <ClInclude Include="CosUmd12CommandAllocator.h" />
+    <ClInclude Include="CosUmd12CommandList.h" />
+    <ClInclude Include="CosUmd12CommandQueue.h" />
+    <ClInclude Include="CosUmd12DepthStencilState.h" />
     <ClInclude Include="CosUmd12Device.h" />
+    <ClInclude Include="CosUmd12Fence.h" />
+    <ClInclude Include="CosUmd12PipelineState.h" />
+    <ClInclude Include="CosUmd12RasterizerState.h" />
+    <ClInclude Include="CosUmd12RootSignature.h" />
+    <ClInclude Include="CosUmd12Shader.h" />
+    <ClInclude Include="CosUmd12Descriptor.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CosUmd12.cpp">

@@ -701,11 +701,14 @@ NTSTATUS
 CosKmAdapter::CreateAllocation(
     INOUT_PDXGKARG_CREATEALLOCATION     pCreateAllocation)
 {
-    NT_ASSERT(pCreateAllocation->PrivateDriverDataSize == sizeof(CosAllocationGroupExchange));
-    CosAllocationGroupExchange * pCosAllocationGroupExchange = (CosAllocationGroupExchange *)pCreateAllocation->pPrivateDriverData;
+    // TODO: Find out why this is 0 for some allocations (Breadcrumb buffer)
+    if (pCreateAllocation->PrivateDriverDataSize != 0) {
+        NT_ASSERT(pCreateAllocation->PrivateDriverDataSize == sizeof(CosAllocationGroupExchange));
+        CosAllocationGroupExchange * pCosAllocationGroupExchange = (CosAllocationGroupExchange *)pCreateAllocation->pPrivateDriverData;
 
-    pCosAllocationGroupExchange;
-    NT_ASSERT(pCosAllocationGroupExchange->m_dummy == 0);
+        pCosAllocationGroupExchange;
+        NT_ASSERT(pCosAllocationGroupExchange->m_dummy == 0);
+    }
 
     CosKmdResource * pCosKmdResource = NULL;
 
@@ -1954,16 +1957,63 @@ NTSTATUS CosKmAdapter::GetStandardAllocationDriverData (
     }
     case D3DKMDT_STANDARDALLOCATION_GDISURFACE:
     {
-        const D3DKMDT_GDISURFACEDATA* surfData = Args->pCreateGdiSurfaceData;
-        COS_ASSERTION(
-            "GDISURFACEDATA is not implemented. We must return a nonzero Pitch if allocation is CPU visible. (Width=%d, Height=%d, Format=%d, Type=%d, Flags=0x%x, Pitch=%d)",
-            surfData->Width,
-            surfData->Height,
-            surfData->Format,
-            surfData->Type,
-            surfData->Flags.Value,
-            surfData->Pitch);
-        return STATUS_NOT_IMPLEMENTED;
+        D3DKMDT_GDISURFACEDATA* surfData = Args->pCreateGdiSurfaceData;
+
+        if (surfData->Type == D3DKMDT_GDISURFACE_TEXTURE_CROSSADAPTER ||
+            surfData->Type == D3DKMDT_GDISURFACE_TEXTURE_CPUVISIBLE_CROSSADAPTER)
+        {
+            if (surfData->Format == D3DDDIFMT_UNKNOWN)
+            {
+                //
+                // DX12 cross-adapter heap
+                //
+
+                allocParams->m_resourceDimension = D3D10DDIRESOURCE_BUFFER;
+                allocParams->m_mip0Info.TexelWidth = surfData->Width;
+                allocParams->m_mip0Info.TexelHeight = surfData->Height;
+                allocParams->m_mip0Info.TexelDepth = 1;
+                allocParams->m_mip0Info.PhysicalWidth = surfData->Width;
+                allocParams->m_mip0Info.PhysicalHeight = surfData->Height;
+                allocParams->m_mip0Info.PhysicalDepth = 1;
+                allocParams->m_usage = D3D10_DDI_USAGE_DEFAULT;     // TODO: what should usage be?
+
+                allocParams->m_bindFlags = D3D10_DDI_BIND_PIPELINE_MASK;
+
+                allocParams->m_mapFlags = D3D10_DDI_MAP_READWRITE;
+                allocParams->m_miscFlags = D3D10_DDI_RESOURCE_MISC_SHARED;
+
+                allocParams->m_format = DxgiFormatFromD3dDdiFormat(surfData->Format);
+                allocParams->m_sampleDesc.Count = 1;
+                allocParams->m_sampleDesc.Quality = 0;
+                allocParams->m_mipLevels = 1;
+                allocParams->m_arraySize = 1;
+                allocParams->m_isPrimary = false;
+
+                allocParams->m_hwLayout = CosHwLayout::Linear;
+                allocParams->m_hwWidthPixels = surfData->Width;
+                allocParams->m_hwHeightPixels = surfData->Height;
+
+                allocParams->m_hwSizeBytes = surfData->Width;
+
+                surfData->Pitch = surfData->Width;
+            }
+            else
+            {
+                //
+                // Cross adapter resource should have its pitch aligned to a pre-defined value.
+                //
+
+                COS_ASSERTION("Needs to be implemented");
+                return STATUS_NOT_IMPLEMENTED;
+            }
+
+        } else {
+            COS_ASSERTION("Needs to be implemented");
+            return STATUS_NOT_IMPLEMENTED;
+        }
+         
+
+        return STATUS_SUCCESS;
     }
     default:
         COS_ASSERTION(
