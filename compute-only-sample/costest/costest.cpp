@@ -84,7 +84,7 @@ private:
             D3D12_COMMAND_QUEUE_DESC commandQueueDesc;
 
             commandQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-            commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+            commandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
             commandQueueDesc.Priority = 0;
             commandQueueDesc.NodeMask = 0;
 
@@ -99,7 +99,7 @@ private:
         if (success) {
             ID3D12CommandAllocator * pCommandAllocator;
 
-            hr = pDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&pCommandAllocator));
+            hr = pDevice->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COMPUTE, IID_PPV_ARGS(&pCommandAllocator));
 
             success = (hr == S_OK);
 
@@ -110,7 +110,9 @@ private:
         if (success) {
             ID3D12GraphicsCommandList * pCommandList;
 
-            hr = pDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_pCommandAllocator, NULL, IID_PPV_ARGS(&pCommandList));
+            DebugBreak();
+
+            hr = pDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COMPUTE, m_pCommandAllocator, NULL, IID_PPV_ARGS(&pCommandList));
 
             success = (hr == S_OK);
 

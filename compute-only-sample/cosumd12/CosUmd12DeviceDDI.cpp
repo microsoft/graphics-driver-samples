@@ -429,7 +429,11 @@ HRESULT APIENTRY CosUmd12Device_Ddi_CreateCommandList_0001(
     CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
     CosUmd12CommandList * pCommandList = new (pDesc->hDrvCommandList.pDrvPrivate) CosUmd12CommandList(pDevice, pDesc);
 
-    return S_OK;
+    HRESULT hr = pCommandList->StandUp();
+
+    if (hr != S_OK) pCommandList->~CosUmd12CommandList();
+
+    return hr;
 }
 
 void APIENTRY CosUmd12Device_Ddi_DestroyCommandList(
@@ -631,9 +635,12 @@ D3D12DDI_HEAP_AND_RESOURCE_SIZES APIENTRY CosUmd12Device_Ddi_CalcPrivateHeapAndR
     _In_opt_ const D3D12DDIARG_CREATERESOURCE_0003* pResourceDesc,
     D3D12DDI_HPROTECTEDRESOURCESESSION_0030 hProtectedResourceSession)
 {
-	STOP_IN_FUNCTION();
+    D3D12DDI_HEAP_AND_RESOURCE_SIZES sizes;
 
-    return { 0 };
+    sizes.Heap = CosUmd12Heap::CalculateSize();
+    sizes.Resource = CosUmd12Resource::CalculateSize();
+
+    return sizes;
 }
 
 HRESULT APIENTRY CosUmd12Device_Ddi_CreateHeapAndResource_0030(
@@ -646,9 +653,20 @@ HRESULT APIENTRY CosUmd12Device_Ddi_CreateHeapAndResource_0030(
     D3D12DDI_HPROTECTEDRESOURCESESSION_0030 hProtectedResourceSession, //TODO: DRM!
     D3D12DDI_HRESOURCE Resource)
 {
-	STOP_IN_FUNCTION();
+    // TODO: Talk to whoever designed this and find out how it works
+    CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
 
-    return E_NOTIMPL;
+    if (pResourceDesc != NULL) {
+        STOP_IN_FUNCTION();
+        CosUmd12Resource * pResource = new (Resource.pDrvPrivate) CosUmd12Resource(pDevice, pResourceDesc);
+    }
+
+    if (pHeapDesc != NULL) {
+        STOP_IN_FUNCTION();
+        CosUmd12Heap * pHeap = new (Heap.pDrvPrivate) CosUmd12Heap(pDevice, RtHeap, pHeapDesc);
+    }
+
+    return S_OK;
 }
 
 void APIENTRY CosUmd12Device_Ddi_DestroyHeapAndResource(
@@ -656,22 +674,117 @@ void APIENTRY CosUmd12Device_Ddi_DestroyHeapAndResource(
     D3D12DDI_HHEAP Heap,
     D3D12DDI_HRESOURCE Resource)
 {
-	STOP_IN_FUNCTION();
+    CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
+    CosUmd12Heap * pHeap = CosUmd12Heap::CastFrom(Heap);
+    CosUmd12Resource * pResource = CosUmd12Resource::CastFrom(Resource);
+
+    if (pHeap != NULL) pHeap->~CosUmd12Heap();
+    if (pResource != NULL) pResource->~CosUmd12Resource();
 }
 
 HRESULT APIENTRY CosUmd12Device_Ddi_MakeResident_0001(
     D3D12DDI_HDEVICE Device,
     D3D12DDIARG_MAKERESIDENT_0001* pDesc)
 {
-    if (pDesc->NumObjects == 0)
+    CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
+
+    ASSERT(pDesc->NumAdapters == 1);
+
+    UINT numAllocations = pDesc->NumObjects;
+
+    D3DKMT_HANDLE* pAllocations = (D3DKMT_HANDLE*)malloc(sizeof(D3DKMT_HANDLE) * numAllocations);
+    if (pAllocations == NULL) return E_OUTOFMEMORY;
+
+    D3DDDI_MAKERESIDENT makeResident = {};
+
+    makeResident.hPagingQueue = 0;
+    makeResident.Flags = pDesc->Flags;
+    makeResident.AllocationList = pAllocations;
+    makeResident.PriorityList = nullptr;
+
+    HRESULT hr = S_OK;
+
+    UINT makeResidentCount = 0;
+
+    for (UINT i = 0; i < numAllocations; ++i)
     {
-        pDesc->WaitMask = 0;
-        return S_OK;
+        switch (pDesc->pObjects[i].Type)
+        {
+            case D3D12DDI_HT_HEAP:
+            {
+                // TODO: Determine if we need to deal with residency
+#if 0
+                D3D12DDI_HHEAP hHeap;
+                hHeap.pDrvPrivate = pDesc->pObjects[i].Handle;
+
+                CosUmd12Heap* pHeap = CosUmd12Heap::CastFrom(hHeap);
+
+                if ((pHeap->m_Allocation.m_Flags & GpuMemoryAlloc_Esram) == 0)
+                {
+                    DBGASSERT(pHeap->m_Allocation.m_CpuMapCount == 0);
+                    pAllocations[makeResidentCount++] = pHeap->m_Allocation.GetHandle();
+                }
+#endif
+                break;
+            }
+            case D3D12DDI_HT_DESCRIPTOR_HEAP:
+            {
+                STOP_IN_FUNCTION();
+#if 0
+                D3D12DDI_HDESCRIPTORHEAP hDescriptorHeap;
+                hDescriptorHeap.pDrvPrivate = pDesc->pObjects[i].Handle;
+                CDescriptorHeap* pDescriptorHeap = Promote(hDescriptorHeap);
+                pAllocations[makeResidentCount++] = pDescriptorHeap->m_DescriptorBuffer.GetHandle();
+#endif
+                break;
+            }
+            case D3D12DDI_HT_QUERY_HEAP:
+            {
+                STOP_IN_FUNCTION();
+#if 0
+                D3D12DDI_HQUERYHEAP hQueryHeap;
+                hQueryHeap.pDrvPrivate = pDesc->pObjects[i].Handle;
+                CQueryHeap* pQueryHeap = Promote(hQueryHeap);
+                DBGASSERT(pQueryHeap->m_Allocation.m_CpuMapCount == 0);
+                pAllocations[makeResidentCount++] = pQueryHeap->m_Allocation.GetHandle();
+#endif
+                break;
+            }
+
+            case D3D12DDI_HT_0012_RESOURCE:
+            case D3D12DDI_HT_PIPELINE_STATE:
+            case D3D12DDI_HT_COMMAND_ALLOCATOR:
+            case D3D12DDI_HT_COMMAND_QUEUE:
+            case D3D12DDI_HT_FENCE:
+            case D3D12DDI_HT_COMMAND_SIGNATURE:
+            default:
+                ASSERT(0);
+                hr = E_INVALIDARG;
+                break;
+        }
     }
 
-    STOP_IN_FUNCTION();
+    if (SUCCEEDED(hr))
+    {
+        if (makeResidentCount == 0)
+        {
+            *pDesc->pPagingFenceValue = 0;
+            pDesc->WaitMask = 0;
+        }
+        else
+        {
+            makeResident.NumAllocations = makeResidentCount;
 
-    return E_NOTIMPL;
+            hr = pDevice->m_pUMCallbacks->pfnMakeResidentCb(pDevice->m_hRTDevice, *pDesc->pRTPagingQueue, &makeResident);
+            if ((hr == E_PENDING) || SUCCEEDED(hr))
+            {
+                *pDesc->pPagingFenceValue = makeResident.PagingFenceValue;
+                pDesc->WaitMask = (hr == E_PENDING) ? 1 : 0;
+            }
+        }
+    }
+
+    return hr;
 }
 
 HRESULT APIENTRY CosUmd12Device_Ddi_Evict2(
@@ -687,9 +800,12 @@ D3D12DDI_HEAP_AND_RESOURCE_SIZES APIENTRY CosUmd12Device_Ddi_CalcPrivateOpenedHe
     D3D12DDI_HDEVICE Device,
     _In_ const D3D12DDIARG_OPENHEAP_0003* pDesc)
 {
-	STOP_IN_FUNCTION();
+    D3D12DDI_HEAP_AND_RESOURCE_SIZES sizes;
 
-    return { 0 };
+    sizes.Heap = CosUmd12Heap::CalculateSize();
+    sizes.Resource = CosUmd12Resource::CalculateSize();
+
+    return sizes;
 }
 
 HRESULT APIENTRY CosUmd12Device_Ddi_OpenHeapAndResource_0003(
@@ -699,9 +815,25 @@ HRESULT APIENTRY CosUmd12Device_Ddi_OpenHeapAndResource_0003(
     D3D12DDI_HRTRESOURCE RtResource,
     D3D12DDI_HRESOURCE Resource)
 {
-	STOP_IN_FUNCTION();
+    CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
+    CosUmd12Heap * pHeap = new (Heap.pDrvPrivate) CosUmd12Heap(pDevice);
+    CosUmd12Resource * pResource = new (Resource.pDrvPrivate) CosUmd12Resource(pDevice, RtResource);
 
-    return E_NOTIMPL;
+    STOP_IN_FUNCTION();
+
+    if (pDesc->NumAllocations == 1) {
+        ASSERT(pDesc->pOpenAllocationInfo->PrivateDriverDataSize == sizeof(CosAllocationExchange));
+        CosAllocationExchange * pAllocation = (CosAllocationExchange *)pDesc->pOpenAllocationInfo->pPrivateDriverData;
+        ASSERT(pAllocation->m_magic == CosAllocationExchange::kMagic);
+
+        pResource->Initialize(pAllocation);
+
+    } else {
+    	STOP_IN_FUNCTION();
+        return E_NOTIMPL;
+    }
+
+    return S_OK;
 }
 
 void APIENTRY CosUmd12Device_Ddi_CopyDescriptors_0003(
@@ -797,7 +929,18 @@ void APIENTRY CosUmd12Device_Ddi_CheckResourceAllocationInfo_0022(
     UINT VisibleNodeMask,
     _Out_ D3D12DDI_RESOURCE_ALLOCATION_INFO_0022* pInfo)
 {
-	STOP_IN_FUNCTION();
+    if (pDesc->ResourceType == D3D12DDI_RT_BUFFER)
+    {
+        memset(pInfo, 0, sizeof(D3D12DDI_RESOURCE_ALLOCATION_INFO_0022));
+
+        pInfo->ResourceDataSize = pDesc->Width;
+        pInfo->ResourceDataAlignment = AlignmentRestriction;
+        pInfo->AdditionalDataHeaderAlignment = 1;
+        pInfo->AdditionalDataAlignment = 1;
+        pInfo->Layout = (pDesc->Layout != D3D12DDI_TL_UNDEFINED) ? pDesc->Layout : D3D12DDI_TL_ROW_MAJOR;
+    } else {
+        STOP_IN_FUNCTION();
+    }
 }
 
 void APIENTRY CosUmd12Device_Ddi_CheckSubresourceInfo(
@@ -814,7 +957,13 @@ void APIENTRY CosUmd12Device_Ddi_CheckExistingResourceAllocationInfo_0022(
     D3D12DDI_HRESOURCE Resource,
     _Out_ D3D12DDI_RESOURCE_ALLOCATION_INFO_0022* pInfo)
 {
-	STOP_IN_FUNCTION();
+    CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
+    CosUmd12Resource * pResource = CosUmd12Resource::CastFrom(Resource);
+
+    memset(pInfo, 0, sizeof(*pInfo));
+
+    pInfo->Layout = pResource->GetTextureLayout();
+    pInfo->ResourceDataSize = pResource->GetDataSize();
 }
 
 HRESULT APIENTRY CosUmd12Device_Ddi_OfferResources(

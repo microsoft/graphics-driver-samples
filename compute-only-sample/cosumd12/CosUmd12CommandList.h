@@ -25,6 +25,16 @@ public:
         return sizeof(CosUmd12CommandList);
     }
 
+    HRESULT StandUp()
+    {
+        DebugBreak();
+
+        ASSERT(m_args.Type < _countof(m_pDevice->m_pAdapter->m_hRTTable));
+        m_pDevice->m_pUMCallbacks->pfnSetCommandListDDITableCb(m_args.hRTCommandList, m_pDevice->m_pAdapter->m_hRTTable[m_args.Type]);
+
+        return S_OK;
+    }
+
     static CosUmd12CommandList* CastFrom(D3D12DDI_HCOMMANDLIST);
     D3D12DDI_HCOMMANDLIST CastTo() const;
 

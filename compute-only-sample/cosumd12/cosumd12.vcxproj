@@ -159,8 +159,10 @@
     <ClInclude Include="CosUmd12DepthStencilState.h" />
     <ClInclude Include="CosUmd12Device.h" />
     <ClInclude Include="CosUmd12Fence.h" />
+    <ClInclude Include="CosUmd12Heap.h" />
     <ClInclude Include="CosUmd12PipelineState.h" />
     <ClInclude Include="CosUmd12RasterizerState.h" />
+    <ClInclude Include="CosUmd12Resource.h" />
     <ClInclude Include="CosUmd12RootSignature.h" />
     <ClInclude Include="CosUmd12Shader.h" />
     <ClInclude Include="CosUmd12Descriptor.h" />

@@ -27,8 +27,6 @@ CosUmd12Device::CosUmd12Device(
     assert(pArgs->hDrvDevice.pDrvPrivate == (void *) this);
 
     assert(m_Interface == D3D12DDI_INTERFACE_VERSION_R3);
-
-    STOP_IN_FUNCTION();
 }
 
 void CosUmd12Device::Standup()

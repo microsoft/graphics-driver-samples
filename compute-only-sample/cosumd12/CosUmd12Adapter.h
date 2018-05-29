@@ -47,6 +47,12 @@ public:
     const D3DDDI_ADAPTERCALLBACKS* m_pMSCallbacks;
 
     COSADAPTERINFO  m_cosAdapterInfo;
+
+    // We need to record the RHRTTABLE values for command lists when they are filled.
+    // When a command list is created, during its initialization we must call to set the correct table using the HRTTABLE value.
+    // We only support DIRECT, BUNDLE, COMPUTE and COPY commands list.
+    // TODO: can we only support COMPUTE?
+    D3D12DDI_HRTTABLE m_hRTTable[4];
 };
 
 //----------------------------------------------------------------------------------------------------------------------------------

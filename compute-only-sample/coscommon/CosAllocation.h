@@ -4,6 +4,7 @@
 
 #include <wingdi.h>
 #include <d3d10umddi.h>
+#include <d3d12umddi.h>
 
 #if VC4
 #include <Vc4Hw.h>
@@ -28,6 +29,10 @@ enum CosHwFormat
 
 struct CosAllocationExchange
 {
+    static const int kMagic = 'caex';
+
+    UINT                    m_magic;
+
     // Input from UMD CreateResource DDI
     D3D10DDIRESOURCE_TYPE   m_resourceDimension;
 
@@ -48,6 +53,11 @@ struct CosAllocationExchange
     UINT                    m_hwWidthPixels;
     UINT                    m_hwHeightPixels;
     UINT                    m_hwSizeBytes;
+
+    bool                    m_shared;
+    bool                    m_cpuVisible;
+    UINT64                  m_dataSize;
+    D3D12DDI_TEXTURE_LAYOUT m_textureLayout;
 };
 
 struct CosAllocationGroupExchange

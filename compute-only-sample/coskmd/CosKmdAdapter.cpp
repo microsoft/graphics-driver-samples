@@ -739,6 +739,9 @@ CosKmAdapter::CreateAllocation(
     NT_ASSERT(pAllocationInfo->PrivateDriverDataSize == sizeof(CosAllocationExchange));
     CosAllocationExchange * pCosAllocation = (CosAllocationExchange *)pAllocationInfo->pPrivateDriverData;
 
+    if (pCosAllocation->m_magic != CosAllocationExchange::kMagic)
+        COS_LOG_ERROR("Allocation magic");
+
     CosKmdAllocation * pCosKmdAllocation = (CosKmdAllocation *)ExAllocatePoolWithTag(NonPagedPoolNx, sizeof(CosKmdAllocation), 'COSD');
     if (!pCosKmdAllocation)
     {
@@ -790,24 +793,15 @@ CosKmAdapter::CreateAllocation(
     NT_ASSERT(pCosAllocation->m_hwSizeBytes != 0);
     pAllocationInfo->Size = pCosAllocation->m_hwSizeBytes;
 
-    pAllocationInfo->SupportedReadSegmentSet = 1 << (COSD_SEGMENT_VIDEO_MEMORY - 1);
-    pAllocationInfo->SupportedWriteSegmentSet = 1 << (COSD_SEGMENT_VIDEO_MEMORY - 1);
-
-#if GPU_CACHE_WORKAROUND
-
-    if (pCosAllocation->m_bindFlags & D3D10_DDI_BIND_RENDER_TARGET)
-    {
-        pAllocationInfo->Size += m_rtSizeJitter;
-
-        //
-        // Specific workaround for BasicTests.exe, ensures allocations use
-        // new memory range by enlarging the size of the render target
-        //
-
-        m_rtSizeJitter += (5*kPageSize);
+    if (pCosAllocation->m_shared && pCosAllocation->m_cpuVisible) {
+        // Shared and CPU visible allocations must only use aperture
+        pAllocationInfo->PreferredSegment.SegmentId0 = COSD_SEGMENT_APERTURE;
+        pAllocationInfo->SupportedReadSegmentSet = 1 << (COSD_SEGMENT_APERTURE - 1);
+        pAllocationInfo->SupportedWriteSegmentSet = 1 << (COSD_SEGMENT_APERTURE - 1);
+    } else {
+        pAllocationInfo->SupportedReadSegmentSet = 1 << (COSD_SEGMENT_VIDEO_MEMORY - 1);
+        pAllocationInfo->SupportedWriteSegmentSet = 1 << (COSD_SEGMENT_VIDEO_MEMORY - 1);
     }
-
-#endif
 
     if (pCreateAllocation->Flags.Resource && pCreateAllocation->hResource == NULL && pCosKmdResource != NULL)
     {
@@ -1833,6 +1827,10 @@ NTSTATUS CosKmAdapter::GetStandardAllocationDriverData (
     new (Args->pResourcePrivateDriverData) CosAllocationGroupExchange();
     auto allocParams = new (Args->pAllocationPrivateDriverData) CosAllocationExchange();
 
+    allocParams->m_magic = CosAllocationExchange::kMagic;
+    allocParams->m_shared = false;
+    allocParams->m_cpuVisible = false;
+
     switch (Args->StandardAllocationType)
     {
     case D3DKMDT_STANDARDALLOCATION_SHAREDPRIMARYSURFACE:
@@ -1895,6 +1893,9 @@ NTSTATUS CosKmAdapter::GetStandardAllocationDriverData (
         NT_ASSERT(surfData->Format == D3DDDIFMT_A8R8G8B8);
         allocParams->m_hwSizeBytes = surfData->Width * 4 * surfData->Height;
 
+        allocParams->m_dataSize = surfData->Width * 4 * surfData->Height;
+        allocParams->m_textureLayout = D3D12DDI_TL_ROW_MAJOR;
+
         return STATUS_SUCCESS;
     }
     case D3DKMDT_STANDARDALLOCATION_SHADOWSURFACE:
@@ -1943,6 +1944,10 @@ NTSTATUS CosKmAdapter::GetStandardAllocationDriverData (
         allocParams->m_hwSizeBytes = surfData->Width * 4 * surfData->Height;
 
         Args->pCreateShadowSurfaceData->Pitch = surfData->Width * 4; //allocParams->m_hwPitchBytes;
+
+        allocParams->m_dataSize = surfData->Width * 4 * surfData->Height;
+        allocParams->m_textureLayout = D3D12DDI_TL_ROW_MAJOR;
+
         return STATUS_SUCCESS;
     }
     case D3DKMDT_STANDARDALLOCATION_STAGINGSURFACE:
@@ -1994,6 +1999,12 @@ NTSTATUS CosKmAdapter::GetStandardAllocationDriverData (
                 allocParams->m_hwHeightPixels = surfData->Height;
 
                 allocParams->m_hwSizeBytes = surfData->Width;
+
+                allocParams->m_shared = true;
+                allocParams->m_cpuVisible = true;   // TODO: check that these will always be CPU visible
+                
+                allocParams->m_dataSize = surfData->Width;
+                allocParams->m_textureLayout = D3D12DDI_TL_ROW_MAJOR;
 
                 surfData->Pitch = surfData->Width;
             }

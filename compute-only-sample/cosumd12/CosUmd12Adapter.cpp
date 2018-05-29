@@ -43,6 +43,8 @@ HRESULT CosUmd12Adapter::Open( D3D12DDIARG_OPENADAPTER* pArgs )
 
     pArgs->hAdapter = CastTo();
 
+    memset(m_hRTTable, 0, sizeof(m_hRTTable));
+
 cleanup:
 
     return hr;
@@ -400,13 +402,16 @@ HRESULT APIENTRY CosUmd12Adapter::FillDdiTable(D3D12DDI_HADAPTER hAdapter, D3D12
         }
         case D3D12DDI_TABLE_TYPE_COMMAND_LIST_3D:
         {
+            DebugBreak();
             if (uTableNum == D3D12_COMMAND_LIST_TYPE_COMPUTE)
             {
                 memcpy(pTable, (void*) &g_CosUmd12ComputeCommandList_Ddi_0033, sizeof(g_CosUmd12ComputeCommandList_Ddi_0033));
+                pAdapter->m_hRTTable[uTableNum] = hTable;
             }
-            else if (uTableNum == D3D12_COMMAND_LIST_TYPE_DIRECT || uTableNum == D3D12_COMMAND_LIST_TYPE_BUNDLE)
+            else if (uTableNum == D3D12_COMMAND_LIST_TYPE_DIRECT || uTableNum == D3D12_COMMAND_LIST_TYPE_BUNDLE || uTableNum == D3D12_COMMAND_LIST_TYPE_COPY)
             {
                 memcpy(pTable, (void*) &g_CosUmd12CommandList_Ddi_0033, sizeof(g_CosUmd12CommandList_Ddi_0033));
+                pAdapter->m_hRTTable[uTableNum] = hTable;
             }
             else
             {

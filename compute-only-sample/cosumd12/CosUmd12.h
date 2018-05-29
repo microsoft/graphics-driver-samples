@@ -21,6 +21,9 @@ void StopInFunction(const char * function, const char * file, int line);
 
 #define ASSERT(cond) if (!(cond)) STOP_IN_FUNCTION()
 
+#include "CosAllocation.h"
+
+#include "CosUmd12Adapter.h"
 #include "CosUmd12Device.h"
 #include "CosUmd12RootSignature.h"
 #include "CosUmd12Shader.h"
@@ -33,4 +36,6 @@ void StopInFunction(const char * function, const char * file, int line);
 #include "CosUmd12CommandAllocator.h"
 #include "CosUmd12CommandList.h"
 #include "CosUmd12Fence.h"
+#include "CosUmd12Heap.h"
+#include "CosUmd12Resource.h"
 
