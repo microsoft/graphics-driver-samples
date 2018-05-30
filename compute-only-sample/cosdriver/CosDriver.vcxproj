@@ -84,6 +84,9 @@
     <PreBuildEvent>
       <Command>mkdir $(OutDir) &amp; copy /y $(OutDir)cosumd12.dll $(OutDir)cosDriver</Command>
     </PreBuildEvent>
+    <Inf>
+      <TimeStamp>1.1.1.1</TimeStamp>
+    </Inf>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
