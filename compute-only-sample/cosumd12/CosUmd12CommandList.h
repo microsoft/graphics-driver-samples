@@ -9,6 +9,7 @@ public:
     {
         m_pDevice = pDevice;
         m_args = *pArgs;
+        m_pPipelineState = NULL;
     }
 
     ~CosUmd12CommandList()
@@ -27,12 +28,15 @@ public:
 
     HRESULT StandUp()
     {
-        DebugBreak();
-
         ASSERT(m_args.Type < _countof(m_pDevice->m_pAdapter->m_hRTTable));
         m_pDevice->m_pUMCallbacks->pfnSetCommandListDDITableCb(m_args.hRTCommandList, m_pDevice->m_pAdapter->m_hRTTable[m_args.Type]);
 
         return S_OK;
+    }
+
+    void SetPipelineState(CosUmd12PipelineState * pPipelineState)
+    {
+        m_pPipelineState = pPipelineState;
     }
 
     static CosUmd12CommandList* CastFrom(D3D12DDI_HCOMMANDLIST);
@@ -42,6 +46,7 @@ private:
 
     CosUmd12Device * m_pDevice;
     D3D12DDIARG_CREATE_COMMAND_LIST_0001 m_args;
+    CosUmd12PipelineState * m_pPipelineState;
 
 };
 

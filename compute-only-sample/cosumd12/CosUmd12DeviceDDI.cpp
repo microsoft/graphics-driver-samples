@@ -819,8 +819,6 @@ HRESULT APIENTRY CosUmd12Device_Ddi_OpenHeapAndResource_0003(
     CosUmd12Heap * pHeap = new (Heap.pDrvPrivate) CosUmd12Heap(pDevice);
     CosUmd12Resource * pResource = new (Resource.pDrvPrivate) CosUmd12Resource(pDevice, RtResource);
 
-    STOP_IN_FUNCTION();
-
     if (pDesc->NumAllocations == 1) {
         ASSERT(pDesc->pOpenAllocationInfo->PrivateDriverDataSize == sizeof(CosAllocationExchange));
         CosAllocationExchange * pAllocation = (CosAllocationExchange *)pDesc->pOpenAllocationInfo->pPrivateDriverData;

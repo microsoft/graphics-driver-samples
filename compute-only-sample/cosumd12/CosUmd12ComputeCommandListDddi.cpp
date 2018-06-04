@@ -228,7 +228,12 @@ void APIENTRY CosUmd12ComputeCommandList_Ddi_SetPredication(
     UINT64 AlignedBufferOffset,
     D3D12DDI_PREDICATION_OP Operation)
 {
-	STOP_IN_FUNCTION();
+    if (Operation == D3D12DDI_PREDICATION_OP_EQUAL_ZERO) {
+        ASSERT(Buffer.pDrvPrivate == NULL);
+        ASSERT(AlignedBufferOffset == 0);
+    } else {
+    	STOP_IN_FUNCTION();
+    }
 }
 
 void APIENTRY CosUmd12ComputeCommandList_Ddi_IaSetTopology_0003(
@@ -272,7 +277,10 @@ void APIENTRY CosUmd12ComputeCommandList_Ddi_SetPipelineState(
     D3D12DDI_HCOMMANDLIST CommandList,
     D3D12DDI_HPIPELINESTATE PipelineState)
 {
-	STOP_IN_FUNCTION();
+    CosUmd12CommandList * pCommandList = CosUmd12CommandList::CastFrom(CommandList);
+    CosUmd12PipelineState * pPipelineState = CosUmd12PipelineState::CastFrom(PipelineState);
+
+    pCommandList->SetPipelineState(pPipelineState);
 }
 
 void APIENTRY CosUmd12ComputeCommandList_Ddi_SetDescriptorHeaps_0003(
@@ -280,7 +288,11 @@ void APIENTRY CosUmd12ComputeCommandList_Ddi_SetDescriptorHeaps_0003(
     _In_ UINT NumDescriptorHeaps,
     _In_reads_(NumDescriptorHeaps) D3D12DDI_HDESCRIPTORHEAP* pDescriptorHeaps)
 {
-	STOP_IN_FUNCTION();
+    if (NumDescriptorHeaps == 0) {
+        // do nothing
+    } else {
+    	STOP_IN_FUNCTION();
+    }
 }
 
 void APIENTRY CosUmd12ComputeCommandList_Ddi_SetComputeRootSignature(
@@ -444,7 +456,7 @@ void APIENTRY CosUmd12ComputeCommandList_Ddi_SetMarker(
 void APIENTRY CosUmd12ComputeCommandList_Ddi_ClearRootArguments(
     D3D12DDI_HCOMMANDLIST CommandList)
 {
-	STOP_IN_FUNCTION();
+    // TODO: Research root arguments and implement
 }
 
 void APIENTRY CosUmd12ComputeCommandList_Ddi_AtomicCopyBufferRegion_0003(

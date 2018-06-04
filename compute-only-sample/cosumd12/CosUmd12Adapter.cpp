@@ -402,7 +402,6 @@ HRESULT APIENTRY CosUmd12Adapter::FillDdiTable(D3D12DDI_HADAPTER hAdapter, D3D12
         }
         case D3D12DDI_TABLE_TYPE_COMMAND_LIST_3D:
         {
-            DebugBreak();
             if (uTableNum == D3D12_COMMAND_LIST_TYPE_COMPUTE)
             {
                 memcpy(pTable, (void*) &g_CosUmd12ComputeCommandList_Ddi_0033, sizeof(g_CosUmd12ComputeCommandList_Ddi_0033));

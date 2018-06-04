@@ -110,8 +110,6 @@ private:
         if (success) {
             ID3D12GraphicsCommandList * pCommandList;
 
-            DebugBreak();
-
             hr = pDevice->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COMPUTE, m_pCommandAllocator, NULL, IID_PPV_ARGS(&pCommandList));
 
             success = (hr == S_OK);
