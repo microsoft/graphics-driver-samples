@@ -427,6 +427,7 @@ HRESULT APIENTRY CosUmd12Device_Ddi_CreateCommandList_0001(
     _In_ const D3D12DDIARG_CREATE_COMMAND_LIST_0001* pDesc)
 {
     CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
+
     CosUmd12CommandList * pCommandList = new (pDesc->hDrvCommandList.pDrvPrivate) CosUmd12CommandList(pDevice, pDesc);
 
     HRESULT hr = pCommandList->StandUp();

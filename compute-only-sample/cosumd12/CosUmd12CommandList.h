@@ -28,8 +28,10 @@ public:
 
     HRESULT StandUp()
     {
-        ASSERT(m_args.Type < _countof(m_pDevice->m_pAdapter->m_hRTTable));
-        m_pDevice->m_pUMCallbacks->pfnSetCommandListDDITableCb(m_args.hRTCommandList, m_pDevice->m_pAdapter->m_hRTTable[m_args.Type]);
+        if (IsComputeType())
+            m_pDevice->m_pUMCallbacks->pfnSetCommandListDDITableCb(m_args.hRTCommandList, m_pDevice->m_pAdapter->m_hRTTable[CosUmd12Adapter::TableType::Compute]);
+        else
+            m_pDevice->m_pUMCallbacks->pfnSetCommandListDDITableCb(m_args.hRTCommandList, m_pDevice->m_pAdapter->m_hRTTable[CosUmd12Adapter::TableType::Render]);
 
         return S_OK;
     }
@@ -38,6 +40,9 @@ public:
     {
         m_pPipelineState = pPipelineState;
     }
+
+    bool IsComputeType() { return (m_args.QueueFlags & D3D12DDI_COMMAND_QUEUE_FLAG_3D) == 0; }
+    bool IsRenderType() { return (m_args.QueueFlags & D3D12DDI_COMMAND_QUEUE_FLAG_3D) != 0; }
 
     static CosUmd12CommandList* CastFrom(D3D12DDI_HCOMMANDLIST);
     D3D12DDI_HCOMMANDLIST CastTo() const;

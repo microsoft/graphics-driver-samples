@@ -402,18 +402,15 @@ HRESULT APIENTRY CosUmd12Adapter::FillDdiTable(D3D12DDI_HADAPTER hAdapter, D3D12
         }
         case D3D12DDI_TABLE_TYPE_COMMAND_LIST_3D:
         {
-            if (uTableNum == D3D12_COMMAND_LIST_TYPE_COMPUTE)
-            {
+            // TODO: Talk with Jesse about where we indicate how many tables will get filled out and what they correspond to?  Is this documented somewhere?
+
+            if (uTableNum == Compute) {
                 memcpy(pTable, (void*) &g_CosUmd12ComputeCommandList_Ddi_0033, sizeof(g_CosUmd12ComputeCommandList_Ddi_0033));
-                pAdapter->m_hRTTable[uTableNum] = hTable;
-            }
-            else if (uTableNum == D3D12_COMMAND_LIST_TYPE_DIRECT || uTableNum == D3D12_COMMAND_LIST_TYPE_BUNDLE || uTableNum == D3D12_COMMAND_LIST_TYPE_COPY)
-            {
+                pAdapter->m_hRTTable[Compute] = hTable;
+            } else if (uTableNum == Render) {
                 memcpy(pTable, (void*) &g_CosUmd12CommandList_Ddi_0033, sizeof(g_CosUmd12CommandList_Ddi_0033));
-                pAdapter->m_hRTTable[uTableNum] = hTable;
-            }
-            else
-            {
+                pAdapter->m_hRTTable[Render] = hTable;
+            } else {
                 STOP_IN_FUNCTION();
             }
             break;
