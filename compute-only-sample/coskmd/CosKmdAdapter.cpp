@@ -64,7 +64,7 @@ CosKmAdapter::AddAdapter(
     status = IoGetDeviceProperty(PhysicalDeviceObject, DevicePropertyHardwareID, sizeof(deviceID), deviceID, &dataLen);
     if (!NT_SUCCESS(status))
     {
-		COS_LOG_ERROR(
+        COS_LOG_ERROR(
             "Failed to get DevicePropertyHardwareID from PDO. (status=%!STATUS!)",
             status);
         return status;
