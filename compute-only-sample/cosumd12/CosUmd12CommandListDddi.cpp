@@ -272,7 +272,12 @@ void APIENTRY CosUmd12CommandList_Ddi_SetPipelineState(
     D3D12DDI_HCOMMANDLIST CommandList,
     D3D12DDI_HPIPELINESTATE PipelineState)
 {
-    STOP_IN_FUNCTION();
+    CosUmd12CommandList * pCommandList = CosUmd12CommandList::CastFrom(CommandList);
+    ASSERT(pCommandList->IsRenderType());
+
+    CosUmd12PipelineState * pPipelineState = CosUmd12PipelineState::CastFrom(PipelineState);
+
+    pCommandList->SetPipelineState(pPipelineState);
 }
 
 void APIENTRY CosUmd12CommandList_Ddi_SetDescriptorHeaps_0003(
