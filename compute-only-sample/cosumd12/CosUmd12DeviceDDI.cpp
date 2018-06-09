@@ -619,7 +619,9 @@ HRESULT APIENTRY CosUmd12Device_Ddi_MapHeap(
 {
     STOP_IN_FUNCTION();
 
-    return E_NOTIMPL;
+    CosUmd12Heap * pHeap = (CosUmd12Heap *)Heap.pDrvPrivate;
+
+    return pHeap->Map(pHeapData);
 }
 
 void APIENTRY CosUmd12Device_Ddi_UnmapHeap(
@@ -656,14 +658,20 @@ HRESULT APIENTRY CosUmd12Device_Ddi_CreateHeapAndResource_0030(
     // TODO: Talk to whoever designed this and find out how it works
     CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
 
-    if (pResourceDesc != NULL) {
-        STOP_IN_FUNCTION();
-        CosUmd12Resource * pResource = new (Resource.pDrvPrivate) CosUmd12Resource(pDevice, pResourceDesc);
-    }
+    CosUmd12Heap * pHeap = NULL;
 
     if (pHeapDesc != NULL) {
         STOP_IN_FUNCTION();
-        CosUmd12Heap * pHeap = new (Heap.pDrvPrivate) CosUmd12Heap(pDevice, RtHeap, pHeapDesc);
+        pHeap = new (Heap.pDrvPrivate) CosUmd12Heap(pDevice, RtHeap, pHeapDesc);
+
+        pHeap->Standup();
+    }
+
+    if (pResourceDesc != NULL) {
+        STOP_IN_FUNCTION();
+        CosUmd12Resource * pResource = new (Resource.pDrvPrivate) CosUmd12Resource(pDevice, pResourceDesc);
+
+        pResource->Standup(pHeap);
     }
 
     return S_OK;
@@ -916,7 +924,9 @@ D3D12DDI_GPU_VIRTUAL_ADDRESS APIENTRY CosUmd12Device_Ddi_CheckResourceVirtualAdd
 {
     STOP_IN_FUNCTION();
 
-    return NULL;
+    CosUmd12Resource * pResource = (CosUmd12Resource *)Resource.pDrvPrivate;
+
+    return pResource->GetUniqueAddress();
 }
 
 void APIENTRY CosUmd12Device_Ddi_CheckResourceAllocationInfo_0022(
@@ -948,6 +958,13 @@ void APIENTRY CosUmd12Device_Ddi_CheckSubresourceInfo(
     _Out_ D3D12DDI_SUBRESOURCE_INFO* pInfo)
 {
     STOP_IN_FUNCTION();
+
+    CosUmd12Resource * pResource = (CosUmd12Resource *)Resource.pDrvPrivate;
+
+    //
+    // Assumption : Only BUFFER is supported
+    //
+    memset(pInfo, 0, sizeof(*pInfo));
 }
 
 void APIENTRY CosUmd12Device_Ddi_CheckExistingResourceAllocationInfo_0022(

@@ -160,7 +160,11 @@ CosKmContext::DdiCreateContext(
     //
     DXGK_CONTEXTINFO   *pContextInfo = &pCreateContext->ContextInfo;
 
+#if 1
+    pContextInfo->DmaBufferSegmentSet = 0;  // Use physical contiguos memory
+#else
     pContextInfo->DmaBufferSegmentSet = 1 << (COSD_SEGMENT_APERTURE - 1);
+#endif
     pContextInfo->DmaBufferSize = COSD_COMMAND_BUFFER_SIZE;
     pContextInfo->DmaBufferPrivateDataSize = sizeof(COSDMABUFINFO);
 

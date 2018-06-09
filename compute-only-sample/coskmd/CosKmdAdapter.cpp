@@ -764,21 +764,14 @@ CosKmAdapter::CreateAllocation(
     pAllocationInfo->FlagsWddm2.Value = 0;
 
     //
-    // Allocations should be marked CPU visible unless they are shared or
-    // can be flipped.
-    // Shared allocations (including the primary) cannot be CPU visible unless
-    // they are exclusively located in an aperture segment.
+    // Set CpuVisible per UMD request
     //
-    pAllocationInfo->FlagsWddm2.CpuVisible =
-        !((pCosAllocation->m_miscFlags & D3D10_DDI_RESOURCE_MISC_SHARED) ||
-          (pCosAllocation->m_bindFlags & D3D10_DDI_BIND_PRESENT));
+    pAllocationInfo->FlagsWddm2.CpuVisible = pCosKmdAllocation->m_cpuVisible;
 
-    // Allocations that will be flipped, such as the primary allocation,
-    // cannot be cached.
-    // NOTE: we can not allow CPU visibilty of a shared allocation because the
-    //       OS can not atomically update the mapping across the shared
-    //       processes when it is moved from video memory to system memory.
-    pAllocationInfo->FlagsWddm2.Cached = pAllocationInfo->Flags.CpuVisible;
+    //
+    // TODO: Investigate how to support Cached allocation 
+    //
+    // pAllocationInfo->FlagsWddm2.Cached = true;
 
     pAllocationInfo->HintedBank.Value = 0;
     pAllocationInfo->MaximumRenamingListLength = 0;
@@ -793,15 +786,8 @@ CosKmAdapter::CreateAllocation(
     NT_ASSERT(pCosAllocation->m_hwSizeBytes != 0);
     pAllocationInfo->Size = pCosAllocation->m_hwSizeBytes;
 
-    if (pCosAllocation->m_shared && pCosAllocation->m_cpuVisible) {
-        // Shared and CPU visible allocations must only use aperture
-        pAllocationInfo->PreferredSegment.SegmentId0 = COSD_SEGMENT_APERTURE;
-        pAllocationInfo->SupportedReadSegmentSet = 1 << (COSD_SEGMENT_APERTURE - 1);
-        pAllocationInfo->SupportedWriteSegmentSet = 1 << (COSD_SEGMENT_APERTURE - 1);
-    } else {
-        pAllocationInfo->SupportedReadSegmentSet = 1 << (COSD_SEGMENT_VIDEO_MEMORY - 1);
-        pAllocationInfo->SupportedWriteSegmentSet = 1 << (COSD_SEGMENT_VIDEO_MEMORY - 1);
-    }
+    pAllocationInfo->SupportedReadSegmentSet = 1 << (COSD_SEGMENT_VIDEO_MEMORY - 1);
+    pAllocationInfo->SupportedWriteSegmentSet = 1 << (COSD_SEGMENT_VIDEO_MEMORY - 1);
 
     if (pCreateAllocation->Flags.Resource && pCreateAllocation->hResource == NULL && pCosKmdResource != NULL)
     {
@@ -828,12 +814,17 @@ CosKmAdapter::DestroyAllocation(
         pCosKmdResource = (CosKmdResource *)pDestroyAllocation->hResource;
     }
 
-    NT_ASSERT(pDestroyAllocation->NumAllocations == 1);
-    CosKmdAllocation * pCosKmdAllocation = (CosKmdAllocation *)pDestroyAllocation->pAllocationList[0];
+    if (pDestroyAllocation->NumAllocations)
+    {
+        CosKmdAllocation * pCosKmdAllocation = (CosKmdAllocation *)pDestroyAllocation->pAllocationList[0];
 
-    ExFreePoolWithTag(pCosKmdAllocation, 'COSD');
+        ExFreePoolWithTag(pCosKmdAllocation, 'COSD');
+    }
 
-    if (pCosKmdResource != NULL) ExFreePoolWithTag(pCosKmdResource, 'COSD');
+    if (pCosKmdResource != NULL)
+    {
+        ExFreePoolWithTag(pCosKmdResource, 'COSD');
+    }
 
     return STATUS_SUCCESS;
 }
@@ -1151,7 +1142,6 @@ CosKmAdapter::QueryAdapterInfo(
 
     case DXGKQAITYPE_QUERYSEGMENT4:
     {
-
         if (pQueryAdapterInfo->OutputDataSize < sizeof(DXGK_QUERYSEGMENTOUT4))
         {
             COS_ASSERTION(
@@ -1165,7 +1155,7 @@ CosKmAdapter::QueryAdapterInfo(
 
         if (!pSegmentInfo[0].pSegmentDescriptor)
         {
-            pSegmentInfo->NbSegment = 2;
+            pSegmentInfo->NbSegment = 1;
         }
         else
         {
@@ -1175,34 +1165,13 @@ CosKmAdapter::QueryAdapterInfo(
             //
             pSegmentInfo->PagingBufferPrivateDataSize = sizeof(COSUMDDMAPRIVATEDATA2);
 
-            pSegmentInfo->PagingBufferSegmentId = COSD_SEGMENT_APERTURE;
+            pSegmentInfo->PagingBufferSegmentId = 0;    // Use physical contiguous memory
             pSegmentInfo->PagingBufferSize = PAGE_SIZE;
-
-            //
-            // Fill out aperture segment descriptor
-            //
-            DXGK_SEGMENTDESCRIPTOR4 *pApertureSegmentDesc = (DXGK_SEGMENTDESCRIPTOR4 *) pSegmentInfo->pSegmentDescriptor;
-
-            memset(pApertureSegmentDesc, 0, sizeof(*pApertureSegmentDesc));
-
-            pApertureSegmentDesc->Flags.Aperture = TRUE;
-            pApertureSegmentDesc->Flags.CacheCoherent = TRUE;
-
-            //
-            // TODO[bhouse] BaseAddress should never be used.  Do we need to set this still?
-            //
-
-            pApertureSegmentDesc->BaseAddress.QuadPart = COSD_SEGMENT_APERTURE_BASE_ADDRESS;
-
-            pApertureSegmentDesc->Size = kApertureSegmentSize;
-
-            // TODO [bhouse] Do we need to set commit limit?
-            pApertureSegmentDesc->CommitLimit = kApertureSegmentSize;
 
             //
             // Setup local video memory segment
             //
-            DXGK_SEGMENTDESCRIPTOR4 *pLocalVidMemSegmentDesc = (DXGK_SEGMENTDESCRIPTOR4 *) (pSegmentInfo->pSegmentDescriptor + pSegmentInfo->SegmentDescriptorStride);
+            DXGK_SEGMENTDESCRIPTOR4 *pLocalVidMemSegmentDesc = (DXGK_SEGMENTDESCRIPTOR4 *)(pSegmentInfo->pSegmentDescriptor);
 
             memset(pLocalVidMemSegmentDesc, 0, sizeof(*pLocalVidMemSegmentDesc));
 
@@ -1212,7 +1181,6 @@ CosKmAdapter::QueryAdapterInfo(
             pLocalVidMemSegmentDesc->Flags.DirectFlip = true;
             pLocalVidMemSegmentDesc->CpuTranslatedAddress = CosKmdGlobal::s_videoMemoryPhysicalAddress; // cpu base physical address
             pLocalVidMemSegmentDesc->Size = kVidMemSegementSize;
-
         }
     }
     break;

@@ -22,8 +22,10 @@ extern "C" {
 #include "CosAllocation.h"
 #include "CosAdapter.h"
 
-#define COSD_SEGMENT_APERTURE 1
-#define COSD_SEGMENT_VIDEO_MEMORY 2
+#define COSD_SEGMENT_VIDEO_MEMORY 1
+
+// TODO: Clean up later
+#define COSD_SEGMENT_APERTURE 2
 #define COSD_SEGMENT_APERTURE_BASE_ADDRESS  0xC0000000
 
 #define COSD_COMMAND_BUFFER_SIZE    PAGE_SIZE

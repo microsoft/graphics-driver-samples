@@ -63,6 +63,7 @@ public:
     static CosUmd12Device* CastFrom( DXGI_DDI_HDEVICE );
     D3D10DDI_HDEVICE CastTo() const;
 
+    D3D12DDI_GPU_VIRTUAL_ADDRESS AllocateUniqueAddress(UINT size);
 
 public:
 
@@ -70,9 +71,10 @@ public:
     UINT                            m_Interface;
     D3D12DDI_HRTDEVICE              m_hRTDevice;
 
-    const D3D12DDI_CORELAYER_DEVICECALLBACKS_0003*   m_pUMCallbacks;
+    const D3D12DDI_CORELAYER_DEVICECALLBACKS_0022*   m_pUMCallbacks;
     const D3DDDI_DEVICECALLBACKS*   m_pKMCallbacks;
 
+    D3D12DDI_GPU_VIRTUAL_ADDRESS    m_curUniqueAddress;
 };
 
 inline CosUmd12Device* CosUmd12Device::CastFrom(D3D10DDI_HDEVICE hDevice)
@@ -89,4 +91,3 @@ inline D3D10DDI_HDEVICE CosUmd12Device::CastTo() const
 {
     return MAKE_D3D10DDI_HDEVICE(const_cast< CosUmd12Device* >(this));
 }
-

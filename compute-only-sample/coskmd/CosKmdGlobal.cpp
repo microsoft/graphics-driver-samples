@@ -130,7 +130,7 @@ NTSTATUS CosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
                             lowestAcceptableAddress,
                             highestAcceptableAddress,
                             boundaryAddressMultiple,
-                            MmCached);
+                            MmWriteCombined);               // TODO: Investigate how to support Cached allocation
         if (s_pVideoMemory != NULL)
         {
             break;

@@ -92,5 +92,11 @@
     <ClCompile Include="CosUmd12ExtendedFeaturesDdi.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="CosUmd12Heap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CosUmd12Resource.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
