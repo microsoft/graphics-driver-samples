@@ -22,6 +22,7 @@ void StopInFunction(const char * function, const char * file, int line);
 #define ASSERT(cond) if (!(cond)) STOP_IN_FUNCTION()
 
 #include "CosAllocation.h"
+#include "CosContext.h"
 
 #include "CosUmd12Adapter.h"
 #include "CosUmd12Device.h"

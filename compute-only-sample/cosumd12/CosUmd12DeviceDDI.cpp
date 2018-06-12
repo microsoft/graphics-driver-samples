@@ -339,7 +339,7 @@ HRESULT APIENTRY CosUmd12Device_Ddi_CreateCommandQueue_0023(
     CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
     CosUmd12CommandQueue * pCommandQueue = new (DrvCommandQueue.pDrvPrivate) CosUmd12CommandQueue(pDevice, RTCommandQueue, pDesc);
 
-    return S_OK;
+    return pCommandQueue->Standup();
 }
 
 void APIENTRY CosUmd12Device_Ddi_DestroyCommandQueue(
