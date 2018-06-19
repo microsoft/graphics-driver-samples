@@ -349,7 +349,7 @@ CosKmAdapter::Start(
     *NumberOfChildren = 0;
 
     //
-    // Sample for 1.3 model currently
+    // Sample for 2.0 model currently
     //
     m_WDDMVersion = DXGKDDI_WDDMv2;
 

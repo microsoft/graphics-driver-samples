@@ -10,7 +10,7 @@ enum GpuCommandId
 {
     Nop,
     ResourceCopy,
-    Header = 'RSCB'
+    Header = 'CSCB'
 };
 
 struct GpuCommandBufferHeader
