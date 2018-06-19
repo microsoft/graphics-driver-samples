@@ -50,3 +50,51 @@ CosUmd12CommandQueue::Teardown()
     hr = m_pDevice->m_pUMCallbacks->pfnDestroyContextCb(m_hRTCommandQueue, &destroyContext);
     ASSERT(S_OK == hr);
 }
+
+void
+CosUmd12CommandQueue::ExecuteCommandLists(
+    UINT Count,
+    const D3D12DDI_HCOMMANDLIST* pCommandLists)
+{
+    STOP_IN_FUNCTION();
+
+    for (UINT i = 0; i < Count; i++)
+    {
+        CosUmd12CommandList * pCommandList = CosUmd12CommandList::CastFrom(pCommandLists[i]);
+
+        pCommandList->Execute(this);
+    }
+}
+
+HRESULT
+CosUmd12CommandQueue::ExecuteCommandBuffer(
+    BYTE *                      pCommandBuffer,
+    UINT                        commandBufferLength,
+    D3DDDI_ALLOCATIONLIST *     pAllocationList,
+    UINT                        numAllocations,
+    D3DDDI_PATCHLOCATIONLIST *  pPatchLocationList,
+    UINT                        numPatchLocations)
+{
+    D3DDDICB_RENDER render;
+
+    memset(&render, 0, sizeof(render));
+
+    render.hContext = m_createContext.hContext;
+
+    render.BroadcastContextCount = 0;
+
+    render.CommandLength = commandBufferLength;
+    render.NumAllocations = numAllocations;
+    render.NumPatchLocations = numPatchLocations;
+
+    //
+    // Copy the command buffer, allocation list and patch location list to ones provided by kernel runtime
+    //
+
+    RtlCopyMemory(m_createContext.pCommandBuffer, pCommandBuffer, commandBufferLength);
+    RtlCopyMemory(m_createContext.pAllocationList, pAllocationList, numAllocations*sizeof(D3DDDI_ALLOCATIONLIST));
+    RtlCopyMemory(m_createContext.pPatchLocationList, pPatchLocationList, numPatchLocations*sizeof(D3DDDI_PATCHLOCATIONLIST));
+
+    return m_pDevice->m_pKMCallbacks->pfnRenderCb(m_pDevice->m_hRTDevice.handle, &render);
+}
+

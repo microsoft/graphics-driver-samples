@@ -4,6 +4,10 @@ void APIENTRY CosUmd12ComputeCommandList_Ddi_CloseCommandList(
     D3D12DDI_HCOMMANDLIST CommandList)
 {
     STOP_IN_FUNCTION();
+
+    CosUmd12CommandList * pCommandList = CosUmd12CommandList::CastFrom(CommandList);
+
+    pCommandList->Close();
 }
 
 void APIENTRY CosUmd12ComputeCommandList_Ddi_ResetCommandList(
@@ -117,6 +121,10 @@ void APIENTRY CosUmd12ComputeCommandList_Ddi_ResourceCopy(
     D3D12DDI_HRESOURCE SrcResource)
 {
     STOP_IN_FUNCTION();
+
+    CosUmd12CommandList * pCommandList = CosUmd12CommandList::CastFrom(CommandList);
+
+    pCommandList->ResourceCopy(DstResource, SrcResource);
 }
 
 void APIENTRY CosUmd12ComputeCommandList_Ddi_CopyTiles(

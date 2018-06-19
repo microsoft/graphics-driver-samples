@@ -40,3 +40,6 @@ void StopInFunction(const char * function, const char * file, int line);
 #include "CosUmd12Heap.h"
 #include "CosUmd12Resource.h"
 
+#include "CosGpuCommand.h"
+#include "CosUmd12CommandBuffer.h"
+

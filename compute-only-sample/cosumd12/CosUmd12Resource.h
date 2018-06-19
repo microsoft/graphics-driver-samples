@@ -73,6 +73,17 @@ public:
 
     D3D12DDI_GPU_VIRTUAL_ADDRESS GetUniqueAddress();
 
+    UINT GetHeapOffset()
+    {
+        ASSERT(m_dataSize < 0x100000000L);
+        return (UINT)m_desc.ReuseBufferGPUVA.BaseAddress.UMD.Offset;
+    }
+
+    D3DKMT_HANDLE GetHeapAllocationHandle()
+    {
+        return m_pHeap->m_hKMAllocation;
+    }
+
 private:
 
     static const int kMagic = 'rsrc';

@@ -2,6 +2,8 @@
 
 #include "CosUmd12.h"
 
+const UINT COS_MAX_NUM_COMMAND_BUFFERS = 256;
+
 class CosUmd12CommandList
 {
 public:
@@ -10,6 +12,7 @@ public:
         m_pDevice = pDevice;
         m_args = *pArgs;
         m_pPipelineState = NULL;
+        m_numFilledCommandBuffers = 0;
     }
 
     ~CosUmd12CommandList()
@@ -26,15 +29,7 @@ public:
         return sizeof(CosUmd12CommandList);
     }
 
-    HRESULT StandUp()
-    {
-        if (IsComputeType())
-            m_pDevice->m_pUMCallbacks->pfnSetCommandListDDITableCb(m_args.hRTCommandList, m_pDevice->m_pAdapter->m_hRTTable[CosUmd12Adapter::TableType::Compute]);
-        else
-            m_pDevice->m_pUMCallbacks->pfnSetCommandListDDITableCb(m_args.hRTCommandList, m_pDevice->m_pAdapter->m_hRTTable[CosUmd12Adapter::TableType::Render]);
-
-        return S_OK;
-    }
+    HRESULT StandUp();
 
     void SetPipelineState(CosUmd12PipelineState * pPipelineState)
     {
@@ -47,12 +42,35 @@ public:
     static CosUmd12CommandList* CastFrom(D3D12DDI_HCOMMANDLIST);
     D3D12DDI_HCOMMANDLIST CastTo() const;
 
+    void Close();
+
+    // Interface for Command Queue
+    void Execute(CosUmd12CommandQueue * pCommandQueue);
+
+    void ResourceCopy(D3D12DDI_HRESOURCE DstResource, D3D12DDI_HRESOURCE SrcResource);
+
 private:
 
     CosUmd12Device * m_pDevice;
     D3D12DDIARG_CREATE_COMMAND_LIST_0001 m_args;
     CosUmd12PipelineState * m_pPipelineState;
 
+    CosUmd12CommandAllocator * m_pCommandAllocator;
+
+    CosUmd12CommandBuffer * m_pCurCommandBuffer;
+
+    UINT m_numFilledCommandBuffers;
+    CosUmd12CommandBuffer * m_filledCommandBuffers[COS_MAX_NUM_COMMAND_BUFFERS];
+
+    void
+    ReserveCommandBufferSpace(
+        bool                        bSwCommand,
+        UINT                        commandSize,
+        BYTE **                     ppCommandBuffer,
+        UINT                        allocationListSize = 0,
+        UINT                        patchLocationSize = 0,
+        UINT *                      pCurCommandOffset = NULL,
+        D3DDDI_PATCHLOCATIONLIST ** ppPatchLocationList = NULL);
 };
 
 inline CosUmd12CommandList* CosUmd12CommandList::CastFrom(D3D12DDI_HCOMMANDLIST hRootSignature)

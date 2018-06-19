@@ -27,6 +27,19 @@ public:
     HRESULT Standup();
     void Teardown();
 
+    // Ddi ExecuteCommandLists support
+    void ExecuteCommandLists(UINT Count, const D3D12DDI_HCOMMANDLIST* pCommandLists);
+
+    // Interface for Command List
+    HRESULT
+    ExecuteCommandBuffer(
+        BYTE *                      pCommandBuffer,
+        UINT                        commandBufferLength,
+        D3DDDI_ALLOCATIONLIST *     pAllocationList,
+        UINT                        NumAllocations,
+        D3DDDI_PATCHLOCATIONLIST *  pPatchLocationList,
+        UINT                        NumPatchLocations);
+
 private:
 
     CosUmd12Device * m_pDevice;
