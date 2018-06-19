@@ -721,19 +721,15 @@ HRESULT APIENTRY CosUmd12Device_Ddi_MakeResident_0001(
         {
             case D3D12DDI_HT_HEAP:
             {
-                // TODO: Determine if we need to deal with residency
-#if 0
                 D3D12DDI_HHEAP hHeap;
                 hHeap.pDrvPrivate = pDesc->pObjects[i].Handle;
 
                 CosUmd12Heap* pHeap = CosUmd12Heap::CastFrom(hHeap);
 
-                if ((pHeap->m_Allocation.m_Flags & GpuMemoryAlloc_Esram) == 0)
+                if (pHeap->GetAllocationHandle())
                 {
-                    DBGASSERT(pHeap->m_Allocation.m_CpuMapCount == 0);
-                    pAllocations[makeResidentCount++] = pHeap->m_Allocation.GetHandle();
+                    pAllocations[makeResidentCount++] = pHeap->GetAllocationHandle();
                 }
-#endif
                 break;
             }
             case D3D12DDI_HT_DESCRIPTOR_HEAP:

@@ -42,6 +42,11 @@ public:
     HRESULT Map(void** pHeapData);
     void Unmap();
 
+    D3DKMT_HANDLE GetAllocationHandle()
+    {
+        return m_hKMAllocation;
+    }
+
 private:
 
     friend class CosUmd12Resource;
