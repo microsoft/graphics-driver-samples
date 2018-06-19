@@ -20,6 +20,7 @@ extern "C" {
 } // extern "C"
 
 #include "CosAllocation.h"
+#include "CosContext.h"
 #include "CosAdapter.h"
 
 #define COSD_SEGMENT_VIDEO_MEMORY 1
@@ -27,8 +28,6 @@ extern "C" {
 // TODO: Clean up later
 #define COSD_SEGMENT_APERTURE 2
 #define COSD_SEGMENT_APERTURE_BASE_ADDRESS  0xC0000000
-
-#define COSD_COMMAND_BUFFER_SIZE    PAGE_SIZE
 
 #define COSD_PAGING_BUFFER_SIZE     PAGE_SIZE
 
@@ -53,9 +52,6 @@ typedef struct _COSDUMDMAPRIVATEDATA2 : public COSUMDDMAPRIVATEDATA
 } COSUMDDMAPRIVATEDATA2;
 
 #define COSD_VERSION 2
-
-const int C_COSD_ALLOCATION_LIST_SIZE = 64;
-const int C_COSD_PATCH_LOCATION_LIST_SIZE = 128;
 
 const int C_COSD_GPU_ENGINE_COUNT = 1;
 
