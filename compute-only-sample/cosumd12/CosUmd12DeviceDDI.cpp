@@ -630,6 +630,10 @@ void APIENTRY CosUmd12Device_Ddi_UnmapHeap(
     D3D12DDI_HHEAP Heap)
 {
     STOP_IN_FUNCTION();
+
+    CosUmd12Heap * pHeap = (CosUmd12Heap *)Heap.pDrvPrivate;
+
+    pHeap->Unmap();
 }
 
 D3D12DDI_HEAP_AND_RESOURCE_SIZES APIENTRY CosUmd12Device_Ddi_CalcPrivateHeapAndResourceSizes_0030(
