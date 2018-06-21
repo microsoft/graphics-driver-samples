@@ -126,6 +126,7 @@ CosKmdSoftAdapter::ProcessHWRenderBuffer(
 
                 if (bRootSignatureSet)
                 {
+#if 1   // ENABLE_FOR_COSTEST
                     KFLOATING_SAVE floatingSave;
 
                     KeSaveFloatingPointState(&floatingSave);
@@ -151,6 +152,7 @@ CosKmdSoftAdapter::ProcessHWRenderBuffer(
                     }
 
                     KeRestoreFloatingPointState(&floatingSave);
+#endif
                 }
 
                 commandSize = pCSDispatch->m_commandSize;
