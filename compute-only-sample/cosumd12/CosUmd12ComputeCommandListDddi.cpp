@@ -45,6 +45,10 @@ void APIENTRY CosUmd12ComputeCommandList_Ddi_Dispatch(
     UINT ThreadGroupCountZ)
 {
     STOP_IN_FUNCTION();
+
+    CosUmd12CommandList * pCommandList = CosUmd12CommandList::CastFrom(CommandList);
+
+    pCommandList->Dispatch(ThreadGroupCountX, ThreadGroupCountY, ThreadGroupCountZ);
 }
 
 void APIENTRY CosUmd12ComputeCommandList_Ddi_ClearUnorderedAccessViewUint_0003(
@@ -411,6 +415,10 @@ void APIENTRY CosUmd12ComputeCommandList_Ddi_SetComputeRootUnorderedAccessView(
     _In_ D3D12DDI_GPU_VIRTUAL_ADDRESS BufferLocation)
 {
     STOP_IN_FUNCTION();
+
+    CosUmd12CommandList * pCommandList = CosUmd12CommandList::CastFrom(CommandList);
+
+    pCommandList->SetComputeRootUnorderedAccessView(RootParameterIndex, BufferLocation);
 }
 
 void APIENTRY CosUmd12ComputeCommandList_Ddi_SetGraphicsRootUnorderedAccessView(

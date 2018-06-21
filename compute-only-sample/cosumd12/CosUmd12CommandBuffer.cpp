@@ -138,12 +138,20 @@ CosUmd12CommandBuffer::CommitCommandBufferSpace(
 // so a search of the Allocation List is necessary
 //
 
+
 UINT
 CosUmd12CommandBuffer::UseResource(
     CosUmd12Resource *  pResource,
     BOOL                bWriteOperation)
 {
-    D3DKMT_HANDLE hAllocation = pResource->GetHeapAllocationHandle();
+    return UseAllocation(pResource->GetHeapAllocationHandle(), bWriteOperation);
+}
+
+UINT
+CosUmd12CommandBuffer::UseAllocation(
+    D3DKMT_HANDLE   hAllocation,
+    BOOL            bWriteOperation)
+{
     UINT i;
 
     for (i = 0; i < m_allocationListPos; i++)

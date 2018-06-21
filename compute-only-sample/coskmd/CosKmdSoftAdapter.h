@@ -25,6 +25,7 @@ private:
 protected:
 
     virtual void ProcessRenderBuffer(COSDMABUFSUBMISSION * pDmaBufSubmission);
+    virtual void ProcessHWRenderBuffer(COSDMABUFSUBMISSION * pDmaBufSubmission);
 
     virtual NTSTATUS Start(
         IN_PDXGK_START_INFO     DxgkStartInfo,

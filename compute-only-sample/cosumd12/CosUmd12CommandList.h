@@ -44,16 +44,28 @@ public:
 
     void Close();
 
-    // Interface for Command Queue
-    void Execute(CosUmd12CommandQueue * pCommandQueue);
+    void SetComputeRootUnorderedAccessView(UINT RootParameterIndex, D3D12DDI_GPU_VIRTUAL_ADDRESS BufferLocation);
+
+    void Dispatch(
+        UINT ThreadGroupCountX,
+        UINT ThreadGroupCountY,
+        UINT ThreadGroupCountZ);
 
     void ResourceCopy(D3D12DDI_HRESOURCE DstResource, D3D12DDI_HRESOURCE SrcResource);
+
+    // Interface for Command Queue
+    void Execute(CosUmd12CommandQueue * pCommandQueue);
 
 private:
 
     CosUmd12Device * m_pDevice;
     D3D12DDIARG_CREATE_COMMAND_LIST_0001 m_args;
     CosUmd12PipelineState * m_pPipelineState;
+
+    //
+    // TODO : Cbv, Srv, Root Constant support
+    //
+    D3D12DDI_GPU_VIRTUAL_ADDRESS m_rootDescriptorTableUav[SIZE_ROOT_SIGNATURE/sizeof(D3D12DDI_GPU_VIRTUAL_ADDRESS)];
 
     CosUmd12CommandAllocator * m_pCommandAllocator;
 
