@@ -33,6 +33,11 @@ public:
         UINT    patchLocationSize = 0);
 
     UINT
+    UseAllocation(
+        D3DKMT_HANDLE   hAllocation,
+        BOOL            bWriteOperation);
+
+    UINT
     UseResource(
         CosUmd12Resource *  pResource,
         BOOL                bWriteOperation);

@@ -136,18 +136,21 @@ void CosKmAdapter::DoWork(void)
 
                 ProcessPagingBuffer(pDmaBufSubmission);
 
-                NotifyDmaBufCompletion(pDmaBufSubmission);
             }
-            else
+            else if (pDmaBufInfo->m_DmaBufState.m_bSwCommandBuffer)
             {
                 //
                 // Process render DMA buffer
                 //
 
                 ProcessRenderBuffer(pDmaBufSubmission);
-
-                NotifyDmaBufCompletion(pDmaBufSubmission);
             }
+            else
+            {
+                ProcessHWRenderBuffer(pDmaBufSubmission);
+            }
+
+            NotifyDmaBufCompletion(pDmaBufSubmission);
 
             ExInterlockedInsertTailList(&m_dmaBufSubmissionFree, &pDmaBufSubmission->m_QueueEntry, &m_dmaBufQueueLock);
         }
@@ -1567,6 +1570,13 @@ CosKmAdapter::PatchDmaBuffer(
                 default:
                     *((UINT *)(pDmaBuf + patch->PatchOffset)) = physicalAddress + m_busAddressOffset;
                 }
+#else
+                UINT    physicalAddress =
+                    CosKmdGlobal::s_videoMemoryPhysicalAddress.LowPart +
+                    allocation->PhysicalAddress.LowPart +
+                    patch->AllocationOffset;
+
+                *((UINT *)(pDmaBuf + patch->PatchOffset)) = physicalAddress;
 #endif
             }
         }

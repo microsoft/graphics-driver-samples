@@ -21,5 +21,5 @@ CosUmd12Resource::Standup(CosUmd12Heap * pHeap)
 
 D3D12DDI_GPU_VIRTUAL_ADDRESS CosUmd12Resource::GetUniqueAddress()
 {
-    return m_pHeap->m_uniqueAddress + m_desc.ReuseBufferGPUVA.BaseAddress.UMD.Offset;
+    return (((D3D12DDI_GPU_VIRTUAL_ADDRESS)m_pHeap->GetAllocationHandle()) << 32) | m_desc.ReuseBufferGPUVA.BaseAddress.UMD.Offset;
 }
