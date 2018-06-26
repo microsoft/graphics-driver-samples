@@ -126,7 +126,7 @@ CosKmdSoftAdapter::ProcessHWRenderBuffer(
 
                 if (bRootSignatureSet)
                 {
-#if 1   // ENABLE_FOR_COSTEST
+#if ENABLE_FOR_COSTEST
                     KFLOATING_SAVE floatingSave;
 
                     KeSaveFloatingPointState(&floatingSave);
