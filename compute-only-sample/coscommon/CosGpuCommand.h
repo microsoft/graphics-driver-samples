@@ -10,7 +10,9 @@ enum GpuCommandId
 {
     Nop,
     ResourceCopy,
-    Header = 'RSCB'
+    Header = 'CSCB',
+    RootSignatureSet = 'RTSS',
+    ComputeShaderDispatch = 'CSDP'
 };
 
 struct GpuCommandBufferHeader
@@ -42,6 +44,38 @@ struct GpuResourceCopy
     PHYSICAL_ADDRESS    m_dstGpuAddress;
     PHYSICAL_ADDRESS    m_srcGpuAddress;
     size_t              m_sizeBytes;
+};
+
+struct GpuHWRootSignatureSet
+{
+    GpuCommandId    m_commandId;
+    UINT            m_commandSize;
+
+    UINT            m_numRootConstants;
+    UINT            m_numRootDescriptorCbv;
+    UINT            m_numRootDescriptorSrv;
+    UINT            m_numRootDescriptorUav;
+    //
+    // Followed by m_numRootConstants of FLOAT
+    //
+    //
+    // Followed by number Cbv + Srv + Uav of PHYSICAL_ADDRESS
+    //
+};
+
+struct GpuHwComputeShaderDisptch
+{
+    GpuCommandId    m_commandId;
+    UINT            m_commandSize;
+
+    UINT            m_numThreadPerGroup;
+    UINT            m_threadGroupCountX;
+    UINT            m_threadGroupCountY;
+    UINT            m_threadGroupCountZ;
+    BYTE            m_ShaderHash[16];
+    //
+    // Followed by shader binary code
+    //
 };
 
 struct GpuCommand

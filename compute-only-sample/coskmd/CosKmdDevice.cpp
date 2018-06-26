@@ -85,11 +85,21 @@ NTSTATUS CosKmDevice::OpenAllocation (const DXGKARG_OPENALLOCATION* ArgsPtr)
         CosKmdAllocation* rosKmdAllocationPtr;
         {
             DXGKARGCB_GETHANDLEDATA getHandleData;
+            DXGKARG_RELEASE_HANDLE hReleaseHandle;
+
             getHandleData.hObject = openAllocInfoPtr->hAllocation;
             getHandleData.Type = DXGK_HANDLE_ALLOCATION;
             getHandleData.Flags.DeviceSpecific = 0;
+
             rosKmdAllocationPtr = static_cast<CosKmdAllocation*>(
-                dxgkInterface.DxgkCbGetHandleData(&getHandleData));
+                dxgkInterface.DxgkCbAcquireHandleData(&getHandleData, &hReleaseHandle));
+
+            DXGKARGCB_RELEASEHANDLEDATA releaseHandleData;
+
+            releaseHandleData.ReleaseHandle = hReleaseHandle;
+            releaseHandleData.Type = DXGK_HANDLE_ALLOCATION;
+
+            dxgkInterface.DxgkCbReleaseHandleData(releaseHandleData);
         }
 
         CosKmdDeviceAllocation* rosKmdDeviceAllocationPtr;

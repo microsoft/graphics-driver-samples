@@ -24,12 +24,29 @@ public:
     static CosUmd12CommandQueue* CastFrom(D3D12DDI_HCOMMANDQUEUE);
     D3D12DDI_HCOMMANDQUEUE CastTo() const;
 
+    HRESULT Standup();
+    void Teardown();
+
+    // Ddi ExecuteCommandLists support
+    void ExecuteCommandLists(UINT Count, const D3D12DDI_HCOMMANDLIST* pCommandLists);
+
+    // Interface for Command List
+    HRESULT
+    ExecuteCommandBuffer(
+        BYTE *                      pCommandBuffer,
+        UINT                        commandBufferLength,
+        D3DDDI_ALLOCATIONLIST *     pAllocationList,
+        UINT                        NumAllocations,
+        D3DDDI_PATCHLOCATIONLIST *  pPatchLocationList,
+        UINT                        NumPatchLocations);
+
 private:
 
     CosUmd12Device * m_pDevice;
     D3D12DDIARG_CREATECOMMANDQUEUE_0023 m_args;
     D3D12DDI_HRTCOMMANDQUEUE m_hRTCommandQueue;
 
+    D3DDDICB_CREATECONTEXT m_createContext;
 };
 
 inline CosUmd12CommandQueue* CosUmd12CommandQueue::CastFrom(D3D12DDI_HCOMMANDQUEUE hRootSignature)

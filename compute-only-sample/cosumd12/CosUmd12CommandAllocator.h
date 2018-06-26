@@ -2,6 +2,8 @@
 
 #include "CosUmd12.h"
 
+class CosUmd12CommandBuffer;
+
 class CosUmd12CommandAllocator
 {
 public:
@@ -27,6 +29,12 @@ public:
 
     static CosUmd12CommandAllocator* CastFrom(D3D12DDI_HCOMMANDALLOCATOR);
     D3D12DDI_HCOMMANDALLOCATOR CastTo() const;
+
+    //
+    // Interface between Command Allocator and Command List
+    //
+    CosUmd12CommandBuffer * AcquireCommandBuffer(D3D12DDI_COMMAND_QUEUE_FLAGS queueFlags);
+    void ReleaseCommandBuffer(CosUmd12CommandBuffer * pCommandBuffer);
 
 private:
 

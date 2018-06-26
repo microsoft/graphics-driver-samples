@@ -4,6 +4,8 @@
 
 class CosUmd12Device;
 
+const UINT SIZE_ROOT_SIGNATURE = 64*sizeof(DWORD);
+
 class CosUmd12RootSignature
 {
 public:
@@ -66,6 +68,8 @@ public:
     D3D12DDI_HROOTSIGNATURE CastTo() const;
 
 private:
+
+    friend class CosUmd12CommandList;
 
     CosUmd12Device * m_pDevice;
     D3D12DDI_ROOT_SIGNATURE_VERSION m_version;

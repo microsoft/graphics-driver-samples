@@ -21,7 +21,7 @@ CosUmd12Device::CosUmd12Device(
     m_pAdapter(pAdapter),
     m_Interface(pArgs->Interface),
     m_hRTDevice(pArgs->hRTDevice),
-    m_pUMCallbacks(pArgs->p12UMCallbacks),
+    m_pUMCallbacks(pArgs->p12UMCallbacks_0022),
     m_pKMCallbacks(pArgs->pKTCallbacks)
 {
     assert(pArgs->hDrvDevice.pDrvPrivate == (void *) this);
@@ -31,6 +31,7 @@ CosUmd12Device::CosUmd12Device(
 
 void CosUmd12Device::Standup()
 {
+    m_curUniqueAddress = 0x100000000;
 }
 
 //----------------------------------------------------------------------------------------------------------------------------------
@@ -42,4 +43,13 @@ void CosUmd12Device::Teardown()
 CosUmd12Device::~CosUmd12Device()
 {
     // do nothing
+}
+
+D3D12DDI_GPU_VIRTUAL_ADDRESS CosUmd12Device::AllocateUniqueAddress(UINT size)
+{
+    D3D12DDI_GPU_VIRTUAL_ADDRESS curUniqueAddress = m_curUniqueAddress;
+
+    m_curUniqueAddress += size;
+
+    return curUniqueAddress;
 }

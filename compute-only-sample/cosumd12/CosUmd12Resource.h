@@ -68,6 +68,22 @@ public:
     static CosUmd12Resource* CastFrom(D3D12DDI_HRESOURCE);
     D3D12DDI_HRESOURCE CastTo() const;
 
+    HRESULT Standup(CosUmd12Heap *);
+    void Teardown();
+
+    D3D12DDI_GPU_VIRTUAL_ADDRESS GetUniqueAddress();
+
+    UINT GetHeapOffset()
+    {
+        ASSERT(m_dataSize < 0x100000000L);
+        return (UINT)m_desc.ReuseBufferGPUVA.BaseAddress.UMD.Offset;
+    }
+
+    D3DKMT_HANDLE GetHeapAllocationHandle()
+    {
+        return m_pHeap->m_hKMAllocation;
+    }
+
 private:
 
     static const int kMagic = 'rsrc';
@@ -81,6 +97,8 @@ private:
     D3D12DDI_TEXTURE_LAYOUT m_textureLayout;
 
     D3D12DDIARG_CREATERESOURCE_0003 m_desc;
+
+    CosUmd12Heap * m_pHeap;
 };
 
 inline CosUmd12Resource* CosUmd12Resource::CastFrom(D3D12DDI_HRESOURCE hResource)
@@ -94,6 +112,3 @@ inline D3D12DDI_HRESOURCE CosUmd12Resource::CastTo() const
 {
     return MAKE_D3D10DDI_HRESOURCE(const_cast< CosUmd12Resource* >(this));
 }
-
-
-

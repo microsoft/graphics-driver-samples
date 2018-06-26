@@ -81,6 +81,8 @@ public:
 
 private:
 
+    friend class CosUmd12CommandList;
+
     CosUmd12Device * m_pDevice;
     D3D12DDIARG_CREATE_SHADER_0026 m_args;
 

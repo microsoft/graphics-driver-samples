@@ -34,6 +34,8 @@ public:
 
 private:
 
+    friend class CosUmd12CommandList;
+
     CosUmd12Device * m_pDevice;
     D3D12DDI_HRTPIPELINESTATE m_hRTPipelineState;
     D3D12DDIARG_CREATE_PIPELINE_STATE_0033 m_args;

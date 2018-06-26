@@ -320,6 +320,7 @@ protected:
 protected:
 
     virtual void ProcessRenderBuffer(COSDMABUFSUBMISSION * pDmaBufSubmission) = 0;
+    virtual void ProcessHWRenderBuffer(COSDMABUFSUBMISSION * pDmaBufSubmission) = 0;
 
 private:
 

@@ -275,7 +275,7 @@ SIZE_T APIENTRY CosUmd12Device_Ddi_CalcPrivateGeometryShaderWithStreamOutput_002
     D3D12DDI_HDEVICE Device,
     _In_ const D3D12DDIARG_CREATE_GEOMETRY_SHADER_WITH_STREAM_OUTPUT_0026* pDesc)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 
     return 0;
 }
@@ -285,14 +285,14 @@ void APIENTRY CosUmd12Device_Ddi_CreateGeometryShaderWithStreamOutput_0026(
     _In_ const D3D12DDIARG_CREATE_GEOMETRY_SHADER_WITH_STREAM_OUTPUT_0026* pDesc,
     D3D12DDI_HSHADER Shader)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 }
 
 SIZE_T APIENTRY CosUmd12Device_Ddi_CalcPrivateTessellationShaderSize_0026(
     D3D12DDI_HDEVICE Device,
     _In_ const D3D12DDIARG_CREATE_SHADER_0026* pDesc)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 
     return 0;
 }
@@ -302,7 +302,7 @@ void APIENTRY CosUmd12Device_Ddi_CreateHullShader_0026(
     _In_ const D3D12DDIARG_CREATE_SHADER_0026* pDesc,
     D3D12DDI_HSHADER Shader)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 }
 
 void APIENTRY CosUmd12Device_Ddi_CreateDomainShader_0026(
@@ -310,7 +310,7 @@ void APIENTRY CosUmd12Device_Ddi_CreateDomainShader_0026(
     _In_ const D3D12DDIARG_CREATE_SHADER_0026* pDesc,
     D3D12DDI_HSHADER Shader)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 }
 
 void APIENTRY CosUmd12Device_Ddi_DestroyShader(
@@ -339,7 +339,7 @@ HRESULT APIENTRY CosUmd12Device_Ddi_CreateCommandQueue_0023(
     CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
     CosUmd12CommandQueue * pCommandQueue = new (DrvCommandQueue.pDrvPrivate) CosUmd12CommandQueue(pDevice, RTCommandQueue, pDesc);
 
-    return S_OK;
+    return pCommandQueue->Standup();
 }
 
 void APIENTRY CosUmd12Device_Ddi_DestroyCommandQueue(
@@ -479,7 +479,7 @@ SIZE_T APIENTRY CosUmd12Device_Ddi_CalcPrivateDescriptorHeapSize_0001(
     D3D12DDI_HDEVICE Device,
     _In_ const D3D12DDIARG_CREATE_DESCRIPTOR_HEAP_0001* pDesc)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 
     return 0;
 }
@@ -489,7 +489,7 @@ HRESULT APIENTRY CosUmd12Device_Ddi_CreateDescriptorHeap_0001(
     _In_ const D3D12DDIARG_CREATE_DESCRIPTOR_HEAP_0001* pDesc,
     D3D12DDI_HDESCRIPTORHEAP DescriptorHeap)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 
     return E_NOTIMPL;
 }
@@ -498,7 +498,7 @@ void APIENTRY CosUmd12Device_Ddi_DestroyDescriptorHeap(
     D3D12DDI_HDEVICE Device,
     D3D12DDI_HDESCRIPTORHEAP DescriptorHeap)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 }
 
 UINT APIENTRY CosUmd12Device_Ddi_GetDescriptorSizeInBytes(
@@ -525,7 +525,7 @@ D3D12DDI_CPU_DESCRIPTOR_HANDLE APIENTRY CosUmd12Device_Ddi_GetCpuDescriptorHandl
     D3D12DDI_HDEVICE Device, 
     D3D12DDI_HDESCRIPTORHEAP DescriptorHeap)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 
     return { 0 };
 }
@@ -534,7 +534,7 @@ D3D12DDI_GPU_DESCRIPTOR_HANDLE APIENTRY CosUmd12Device_Ddi_GetGpuDescriptorHandl
     D3D12DDI_HDEVICE Device,
     D3D12DDI_HDESCRIPTORHEAP DescriptorHeap)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 
     return { 0 };
 }
@@ -544,7 +544,7 @@ void APIENTRY CosUmd12Device_Ddi_CreateShaderResourceView_0002(
     _In_ const D3D12DDIARG_CREATE_SHADER_RESOURCE_VIEW_0002* pDesc,
     _In_ D3D12DDI_CPU_DESCRIPTOR_HANDLE DestDescriptor)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 }
 
 void APIENTRY CosUmd12Device_Ddi_CreateConstantBufferView(
@@ -552,7 +552,7 @@ void APIENTRY CosUmd12Device_Ddi_CreateConstantBufferView(
     _In_ const D3D12DDI_CONSTANT_BUFFER_VIEW_DESC* pDesc,
     _In_ D3D12DDI_CPU_DESCRIPTOR_HANDLE DestDescriptor)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 }
 
 void APIENTRY CosUmd12Device_Ddi_CreateSampler(
@@ -560,7 +560,7 @@ void APIENTRY CosUmd12Device_Ddi_CreateSampler(
     _In_ const D3D12DDIARG_CREATE_SAMPLER* pDesc,
     _In_ D3D12DDI_CPU_DESCRIPTOR_HANDLE DestDescriptor)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 }
 
 void APIENTRY CosUmd12Device_Ddi_CreateUnorderedAccessView_0002(
@@ -568,7 +568,7 @@ void APIENTRY CosUmd12Device_Ddi_CreateUnorderedAccessView_0002(
     _In_ const D3D12DDIARG_CREATE_UNORDERED_ACCESS_VIEW_0002* pDesc,
     _In_ D3D12DDI_CPU_DESCRIPTOR_HANDLE DestDescriptor)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 }
 
 void APIENTRY CosUmd12Device_Ddi_CreateRenderTargetView_0002(
@@ -576,7 +576,7 @@ void APIENTRY CosUmd12Device_Ddi_CreateRenderTargetView_0002(
     _In_ const D3D12DDIARG_CREATE_RENDER_TARGET_VIEW_0002* pDesc,
     _In_ D3D12DDI_CPU_DESCRIPTOR_HANDLE DestDescriptor)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 }
 
 void APIENTRY CosUmd12Device_Ddi_CreateDepthStencilView(
@@ -584,7 +584,7 @@ void APIENTRY CosUmd12Device_Ddi_CreateDepthStencilView(
     _In_ const D3D12DDIARG_CREATE_DEPTH_STENCIL_VIEW* pDesc,
     _In_ D3D12DDI_CPU_DESCRIPTOR_HANDLE DestDescriptor)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 }
 
 
@@ -618,16 +618,22 @@ HRESULT APIENTRY CosUmd12Device_Ddi_MapHeap(
     D3D12DDI_HHEAP Heap,
     _Out_ void** pHeapData)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 
-    return E_NOTIMPL;
+    CosUmd12Heap * pHeap = (CosUmd12Heap *)Heap.pDrvPrivate;
+
+    return pHeap->Map(pHeapData);
 }
 
 void APIENTRY CosUmd12Device_Ddi_UnmapHeap(
     D3D12DDI_HDEVICE Device,
     D3D12DDI_HHEAP Heap)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
+
+    CosUmd12Heap * pHeap = (CosUmd12Heap *)Heap.pDrvPrivate;
+
+    pHeap->Unmap();
 }
 
 D3D12DDI_HEAP_AND_RESOURCE_SIZES APIENTRY CosUmd12Device_Ddi_CalcPrivateHeapAndResourceSizes_0030(
@@ -657,14 +663,20 @@ HRESULT APIENTRY CosUmd12Device_Ddi_CreateHeapAndResource_0030(
     // TODO: Talk to whoever designed this and find out how it works
     CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
 
-    if (pResourceDesc != NULL) {
-        STOP_IN_FUNCTION();
-        CosUmd12Resource * pResource = new (Resource.pDrvPrivate) CosUmd12Resource(pDevice, pResourceDesc);
-    }
+    CosUmd12Heap * pHeap = NULL;
 
     if (pHeapDesc != NULL) {
         STOP_IN_FUNCTION();
-        CosUmd12Heap * pHeap = new (Heap.pDrvPrivate) CosUmd12Heap(pDevice, RtHeap, pHeapDesc);
+        pHeap = new (Heap.pDrvPrivate) CosUmd12Heap(pDevice, RtHeap, pHeapDesc);
+
+        pHeap->Standup();
+    }
+
+    if (pResourceDesc != NULL) {
+        STOP_IN_FUNCTION();
+        CosUmd12Resource * pResource = new (Resource.pDrvPrivate) CosUmd12Resource(pDevice, pResourceDesc);
+
+        pResource->Standup(pHeap);
     }
 
     return S_OK;
@@ -713,19 +725,15 @@ HRESULT APIENTRY CosUmd12Device_Ddi_MakeResident_0001(
         {
             case D3D12DDI_HT_HEAP:
             {
-                // TODO: Determine if we need to deal with residency
-#if 0
                 D3D12DDI_HHEAP hHeap;
                 hHeap.pDrvPrivate = pDesc->pObjects[i].Handle;
 
                 CosUmd12Heap* pHeap = CosUmd12Heap::CastFrom(hHeap);
 
-                if ((pHeap->m_Allocation.m_Flags & GpuMemoryAlloc_Esram) == 0)
+                if (pHeap->GetAllocationHandle())
                 {
-                    DBGASSERT(pHeap->m_Allocation.m_CpuMapCount == 0);
-                    pAllocations[makeResidentCount++] = pHeap->m_Allocation.GetHandle();
+                    pAllocations[makeResidentCount++] = pHeap->GetAllocationHandle();
                 }
-#endif
                 break;
             }
             case D3D12DDI_HT_DESCRIPTOR_HEAP:
@@ -792,9 +800,89 @@ HRESULT APIENTRY CosUmd12Device_Ddi_Evict2(
     D3D12DDI_HDEVICE Device,
     const D3D12DDIARG_EVICT* pDesc)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 
-    return E_NOTIMPL;
+    CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
+
+    UINT numAllocations = pDesc->NumObjects;
+
+    D3DKMT_HANDLE* pAllocations = (D3DKMT_HANDLE*)malloc(sizeof(D3DKMT_HANDLE) * numAllocations);
+    if (pAllocations == NULL) return E_OUTOFMEMORY;
+
+    D3DDDICB_EVICT evict = {};
+
+    evict.Flags = pDesc->Flags;
+    evict.AllocationList = pAllocations;
+
+    HRESULT hr = S_OK;
+
+    UINT evictCount = 0;
+
+    for (UINT i = 0; i < numAllocations; ++i)
+    {
+        switch (pDesc->pObjects[i].Type)
+        {
+        case D3D12DDI_HT_HEAP:
+        {
+            D3D12DDI_HHEAP hHeap;
+            hHeap.pDrvPrivate = pDesc->pObjects[i].Handle;
+
+            CosUmd12Heap* pHeap = CosUmd12Heap::CastFrom(hHeap);
+
+            if (pHeap->GetAllocationHandle())
+            {
+                pAllocations[evictCount++] = pHeap->GetAllocationHandle();
+            }
+            break;
+        }
+        case D3D12DDI_HT_DESCRIPTOR_HEAP:
+        {
+            STOP_IN_FUNCTION();
+#if 0
+            D3D12DDI_HDESCRIPTORHEAP hDescriptorHeap;
+            hDescriptorHeap.pDrvPrivate = pDesc->pObjects[i].Handle;
+            CDescriptorHeap* pDescriptorHeap = Promote(hDescriptorHeap);
+            pAllocations[evictCount++] = pDescriptorHeap->m_DescriptorBuffer.GetHandle();
+#endif
+            break;
+        }
+        case D3D12DDI_HT_QUERY_HEAP:
+        {
+            STOP_IN_FUNCTION();
+#if 0
+            D3D12DDI_HQUERYHEAP hQueryHeap;
+            hQueryHeap.pDrvPrivate = pDesc->pObjects[i].Handle;
+            CQueryHeap* pQueryHeap = Promote(hQueryHeap);
+            DBGASSERT(pQueryHeap->m_Allocation.m_CpuMapCount == 0);
+            pAllocations[evictCount++] = pQueryHeap->m_Allocation.GetHandle();
+#endif
+            break;
+        }
+
+        case D3D12DDI_HT_0012_RESOURCE:
+        case D3D12DDI_HT_PIPELINE_STATE:
+        case D3D12DDI_HT_COMMAND_ALLOCATOR:
+        case D3D12DDI_HT_COMMAND_QUEUE:
+        case D3D12DDI_HT_FENCE:
+        case D3D12DDI_HT_COMMAND_SIGNATURE:
+        default:
+            ASSERT(0);
+            hr = E_INVALIDARG;
+            break;
+        }
+    }
+
+    if (SUCCEEDED(hr))
+    {
+        if (evictCount)
+        {
+            evict.NumAllocations = evictCount;
+
+            hr = pDevice->m_pUMCallbacks->pfnEvictCb(pDevice->m_hRTDevice, &evict);
+        }
+    }
+
+    return hr;
 }
 
 D3D12DDI_HEAP_AND_RESOURCE_SIZES APIENTRY CosUmd12Device_Ddi_CalcPrivateOpenedHeapAndResourceSizes_0003(
@@ -828,7 +916,7 @@ HRESULT APIENTRY CosUmd12Device_Ddi_OpenHeapAndResource_0003(
         pResource->Initialize(pAllocation);
 
     } else {
-    	STOP_IN_FUNCTION();
+        STOP_IN_FUNCTION();
         return E_NOTIMPL;
     }
 
@@ -845,7 +933,7 @@ void APIENTRY CosUmd12Device_Ddi_CopyDescriptors_0003(
     _In_reads_opt_(NumSrcDescriptorRanges) const UINT* pSrcDescriptorRangeSizes, // NULL means all ranges 1
     _In_ D3D12DDI_DESCRIPTOR_HEAP_TYPE DescriptorHeapsType)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 }
 
 void APIENTRY CosUmd12Device_Ddi_CopyDescriptorsSimple_0003(
@@ -855,14 +943,14 @@ void APIENTRY CosUmd12Device_Ddi_CopyDescriptorsSimple_0003(
     _In_ D3D12DDI_CPU_DESCRIPTOR_HANDLE SrcDescriptorRangeStart,
     _In_ D3D12DDI_DESCRIPTOR_HEAP_TYPE DescriptorHeapsType)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 }
 
 SIZE_T APIENTRY CosUmd12Device_Ddi_CalcPrivateQueryHeapSize_0001(
     D3D12DDI_HDEVICE Device,
     _In_ const D3D12DDIARG_CREATE_QUERY_HEAP_0001* pDesc)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 
     return 0;
 }
@@ -872,7 +960,7 @@ HRESULT APIENTRY CosUmd12Device_Ddi_CreateQueryHeap_0001(
     _In_ const D3D12DDIARG_CREATE_QUERY_HEAP_0001* pDesc,
     D3D12DDI_HQUERYHEAP QueryHeap)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 
     return E_NOTIMPL;
 }
@@ -881,14 +969,14 @@ void APIENTRY CosUmd12Device_Ddi_DestroyQueryHeap(
     D3D12DDI_HDEVICE Device,
     D3D12DDI_HQUERYHEAP QueryHeap)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 }
 
 SIZE_T APIENTRY CosUmd12Device_Ddi_CalcPrivateCommandSignatureSize_0001(
     D3D12DDI_HDEVICE Device,
     _In_ const D3D12DDIARG_CREATE_COMMAND_SIGNATURE_0001* pDesc)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 
     return 0;
 }
@@ -898,7 +986,7 @@ HRESULT APIENTRY CosUmd12Device_Ddi_CreateCommandSignature_0001(
     _In_ const D3D12DDIARG_CREATE_COMMAND_SIGNATURE_0001* pDesc,
     D3D12DDI_HCOMMANDSIGNATURE CommandSignature)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 
     return E_NOTIMPL;
 }
@@ -907,7 +995,7 @@ void APIENTRY CosUmd12Device_Ddi_DestroyCommandSignature(
     D3D12DDI_HDEVICE Device, 
     D3D12DDI_HCOMMANDSIGNATURE CommandSignature)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 }
 
 
@@ -915,9 +1003,11 @@ D3D12DDI_GPU_VIRTUAL_ADDRESS APIENTRY CosUmd12Device_Ddi_CheckResourceVirtualAdd
     D3D12DDI_HDEVICE Device,
     D3D12DDI_HRESOURCE Resource)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 
-    return NULL;
+    CosUmd12Resource * pResource = (CosUmd12Resource *)Resource.pDrvPrivate;
+
+    return pResource->GetUniqueAddress();
 }
 
 void APIENTRY CosUmd12Device_Ddi_CheckResourceAllocationInfo_0022(
@@ -948,7 +1038,14 @@ void APIENTRY CosUmd12Device_Ddi_CheckSubresourceInfo(
     UINT Subresource,
     _Out_ D3D12DDI_SUBRESOURCE_INFO* pInfo)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
+
+    CosUmd12Resource * pResource = (CosUmd12Resource *)Resource.pDrvPrivate;
+
+    //
+    // Assumption : Only BUFFER is supported
+    //
+    memset(pInfo, 0, sizeof(*pInfo));
 }
 
 void APIENTRY CosUmd12Device_Ddi_CheckExistingResourceAllocationInfo_0022(
@@ -969,7 +1066,7 @@ HRESULT APIENTRY CosUmd12Device_Ddi_OfferResources(
     D3D12DDI_HDEVICE Device,
     const D3D12DDIARG_OFFERRESOURCES* pDesc)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 
     return E_NOTIMPL;
 }
@@ -978,14 +1075,14 @@ HRESULT APIENTRY CosUmd12Device_Ddi_ReclaimResources_0001(
      D3D12DDI_HDEVICE Device, 
      D3D12DDIARG_RECLAIMRESOURCES_0001* pDesc)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 
     return E_NOTIMPL;
 }
 UINT APIENTRY CosUmd12Device_Ddi_GetImplicitPhysicalAdapterMask(
     D3D12DDI_HDEVICE Device)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 
     return 0;
 }
@@ -994,7 +1091,7 @@ UINT APIENTRY CosUmd12Device_Ddi_GetPresentPrivateDriverDataSize(
     D3D12DDI_HDEVICE Device,
     _In_ const D3D12DDIARG_PRESENT_0001* pDesc)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 
     return 0;
 }
@@ -1016,7 +1113,7 @@ HRESULT APIENTRY CosUmd12Device_Ddi_RetrieveShaderComment_0003(
     _Out_writes_z_(*pCharacterCountIncludingNullTerminator) WCHAR* pBuffer,
     _Inout_ SIZE_T* pCharacterCountIncludingNullTerminator)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 
     return E_NOTIMPL;
 }
@@ -1025,7 +1122,7 @@ D3DKMT_HANDLE APIENTRY CosUmd12Device_Ddi_CheckResourceAllocationHandle(
     D3D12DDI_HDEVICE Device,
     D3D10DDI_HRESOURCE Resource)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 
     return NULL;
 }
@@ -1034,7 +1131,7 @@ SIZE_T APIENTRY CosUmd12Device_Ddi_CalcPrivatePipelineLibrarySize_0010(
     D3D12DDI_HDEVICE Device,
     _In_ const D3D12DDIARG_CREATE_PIPELINE_LIBRARY_0010* pDesc)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 
     return 0;
 }
@@ -1044,7 +1141,7 @@ HRESULT APIENTRY CosUmd12Device_Ddi_CreatePipelineLibrary_0010(
     _In_ const D3D12DDIARG_CREATE_PIPELINE_LIBRARY_0010* pDesc,
     D3D12DDI_HPIPELINELIBRARY PipelineLibrary)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 
     return E_NOTIMPL;
 }
@@ -1053,7 +1150,7 @@ void APIENTRY CosUmd12Device_Ddi_DestroyPipelineLibrary_0010(
     D3D12DDI_HDEVICE Device, 
     D3D12DDI_HPIPELINELIBRARY PipelineLibrary)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 }
 
 HRESULT APIENTRY CosUmd12Device_Ddi_AddPipelineStateToLibrary_0010(
@@ -1062,7 +1159,7 @@ HRESULT APIENTRY CosUmd12Device_Ddi_AddPipelineStateToLibrary_0010(
     D3D12DDI_HPIPELINESTATE PipelineState,
     UINT PipelineIndex)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 
     return E_NOTIMPL;
 }
@@ -1071,7 +1168,7 @@ SIZE_T APIENTRY CosUmd12Device_Ddi_CalcSerializedLibrarySize_0010(
     D3D12DDI_HDEVICE Device,
     D3D12DDI_HPIPELINELIBRARY hLibrary)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 
     return 0;
 }
@@ -1081,7 +1178,7 @@ HRESULT APIENTRY CosUmd12Device_Ddi_SerializeLibrary_0010(
     D3D12DDI_HPIPELINELIBRARY hLibrary,
     _Out_ void *pBlob)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 
     return E_NOTIMPL;
 }
@@ -1094,7 +1191,7 @@ void APIENTRY CosUmd12Device_Ddi_GetDebugAllocationInfo_0014(
     _Inout_ UINT* pNumKMTInfos,
     _Out_writes_to_opt_(*pNumKMTInfos, *pNumKMTInfos) D3D12DDI_DEBUG_KMT_ALLOCATION_INFO_0014* pKMTInfos)
 {
-	STOP_IN_FUNCTION();
+    STOP_IN_FUNCTION();
 }
 
 D3D12DDI_DEVICE_FUNCS_CORE_0033 g_CosUmd12Device_Ddi_0033 =
