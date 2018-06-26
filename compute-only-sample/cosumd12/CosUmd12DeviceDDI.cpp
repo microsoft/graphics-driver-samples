@@ -802,7 +802,87 @@ HRESULT APIENTRY CosUmd12Device_Ddi_Evict2(
 {
     STOP_IN_FUNCTION();
 
-    return E_NOTIMPL;
+    CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
+
+    UINT numAllocations = pDesc->NumObjects;
+
+    D3DKMT_HANDLE* pAllocations = (D3DKMT_HANDLE*)malloc(sizeof(D3DKMT_HANDLE) * numAllocations);
+    if (pAllocations == NULL) return E_OUTOFMEMORY;
+
+    D3DDDICB_EVICT evict = {};
+
+    evict.Flags = pDesc->Flags;
+    evict.AllocationList = pAllocations;
+
+    HRESULT hr = S_OK;
+
+    UINT evictCount = 0;
+
+    for (UINT i = 0; i < numAllocations; ++i)
+    {
+        switch (pDesc->pObjects[i].Type)
+        {
+        case D3D12DDI_HT_HEAP:
+        {
+            D3D12DDI_HHEAP hHeap;
+            hHeap.pDrvPrivate = pDesc->pObjects[i].Handle;
+
+            CosUmd12Heap* pHeap = CosUmd12Heap::CastFrom(hHeap);
+
+            if (pHeap->GetAllocationHandle())
+            {
+                pAllocations[evictCount++] = pHeap->GetAllocationHandle();
+            }
+            break;
+        }
+        case D3D12DDI_HT_DESCRIPTOR_HEAP:
+        {
+            STOP_IN_FUNCTION();
+#if 0
+            D3D12DDI_HDESCRIPTORHEAP hDescriptorHeap;
+            hDescriptorHeap.pDrvPrivate = pDesc->pObjects[i].Handle;
+            CDescriptorHeap* pDescriptorHeap = Promote(hDescriptorHeap);
+            pAllocations[evictCount++] = pDescriptorHeap->m_DescriptorBuffer.GetHandle();
+#endif
+            break;
+        }
+        case D3D12DDI_HT_QUERY_HEAP:
+        {
+            STOP_IN_FUNCTION();
+#if 0
+            D3D12DDI_HQUERYHEAP hQueryHeap;
+            hQueryHeap.pDrvPrivate = pDesc->pObjects[i].Handle;
+            CQueryHeap* pQueryHeap = Promote(hQueryHeap);
+            DBGASSERT(pQueryHeap->m_Allocation.m_CpuMapCount == 0);
+            pAllocations[evictCount++] = pQueryHeap->m_Allocation.GetHandle();
+#endif
+            break;
+        }
+
+        case D3D12DDI_HT_0012_RESOURCE:
+        case D3D12DDI_HT_PIPELINE_STATE:
+        case D3D12DDI_HT_COMMAND_ALLOCATOR:
+        case D3D12DDI_HT_COMMAND_QUEUE:
+        case D3D12DDI_HT_FENCE:
+        case D3D12DDI_HT_COMMAND_SIGNATURE:
+        default:
+            ASSERT(0);
+            hr = E_INVALIDARG;
+            break;
+        }
+    }
+
+    if (SUCCEEDED(hr))
+    {
+        if (evictCount)
+        {
+            evict.NumAllocations = evictCount;
+
+            hr = pDevice->m_pUMCallbacks->pfnEvictCb(pDevice->m_hRTDevice, &evict);
+        }
+    }
+
+    return hr;
 }
 
 D3D12DDI_HEAP_AND_RESOURCE_SIZES APIENTRY CosUmd12Device_Ddi_CalcPrivateOpenedHeapAndResourceSizes_0003(
