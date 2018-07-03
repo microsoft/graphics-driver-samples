@@ -22,36 +22,47 @@ public:
 
         UINT * dstCode = (UINT *)storage;
         storageSize -= size;
+        storage += size;
 
         memcpy(dstCode, m_args.pShaderCode, size);
         m_args.pShaderCode = dstCode;
 
+        // Only Compute Shader is supported, so IOSignatures.Tessellation is not used
         size = sizeof(D3D12DDIARG_STAGE_IO_SIGNATURES);
         ASSERT(storageSize >= size);
 
-        D3D12DDIARG_STAGE_IO_SIGNATURES * dstSignature = (D3D12DDIARG_STAGE_IO_SIGNATURES *) storage;
+        D3D12DDIARG_STAGE_IO_SIGNATURES * dstSignature = (D3D12DDIARG_STAGE_IO_SIGNATURES *)storage;
         storageSize -= size;
+        storage += size;
 
         *dstSignature = *m_args.IOSignatures.Standard;
         m_args.IOSignatures.Standard = dstSignature;
 
-        size = dstSignature->NumInputSignatureEntries * sizeof(D3D12DDIARG_SIGNATURE_ENTRY_0012);
-        ASSERT(storageSize >= size);
+        if (dstSignature->NumInputSignatureEntries)
+        {
+            size = dstSignature->NumInputSignatureEntries * sizeof(D3D12DDIARG_SIGNATURE_ENTRY_0012);
+            ASSERT(storageSize >= size);
 
-        D3D12DDIARG_SIGNATURE_ENTRY_0012 * inputEntries = (D3D12DDIARG_SIGNATURE_ENTRY_0012 *) storage;
-        storageSize -= size;
+            D3D12DDIARG_SIGNATURE_ENTRY_0012 * inputEntries = (D3D12DDIARG_SIGNATURE_ENTRY_0012 *)storage;
+            storageSize -= size;
+            storage += size;
 
-        memcpy(inputEntries, m_args.IOSignatures.Standard->pInputSignature, size);
-        dstSignature->pInputSignature = inputEntries;
+            memcpy(inputEntries, m_args.IOSignatures.Standard->pInputSignature, size);
+            dstSignature->pInputSignature = inputEntries;
+        }
 
-        size = dstSignature->NumOutputSignatureEntries * sizeof(D3D12DDIARG_SIGNATURE_ENTRY_0012);
-        ASSERT(storageSize >= size);
+        if (dstSignature->NumOutputSignatureEntries)
+        {
+            size = dstSignature->NumOutputSignatureEntries * sizeof(D3D12DDIARG_SIGNATURE_ENTRY_0012);
+            ASSERT(storageSize >= size);
 
-        D3D12DDIARG_SIGNATURE_ENTRY_0012 * outputEntries = (D3D12DDIARG_SIGNATURE_ENTRY_0012 *) storage;
-        storageSize -= size;
+            D3D12DDIARG_SIGNATURE_ENTRY_0012 * outputEntries = (D3D12DDIARG_SIGNATURE_ENTRY_0012 *)storage;
+            storageSize -= size;
+            storage += size;
 
-        memcpy(outputEntries, m_args.IOSignatures.Standard->pInputSignature, size);
-        dstSignature->pOutputSignature = outputEntries;
+            memcpy(outputEntries, m_args.IOSignatures.Standard->pOutputSignature, size);
+            dstSignature->pOutputSignature = outputEntries;
+        }
 
         ASSERT(storageSize == 0);
     }
@@ -66,8 +77,7 @@ public:
 
         size += pArgs->pShaderCode[1] * sizeof(UINT);
 
-        // TODO: How do we know when args are for tesselation?
-
+        // Only Compute Shader is supported, so IOSignatures.Tessellation is not used
         size += sizeof(D3D12DDIARG_STAGE_IO_SIGNATURES);
 
         size += pArgs->IOSignatures.Standard->NumInputSignatureEntries * sizeof(D3D12DDIARG_SIGNATURE_ENTRY_0012);
