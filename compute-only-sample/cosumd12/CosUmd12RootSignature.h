@@ -24,6 +24,7 @@ public:
 
         D3D12DDI_ROOT_PARAMETER_0013 * dstRootParameters = (D3D12DDI_ROOT_PARAMETER_0013 *) storage;
         storageSize -= size;
+        storage += size;
 
         memcpy(dstRootParameters, m_rootSignature.pRootParameters, size);
         m_rootSignature.pRootParameters = dstRootParameters;
@@ -37,6 +38,7 @@ public:
 
                 D3D12DDI_DESCRIPTOR_RANGE_0013 * dstDescriptorRanges = (D3D12DDI_DESCRIPTOR_RANGE_0013 *)storage;
                 storageSize -= size;
+                storage += size;
 
                 memcpy(dstDescriptorRanges, pDescriptorTable->pDescriptorRanges, size);
                 pDescriptorTable->pDescriptorRanges = dstDescriptorRanges;
