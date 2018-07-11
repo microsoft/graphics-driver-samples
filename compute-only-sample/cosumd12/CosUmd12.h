@@ -23,6 +23,7 @@ void StopInFunction(const char * function, const char * file, int line);
 
 #include "CosAllocation.h"
 #include "CosContext.h"
+#include "CosGpuCommand.h"
 
 #include "CosUmd12Adapter.h"
 #include "CosUmd12Device.h"
@@ -40,6 +41,7 @@ void StopInFunction(const char * function, const char * file, int line);
 #include "CosUmd12Heap.h"
 #include "CosUmd12Resource.h"
 
-#include "CosGpuCommand.h"
 #include "CosUmd12CommandBuffer.h"
+
+#include "CosUmd12DescriptorHeap.h"
 

@@ -73,10 +73,9 @@ CosKmdSoftAdapter::ProcessHWRenderBuffer(
     UINT64 commandSize;
 
     BOOL bRootSignatureSet = false;
-    FLOAT * pRootConstants = NULL;
-    PHYSICAL_ADDRESS * pCbvTable = NULL;
-    PHYSICAL_ADDRESS * pSrvTable = NULL;
-    PHYSICAL_ADDRESS * pUavTable = NULL;
+    GpuHWConstantDescriptor * pCbvTable = NULL;
+    GpuHWDescriptor * pSrvTable = NULL;
+    GpuHWDescriptor * pUavTable = NULL;
 
     for (; pGpuCommand < pEndofCommand; pGpuCommand += commandSize)
     {
@@ -94,27 +93,21 @@ CosKmdSoftAdapter::ProcessHWRenderBuffer(
 
                 BYTE * pRSData = (BYTE *)(pRootSignatureSet + 1);
 
-                if (pRootSignatureSet->m_numRootConstants)
+                if (pRootSignatureSet->m_numCbvRegisters)
                 {
-                    pRootConstants = (FLOAT *)pRSData;
+                    pCbvTable = (GpuHWConstantDescriptor *)pRSData;
 
-                    pRSData += (sizeof(FLOAT)*pRootSignatureSet->m_numRootConstants);
+                    pRSData += (sizeof(GpuHWConstantDescriptor)*pRootSignatureSet->m_numCbvRegisters);
                 }
-                if (pRootSignatureSet->m_numRootDescriptorCbv)
+                if (pRootSignatureSet->m_numSrvRegisters)
                 {
-                    pCbvTable = (PHYSICAL_ADDRESS *)pRSData;
+                    pSrvTable = (GpuHWDescriptor *)pRSData;
 
-                    pRSData += (sizeof(PHYSICAL_ADDRESS)*pRootSignatureSet->m_numRootDescriptorCbv);
+                    pRSData += (sizeof(GpuHWDescriptor)*pRootSignatureSet->m_numSrvRegisters);
                 }
-                if (pRootSignatureSet->m_numRootDescriptorSrv)
+                if (pRootSignatureSet->m_numUavRegisters)
                 {
-                    pSrvTable = (PHYSICAL_ADDRESS *)pRSData;
-
-                    pRSData += (sizeof(PHYSICAL_ADDRESS)*pRootSignatureSet->m_numRootDescriptorCbv);
-                }
-                if (pRootSignatureSet->m_numRootDescriptorUav)
-                {
-                    pUavTable = (PHYSICAL_ADDRESS *)pRSData;
+                    pUavTable = (GpuHWDescriptor *)pRSData;
                 }
 
                 commandSize = pRootSignatureSet->m_commandSize;
@@ -126,7 +119,7 @@ CosKmdSoftAdapter::ProcessHWRenderBuffer(
 
                 if (bRootSignatureSet)
                 {
-#if ENABLE_FOR_COSTEST
+#if 1   // ENABLE_FOR_COSTEST
                     KFLOATING_SAVE floatingSave;
 
                     KeSaveFloatingPointState(&floatingSave);
@@ -137,13 +130,13 @@ CosKmdSoftAdapter::ProcessHWRenderBuffer(
                                         pCSDispatch->m_threadGroupCountZ;
 
                     UINT * pIntIn1 = (UINT *)(((PBYTE)CosKmdGlobal::s_pVideoMemory) + 
-                                              (pUavTable[0].QuadPart - CosKmdGlobal::s_videoMemoryPhysicalAddress.QuadPart));
+                                              (pUavTable[0].m_resourceGpuAddress.QuadPart - CosKmdGlobal::s_videoMemoryPhysicalAddress.QuadPart));
 
                     UINT * pIntIn2 = (UINT *)(((PBYTE)CosKmdGlobal::s_pVideoMemory) + 
-                                              (pUavTable[1].QuadPart - CosKmdGlobal::s_videoMemoryPhysicalAddress.QuadPart));
+                                              (pUavTable[1].m_resourceGpuAddress.QuadPart - CosKmdGlobal::s_videoMemoryPhysicalAddress.QuadPart));
 
                     UINT * pIntOut = (UINT *)(((PBYTE)CosKmdGlobal::s_pVideoMemory) + 
-                                              (pUavTable[2].QuadPart - CosKmdGlobal::s_videoMemoryPhysicalAddress.QuadPart));
+                                              (pUavTable[2].m_resourceGpuAddress.QuadPart - CosKmdGlobal::s_videoMemoryPhysicalAddress.QuadPart));
 
                     for (UINT i = 0; i < numElements; i++)
                     {

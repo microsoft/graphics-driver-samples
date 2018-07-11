@@ -3,6 +3,9 @@
 #include "CosUmd12.h"
 
 class CosUmd12Device;
+class CosUmd12CommandList;
+class CosUmd12CommandBuffer;
+class CosUmd12DescriptorHeap;
 
 const UINT SIZE_ROOT_SIGNATURE = 64*sizeof(DWORD);
 
@@ -18,8 +21,15 @@ public:
 
         char * storage = (char *)this + sizeof(*this);
         int storageSize = CalculateSize(pArgs) - sizeof(*this);
+        UINT valueOffset = 0;
 
-        size_t size = sizeof(D3D12DDI_ROOT_PARAMETER_0013) * m_rootSignature.NumParameters;
+        m_pRootValueOffsets = (UINT *)storage;
+        size_t size = m_rootSignature.NumParameters * sizeof(UINT);
+
+        storageSize -= size;
+        storage += size;
+
+        size = sizeof(D3D12DDI_ROOT_PARAMETER_0013) * m_rootSignature.NumParameters;
         ASSERT(storageSize >= size);
 
         D3D12DDI_ROOT_PARAMETER_0013 * dstRootParameters = (D3D12DDI_ROOT_PARAMETER_0013 *) storage;
@@ -30,23 +40,45 @@ public:
         m_rootSignature.pRootParameters = dstRootParameters;
 
         D3D12DDI_ROOT_PARAMETER_0013 * pRootParameter = dstRootParameters;
-        for (UINT i = 0; i < m_rootSignature.NumParameters; i++, pRootParameter++) {
-            if (pRootParameter->ParameterType == D3D12DDI_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE) {
-                D3D12DDI_ROOT_DESCRIPTOR_TABLE_0013 * pDescriptorTable = &pRootParameter->DescriptorTable;
-                size = sizeof(D3D12DDI_DESCRIPTOR_RANGE_0013) * pDescriptorTable->NumDescriptorRanges;
-                ASSERT(storageSize >= size);
+        for (UINT i = 0; i < m_rootSignature.NumParameters; i++, pRootParameter++)
+        {
+            m_pRootValueOffsets[i] = valueOffset;
 
-                D3D12DDI_DESCRIPTOR_RANGE_0013 * dstDescriptorRanges = (D3D12DDI_DESCRIPTOR_RANGE_0013 *)storage;
-                storageSize -= size;
-                storage += size;
+            switch (pRootParameter->ParameterType)
+            {
+            case D3D12DDI_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE:
+                {
+                    D3D12DDI_ROOT_DESCRIPTOR_TABLE_0013 * pDescriptorTable = &pRootParameter->DescriptorTable;
+                    size = sizeof(D3D12DDI_DESCRIPTOR_RANGE_0013) * pDescriptorTable->NumDescriptorRanges;
+                    ASSERT(storageSize >= size);
 
-                memcpy(dstDescriptorRanges, pDescriptorTable->pDescriptorRanges, size);
-                pDescriptorTable->pDescriptorRanges = dstDescriptorRanges;
+                    D3D12DDI_DESCRIPTOR_RANGE_0013 * dstDescriptorRanges = (D3D12DDI_DESCRIPTOR_RANGE_0013 *)storage;
+                    storageSize -= size;
+                    storage += size;
+
+                    memcpy(dstDescriptorRanges, pDescriptorTable->pDescriptorRanges, size);
+                    pDescriptorTable->pDescriptorRanges = dstDescriptorRanges;
+                }
+                //
+                // Offset from the start of Descriptor Heap need to be stored
+                //
+                valueOffset += sizeof(UINT);
+                break;
+            case D3D12DDI_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS:
+                valueOffset += pRootParameter->Constants.Num32BitValues * sizeof(FLOAT);
+                break;
+            case D3D12DDI_ROOT_PARAMETER_TYPE_CBV:
+            case D3D12DDI_ROOT_PARAMETER_TYPE_SRV:
+            case D3D12DDI_ROOT_PARAMETER_TYPE_UAV:
+                valueOffset += sizeof(D3D12DDI_GPU_VIRTUAL_ADDRESS);
+                break;
             }
         }
 
         ASSERT(storageSize == 0);
         ASSERT(m_rootSignature.NumStaticSamplers == 0);
+
+        PrepareHWRootSignature();
     }
 
     ~CosUmd12RootSignature()
@@ -58,16 +90,56 @@ public:
         const D3D12DDI_ROOT_SIGNATURE_0013 * pRootSignature = pArgs->pRootSignature_1_1;
         int size = sizeof(CosUmd12RootSignature) + sizeof(D3D12DDI_ROOT_PARAMETER_0013) * pRootSignature->NumParameters;
         const D3D12DDI_ROOT_PARAMETER_0013 * pRootParameter = pRootSignature->pRootParameters;
+
         for (UINT i = 0; i < pArgs->pRootSignature_1_1->NumParameters; i++, pRootParameter++)
-            if (pRootParameter->ParameterType == D3D12DDI_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE) {
+        {
+            if (pRootParameter->ParameterType == D3D12DDI_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE)
+            {
                 const D3D12DDI_ROOT_DESCRIPTOR_TABLE_0013 * pDescriptorTable = &pRootParameter->DescriptorTable;
                 size += sizeof(D3D12DDI_DESCRIPTOR_RANGE_0013) * pDescriptorTable->NumDescriptorRanges;
             }
+        }
+
+        //
+        // Offsets to root parameter values
+        //
+
+        size += pRootSignature->NumParameters * sizeof(UINT);
+
         return size;
     }
 
     static CosUmd12RootSignature* CastFrom(D3D12DDI_HROOTSIGNATURE);
     D3D12DDI_HROOTSIGNATURE CastTo() const;
+
+    void SetRootDescriptorTable(
+        BYTE * pRootValues,
+        CosUmd12DescriptorHeap * pDescriptorHeaps[D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES],
+        UINT rootParameterIndex,
+        D3D12DDI_GPU_DESCRIPTOR_HANDLE baseDescriptor);
+        
+   void SetRoot32BitConstants(
+        BYTE * pRootValues,
+        UINT rootParameterIndex,
+        UINT num32BitValuesToSet,
+        const void* pSrcData,
+        UINT destOffsetIn32BitValues);
+
+    void SetRootView(
+        BYTE * pRootValues,
+        UINT rootParameterIndex,
+        D3D12DDI_GPU_VIRTUAL_ADDRESS bufferLocation);
+
+    UINT GetHwRootSignatureSize(
+        UINT * pNumPatchLocation);
+
+    void WriteHWRootSignature(
+        BYTE * pRootValues,
+        CosUmd12DescriptorHeap * pDescriptorHeaps[D3D12DDI_DESCRIPTOR_HEAP_TYPE_NUM_TYPES],
+        CosUmd12CommandBuffer * pCurCommandBuffer,
+        BYTE * pCommandBuf,
+        UINT curCommandOffset,
+        D3DDDI_PATCHLOCATIONLIST * pPatchLocations);
 
 private:
 
@@ -75,9 +147,21 @@ private:
 
     CosUmd12Device * m_pDevice;
     D3D12DDI_ROOT_SIGNATURE_VERSION m_version;
-    D3D12DDI_ROOT_SIGNATURE_0013 m_rootSignature;        
+    D3D12DDI_ROOT_SIGNATURE_0013 m_rootSignature;
     UINT m_nodeMask;
 
+    UINT * m_pRootValueOffsets;
+
+    GpuHWRootSignatureSet m_hwRootSignature;
+    UINT m_numRegistersToPatch;
+
+    void PrepareHWRootSignature();
+
+    void WriteHWRootDescriptor(
+        CosUmd12CommandBuffer * pCurCommandBuffer,
+        D3D12DDI_GPU_VIRTUAL_ADDRESS resourceGpuVA,
+        UINT hwDescriptorOffset,
+        D3DDDI_PATCHLOCATIONLIST * &pPatchLocations);
 };
 
 inline CosUmd12RootSignature* CosUmd12RootSignature::CastFrom(D3D12DDI_HROOTSIGNATURE hRootSignature)

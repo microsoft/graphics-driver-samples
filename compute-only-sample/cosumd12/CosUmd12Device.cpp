@@ -49,6 +49,8 @@ D3D12DDI_GPU_VIRTUAL_ADDRESS CosUmd12Device::AllocateUniqueAddress(UINT size)
 {
     D3D12DDI_GPU_VIRTUAL_ADDRESS curUniqueAddress = m_curUniqueAddress;
 
+    size = (size + PAGE_SIZE - 1) & (~(PAGE_SIZE - 1));
+
     m_curUniqueAddress += size;
 
     return curUniqueAddress;

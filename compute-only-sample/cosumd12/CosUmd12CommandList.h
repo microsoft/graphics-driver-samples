@@ -2,6 +2,8 @@
 
 #include "CosUmd12.h"
 
+class CosUmd12DescriptorHeap;
+
 const UINT COS_MAX_NUM_COMMAND_BUFFERS = 256;
 
 class CosUmd12CommandList
@@ -12,6 +14,7 @@ public:
         m_pDevice = pDevice;
         m_args = *pArgs;
         m_pPipelineState = NULL;
+        memset(m_pDescriptorHeaps, 0, sizeof(m_pDescriptorHeaps));
         m_numFilledCommandBuffers = 0;
     }
 
@@ -44,7 +47,23 @@ public:
 
     void Close();
 
-    void SetComputeRootUnorderedAccessView(UINT RootParameterIndex, D3D12DDI_GPU_VIRTUAL_ADDRESS BufferLocation);
+    void SetDescriptorHeaps(
+        UINT numDescriptorHeaps,
+        D3D12DDI_HDESCRIPTORHEAP * pDescriptorHeaps);
+
+    void SetRootDescriptorTable(
+        UINT rootParameterIndex,
+        D3D12DDI_GPU_DESCRIPTOR_HANDLE baseDescriptor);
+
+    void SetRoot32BitConstants(
+        UINT rootParameterIndex,
+        UINT num32BitValuesToSet,
+        const void* pSrcData,
+        UINT destOffsetIn32BitValues);
+
+    void SetRootView(
+        UINT RootParameterIndex,
+        D3D12DDI_GPU_VIRTUAL_ADDRESS BufferLocation);
 
     void Dispatch(
         UINT ThreadGroupCountX,
@@ -61,11 +80,13 @@ private:
     CosUmd12Device * m_pDevice;
     D3D12DDIARG_CREATE_COMMAND_LIST_0001 m_args;
     CosUmd12PipelineState * m_pPipelineState;
+    CosUmd12DescriptorHeap * m_pDescriptorHeaps[D3D12DDI_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
 
     //
-    // TODO : Cbv, Srv, Root Constant support
+    // Storage for current root values specified by Root Signature
     //
-    D3D12DDI_GPU_VIRTUAL_ADDRESS m_rootDescriptorTableUav[SIZE_ROOT_SIGNATURE/sizeof(D3D12DDI_GPU_VIRTUAL_ADDRESS)];
+
+    BYTE m_rootValues[SIZE_ROOT_SIGNATURE];
 
     CosUmd12CommandAllocator * m_pCommandAllocator;
 

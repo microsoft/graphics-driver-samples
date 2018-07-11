@@ -158,6 +158,7 @@
     <ClInclude Include="CosUmd12CommandList.h" />
     <ClInclude Include="CosUmd12CommandQueue.h" />
     <ClInclude Include="CosUmd12DepthStencilState.h" />
+    <ClInclude Include="CosUmd12DescriptorHeap.h" />
     <ClInclude Include="CosUmd12Device.h" />
     <ClInclude Include="CosUmd12Fence.h" />
     <ClInclude Include="CosUmd12Heap.h" />
@@ -180,12 +181,15 @@
     <ClCompile Include="CosUmd12CommandQueue.cpp" />
     <ClCompile Include="CosUmd12CommandQueueDdi.cpp" />
     <ClCompile Include="CosUmd12ComputeCommandListDddi.cpp" />
+    <ClCompile Include="CosUmd12Descriptor.cpp" />
+    <ClCompile Include="CosUmd12DescriptorHeap.cpp" />
     <ClCompile Include="CosUmd12Device.cpp" />
     <ClCompile Include="CosUmd12DeviceDdi.cpp" />
     <ClCompile Include="CosUmd12DxgiDdi.cpp" />
     <ClCompile Include="CosUmd12ExtendedFeaturesDdi.cpp" />
     <ClCompile Include="CosUmd12Heap.cpp" />
     <ClCompile Include="CosUmd12Resource.cpp" />
+    <ClCompile Include="CosUmd12RootSignature.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
