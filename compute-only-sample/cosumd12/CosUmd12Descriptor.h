@@ -6,18 +6,42 @@ class CosUmd12Descriptor
 {
 public:
 
-    enum Type { kUnknown };
-
-    CosUmd12Descriptor(Type type, void * ptr)
+    enum Type 
     {
-        m_type = type;
-        m_ptr = ptr;
+        COS_CBV = 1,
+        COS_SRV = 2,
+        COS_UAV = 3
+    };
+
+    CosUmd12Descriptor(const D3D12DDI_CONSTANT_BUFFER_VIEW_DESC * pDesc)
+    {
+        m_type = COS_CBV;
+        m_cbv = *pDesc;
     }
 
+    CosUmd12Descriptor(const D3D12DDIARG_CREATE_SHADER_RESOURCE_VIEW_0002 * pDesc)
+    {
+        m_type = COS_SRV;
+        m_srv = *pDesc;
+    }
+
+    CosUmd12Descriptor(const D3D12DDIARG_CREATE_UNORDERED_ACCESS_VIEW_0002 * pDesc)
+    {
+        m_type = COS_UAV;
+        m_uav = *pDesc;
+    }
+
+    void WriteHWDescriptor(
+        CosUmd12CommandBuffer * pCurCommandBuffer,
+        UINT hwDescriptorOffset,
+        D3DDDI_PATCHLOCATIONLIST * &pPatchLocations) const;
+
 private:
-
-    
     Type    m_type;
-    void *  m_ptr;
-
+    union
+    {
+        D3D12DDI_CONSTANT_BUFFER_VIEW_DESC m_cbv;
+        D3D12DDIARG_CREATE_SHADER_RESOURCE_VIEW_0002 m_srv;
+        D3D12DDIARG_CREATE_UNORDERED_ACCESS_VIEW_0002 m_uav;
+    };
 };

@@ -306,6 +306,10 @@ void APIENTRY CosUmd12ComputeCommandList_Ddi_SetDescriptorHeaps_0003(
         // do nothing
     } else {
         STOP_IN_FUNCTION();
+
+        CosUmd12CommandList * pCommandList = CosUmd12CommandList::CastFrom(CommandList);
+
+        pCommandList->SetDescriptorHeaps(NumDescriptorHeaps, pDescriptorHeaps);
     }
 }
 
@@ -329,6 +333,10 @@ void APIENTRY CosUmd12ComputeCommandList_Ddi_SetComputeRootDescriptorTable(
     _In_ D3D12DDI_GPU_DESCRIPTOR_HANDLE BaseDescriptor)
 {
     STOP_IN_FUNCTION();
+
+    CosUmd12CommandList * pCommandList = CosUmd12CommandList::CastFrom(CommandList);
+
+    pCommandList->SetRootDescriptorTable(RootParameterIndex, BaseDescriptor);
 }
 
 void APIENTRY CosUmd12ComputeCommandList_Ddi_SetGraphicsRootDescriptorTable(
@@ -365,6 +373,14 @@ void APIENTRY CosUmd12ComputeCommandList_Ddi_SetComputeRoot32BitConstants_0003(
     UINT DestOffsetIn32BitValues)
 {
     STOP_IN_FUNCTION();
+
+    //
+    // TODO : Test
+    //
+
+    CosUmd12CommandList * pCommandList = CosUmd12CommandList::CastFrom(CommandList);
+
+    pCommandList->SetRoot32BitConstants(RootParameterIndex, Num32BitValuesToSet, pSrcData, DestOffsetIn32BitValues);
 }
 
 void APIENTRY CosUmd12ComputeCommandList_Ddi_SetGraphicsRoot32BitConstants_0003(
@@ -383,6 +399,14 @@ void APIENTRY CosUmd12ComputeCommandList_Ddi_SetComputeRootConstantBufferView(
     _In_ D3D12DDI_GPU_VIRTUAL_ADDRESS BufferLocation)
 {
     STOP_IN_FUNCTION();
+
+    //
+    // TODO : Test
+    //
+
+    CosUmd12CommandList * pCommandList = CosUmd12CommandList::CastFrom(CommandList);
+
+    pCommandList->SetRootView(RootParameterIndex, BufferLocation);
 }
 
 void APIENTRY CosUmd12ComputeCommandList_Ddi_SetGraphicsRootConstantBufferView(
@@ -399,6 +423,14 @@ void APIENTRY CosUmd12ComputeCommandList_Ddi_SetComputeRootShaderResourceView(
     _In_ D3D12DDI_GPU_VIRTUAL_ADDRESS BufferLocation)
 {
     STOP_IN_FUNCTION();
+
+    //
+    // TODO : Test
+    //
+
+    CosUmd12CommandList * pCommandList = CosUmd12CommandList::CastFrom(CommandList);
+
+    pCommandList->SetRootView(RootParameterIndex, BufferLocation);
 }
 
 void APIENTRY CosUmd12ComputeCommandList_Ddi_SetGraphicsRootShaderResourceView(
@@ -418,7 +450,7 @@ void APIENTRY CosUmd12ComputeCommandList_Ddi_SetComputeRootUnorderedAccessView(
 
     CosUmd12CommandList * pCommandList = CosUmd12CommandList::CastFrom(CommandList);
 
-    pCommandList->SetComputeRootUnorderedAccessView(RootParameterIndex, BufferLocation);
+    pCommandList->SetRootView(RootParameterIndex, BufferLocation);
 }
 
 void APIENTRY CosUmd12ComputeCommandList_Ddi_SetGraphicsRootUnorderedAccessView(

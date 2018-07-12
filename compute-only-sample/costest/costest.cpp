@@ -513,6 +513,8 @@ int main()
     std::wstring cosDriverString = L"Compute Only Sample Driver";
     std::wstring brdDriverString = L"Microsoft Basic Render Driver";
     std::wstring amdDriverString = L"Radeon (TM) RX 480 Graphics";
+    std::wstring intelDriverString = L"Intel(R) HD Graphics 620";
+
     std::list<std::wstring> adapterList;
 
     D3DAdapter::GetAdapterList(adapterList);

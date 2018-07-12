@@ -267,6 +267,8 @@ void APIENTRY CosUmd12Device_Ddi_CreateComputeShader_0026(
     _In_ const D3D12DDIARG_CREATE_SHADER_0026* pDesc,
     D3D12DDI_HSHADER Shader)
 {
+    STOP_IN_FUNCTION();
+
     CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
     CosUmd12Shader * pShader = new (Shader.pDrvPrivate) CosUmd12Shader(pDevice, pDesc);
 }
@@ -481,7 +483,7 @@ SIZE_T APIENTRY CosUmd12Device_Ddi_CalcPrivateDescriptorHeapSize_0001(
 {
     STOP_IN_FUNCTION();
 
-    return 0;
+    return CosUmd12DescriptorHeap::CalculateSize(pDesc);
 }
 
 HRESULT APIENTRY CosUmd12Device_Ddi_CreateDescriptorHeap_0001(
@@ -491,7 +493,10 @@ HRESULT APIENTRY CosUmd12Device_Ddi_CreateDescriptorHeap_0001(
 {
     STOP_IN_FUNCTION();
 
-    return E_NOTIMPL;
+    CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
+    CosUmd12DescriptorHeap * pDescriptorHeap = new(DescriptorHeap.pDrvPrivate) CosUmd12DescriptorHeap(pDevice, pDesc);
+
+    return S_OK;
 }
 
 void APIENTRY CosUmd12Device_Ddi_DestroyDescriptorHeap(
@@ -505,6 +510,8 @@ UINT APIENTRY CosUmd12Device_Ddi_GetDescriptorSizeInBytes(
     D3D12DDI_HDEVICE Device,
     D3D12DDI_DESCRIPTOR_HEAP_TYPE HeapType)
 {
+    STOP_IN_FUNCTION();
+
     UINT size = 0;
 
     switch (HeapType) {
@@ -527,7 +534,9 @@ D3D12DDI_CPU_DESCRIPTOR_HANDLE APIENTRY CosUmd12Device_Ddi_GetCpuDescriptorHandl
 {
     STOP_IN_FUNCTION();
 
-    return { 0 };
+    CosUmd12DescriptorHeap * pDescriptorHeap = CosUmd12DescriptorHeap::CastFrom(DescriptorHeap);
+
+    return { (SIZE_T)pDescriptorHeap->GetCpuAddress() };
 }
 
 D3D12DDI_GPU_DESCRIPTOR_HANDLE APIENTRY CosUmd12Device_Ddi_GetGpuDescriptorHandleForHeapStart(
@@ -536,7 +545,9 @@ D3D12DDI_GPU_DESCRIPTOR_HANDLE APIENTRY CosUmd12Device_Ddi_GetGpuDescriptorHandl
 {
     STOP_IN_FUNCTION();
 
-    return { 0 };
+    CosUmd12DescriptorHeap * pDescriptorHeap = CosUmd12DescriptorHeap::CastFrom(DescriptorHeap);
+
+    return { pDescriptorHeap->GetGpuAddress() };
 }
 
 void APIENTRY CosUmd12Device_Ddi_CreateShaderResourceView_0002(
@@ -569,6 +580,8 @@ void APIENTRY CosUmd12Device_Ddi_CreateUnorderedAccessView_0002(
     _In_ D3D12DDI_CPU_DESCRIPTOR_HANDLE DestDescriptor)
 {
     STOP_IN_FUNCTION();
+
+    CosUmd12Descriptor *pUavDescriptor = new ((void *)DestDescriptor.ptr) CosUmd12Descriptor(pDesc);
 }
 
 void APIENTRY CosUmd12Device_Ddi_CreateRenderTargetView_0002(
@@ -600,6 +613,8 @@ HRESULT APIENTRY CosUmd12Device_Ddi_CreateRootSignature_0013(
     _In_ const D3D12DDIARG_CREATE_ROOT_SIGNATURE_0013* pDesc,
     D3D12DDI_HROOTSIGNATURE hRootSignature)
 {
+    STOP_IN_FUNCTION();
+
     CosUmd12Device * pDevice = CosUmd12Device::CastFrom(hDevice);
     CosUmd12RootSignature * pCosUmdRootSignature = new (hRootSignature.pDrvPrivate) CosUmd12RootSignature(pDevice, pDesc);
 
