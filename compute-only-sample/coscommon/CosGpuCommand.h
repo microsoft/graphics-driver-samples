@@ -46,20 +46,36 @@ struct GpuResourceCopy
     size_t              m_sizeBytes;
 };
 
+//
+// A constant register is loaded directly with Root Constant value or through a Constant Buffer
+//
+
+union GpuHWConstantDescriptor
+{
+    FLOAT               m_constantValues[4];
+    PHYSICAL_ADDRESS    m_resourceGpuAddress;
+};
+
+struct GpuHWDescriptor
+{
+    PHYSICAL_ADDRESS    m_resourceGpuAddress;
+};
+
 struct GpuHWRootSignatureSet
 {
     GpuCommandId    m_commandId;
     UINT            m_commandSize;
 
-    UINT            m_numRootConstants;
-    UINT            m_numRootDescriptorCbv;
-    UINT            m_numRootDescriptorSrv;
-    UINT            m_numRootDescriptorUav;
+    UINT            m_numCbvRegisters;
+    UINT            m_numSrvRegisters;
+    UINT            m_numUavRegisters;
+
     //
-    // Followed by m_numRootConstants of FLOAT
+    // Followed by number Cbv of GpuHWConstantDescriptor
     //
+
     //
-    // Followed by number Cbv + Srv + Uav of PHYSICAL_ADDRESS
+    // Followed by number Srv + Uav of GpuHWDescriptor
     //
 };
 
@@ -73,6 +89,7 @@ struct GpuHwComputeShaderDisptch
     UINT            m_threadGroupCountY;
     UINT            m_threadGroupCountZ;
     BYTE            m_ShaderHash[16];
+
     //
     // Followed by shader binary code
     //
