@@ -23,7 +23,7 @@ CosUmd12Heap::Standup()
     pCosAllocationExchange->m_hwHeightPixels = 1;
     pCosAllocationExchange->m_hwWidthPixels = pCosAllocationExchange->m_hwSizeBytes = (UINT)m_desc.ByteSize;
 
-    if (m_desc.CPUPageProperty != D3D12_CPU_PAGE_PROPERTY_NOT_AVAILABLE)
+    if (m_desc.CPUPageProperty != D3D12DDI_CPU_PAGE_PROPERTY_NOT_AVAILABLE)
     {
         pCosAllocationExchange->m_cpuVisible = 1;
     }
