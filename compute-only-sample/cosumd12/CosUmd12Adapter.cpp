@@ -92,7 +92,7 @@ SIZE_T APIENTRY CosUmd12Adapter::CalcPrivateDeviceSize(
 // List of DDIs ref is compatible with.
 const UINT64 c_aSupportedVersions[] =
 {
-    D3D12DDI_SUPPORTED_0034
+    D3D12DDI_SUPPORTED_0052
 };
 
 HRESULT APIENTRY CosUmd12Adapter::GetSupportedVersions(
@@ -171,12 +171,12 @@ HRESULT APIENTRY CosUmd12Adapter::GetCaps(
 
     case (D3D12DDICAPS_TYPE_SHADER):
     {
-        if (pCaps->DataSize != sizeof(D3D12DDI_SHADER_CAPS_0015))
+        if (pCaps->DataSize != sizeof(D3D12DDI_SHADER_CAPS_0042))
         {
             hr = E_UNEXPECTED;
         } else {
             // TODO: Research these caps
-            D3D12DDI_SHADER_CAPS_0015* pShaderCaps = (D3D12DDI_SHADER_CAPS_0015*)pCaps->pData;
+            D3D12DDI_SHADER_CAPS_0042* pShaderCaps = (D3D12DDI_SHADER_CAPS_0042*)pCaps->pData;
             pShaderCaps->MinPrecision = D3D12DDI_SHADER_MIN_PRECISION_NONE;
             pShaderCaps->DoubleOps = FALSE;
             pShaderCaps->ShaderSpecifiedStencilRef = FALSE;
@@ -187,6 +187,7 @@ HRESULT APIENTRY CosUmd12Adapter::GetCaps(
             pShaderCaps->WaveLaneCountMax = 4;
             pShaderCaps->TotalLaneCount = 4;
             pShaderCaps->Int64Ops = FALSE;
+            pShaderCaps->Native16BitOps = FALSE;
         }
 
         break;
@@ -196,8 +197,8 @@ HRESULT APIENTRY CosUmd12Adapter::GetCaps(
     {
         // TODO: Review these options with Amar/D3D Team in the context of compute only
 
-        assert(pCaps->DataSize == sizeof(D3D12DDI_D3D12_OPTIONS_DATA_0033));
-        D3D12DDI_D3D12_OPTIONS_DATA_0033* pOptions = (D3D12DDI_D3D12_OPTIONS_DATA_0033*)pCaps->pData;
+        assert(pCaps->DataSize == sizeof(D3D12DDI_D3D12_OPTIONS_DATA_0052));
+        D3D12DDI_D3D12_OPTIONS_DATA_0052* pOptions = (D3D12DDI_D3D12_OPTIONS_DATA_0052*)pCaps->pData;
 
         // TODO: Find out what is required to meet D3D12DDI_RESOURCE_BINDING_TIER_1
         pOptions->ResourceBindingTier = D3D12DDI_RESOURCE_BINDING_TIER_2; // FL 12.0+  must report tier+
@@ -227,6 +228,10 @@ HRESULT APIENTRY CosUmd12Adapter::GetCaps(
         pOptions->BarycentricsSupported = false;
 
         pOptions->ConservativeRasterizationTier = D3D12DDI_CONSERVATIVE_RASTERIZATION_TIER_1; // FL12.1+ must support tier1+
+
+        pOptions->ReservedBufferPlacementSupported = false;
+        pOptions->Deterministic64KBUndefinedSwizzle = false;
+        pOptions->SRVOnlyTiledResourceTier3 = false;
 
         break;
     }
@@ -305,11 +310,13 @@ HRESULT APIENTRY CosUmd12Adapter::GetCaps(
 
         case D3D12DDICAPS_TYPE_MEMORY_ARCHITECTURE:
         {
-            ASSERT(pCaps->DataSize == sizeof(D3D12DDI_MEMORY_ARCHITECTURE_CAPS));
-            D3D12DDI_MEMORY_ARCHITECTURE_CAPS* pMemoryCaps = (D3D12DDI_MEMORY_ARCHITECTURE_CAPS*)pCaps->pData;
+            ASSERT(pCaps->DataSize == sizeof(D3D12DDI_MEMORY_ARCHITECTURE_CAPS_0041));
+            D3D12DDI_MEMORY_ARCHITECTURE_CAPS_0041* pMemoryCaps = (D3D12DDI_MEMORY_ARCHITECTURE_CAPS_0041*)pCaps->pData;
             pMemoryCaps->UMA = TRUE;
             pMemoryCaps->IOCoherent = TRUE;
             pMemoryCaps->CacheCoherent = TRUE;
+            pMemoryCaps->HeapSerializationTier = D3D12DDI_HEAP_SERIALIZATION_TIER_0041_0;
+            pMemoryCaps->ResourceSerializationTier = D3D12DDI_RESOURCE_SERIALIZATION_TIER_0041_0;
             break;
         }
 
@@ -355,6 +362,13 @@ HRESULT APIENTRY CosUmd12Adapter::GetCaps(
             break;
         }
 
+        case D3D12DDICAPS_TYPE_0050_HARDWARE_SCHEDULING_CAPS:
+        {
+            D3D12DDICAPS_HARDWARE_SCHEDULING_CAPS_0050* pHwSchedulingCaps = (D3D12DDICAPS_HARDWARE_SCHEDULING_CAPS_0050*)pCaps->pData;
+            pHwSchedulingCaps->ComputeQueuesPer3DQueue = 0;
+            break;
+        }
+
         default:
         {
             STOP_IN_FUNCTION();
@@ -389,14 +403,14 @@ HRESULT APIENTRY CosUmd12Adapter::FillDdiTable(D3D12DDI_HADAPTER hAdapter, D3D12
     switch (tableType) {
         case D3D12DDI_TABLE_TYPE_DEVICE_CORE:
         {
-            if (tableSize < sizeof(g_CosUmd12Device_Ddi_0033))
+            if (tableSize < sizeof(g_CosUmd12Device_Ddi_0052))
             {
                 assert(0);
                 hr = E_INVALIDARG;
             }
             else
             {
-                memcpy(pTable, (void *) &g_CosUmd12Device_Ddi_0033, sizeof(g_CosUmd12Device_Ddi_0033));
+                memcpy(pTable, (void *) &g_CosUmd12Device_Ddi_0052, sizeof(g_CosUmd12Device_Ddi_0052));
             }
             break;
         }
@@ -405,10 +419,10 @@ HRESULT APIENTRY CosUmd12Adapter::FillDdiTable(D3D12DDI_HADAPTER hAdapter, D3D12
             // TODO: Talk with Jesse about where we indicate how many tables will get filled out and what they correspond to?  Is this documented somewhere?
 
             if (uTableNum == Compute) {
-                memcpy(pTable, (void*) &g_CosUmd12ComputeCommandList_Ddi_0033, sizeof(g_CosUmd12ComputeCommandList_Ddi_0033));
+                memcpy(pTable, (void*) &g_CosUmd12ComputeCommandList_Ddi_0052, sizeof(g_CosUmd12ComputeCommandList_Ddi_0052));
                 pAdapter->m_hRTTable[Compute] = hTable;
             } else if (uTableNum == Render) {
-                memcpy(pTable, (void*) &g_CosUmd12CommandList_Ddi_0033, sizeof(g_CosUmd12CommandList_Ddi_0033));
+                memcpy(pTable, (void*) &g_CosUmd12CommandList_Ddi_0052, sizeof(g_CosUmd12CommandList_Ddi_0052));
                 pAdapter->m_hRTTable[Render] = hTable;
             } else {
                 STOP_IN_FUNCTION();

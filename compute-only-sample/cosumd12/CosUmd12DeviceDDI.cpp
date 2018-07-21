@@ -325,16 +325,16 @@ void APIENTRY CosUmd12Device_Ddi_DestroyShader(
     pShader->~CosUmd12Shader();
 }
 
-SIZE_T APIENTRY CosUmd12Device_Ddi_CalcPrivateCommandQueueSize_0023(
+SIZE_T APIENTRY CosUmd12Device_Ddi_CalcPrivateCommandQueueSize_0050(
     D3D12DDI_HDEVICE Device,
-    _In_ const D3D12DDIARG_CREATECOMMANDQUEUE_0023* pDesc)
+    _In_ const D3D12DDIARG_CREATECOMMANDQUEUE_0050* pDesc)
 {
     return CosUmd12CommandQueue::CalculateSize(pDesc);
 }
 
-HRESULT APIENTRY CosUmd12Device_Ddi_CreateCommandQueue_0023(
+HRESULT APIENTRY CosUmd12Device_Ddi_CreateCommandQueue_0050(
     D3D12DDI_HDEVICE Device,
-    _In_ const D3D12DDIARG_CREATECOMMANDQUEUE_0023* pDesc,
+    _In_ const D3D12DDIARG_CREATECOMMANDQUEUE_0050* pDesc,
     D3D12DDI_HCOMMANDQUEUE DrvCommandQueue,
     D3D12DDI_HRTCOMMANDQUEUE RTCommandQueue)
 {
@@ -354,38 +354,40 @@ void APIENTRY CosUmd12Device_Ddi_DestroyCommandQueue(
     pCommandQueue->~CosUmd12CommandQueue();
 }
 
-SIZE_T APIENTRY CosUmd12Device_Ddi_CalcPrivateCommandAllocatorSize(
+SIZE_T APIENTRY CosUmd12Device_Ddi_CalcPrivateCommandPoolSize_0040(
     D3D12DDI_HDEVICE Device,
-    _In_ const D3D12DDIARG_CREATECOMMANDALLOCATOR* pDesc)
+    _In_ const D3D12DDIARG_CREATE_COMMAND_POOL_0040* pDesc)
 {
-    return CosUmd12CommandAllocator::CalculateSize(pDesc);
+    return CosUmd12CommandPool::CalculateSize(pDesc);
 }
 
-HRESULT APIENTRY CosUmd12Device_Ddi_CreateCommandAllocator(
+HRESULT APIENTRY CosUmd12Device_Ddi_CreateCommandPool_0040(
     D3D12DDI_HDEVICE Device,
-    _In_ const D3D12DDIARG_CREATECOMMANDALLOCATOR* pDesc)
+    _In_ const D3D12DDIARG_CREATE_COMMAND_POOL_0040* pDesc,
+    D3D12DDI_HCOMMANDPOOL_0040 CommandPool)
 {
     CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
-    CosUmd12CommandAllocator * pCommandQueue = new (pDesc->hDrvCommandAllocator.pDrvPrivate) CosUmd12CommandAllocator(pDevice, pDesc);
+    CosUmd12CommandPool * pCommandQueue = new (CommandPool.pDrvPrivate) CosUmd12CommandPool(pDevice, pDesc);
 
     return S_OK;
 }
 
-void APIENTRY CosUmd12Device_Ddi_DestroyCommandAllocator(
+void APIENTRY CosUmd12Device_Ddi_DestroyCommandPool_0040(
     D3D12DDI_HDEVICE Device,
-    D3D12DDI_HCOMMANDALLOCATOR CommandAllocator)
+    D3D12DDI_HCOMMANDPOOL_0040 CommandPool)
 {
     CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
-    CosUmd12CommandAllocator * pCommandAllocator = CosUmd12CommandAllocator::CastFrom(CommandAllocator);
+    CosUmd12CommandPool * pCommandPool = CosUmd12CommandPool::CastFrom(CommandPool);
 
-    pCommandAllocator->~CosUmd12CommandAllocator();
+    pCommandPool->~CosUmd12CommandPool();
 }
 
-void APIENTRY CosUmd12Device_Ddi_ResetCommandAllocator(
-    D3D12DDI_HCOMMANDALLOCATOR CommandAllocator)
+void APIENTRY CosUmd12Device_Ddi_ResetCommandPool_0040(
+    D3D12DDI_HDEVICE Device,
+    D3D12DDI_HCOMMANDPOOL_0040 CommandPool)
 {
-    CosUmd12CommandAllocator * pCommandAllocator = CosUmd12CommandAllocator::CastFrom(CommandAllocator);
-    pCommandAllocator->Reset();
+    CosUmd12CommandPool * pCommandPool = CosUmd12CommandPool::CastFrom(CommandPool);
+    pCommandPool->Reset();
 }
 
 SIZE_T APIENTRY CosUmd12Device_Ddi_CalcPrivatePipelineStateSize_0033(
@@ -417,20 +419,22 @@ VOID APIENTRY CosUmd12Device_Ddi_DestroyPipelineState(
     pPipelineState->~CosUmd12PipelineState();
 }
 
-SIZE_T APIENTRY CosUmd12Device_Ddi_CalcPrivateCommandListSize_0001(
+SIZE_T APIENTRY CosUmd12Device_Ddi_CalcPrivateCommandListSize_0040(
     D3D12DDI_HDEVICE Device, 
-    _In_ const D3D12DDIARG_CREATE_COMMAND_LIST_0001* pDesc)
+    _In_ const D3D12DDIARG_CREATE_COMMAND_LIST_0040* pDesc)
 {
     return CosUmd12CommandList::CalculateSize(pDesc);
 }
 
-HRESULT APIENTRY CosUmd12Device_Ddi_CreateCommandList_0001(
+HRESULT APIENTRY CosUmd12Device_Ddi_CreateCommandList_0040(
     D3D12DDI_HDEVICE Device, 
-    _In_ const D3D12DDIARG_CREATE_COMMAND_LIST_0001* pDesc)
+    _In_ const D3D12DDIARG_CREATE_COMMAND_LIST_0040* pDesc,
+    D3D12DDI_HCOMMANDLIST CommandList,
+    D3D12DDI_HRTCOMMANDLIST RtCommandList)
 {
     CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
 
-    CosUmd12CommandList * pCommandList = new (pDesc->hDrvCommandList.pDrvPrivate) CosUmd12CommandList(pDevice, pDesc);
+    CosUmd12CommandList * pCommandList = new (CommandList.pDrvPrivate) CosUmd12CommandList(pDevice, pDesc, RtCommandList);
 
     HRESULT hr = pCommandList->StandUp();
 
@@ -900,9 +904,10 @@ HRESULT APIENTRY CosUmd12Device_Ddi_Evict2(
     return hr;
 }
 
-D3D12DDI_HEAP_AND_RESOURCE_SIZES APIENTRY CosUmd12Device_Ddi_CalcPrivateOpenedHeapAndResourceSizes_0003(
+D3D12DDI_HEAP_AND_RESOURCE_SIZES APIENTRY CosUmd12Device_Ddi_CalcPrivateOpenedHeapAndResourceSizes_0043(
     D3D12DDI_HDEVICE Device,
-    _In_ const D3D12DDIARG_OPENHEAP_0003* pDesc)
+    _In_ const D3D12DDIARG_OPENHEAP_0003* pDesc,
+    D3D12DDI_HPROTECTEDRESOURCESESSION_0030 ProtectedResourceSession)
 {
     D3D12DDI_HEAP_AND_RESOURCE_SIZES sizes;
 
@@ -912,11 +917,12 @@ D3D12DDI_HEAP_AND_RESOURCE_SIZES APIENTRY CosUmd12Device_Ddi_CalcPrivateOpenedHe
     return sizes;
 }
 
-HRESULT APIENTRY CosUmd12Device_Ddi_OpenHeapAndResource_0003(
+HRESULT APIENTRY CosUmd12Device_Ddi_OpenHeapAndResource_0043(
     D3D12DDI_HDEVICE Device,
     _In_ const D3D12DDIARG_OPENHEAP_0003* pDesc,
     D3D12DDI_HHEAP Heap,
     D3D12DDI_HRTRESOURCE RtResource,
+    D3D12DDI_HPROTECTEDRESOURCESESSION_0030 ProtectedResourceSession,
     D3D12DDI_HRESOURCE Resource)
 {
     CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
@@ -1209,7 +1215,140 @@ void APIENTRY CosUmd12Device_Ddi_GetDebugAllocationInfo_0014(
     STOP_IN_FUNCTION();
 }
 
-D3D12DDI_DEVICE_FUNCS_CORE_0033 g_CosUmd12Device_Ddi_0033 =
+SIZE_T APIENTRY CosUmd12Device_Ddi_CalcPrivateCommandRecorderSize_0040(
+    D3D12DDI_HDEVICE Device,
+    _In_ CONST D3D12DDIARG_CREATE_COMMAND_RECORDER_0040* pDesc)
+{
+    STOP_IN_FUNCTION();
+
+    return CosUmd12CommandRecorder::CalculateSize(pDesc);
+}
+
+HRESULT APIENTRY CosUmd12Device_Ddi_CreateCommandRecorder_0040(
+    D3D12DDI_HDEVICE Device,
+    _In_ CONST D3D12DDIARG_CREATE_COMMAND_RECORDER_0040* pDesc,
+    D3D12DDI_HCOMMANDRECORDER_0040 CommandRecorder)
+{
+    STOP_IN_FUNCTION();
+
+    CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
+
+    new (CommandRecorder.pDrvPrivate) CosUmd12CommandRecorder(pDevice, pDesc);
+    return S_OK;
+}
+
+VOID APIENTRY CosUmd12Device_Ddi_DestroyCommandRecorder_0040(
+    D3D12DDI_HDEVICE Device,
+    D3D12DDI_HCOMMANDRECORDER_0040 CommandRecorder)
+{
+    STOP_IN_FUNCTION();
+}
+
+VOID APIENTRY CosUmd12Device_Ddi_CommandRecorderSetCommandPoolAsTarget_0040(
+    D3D12DDI_HDEVICE Device,
+    D3D12DDI_HCOMMANDRECORDER_0040 CommandRecorder,
+    D3D12DDI_HCOMMANDPOOL_0040 CommandPool)
+{
+    STOP_IN_FUNCTION();
+
+    CosUmd12CommandRecorder * pCommandRecorder = CosUmd12CommandRecorder::CastFrom(CommandRecorder);
+    CosUmd12CommandPool * pCommandPool = CosUmd12CommandPool::CastFrom(CommandPool);
+
+    pCommandRecorder->SetCommandPoolAsTarget(pCommandPool);
+}
+
+SIZE_T APIENTRY CosUmd12Device_Ddi_CalcPrivateSchedulingGroupSize(
+    D3D12DDI_HDEVICE,
+    _In_ CONST D3D12DDIARG_CREATESCHEDULINGGROUP_0050*)
+{
+    STOP_IN_FUNCTION();
+
+    return 0;
+}
+
+HRESULT APIENTRY CosUmd12Device_Ddi_CreateSchedulingGroup(
+    D3D12DDI_HDEVICE Devoce,
+    _In_ CONST D3D12DDIARG_CREATESCHEDULINGGROUP_0050* pArgs,
+    D3D12DDI_HSCHEDULINGGROUP_0050 SchedulingGroup,
+    D3D12DDI_HRTSCHEDULINGGROUP_0050 RtSchedulingGroup)
+{
+    STOP_IN_FUNCTION();
+
+    return E_NOINTERFACE;
+}
+
+VOID APIENTRY CosUmd12Device_Ddi_DestroySchedulingGroup(
+    D3D12DDI_HDEVICE Devuce,
+    D3D12DDI_HSCHEDULINGGROUP_0050 SchedulingGroup)
+{
+    STOP_IN_FUNCTION();
+}
+
+HRESULT APIENTRY CosUmd12Device_Ddi_EnumerateMetaCommands(
+    D3D12DDI_HDEVICE Device,
+    _Inout_ UINT* pNumMetaCommands,
+    _Out_writes_opt_(*pNumMetaCommands) D3D12DDIARG_META_COMMAND_DESC* pDescs)
+{
+    STOP_IN_FUNCTION();
+
+    return E_NOTIMPL;
+}
+
+HRESULT APIENTRY CosUmd12Device_Ddi_EnumerateMetaCommandParameters(
+    D3D12DDI_HDEVICE Device,
+    GUID CommandId,
+    D3D12DDI_META_COMMAND_PARAMETER_STAGE Stage,
+    _Inout_ UINT* pParameterCount,
+    _Out_writes_opt_(*pParameterCount) D3D12DDIARG_META_COMMAND_PARAMETER_DESC* pParameterDescs)
+{
+    STOP_IN_FUNCTION();
+
+    return E_NOTIMPL;
+}
+
+SIZE_T APIENTRY CosUmd12Device_Ddi_CalcPrivateMetaCommandSize(
+    D3D12DDI_HDEVICE Device,
+    GUID CommandId,
+    UINT NodeMask,
+    CONST void* pCreationParameters,
+    SIZE_T CreationParametersDataSizeInBytes)
+{
+    STOP_IN_FUNCTION();
+
+    return 0;
+}
+
+HRESULT APIENTRY CosUmd12Device_Ddi_CreateMetaCommand(
+    D3D12DDI_HDEVICE Device,
+    GUID CommandId,
+    UINT NodeMask,
+    CONST void* pCreationParameters,
+    SIZE_T CreationParametersDataSizeInBytes,
+    D3D12DDI_HMETACOMMAND_0052 MetaCommand,
+    D3D12DDI_HRTMETACOMMAND_0052 RtMetaCommand)
+{
+    STOP_IN_FUNCTION();
+
+    return E_NOTIMPL;
+}
+
+VOID APIENTRY CosUmd12Device_Ddi_DestroyMetaCommand(
+    D3D12DDI_HDEVICE Device,
+    D3D12DDI_HMETACOMMAND_0052 MetaCommand)
+{
+    STOP_IN_FUNCTION();
+}
+
+VOID APIENTRY CosUmd12Device_Ddi_GetMetaCommandRequiredParameterInfo(
+    D3D12DDI_HMETACOMMAND_0052 MetaCommand,
+    D3D12DDI_META_COMMAND_PARAMETER_STAGE Stage,
+    UINT ParameterIndex,
+    _Out_ D3D12DDIARG_META_COMMAND_REQUIRED_PARAMETER_INFO* pInfo)
+{
+    STOP_IN_FUNCTION();
+}
+
+D3D12DDI_DEVICE_FUNCS_CORE_0052 g_CosUmd12Device_Ddi_0052 =
 {
     CosUmd12Device_Ddi_CheckFormatSupport,                             // pfnCheckFormatSupport
     CosUmd12Device_Ddi_CheckMultisampleQualityLevels,                  // pfnCheckMultisampleQualityLevels
@@ -1237,18 +1376,18 @@ D3D12DDI_DEVICE_FUNCS_CORE_0033 g_CosUmd12Device_Ddi_0033 =
     CosUmd12Device_Ddi_CreateHullShader_0026,                          // pfnCreateHullShader
     CosUmd12Device_Ddi_CreateDomainShader_0026,                        // pfnCreateDomainShader
     CosUmd12Device_Ddi_DestroyShader,                                  // pfnDestroyShader
-    CosUmd12Device_Ddi_CalcPrivateCommandQueueSize_0023,               // pfnCalcPrivateCommandQueueSize
-    CosUmd12Device_Ddi_CreateCommandQueue_0023,                        // pfnCreateCommandQueue
+    CosUmd12Device_Ddi_CalcPrivateCommandQueueSize_0050,               // pfnCalcPrivateCommandQueueSize
+    CosUmd12Device_Ddi_CreateCommandQueue_0050,                        // pfnCreateCommandQueue
     CosUmd12Device_Ddi_DestroyCommandQueue,                            // pfnDestroyCommandQueue
-    CosUmd12Device_Ddi_CalcPrivateCommandAllocatorSize,                // pfnCalcPrivateCommandAllocatorSize
-    CosUmd12Device_Ddi_CreateCommandAllocator,                         // pfnCreateCommandAllocator
-    CosUmd12Device_Ddi_DestroyCommandAllocator,                        // pfnDestroyCommandAllocator
-    CosUmd12Device_Ddi_ResetCommandAllocator,                          // pfnResetCommandAllocator
+    CosUmd12Device_Ddi_CalcPrivateCommandPoolSize_0040,                // pfnCalcPrivateCommandPoolSize
+    CosUmd12Device_Ddi_CreateCommandPool_0040,                         // pfnCreateCommandPool
+    CosUmd12Device_Ddi_DestroyCommandPool_0040,                        // pfnDestroyCommandPool
+    CosUmd12Device_Ddi_ResetCommandPool_0040,                          // pfnResetCommandPool
     CosUmd12Device_Ddi_CalcPrivatePipelineStateSize_0033,              // pfnCalcPrivatePipelineStateSize
     CosUmd12Device_Ddi_CreatePipelineState_0033,                       // pfnCreatePipelineState
     CosUmd12Device_Ddi_DestroyPipelineState,                           // pfnDestroyPipelineState
-    CosUmd12Device_Ddi_CalcPrivateCommandListSize_0001,                // pfnCalcPrivateCommandListSize
-    CosUmd12Device_Ddi_CreateCommandList_0001,                         // pfnCreateCommandList
+    CosUmd12Device_Ddi_CalcPrivateCommandListSize_0040,                // pfnCalcPrivateCommandListSize
+    CosUmd12Device_Ddi_CreateCommandList_0040,                         // pfnCreateCommandList
     CosUmd12Device_Ddi_DestroyCommandList,                             // pfnDestroyCommandList
     CosUmd12Device_Ddi_CalcPrivateFenceSize,                           // pfnCalcPrivateFenceSize
     CosUmd12Device_Ddi_CreateFence,                                    // pfnCreateFence
@@ -1275,8 +1414,8 @@ D3D12DDI_DEVICE_FUNCS_CORE_0033 g_CosUmd12Device_Ddi_0033 =
     CosUmd12Device_Ddi_DestroyHeapAndResource,                         // pfnDestroyHeapAndResource
     CosUmd12Device_Ddi_MakeResident_0001,                              // pfnMakeResident
     CosUmd12Device_Ddi_Evict2,                                         // pfnEvict
-    CosUmd12Device_Ddi_CalcPrivateOpenedHeapAndResourceSizes_0003,     // pfnCalcPrivateOpenedHeapAndResourceSizes
-    CosUmd12Device_Ddi_OpenHeapAndResource_0003,                       // pfnOpenHeapAndResource
+    CosUmd12Device_Ddi_CalcPrivateOpenedHeapAndResourceSizes_0043,     // pfnCalcPrivateOpenedHeapAndResourceSizes
+    CosUmd12Device_Ddi_OpenHeapAndResource_0043,                       // pfnOpenHeapAndResource
     CosUmd12Device_Ddi_CopyDescriptors_0003,                           // pfnCopyDescriptors
     CosUmd12Device_Ddi_CopyDescriptorsSimple_0003,                     // pfnCopyDescriptorsSimple
     CosUmd12Device_Ddi_CalcPrivateQueryHeapSize_0001,                  // pfnCalcPrivateQueryHeapSize
@@ -1302,5 +1441,18 @@ D3D12DDI_DEVICE_FUNCS_CORE_0033 g_CosUmd12Device_Ddi_0033 =
     CosUmd12Device_Ddi_AddPipelineStateToLibrary_0010,                 // pfnAddPipelineStateToLibrary
     CosUmd12Device_Ddi_CalcSerializedLibrarySize_0010,                 // pfnCalcSerializedLibrarySize
     CosUmd12Device_Ddi_SerializeLibrary_0010,                          // pfnSerializeLibrary
-    CosUmd12Device_Ddi_GetDebugAllocationInfo_0014                     // pfnGetDebugAllocationInfo
+    CosUmd12Device_Ddi_GetDebugAllocationInfo_0014,                    // pfnGetDebugAllocationInfo
+    CosUmd12Device_Ddi_CalcPrivateCommandRecorderSize_0040,            // pfnCalcPrivateCommandRecorderSize
+    CosUmd12Device_Ddi_CreateCommandRecorder_0040,                     // pfnCreateCommandRecorder
+    CosUmd12Device_Ddi_DestroyCommandRecorder_0040,                    // pfnDestroyCommandRecorder
+    CosUmd12Device_Ddi_CommandRecorderSetCommandPoolAsTarget_0040,     // pfnCommandRecorderSetCommandPoolAsTarget
+    CosUmd12Device_Ddi_CalcPrivateSchedulingGroupSize,                 // pfnCalcPrivateSchedulingGroupSize
+    CosUmd12Device_Ddi_CreateSchedulingGroup,                          // pfnCreateSchedulingGroup
+    CosUmd12Device_Ddi_DestroySchedulingGroup,                         // pfnDestroySchedulingGroup
+    CosUmd12Device_Ddi_EnumerateMetaCommands,                          // pfnEnumerateMetaCommands
+    CosUmd12Device_Ddi_EnumerateMetaCommandParameters,                 // pfnEnumerateMetaCommandParameters
+    CosUmd12Device_Ddi_CalcPrivateMetaCommandSize,                     // pfnCalcPrivateMetaCommandSize
+    CosUmd12Device_Ddi_CreateMetaCommand,                              // pfnCreateMetaCommand
+    CosUmd12Device_Ddi_DestroyMetaCommand,                             // pfnDestroyMetaCommand
+    CosUmd12Device_Ddi_GetMetaCommandRequiredParameterInfo             // pfnGetMetaCommandRequiredParameterInfo
 };

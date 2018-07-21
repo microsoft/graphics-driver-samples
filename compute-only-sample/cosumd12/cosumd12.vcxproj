@@ -157,6 +157,7 @@
     <ClInclude Include="CosUmd12CommandBuffer.h" />
     <ClInclude Include="CosUmd12CommandList.h" />
     <ClInclude Include="CosUmd12CommandQueue.h" />
+    <ClInclude Include="CosUmd12CommandRecorder.h" />
     <ClInclude Include="CosUmd12DepthStencilState.h" />
     <ClInclude Include="CosUmd12DescriptorHeap.h" />
     <ClInclude Include="CosUmd12Device.h" />

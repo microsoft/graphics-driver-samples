@@ -19,21 +19,16 @@ HRESULT CosUmd12CommandList::StandUp()
 {
     if (IsComputeType())
     {
-        m_pDevice->m_pUMCallbacks->pfnSetCommandListDDITableCb(m_args.hRTCommandList, m_pDevice->m_pAdapter->m_hRTTable[CosUmd12Adapter::TableType::Compute]);
+        m_pDevice->m_pUMCallbacks->pfnSetCommandListDDITableCb(m_rtCommandList, m_pDevice->m_pAdapter->m_hRTTable[CosUmd12Adapter::TableType::Compute]);
     }
     else
     {
-        m_pDevice->m_pUMCallbacks->pfnSetCommandListDDITableCb(m_args.hRTCommandList, m_pDevice->m_pAdapter->m_hRTTable[CosUmd12Adapter::TableType::Render]);
+        m_pDevice->m_pUMCallbacks->pfnSetCommandListDDITableCb(m_rtCommandList, m_pDevice->m_pAdapter->m_hRTTable[CosUmd12Adapter::TableType::Render]);
     }
 
-    m_pCommandAllocator = CosUmd12CommandAllocator::CastFrom(m_args.hDrvCommandAllocator);
-
-    m_pCurCommandBuffer = m_pCommandAllocator->AcquireCommandBuffer(m_args.QueueFlags);
-
-    if (NULL == m_pCurCommandBuffer)
-    {
-        return E_OUTOFMEMORY;
-    }
+    //
+    // m_pCommandPool is set with the first Reset()
+    //
 
     return S_OK;
 }
@@ -49,6 +44,44 @@ CosUmd12CommandList::Close()
     m_filledCommandBuffers[m_numFilledCommandBuffers++] = m_pCurCommandBuffer;
 
     m_pCurCommandBuffer = NULL;
+}
+
+void 
+CosUmd12CommandList::Reset(
+    const D3D12DDIARG_RESETCOMMANDLIST_0040 * pReset)
+{
+    //
+    // Release the command buffers back to the Command Pool
+    //
+
+    if (m_pCommandPool)
+    {
+        for (UINT i = 0; i < m_numFilledCommandBuffers; i++)
+        {
+            m_pCommandPool->ReleaseCommandBuffer(m_filledCommandBuffers[i]);
+        }
+
+        if (m_pCurCommandBuffer)
+        {
+            m_pCommandPool->ReleaseCommandBuffer(m_pCurCommandBuffer);
+        }
+
+        m_numFilledCommandBuffers = 0;
+        m_pCurCommandBuffer = 0;
+    }
+
+    m_pCommandPool = NULL;
+
+    CosUmd12CommandRecorder * pCommandRecorder = CosUmd12CommandRecorder::CastFrom(pReset->hDrvCommandRecorder);
+
+    m_pCommandPool = pCommandRecorder->GetCommandPool();
+
+    m_pCurCommandBuffer = m_pCommandPool->AcquireCommandBuffer(m_args.QueueFlags);
+
+    if (NULL == m_pCurCommandBuffer)
+    {
+        m_pDevice->m_pUMCallbacks->pfnSetErrorCb(m_pDevice->m_hRTDevice, E_OUTOFMEMORY);
+    }
 }
 
 void
@@ -156,7 +189,7 @@ CosUmd12CommandList::ReserveCommandBufferSpace(
 
     m_filledCommandBuffers[m_numFilledCommandBuffers++] = m_pCurCommandBuffer;
 
-    m_pCurCommandBuffer = m_pCommandAllocator->AcquireCommandBuffer(m_args.QueueFlags);
+    m_pCurCommandBuffer = m_pCommandPool->AcquireCommandBuffer(m_args.QueueFlags);
 
     m_pCurCommandBuffer->ReserveCommandBufferSpace(
                             bSwCommand,

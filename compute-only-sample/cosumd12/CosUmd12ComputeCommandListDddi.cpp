@@ -10,11 +10,15 @@ void APIENTRY CosUmd12ComputeCommandList_Ddi_CloseCommandList(
     pCommandList->Close();
 }
 
-void APIENTRY CosUmd12ComputeCommandList_Ddi_ResetCommandList(
+void APIENTRY CosUmd12ComputeCommandList_Ddi_ResetCommandList_0040(
     D3D12DDI_HCOMMANDLIST CommandList,
-    _In_ const D3D12DDIARG_RESETCOMMANDLIST* pReset)
+    _In_ const D3D12DDIARG_RESETCOMMANDLIST_0040* pReset)
 {
     STOP_IN_FUNCTION();
+
+    CosUmd12CommandList * pCommandList = CosUmd12CommandList::CastFrom(CommandList);
+
+    pCommandList->Reset(pReset);
 }
 
 void APIENTRY CosUmd12ComputeCommandList_Ddi_DrawInstanced(
@@ -195,11 +199,13 @@ void APIENTRY CosUmd12ComputeCommandList_Ddi_Blt(
     STOP_IN_FUNCTION();
 }
 
-void APIENTRY CosUmd12ComputeCommandList_Ddi_Present_0028(
+void APIENTRY CosUmd12ComputeCommandList_Ddi_Present_0051(
     D3D12DDI_HCOMMANDLIST CommandList, 
     D3D12DDI_HCOMMANDQUEUE CommandQueue, 
     _In_ const D3D12DDIARG_PRESENT_0001* pDesc, 
-    _Out_ D3D12DDI_PRESENT_0028* pPresent)
+    _Out_ D3D12DDI_PRESENT_0051* pPresent,
+    _Out_opt_ D3D12DDI_PRESENT_CONTEXTS_0051*,
+    _Out_opt_ D3D12DDI_PRESENT_HWQUEUES_0051*)
 {
     STOP_IN_FUNCTION();
 }
@@ -573,10 +579,28 @@ void APIENTRY CosUmd12ComputeCommandList_Ddi_SetViewInstanceMask_0033(
     STOP_IN_FUNCTION();
 }
 
-D3D12DDI_COMMAND_LIST_FUNCS_3D_0033 g_CosUmd12ComputeCommandList_Ddi_0033 =
+VOID APIENTRY CosUmd12ComputeCommandList_Ddi_InitializeMetaCommand(
+    D3D12DDI_HCOMMANDLIST CommandList,
+    D3D12DDI_HMETACOMMAND_0052 MetaCommand,
+    _In_ CONST void *pInitializationParameters,
+    _In_ SIZE_T InitializationParametersSize)
+{
+    STOP_IN_FUNCTION();
+}
+
+VOID APIENTRY CosUmd12ComputeCommandList_Ddi_ExecuteMetaCommand(
+    D3D12DDI_HCOMMANDLIST CommandList,
+    D3D12DDI_HMETACOMMAND_0052 MetaCommand,
+    _In_ CONST void *pExecutionParameters,
+    _In_ SIZE_T ExecutionParametersSize)
+{
+    STOP_IN_FUNCTION();
+}
+
+D3D12DDI_COMMAND_LIST_FUNCS_3D_0052 g_CosUmd12ComputeCommandList_Ddi_0052 =
 {
     CosUmd12ComputeCommandList_Ddi_CloseCommandList,                          // pfnCloseCommandList
-    CosUmd12ComputeCommandList_Ddi_ResetCommandList,                          // pfnResetCommandList
+    CosUmd12ComputeCommandList_Ddi_ResetCommandList_0040,                     // pfnResetCommandList
     CosUmd12ComputeCommandList_Ddi_DrawInstanced,                                    // pfnDrawInstanced
     CosUmd12ComputeCommandList_Ddi_DrawIndexedInstanced,                             // pfnDrawIndexedInstanced
     CosUmd12ComputeCommandList_Ddi_Dispatch,                                  // pfnDispatch
@@ -594,7 +618,7 @@ D3D12DDI_COMMAND_LIST_FUNCS_3D_0033 g_CosUmd12ComputeCommandList_Ddi_0033 =
     CosUmd12ComputeCommandList_Ddi_ExecuteIndirect,                           // pfnExecuteIndirect
     CosUmd12ComputeCommandList_Ddi_ResourceBarrier_0022,                      // pfnResourceBarrier
     CosUmd12ComputeCommandList_Ddi_Blt,                                              // pfnBlt
-    CosUmd12ComputeCommandList_Ddi_Present_0028,                              // pfnPresent
+    CosUmd12ComputeCommandList_Ddi_Present_0051,                              // pfnPresent
     CosUmd12ComputeCommandList_Ddi_BeginQuery_0003,                           // pfnBeginQuery
     CosUmd12ComputeCommandList_Ddi_EndQuery_0003,                             // pfnEndQuery
     CosUmd12ComputeCommandList_Ddi_ResolveQueryData,                          // pfnResolveQueryData
@@ -633,4 +657,6 @@ D3D12DDI_COMMAND_LIST_FUNCS_3D_0033 g_CosUmd12ComputeCommandList_Ddi_0033 =
     CosUmd12ComputeCommandList_Ddi_SetProtectedResourceSession_0030,          // pfnSetProtectedResourceSession
     CosUmd12ComputeCommandList_Ddi_WriteBufferImmediate_0032,                 // pfnWriteBufferImmediate
     CosUmd12ComputeCommandList_Ddi_SetViewInstanceMask_0033,                  // pfnSetViewInstanceMask
+    CosUmd12ComputeCommandList_Ddi_InitializeMetaCommand,                     // pfnInitializeMetaCommand
+    CosUmd12ComputeCommandList_Ddi_ExecuteMetaCommand                         // pfnExecuteMetaCommand
 };
