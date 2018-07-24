@@ -35,7 +35,7 @@ void StopInFunction(const char * function, const char * file, int line);
 #include "CosUmd12PipelineState.h"
 #include "CosUmd12Descriptor.h"
 #include "CosUmd12CommandQueue.h"
-#include "CosUmd12CommandAllocator.h"
+#include "CosUmd12CommandPool.h"
 #include "CosUmd12CommandRecorder.h"
 #include "CosUmd12CommandList.h"
 #include "CosUmd12Fence.h"
