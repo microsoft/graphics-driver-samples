@@ -1,7 +1,6 @@
 #pragma once
 
 #include <windows.h>
-#include <ntassert.h>
 #include "d3dumddi_.h"
 
 #include <stdint.h>
