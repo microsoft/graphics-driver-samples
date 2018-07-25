@@ -478,7 +478,7 @@ int main()
         }
 
         //
-        // Check GUID_COPYRESOURCE meta command is supported by the driver
+        // Check GUID_IDENTITY meta command is supported by the driver
         //
 
         UINT i;
