@@ -586,6 +586,11 @@ VOID APIENTRY CosUmd12ComputeCommandList_Ddi_InitializeMetaCommand(
     _In_ SIZE_T InitializationParametersSize)
 {
     STOP_IN_FUNCTION();
+
+    CosUmd12CommandList * pCommandList = CosUmd12CommandList::CastFrom(CommandList);
+    CosUmd12MetaCommand * pMetaCommand = CosUmd12MetaCommand::CastFrom(MetaCommand);
+
+    pMetaCommand->Initialize(pInitializationParameters, InitializationParametersSize);
 }
 
 VOID APIENTRY CosUmd12ComputeCommandList_Ddi_ExecuteMetaCommand(
@@ -595,6 +600,11 @@ VOID APIENTRY CosUmd12ComputeCommandList_Ddi_ExecuteMetaCommand(
     _In_ SIZE_T ExecutionParametersSize)
 {
     STOP_IN_FUNCTION();
+
+    CosUmd12CommandList * pCommandList = CosUmd12CommandList::CastFrom(CommandList);
+    CosUmd12MetaCommand * pMetaCommand = CosUmd12MetaCommand::CastFrom(MetaCommand);
+
+    pMetaCommand->Execute(pCommandList, pExecutionParameters, ExecutionParametersSize);
 }
 
 D3D12DDI_COMMAND_LIST_FUNCS_3D_0052 g_CosUmd12ComputeCommandList_Ddi_0052 =

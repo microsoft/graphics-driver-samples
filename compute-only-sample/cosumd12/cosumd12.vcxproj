@@ -163,6 +163,7 @@
     <ClInclude Include="CosUmd12Device.h" />
     <ClInclude Include="CosUmd12Fence.h" />
     <ClInclude Include="CosUmd12Heap.h" />
+    <ClInclude Include="CosUmd12MetaCommand.h" />
     <ClInclude Include="CosUmd12PipelineState.h" />
     <ClInclude Include="CosUmd12RasterizerState.h" />
     <ClInclude Include="CosUmd12Resource.h" />
@@ -189,6 +190,7 @@
     <ClCompile Include="CosUmd12DxgiDdi.cpp" />
     <ClCompile Include="CosUmd12ExtendedFeaturesDdi.cpp" />
     <ClCompile Include="CosUmd12Heap.cpp" />
+    <ClCompile Include="CosUmd12MetaCommand.cpp" />
     <ClCompile Include="CosUmd12Resource.cpp" />
     <ClCompile Include="CosUmd12RootSignature.cpp" />
   </ItemGroup>

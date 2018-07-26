@@ -1284,6 +1284,11 @@ VOID APIENTRY CosUmd12Device_Ddi_DestroySchedulingGroup(
     STOP_IN_FUNCTION();
 }
 
+D3D12DDIARG_META_COMMAND_DESC CosUmd12Device::m_supportedMetaCommandDescs[] =
+{
+    { GUID_IDENTITY, L"Identity", D3D12DDI_GRAPHICS_STATE_NONE, D3D12DDI_GRAPHICS_STATE_NONE }
+};
+
 HRESULT APIENTRY CosUmd12Device_Ddi_EnumerateMetaCommands(
     D3D12DDI_HDEVICE Device,
     _Inout_ UINT* pNumMetaCommands,
@@ -1291,19 +1296,30 @@ HRESULT APIENTRY CosUmd12Device_Ddi_EnumerateMetaCommands(
 {
     STOP_IN_FUNCTION();
 
-    return E_NOTIMPL;
+    *pNumMetaCommands = _countof(CosUmd12Device::m_supportedMetaCommandDescs);
+
+    if (pDescs)
+    {
+        memcpy(pDescs, CosUmd12Device::m_supportedMetaCommandDescs, sizeof(CosUmd12Device::m_supportedMetaCommandDescs));
+    }
+    return S_OK;
 }
 
 HRESULT APIENTRY CosUmd12Device_Ddi_EnumerateMetaCommandParameters(
     D3D12DDI_HDEVICE Device,
     GUID CommandId,
     D3D12DDI_META_COMMAND_PARAMETER_STAGE Stage,
-    _Inout_ UINT* pParameterCount,
-    _Out_writes_opt_(*pParameterCount) D3D12DDIARG_META_COMMAND_PARAMETER_DESC* pParameterDescs)
+    UINT* pParameterCount,
+    D3D12DDIARG_META_COMMAND_PARAMETER_DESC* pParameterDescs)
 {
     STOP_IN_FUNCTION();
 
-    return E_NOTIMPL;
+    if (IsEqualGUID(CommandId, GUID_IDENTITY))
+    {
+        return CosUmd12MetaCommandIdentity::EnumerateMetaCommandParameters(Stage, pParameterCount, pParameterDescs);
+    }
+
+    return E_INVALIDARG;
 }
 
 SIZE_T APIENTRY CosUmd12Device_Ddi_CalcPrivateMetaCommandSize(
@@ -1315,7 +1331,14 @@ SIZE_T APIENTRY CosUmd12Device_Ddi_CalcPrivateMetaCommandSize(
 {
     STOP_IN_FUNCTION();
 
-    return 0;
+    if (IsEqualGUID(CommandId, GUID_IDENTITY))
+    {
+        return CosUmd12MetaCommandIdentity::CalculateSize(CommandId);
+    }
+    else
+    {
+        return 0;
+    }
 }
 
 HRESULT APIENTRY CosUmd12Device_Ddi_CreateMetaCommand(
@@ -1329,7 +1352,23 @@ HRESULT APIENTRY CosUmd12Device_Ddi_CreateMetaCommand(
 {
     STOP_IN_FUNCTION();
 
-    return E_NOTIMPL;
+    CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
+
+    if (IsEqualGUID(CommandId, GUID_IDENTITY))
+    {
+        new (MetaCommand.pDrvPrivate) CosUmd12MetaCommandIdentity(
+                                        pDevice,
+                                        NodeMask,
+                                        pCreationParameters,
+                                        CreationParametersDataSizeInBytes,
+                                        RtMetaCommand);
+
+        return S_OK;
+    }
+    else
+    {
+        return E_INVALIDARG;
+    }
 }
 
 VOID APIENTRY CosUmd12Device_Ddi_DestroyMetaCommand(
@@ -1346,6 +1385,10 @@ VOID APIENTRY CosUmd12Device_Ddi_GetMetaCommandRequiredParameterInfo(
     _Out_ D3D12DDIARG_META_COMMAND_REQUIRED_PARAMETER_INFO* pInfo)
 {
     STOP_IN_FUNCTION();
+
+    CosUmd12MetaCommand * pMetaCommand = CosUmd12MetaCommand::CastFrom(MetaCommand);
+
+    pMetaCommand->GetRequiredParameterInfo(Stage, ParameterIndex, pInfo);
 }
 
 D3D12DDI_DEVICE_FUNCS_CORE_0052 g_CosUmd12Device_Ddi_0052 =

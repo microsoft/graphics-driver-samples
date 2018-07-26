@@ -72,6 +72,9 @@
     <ClInclude Include="CosUmd12CommandPool.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CosUmd12MetaCommand.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CosUmd12.cpp">
@@ -126,6 +129,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="CosUmd12CommandPool.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CosUmd12MetaCommand.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

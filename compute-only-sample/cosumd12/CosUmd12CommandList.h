@@ -70,6 +70,7 @@ public:
         UINT ThreadGroupCountZ);
 
     void ResourceCopy(D3D12DDI_HRESOURCE DstResource, D3D12DDI_HRESOURCE SrcResource);
+    void GpuMemoryCopy(D3D12_GPU_VIRTUAL_ADDRESS dstGpuVa, D3D12_GPU_VIRTUAL_ADDRESS srcGpuVa, UINT size);
 
     // Interface for Command Queue
     void Execute(CosUmd12CommandQueue * pCommandQueue);

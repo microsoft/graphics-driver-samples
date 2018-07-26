@@ -46,3 +46,6 @@ void StopInFunction(const char * function, const char * file, int line);
 
 #include "CosUmd12DescriptorHeap.h"
 
+#include "CosMetaCommand.h"
+#include "CosUmd12MetaCommand.h"
+

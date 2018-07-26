@@ -65,6 +65,8 @@ public:
 
     D3D12DDI_GPU_VIRTUAL_ADDRESS AllocateUniqueAddress(UINT size);
 
+    static D3D12DDIARG_META_COMMAND_DESC m_supportedMetaCommandDescs[];
+
 public:
 
     CosUmd12Adapter*                m_pAdapter;
