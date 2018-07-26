@@ -21,12 +21,12 @@ CosUmd12Device::CosUmd12Device(
     m_pAdapter(pAdapter),
     m_Interface(pArgs->Interface),
     m_hRTDevice(pArgs->hRTDevice),
-    m_pUMCallbacks(pArgs->p12UMCallbacks_0022),
+    m_pUMCallbacks(pArgs->p12UMCallbacks_0050),
     m_pKMCallbacks(pArgs->pKTCallbacks)
 {
     assert(pArgs->hDrvDevice.pDrvPrivate == (void *) this);
 
-    assert(m_Interface == D3D12DDI_INTERFACE_VERSION_R3);
+    assert(m_Interface == D3D12DDI_INTERFACE_VERSION_R5);
 }
 
 void CosUmd12Device::Standup()

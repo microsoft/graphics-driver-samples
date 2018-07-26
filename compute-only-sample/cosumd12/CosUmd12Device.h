@@ -43,9 +43,9 @@ typedef union _CosUmdDeviceFlags
 
 #endif
 
-extern D3D12DDI_DEVICE_FUNCS_CORE_0033 g_CosUmd12Device_Ddi_0033;
-extern D3D12DDI_COMMAND_LIST_FUNCS_3D_0033 g_CosUmd12CommandList_Ddi_0033;   // TODO: Move to CosUmd12CommandList.h
-extern D3D12DDI_COMMAND_LIST_FUNCS_3D_0033 g_CosUmd12ComputeCommandList_Ddi_0033;   // TODO: Move to CosUmd12ComputeCommandList.h
+extern D3D12DDI_DEVICE_FUNCS_CORE_0052 g_CosUmd12Device_Ddi_0052;
+extern D3D12DDI_COMMAND_LIST_FUNCS_3D_0052 g_CosUmd12CommandList_Ddi_0052;   // TODO: Move to CosUmd12CommandList.h
+extern D3D12DDI_COMMAND_LIST_FUNCS_3D_0052 g_CosUmd12ComputeCommandList_Ddi_0052;   // TODO: Move to CosUmd12ComputeCommandList.h
 extern D3D12DDI_COMMAND_QUEUE_FUNCS_CORE_0001 g_CosUmd12CommandQueue_Ddi_0001; // TODO: Move to CosUmd12CommandQueue.h
 extern DXGI1_4_DDI_BASE_FUNCTIONS g_CosUmd12Dxgi_Ddi; // TODO: Move to CosUmd12Dxgi.h
 extern D3D12DDI_EXTENDED_FEATURES_FUNCS_0020 g_CosUmd12ExtendedFeatures_Ddi_0020;
@@ -65,13 +65,15 @@ public:
 
     D3D12DDI_GPU_VIRTUAL_ADDRESS AllocateUniqueAddress(UINT size);
 
+    static D3D12DDIARG_META_COMMAND_DESC m_supportedMetaCommandDescs[];
+
 public:
 
     CosUmd12Adapter*                m_pAdapter;
     UINT                            m_Interface;
     D3D12DDI_HRTDEVICE              m_hRTDevice;
 
-    const D3D12DDI_CORELAYER_DEVICECALLBACKS_0022*   m_pUMCallbacks;
+    const D3D12DDI_CORELAYER_DEVICECALLBACKS_0050*   m_pUMCallbacks;
     const D3DDDI_DEVICECALLBACKS*   m_pKMCallbacks;
 
     D3D12DDI_GPU_VIRTUAL_ADDRESS    m_curUniqueAddress;

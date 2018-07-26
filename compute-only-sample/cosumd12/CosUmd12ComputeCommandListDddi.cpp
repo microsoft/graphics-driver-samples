@@ -10,11 +10,15 @@ void APIENTRY CosUmd12ComputeCommandList_Ddi_CloseCommandList(
     pCommandList->Close();
 }
 
-void APIENTRY CosUmd12ComputeCommandList_Ddi_ResetCommandList(
+void APIENTRY CosUmd12ComputeCommandList_Ddi_ResetCommandList_0040(
     D3D12DDI_HCOMMANDLIST CommandList,
-    _In_ const D3D12DDIARG_RESETCOMMANDLIST* pReset)
+    _In_ const D3D12DDIARG_RESETCOMMANDLIST_0040* pReset)
 {
     STOP_IN_FUNCTION();
+
+    CosUmd12CommandList * pCommandList = CosUmd12CommandList::CastFrom(CommandList);
+
+    pCommandList->Reset(pReset);
 }
 
 void APIENTRY CosUmd12ComputeCommandList_Ddi_DrawInstanced(
@@ -195,11 +199,13 @@ void APIENTRY CosUmd12ComputeCommandList_Ddi_Blt(
     STOP_IN_FUNCTION();
 }
 
-void APIENTRY CosUmd12ComputeCommandList_Ddi_Present_0028(
+void APIENTRY CosUmd12ComputeCommandList_Ddi_Present_0051(
     D3D12DDI_HCOMMANDLIST CommandList, 
     D3D12DDI_HCOMMANDQUEUE CommandQueue, 
     _In_ const D3D12DDIARG_PRESENT_0001* pDesc, 
-    _Out_ D3D12DDI_PRESENT_0028* pPresent)
+    _Out_ D3D12DDI_PRESENT_0051* pPresent,
+    _Out_opt_ D3D12DDI_PRESENT_CONTEXTS_0051*,
+    _Out_opt_ D3D12DDI_PRESENT_HWQUEUES_0051*)
 {
     STOP_IN_FUNCTION();
 }
@@ -573,64 +579,94 @@ void APIENTRY CosUmd12ComputeCommandList_Ddi_SetViewInstanceMask_0033(
     STOP_IN_FUNCTION();
 }
 
-D3D12DDI_COMMAND_LIST_FUNCS_3D_0033 g_CosUmd12ComputeCommandList_Ddi_0033 =
+VOID APIENTRY CosUmd12ComputeCommandList_Ddi_InitializeMetaCommand(
+    D3D12DDI_HCOMMANDLIST CommandList,
+    D3D12DDI_HMETACOMMAND_0052 MetaCommand,
+    _In_ CONST void *pInitializationParameters,
+    _In_ SIZE_T InitializationParametersSize)
 {
-    CosUmd12ComputeCommandList_Ddi_CloseCommandList,                          // pfnCloseCommandList
-    CosUmd12ComputeCommandList_Ddi_ResetCommandList,                          // pfnResetCommandList
-    CosUmd12ComputeCommandList_Ddi_DrawInstanced,                                    // pfnDrawInstanced
-    CosUmd12ComputeCommandList_Ddi_DrawIndexedInstanced,                             // pfnDrawIndexedInstanced
-    CosUmd12ComputeCommandList_Ddi_Dispatch,                                  // pfnDispatch
-    CosUmd12ComputeCommandList_Ddi_ClearUnorderedAccessViewUint_0003,         // pfnClearUnorderedAccessViewUint
-    CosUmd12ComputeCommandList_Ddi_ClearUnorderedAccessViewFloat_0003,        // pfnClearUnorderedAccessViewFloat
-    CosUmd12ComputeCommandList_Ddi_ClearRenderTargetView_0003,                // pfnClearRenderTargetView
-    CosUmd12ComputeCommandList_Ddi_ClearDepthStencilView_0003,                // pfnClearDepthStencilView
-    CosUmd12ComputeCommandList_Ddi_DiscardResource_0003,                      // pfnDiscardResource
-    CosUmd12ComputeCommandList_Ddi_CopyTextureRegion_0003,                    // pfnCopyTextureRegion
-    CosUmd12ComputeCommandList_Ddi_ResourceCopy,                              // pfnResourceCopy
-    CosUmd12ComputeCommandList_Ddi_CopyTiles,                                 // pfnCopyTiles
-    CosUmd12ComputeCommandList_Ddi_CopyBufferRegion_0003,                     // pfnCopyBufferRegion
-    CosUmd12ComputeCommandList_Ddi_ResourceResolveSubresource,                // pfnResourceResolveSubresource
-    CosUmd12ComputeCommandList_Ddi_ExecuteBundle,                             // pfnExecuteBundle
-    CosUmd12ComputeCommandList_Ddi_ExecuteIndirect,                           // pfnExecuteIndirect
-    CosUmd12ComputeCommandList_Ddi_ResourceBarrier_0022,                      // pfnResourceBarrier
-    CosUmd12ComputeCommandList_Ddi_Blt,                                              // pfnBlt
-    CosUmd12ComputeCommandList_Ddi_Present_0028,                              // pfnPresent
-    CosUmd12ComputeCommandList_Ddi_BeginQuery_0003,                           // pfnBeginQuery
-    CosUmd12ComputeCommandList_Ddi_EndQuery_0003,                             // pfnEndQuery
-    CosUmd12ComputeCommandList_Ddi_ResolveQueryData,                          // pfnResolveQueryData
-    CosUmd12ComputeCommandList_Ddi_SetPredication,                            // pfnSetPredication
-    CosUmd12ComputeCommandList_Ddi_IaSetTopology_0003,                               // pfnIaSetTopology    
-    CosUmd12ComputeCommandList_Ddi_RsSetViewports_0003,                       // pfnRsSetViewports
-    CosUmd12ComputeCommandList_Ddi_RsSetScissorRects_0003,                    // pfnRsSetScissorRects
-    CosUmd12ComputeCommandList_Ddi_OmSetBlendFactor,                                 // pfnOmSetBlendFactor
-    CosUmd12ComputeCommandList_Ddi_OmSetStencilRef,                                  // pfnOmSetStencilRef
-    CosUmd12ComputeCommandList_Ddi_SetPipelineState,                          // pfnSetPipelineState
-    CosUmd12ComputeCommandList_Ddi_SetDescriptorHeaps_0003,                   // pfnSetDescriptorHeaps
-    CosUmd12ComputeCommandList_Ddi_SetComputeRootSignature,                   // pfnSetComputeRootSignature
-    CosUmd12ComputeCommandList_Ddi_SetGraphicsRootSignature,                  // pfnSetGraphicsRootSignature
-    CosUmd12ComputeCommandList_Ddi_SetComputeRootDescriptorTable,             // pfnSetComputeRootDescriptorTable
-    CosUmd12ComputeCommandList_Ddi_SetGraphicsRootDescriptorTable,                   // pfnSetGraphicsRootDescriptorTable
-    CosUmd12ComputeCommandList_Ddi_SetComputeRoot32BitConstant,               // pfnSetComputeRoot32BitConstant
-    CosUmd12ComputeCommandList_Ddi_SetGraphicsRoot32BitConstant,                     // pfnSetGraphicsRoot32BitConstant
-    CosUmd12ComputeCommandList_Ddi_SetComputeRoot32BitConstants_0003,         // pfnSetComputeRoot32BitConstants
-    CosUmd12ComputeCommandList_Ddi_SetGraphicsRoot32BitConstants_0003,               // pfnSetGraphicsRoot32BitConstants
-    CosUmd12ComputeCommandList_Ddi_SetComputeRootConstantBufferView,          // pfnSetComputeRootConstantBufferView
-    CosUmd12ComputeCommandList_Ddi_SetGraphicsRootConstantBufferView,                // pfnSetGraphicsRootConstantBufferView
-    CosUmd12ComputeCommandList_Ddi_SetComputeRootShaderResourceView,          // pfnSetComputeRootShaderResourceView
-    CosUmd12ComputeCommandList_Ddi_SetGraphicsRootShaderResourceView,                // pfnSetGraphicsRootShaderResourceView
-    CosUmd12ComputeCommandList_Ddi_SetComputeRootUnorderedAccessView,         // pfnSetComputeRootUnorderedAccessView
-    CosUmd12ComputeCommandList_Ddi_SetGraphicsRootUnorderedAccessView,               // pfnSetGraphicsRootUnorderedAccessView
-    CosUmd12ComputeCommandList_Ddi_IaSetIndexBuffer,                                 // pfnIASetIndexBuffer
-    CosUmd12ComputeCommandList_Ddi_IaSetVertexBuffers_0003,                          // pfnIASetVertexBuffers
-    CosUmd12ComputeCommandList_Ddi_SoSetTargets_0003,                         // pfnSOSetTargets
-    CosUmd12ComputeCommandList_Ddi_OmSetRenderTargets_0003,                   // pfnOMSetRenderTargets
-    CosUmd12ComputeCommandList_Ddi_SetMarker,                                 // pfnSetMarker
-    CosUmd12ComputeCommandList_Ddi_ClearRootArguments,                        // pfnClearRootArguments
-    CosUmd12ComputeCommandList_Ddi_AtomicCopyBufferRegion_0003,               // pfnAtomicCopyBufferRegion
-    CosUmd12ComputeCommandList_Ddi_OmSetDepthBounds_0025,                     // pfnOMSetDepthBounds
-    CosUmd12ComputeCommandList_Ddi_SetSamplePositions_0027,                   // pfnSetSamplePositions
-    CosUmd12ComputeCommandList_Ddi_ResourceResolveSubresourceRegion,          // pfnResourceResolveSubresourceRegion
-    CosUmd12ComputeCommandList_Ddi_SetProtectedResourceSession_0030,          // pfnSetProtectedResourceSession
-    CosUmd12ComputeCommandList_Ddi_WriteBufferImmediate_0032,                 // pfnWriteBufferImmediate
-    CosUmd12ComputeCommandList_Ddi_SetViewInstanceMask_0033,                  // pfnSetViewInstanceMask
+    STOP_IN_FUNCTION();
+
+    CosUmd12CommandList * pCommandList = CosUmd12CommandList::CastFrom(CommandList);
+    CosUmd12MetaCommand * pMetaCommand = CosUmd12MetaCommand::CastFrom(MetaCommand);
+
+    pMetaCommand->Initialize(pInitializationParameters, InitializationParametersSize);
+}
+
+VOID APIENTRY CosUmd12ComputeCommandList_Ddi_ExecuteMetaCommand(
+    D3D12DDI_HCOMMANDLIST CommandList,
+    D3D12DDI_HMETACOMMAND_0052 MetaCommand,
+    _In_ CONST void *pExecutionParameters,
+    _In_ SIZE_T ExecutionParametersSize)
+{
+    STOP_IN_FUNCTION();
+
+    CosUmd12CommandList * pCommandList = CosUmd12CommandList::CastFrom(CommandList);
+    CosUmd12MetaCommand * pMetaCommand = CosUmd12MetaCommand::CastFrom(MetaCommand);
+
+    pMetaCommand->Execute(pCommandList, pExecutionParameters, ExecutionParametersSize);
+}
+
+D3D12DDI_COMMAND_LIST_FUNCS_3D_0052 g_CosUmd12ComputeCommandList_Ddi_0052 =
+{
+    CosUmd12ComputeCommandList_Ddi_CloseCommandList,                        // pfnCloseCommandList
+    CosUmd12ComputeCommandList_Ddi_ResetCommandList_0040,                   // pfnResetCommandList
+    CosUmd12ComputeCommandList_Ddi_DrawInstanced,                               // pfnDrawInstanced
+    CosUmd12ComputeCommandList_Ddi_DrawIndexedInstanced,                        // pfnDrawIndexedInstanced
+    CosUmd12ComputeCommandList_Ddi_Dispatch,                                // pfnDispatch
+    CosUmd12ComputeCommandList_Ddi_ClearUnorderedAccessViewUint_0003,       // pfnClearUnorderedAccessViewUint
+    CosUmd12ComputeCommandList_Ddi_ClearUnorderedAccessViewFloat_0003,      // pfnClearUnorderedAccessViewFloat
+    CosUmd12ComputeCommandList_Ddi_ClearRenderTargetView_0003,                  // pfnClearRenderTargetView
+    CosUmd12ComputeCommandList_Ddi_ClearDepthStencilView_0003,                  // pfnClearDepthStencilView
+    CosUmd12ComputeCommandList_Ddi_DiscardResource_0003,                    // pfnDiscardResource
+    CosUmd12ComputeCommandList_Ddi_CopyTextureRegion_0003,                  // pfnCopyTextureRegion
+    CosUmd12ComputeCommandList_Ddi_ResourceCopy,                            // pfnResourceCopy
+    CosUmd12ComputeCommandList_Ddi_CopyTiles,                                   // pfnCopyTiles
+    CosUmd12ComputeCommandList_Ddi_CopyBufferRegion_0003,                   // pfnCopyBufferRegion
+    CosUmd12ComputeCommandList_Ddi_ResourceResolveSubresource,              // pfnResourceResolveSubresource
+    CosUmd12ComputeCommandList_Ddi_ExecuteBundle,                           // pfnExecuteBundle
+    CosUmd12ComputeCommandList_Ddi_ExecuteIndirect,                             // pfnExecuteIndirect
+    CosUmd12ComputeCommandList_Ddi_ResourceBarrier_0022,                    // pfnResourceBarrier
+    CosUmd12ComputeCommandList_Ddi_Blt,                                         // pfnBlt
+    CosUmd12ComputeCommandList_Ddi_Present_0051,                                // pfnPresent
+    CosUmd12ComputeCommandList_Ddi_BeginQuery_0003,                         // pfnBeginQuery
+    CosUmd12ComputeCommandList_Ddi_EndQuery_0003,                           // pfnEndQuery
+    CosUmd12ComputeCommandList_Ddi_ResolveQueryData,                        // pfnResolveQueryData
+    CosUmd12ComputeCommandList_Ddi_SetPredication,                              // pfnSetPredication
+    CosUmd12ComputeCommandList_Ddi_IaSetTopology_0003,                          // pfnIaSetTopology    
+    CosUmd12ComputeCommandList_Ddi_RsSetViewports_0003,                         // pfnRsSetViewports
+    CosUmd12ComputeCommandList_Ddi_RsSetScissorRects_0003,                      // pfnRsSetScissorRects
+    CosUmd12ComputeCommandList_Ddi_OmSetBlendFactor,                            // pfnOmSetBlendFactor
+    CosUmd12ComputeCommandList_Ddi_OmSetStencilRef,                             // pfnOmSetStencilRef
+    CosUmd12ComputeCommandList_Ddi_SetPipelineState,                        // pfnSetPipelineState
+    CosUmd12ComputeCommandList_Ddi_SetDescriptorHeaps_0003,                 // pfnSetDescriptorHeaps
+    CosUmd12ComputeCommandList_Ddi_SetComputeRootSignature,                 // pfnSetComputeRootSignature
+    CosUmd12ComputeCommandList_Ddi_SetGraphicsRootSignature,                    // pfnSetGraphicsRootSignature
+    CosUmd12ComputeCommandList_Ddi_SetComputeRootDescriptorTable,           // pfnSetComputeRootDescriptorTable
+    CosUmd12ComputeCommandList_Ddi_SetGraphicsRootDescriptorTable,              // pfnSetGraphicsRootDescriptorTable
+    CosUmd12ComputeCommandList_Ddi_SetComputeRoot32BitConstant,             // pfnSetComputeRoot32BitConstant
+    CosUmd12ComputeCommandList_Ddi_SetGraphicsRoot32BitConstant,                // pfnSetGraphicsRoot32BitConstant
+    CosUmd12ComputeCommandList_Ddi_SetComputeRoot32BitConstants_0003,       // pfnSetComputeRoot32BitConstants
+    CosUmd12ComputeCommandList_Ddi_SetGraphicsRoot32BitConstants_0003,          // pfnSetGraphicsRoot32BitConstants
+    CosUmd12ComputeCommandList_Ddi_SetComputeRootConstantBufferView,        // pfnSetComputeRootConstantBufferView
+    CosUmd12ComputeCommandList_Ddi_SetGraphicsRootConstantBufferView,           // pfnSetGraphicsRootConstantBufferView
+    CosUmd12ComputeCommandList_Ddi_SetComputeRootShaderResourceView,        // pfnSetComputeRootShaderResourceView
+    CosUmd12ComputeCommandList_Ddi_SetGraphicsRootShaderResourceView,           // pfnSetGraphicsRootShaderResourceView
+    CosUmd12ComputeCommandList_Ddi_SetComputeRootUnorderedAccessView,       // pfnSetComputeRootUnorderedAccessView
+    CosUmd12ComputeCommandList_Ddi_SetGraphicsRootUnorderedAccessView,          // pfnSetGraphicsRootUnorderedAccessView
+    CosUmd12ComputeCommandList_Ddi_IaSetIndexBuffer,                            // pfnIASetIndexBuffer
+    CosUmd12ComputeCommandList_Ddi_IaSetVertexBuffers_0003,                     // pfnIASetVertexBuffers
+    CosUmd12ComputeCommandList_Ddi_SoSetTargets_0003,                           // pfnSOSetTargets
+    CosUmd12ComputeCommandList_Ddi_OmSetRenderTargets_0003,                     // pfnOMSetRenderTargets
+    CosUmd12ComputeCommandList_Ddi_SetMarker,                               // pfnSetMarker
+    CosUmd12ComputeCommandList_Ddi_ClearRootArguments,                      // pfnClearRootArguments
+    CosUmd12ComputeCommandList_Ddi_AtomicCopyBufferRegion_0003,             // pfnAtomicCopyBufferRegion
+    CosUmd12ComputeCommandList_Ddi_OmSetDepthBounds_0025,                       // pfnOMSetDepthBounds
+    CosUmd12ComputeCommandList_Ddi_SetSamplePositions_0027,                 // pfnSetSamplePositions
+    CosUmd12ComputeCommandList_Ddi_ResourceResolveSubresourceRegion,        // pfnResourceResolveSubresourceRegion
+    CosUmd12ComputeCommandList_Ddi_SetProtectedResourceSession_0030,            // pfnSetProtectedResourceSession
+    CosUmd12ComputeCommandList_Ddi_WriteBufferImmediate_0032,               // pfnWriteBufferImmediate
+    CosUmd12ComputeCommandList_Ddi_SetViewInstanceMask_0033,                // pfnSetViewInstanceMask
+    CosUmd12ComputeCommandList_Ddi_InitializeMetaCommand,                   // pfnInitializeMetaCommand
+    CosUmd12ComputeCommandList_Ddi_ExecuteMetaCommand                       // pfnExecuteMetaCommand
 };

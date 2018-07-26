@@ -110,7 +110,7 @@ public:
     UINT Pitch () const
     {
         // Pitch is only valid for linear layouts
-        NT_ASSERT(m_hwLayout == CosHwLayout::Linear);
+        assert(m_hwLayout == CosHwLayout::Linear);
         // linear formats are always packed
         return m_hwWidthPixels * CPixel::BytesPerPixel(m_format);
     }
