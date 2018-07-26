@@ -400,11 +400,7 @@ int main()
 
     try {
 
-#if 0
         std::wstring driverString = cosDriverString;
-#else
-        std::wstring driverString = brdDriverString;
-#endif
 
         findIter = std::find(adapterList.begin(), adapterList.end(), driverString);
 
