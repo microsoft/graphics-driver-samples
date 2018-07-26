@@ -9,12 +9,14 @@ const UINT COS_MAX_NUM_COMMAND_BUFFERS = 256;
 class CosUmd12CommandList
 {
 public:
-    explicit CosUmd12CommandList(CosUmd12Device* pDevice, const D3D12DDIARG_CREATE_COMMAND_LIST_0001* pArgs)
+    explicit CosUmd12CommandList(CosUmd12Device* pDevice, const D3D12DDIARG_CREATE_COMMAND_LIST_0040* pArgs, D3D12DDI_HRTCOMMANDLIST rtCommandList)
     {
         m_pDevice = pDevice;
         m_args = *pArgs;
+        m_rtCommandList = rtCommandList;
         m_pPipelineState = NULL;
         memset(m_pDescriptorHeaps, 0, sizeof(m_pDescriptorHeaps));
+        m_pCommandPool = NULL;
         m_numFilledCommandBuffers = 0;
     }
 
@@ -22,12 +24,9 @@ public:
     {
     }
 
-    void Reset()
-    {
-        // do nothing
-    }
+    void Reset(const D3D12DDIARG_RESETCOMMANDLIST_0040 * pReset);
 
-    static int CalculateSize(const D3D12DDIARG_CREATE_COMMAND_LIST_0001 * pArgs)
+    static int CalculateSize(const D3D12DDIARG_CREATE_COMMAND_LIST_0040 * pArgs)
     {
         return sizeof(CosUmd12CommandList);
     }
@@ -71,6 +70,7 @@ public:
         UINT ThreadGroupCountZ);
 
     void ResourceCopy(D3D12DDI_HRESOURCE DstResource, D3D12DDI_HRESOURCE SrcResource);
+    void GpuMemoryCopy(D3D12_GPU_VIRTUAL_ADDRESS dstGpuVa, D3D12_GPU_VIRTUAL_ADDRESS srcGpuVa, UINT size);
 
     // Interface for Command Queue
     void Execute(CosUmd12CommandQueue * pCommandQueue);
@@ -78,7 +78,8 @@ public:
 private:
 
     CosUmd12Device * m_pDevice;
-    D3D12DDIARG_CREATE_COMMAND_LIST_0001 m_args;
+    D3D12DDIARG_CREATE_COMMAND_LIST_0040 m_args;
+    D3D12DDI_HRTCOMMANDLIST m_rtCommandList;
     CosUmd12PipelineState * m_pPipelineState;
     CosUmd12DescriptorHeap * m_pDescriptorHeaps[D3D12DDI_DESCRIPTOR_HEAP_TYPE_NUM_TYPES];
 
@@ -88,7 +89,7 @@ private:
 
     BYTE m_rootValues[SIZE_ROOT_SIGNATURE];
 
-    CosUmd12CommandAllocator * m_pCommandAllocator;
+    CosUmd12CommandPool * m_pCommandPool;
 
     CosUmd12CommandBuffer * m_pCurCommandBuffer;
 

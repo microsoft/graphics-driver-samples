@@ -5,7 +5,7 @@ class CosUmd12Device;
 class CosUmd12CommandQueue
 {
 public:
-    explicit CosUmd12CommandQueue(CosUmd12Device* pDevice, D3D12DDI_HRTCOMMANDQUEUE hRTCommandQueue, const D3D12DDIARG_CREATECOMMANDQUEUE_0023* pArgs)
+    explicit CosUmd12CommandQueue(CosUmd12Device* pDevice, D3D12DDI_HRTCOMMANDQUEUE hRTCommandQueue, const D3D12DDIARG_CREATECOMMANDQUEUE_0050* pArgs)
     {
         m_pDevice = pDevice;
         m_args = *pArgs;
@@ -16,7 +16,7 @@ public:
     {
     }
 
-    static int CalculateSize(const D3D12DDIARG_CREATECOMMANDQUEUE_0023 * pArgs)
+    static int CalculateSize(const D3D12DDIARG_CREATECOMMANDQUEUE_0050 * pArgs)
     {
         return sizeof(CosUmd12CommandQueue);
     }
@@ -43,7 +43,7 @@ public:
 private:
 
     CosUmd12Device * m_pDevice;
-    D3D12DDIARG_CREATECOMMANDQUEUE_0023 m_args;
+    D3D12DDIARG_CREATECOMMANDQUEUE_0050 m_args;
     D3D12DDI_HRTCOMMANDQUEUE m_hRTCommandQueue;
 
     D3DDDICB_CREATECONTEXT m_createContext;

@@ -19,21 +19,16 @@ HRESULT CosUmd12CommandList::StandUp()
 {
     if (IsComputeType())
     {
-        m_pDevice->m_pUMCallbacks->pfnSetCommandListDDITableCb(m_args.hRTCommandList, m_pDevice->m_pAdapter->m_hRTTable[CosUmd12Adapter::TableType::Compute]);
+        m_pDevice->m_pUMCallbacks->pfnSetCommandListDDITableCb(m_rtCommandList, m_pDevice->m_pAdapter->m_hRTTable[CosUmd12Adapter::TableType::Compute]);
     }
     else
     {
-        m_pDevice->m_pUMCallbacks->pfnSetCommandListDDITableCb(m_args.hRTCommandList, m_pDevice->m_pAdapter->m_hRTTable[CosUmd12Adapter::TableType::Render]);
+        m_pDevice->m_pUMCallbacks->pfnSetCommandListDDITableCb(m_rtCommandList, m_pDevice->m_pAdapter->m_hRTTable[CosUmd12Adapter::TableType::Render]);
     }
 
-    m_pCommandAllocator = CosUmd12CommandAllocator::CastFrom(m_args.hDrvCommandAllocator);
-
-    m_pCurCommandBuffer = m_pCommandAllocator->AcquireCommandBuffer(m_args.QueueFlags);
-
-    if (NULL == m_pCurCommandBuffer)
-    {
-        return E_OUTOFMEMORY;
-    }
+    //
+    // m_pCommandPool is set with the first Reset()
+    //
 
     return S_OK;
 }
@@ -49,6 +44,44 @@ CosUmd12CommandList::Close()
     m_filledCommandBuffers[m_numFilledCommandBuffers++] = m_pCurCommandBuffer;
 
     m_pCurCommandBuffer = NULL;
+}
+
+void 
+CosUmd12CommandList::Reset(
+    const D3D12DDIARG_RESETCOMMANDLIST_0040 * pReset)
+{
+    //
+    // Release the command buffers back to the Command Pool
+    //
+
+    if (m_pCommandPool)
+    {
+        for (UINT i = 0; i < m_numFilledCommandBuffers; i++)
+        {
+            m_pCommandPool->ReleaseCommandBuffer(m_filledCommandBuffers[i]);
+        }
+
+        if (m_pCurCommandBuffer)
+        {
+            m_pCommandPool->ReleaseCommandBuffer(m_pCurCommandBuffer);
+        }
+
+        m_numFilledCommandBuffers = 0;
+        m_pCurCommandBuffer = 0;
+    }
+
+    m_pCommandPool = NULL;
+
+    CosUmd12CommandRecorder * pCommandRecorder = CosUmd12CommandRecorder::CastFrom(pReset->hDrvCommandRecorder);
+
+    m_pCommandPool = pCommandRecorder->GetCommandPool();
+
+    m_pCurCommandBuffer = m_pCommandPool->AcquireCommandBuffer(m_args.QueueFlags);
+
+    if (NULL == m_pCurCommandBuffer)
+    {
+        m_pDevice->m_pUMCallbacks->pfnSetErrorCb(m_pDevice->m_hRTDevice, E_OUTOFMEMORY);
+    }
 }
 
 void
@@ -116,6 +149,57 @@ CosUmd12CommandList::ResourceCopy(
 }
 
 void
+CosUmd12CommandList::GpuMemoryCopy(
+    D3D12_GPU_VIRTUAL_ADDRESS dstGpuVa,
+    D3D12_GPU_VIRTUAL_ADDRESS srcGpuVa,
+    UINT size)
+{
+    BYTE *  pCommandBuffer;
+    UINT    curCommandOffset;
+    D3DDDI_PATCHLOCATIONLIST *  pPatchLocationList;
+
+    GpuCommand * command;
+
+    ReserveCommandBufferSpace(
+        true,                           // SW command
+        sizeof(*command),
+        &pCommandBuffer,
+        2,
+        2,
+        &curCommandOffset,
+        &pPatchLocationList);
+    if (NULL == pCommandBuffer)
+    {
+        return;
+    }
+
+    assert(pPatchLocationList != NULL);
+
+    command = reinterpret_cast<GpuCommand *>(pCommandBuffer);
+
+    command->m_commandId = GpuCommandId::ResourceCopy;
+    command->m_resourceCopy.m_srcGpuAddress.QuadPart = 0;
+    command->m_resourceCopy.m_dstGpuAddress.QuadPart = 0;
+    command->m_resourceCopy.m_sizeBytes = size;
+
+    UINT dstAllocIndex = m_pCurCommandBuffer->UseAllocation((UINT)(dstGpuVa >> 32), true);
+    UINT srcAllocIndex = m_pCurCommandBuffer->UseAllocation((UINT)(srcGpuVa >> 32), false);
+
+    m_pCurCommandBuffer->SetPatchLocation(
+        pPatchLocationList,
+        dstAllocIndex,
+        curCommandOffset + offsetof(GpuCommand, m_resourceCopy.m_dstGpuAddress),
+        (UINT)(dstGpuVa & 0xffffffff));
+    m_pCurCommandBuffer->SetPatchLocation(
+        pPatchLocationList,
+        srcAllocIndex,
+        curCommandOffset + offsetof(GpuCommand, m_resourceCopy.m_srcGpuAddress),
+        (UINT)(srcGpuVa & 0xffffffff));
+
+    m_pCurCommandBuffer->CommitCommandBufferSpace(sizeof(*command), 2);
+}
+
+void
 CosUmd12CommandList::ReserveCommandBufferSpace(
     bool                        bSwCommand,
     UINT                        commandSize,
@@ -156,7 +240,7 @@ CosUmd12CommandList::ReserveCommandBufferSpace(
 
     m_filledCommandBuffers[m_numFilledCommandBuffers++] = m_pCurCommandBuffer;
 
-    m_pCurCommandBuffer = m_pCommandAllocator->AcquireCommandBuffer(m_args.QueueFlags);
+    m_pCurCommandBuffer = m_pCommandPool->AcquireCommandBuffer(m_args.QueueFlags);
 
     m_pCurCommandBuffer->ReserveCommandBufferSpace(
                             bSwCommand,

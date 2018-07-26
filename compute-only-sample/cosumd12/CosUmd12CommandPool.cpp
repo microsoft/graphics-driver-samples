@@ -1,6 +1,6 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //
-// Command Allocator implementation
+// Command Pool implementation
 //
 // Copyright (C) Microsoft Corporation
 //
@@ -13,14 +13,14 @@
 //
 
 CosUmd12CommandBuffer *
-CosUmd12CommandAllocator::AcquireCommandBuffer(
+CosUmd12CommandPool::AcquireCommandBuffer(
     D3D12DDI_COMMAND_QUEUE_FLAGS queueFlags)
 {
     return CosUmd12CommandBuffer::Create();
 }
 
 void
-CosUmd12CommandAllocator::ReleaseCommandBuffer(CosUmd12CommandBuffer * pCommandBuffer)
+CosUmd12CommandPool::ReleaseCommandBuffer(CosUmd12CommandBuffer * pCommandBuffer)
 {
     pCommandBuffer->~CosUmd12CommandBuffer();
 }

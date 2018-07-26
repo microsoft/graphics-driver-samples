@@ -4,7 +4,6 @@
 #include <strsafe.h>
 #include <debugapi.h>
 #include "d3dumddi_.h"
-#include <ntassert.h>
 
 #include <exception>
 #include <typeinfo>

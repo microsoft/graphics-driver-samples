@@ -122,7 +122,7 @@ void CosUmdResource::InitSharedResourceFromExistingAllocation (
     // HW specific information calculated based on the fields above
     CalculateMemoryLayout();
 
-    NT_ASSERT(
+    assert(
         (m_hwLayout == ExistingAllocationPtr->m_hwLayout) &&
         (m_hwWidthPixels == ExistingAllocationPtr->m_hwWidthPixels) &&
         (m_hwHeightPixels == ExistingAllocationPtr->m_hwHeightPixels) &&
@@ -333,7 +333,7 @@ CosUmdResource::CalculateMemoryLayout(
             m_hwHeightPixels = m_mip0Info.TexelHeight;
 
             m_hwSizeBytes = m_mip0Info.TexelWidth * CPixel::BytesPerPixel(m_format);
-            NT_ASSERT(this->Pitch() == m_hwSizeBytes);
+            assert(this->Pitch() == m_hwSizeBytes);
         }
     break;
     case D3D10DDIRESOURCE_TEXTURE2D:

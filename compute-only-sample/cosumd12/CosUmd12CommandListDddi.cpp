@@ -6,9 +6,9 @@ void APIENTRY CosUmd12CommandList_Ddi_CloseCommandList(
     STOP_IN_FUNCTION();
 }
 
-void APIENTRY CosUmd12CommandList_Ddi_ResetCommandList(
+void APIENTRY CosUmd12CommandList_Ddi_ResetCommandList_0040(
     D3D12DDI_HCOMMANDLIST CommandList,
-    _In_ const D3D12DDIARG_RESETCOMMANDLIST* pReset)
+    _In_ const D3D12DDIARG_RESETCOMMANDLIST_0040* pReset)
 {
     STOP_IN_FUNCTION();
 }
@@ -183,11 +183,13 @@ void APIENTRY CosUmd12CommandList_Ddi_Blt(
     STOP_IN_FUNCTION();
 }
 
-void APIENTRY CosUmd12CommandList_Ddi_Present_0028(
+void APIENTRY CosUmd12CommandList_Ddi_Present_0051(
     D3D12DDI_HCOMMANDLIST CommandList, 
     D3D12DDI_HCOMMANDQUEUE CommandQueue, 
     _In_ const D3D12DDIARG_PRESENT_0001* pDesc, 
-    _Out_ D3D12DDI_PRESENT_0028* pPresent)
+    _Out_ D3D12DDI_PRESENT_0051* pPresent,
+    _Out_opt_ D3D12DDI_PRESENT_CONTEXTS_0051*,
+    _Out_opt_ D3D12DDI_PRESENT_HWQUEUES_0051*)
 {
     STOP_IN_FUNCTION();
 }
@@ -516,10 +518,10 @@ void APIENTRY CosUmd12CommandList_Ddi_SetViewInstanceMask_0033(
     STOP_IN_FUNCTION();
 }
 
-D3D12DDI_COMMAND_LIST_FUNCS_3D_0033 g_CosUmd12CommandList_Ddi_0033 =
+D3D12DDI_COMMAND_LIST_FUNCS_3D_0052 g_CosUmd12CommandList_Ddi_0052 =
 {
     CosUmd12CommandList_Ddi_CloseCommandList,                          // pfnCloseCommandList
-    CosUmd12CommandList_Ddi_ResetCommandList,                          // pfnResetCommandList
+    CosUmd12CommandList_Ddi_ResetCommandList_0040,                     // pfnResetCommandList
     CosUmd12CommandList_Ddi_DrawInstanced,                                    // pfnDrawInstanced
     CosUmd12CommandList_Ddi_DrawIndexedInstanced,                             // pfnDrawIndexedInstanced
     CosUmd12CommandList_Ddi_Dispatch,                                  // pfnDispatch
@@ -537,7 +539,7 @@ D3D12DDI_COMMAND_LIST_FUNCS_3D_0033 g_CosUmd12CommandList_Ddi_0033 =
     CosUmd12CommandList_Ddi_ExecuteIndirect,                           // pfnExecuteIndirect
     CosUmd12CommandList_Ddi_ResourceBarrier_0022,                      // pfnResourceBarrier
     CosUmd12CommandList_Ddi_Blt,                                              // pfnBlt
-    CosUmd12CommandList_Ddi_Present_0028,                              // pfnPresent
+    CosUmd12CommandList_Ddi_Present_0051,                              // pfnPresent
     CosUmd12CommandList_Ddi_BeginQuery_0003,                           // pfnBeginQuery
     CosUmd12CommandList_Ddi_EndQuery_0003,                             // pfnEndQuery
     CosUmd12CommandList_Ddi_ResolveQueryData,                          // pfnResolveQueryData
