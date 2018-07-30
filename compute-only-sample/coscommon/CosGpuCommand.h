@@ -43,7 +43,7 @@ struct GpuResourceCopy
 {
     PHYSICAL_ADDRESS    m_dstGpuAddress;
     PHYSICAL_ADDRESS    m_srcGpuAddress;
-    size_t              m_sizeBytes;
+    UINT                m_sizeBytes;
 };
 
 //
