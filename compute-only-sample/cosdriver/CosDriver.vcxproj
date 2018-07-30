@@ -61,6 +61,7 @@
     <Platform Condition="'$(Platform)' == ''">ARM</Platform>
     <RootNamespace>CosDriver</RootNamespace>
     <ProjectName>cosDriver</ProjectName>
+    <WindowsTargetPlatformVersion>$(LatestTargetPlatformVersion)</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Label="Configuration">
@@ -79,14 +80,44 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>$(SolutionDir)$(Platform)\$(ConfigurationName)\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>$(SolutionDir)$(Platform)\$(ConfigurationName)\</OutDir>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <PreBuildEvent>
-      <Command>mkdir $(OutDir) &amp; copy /y $(OutDir)cosumd12.dll $(OutDir)cosDriver</Command>
+      <Command>del $(OutDir)cosDriver &amp; mkdir $(OutDir)cosDriver &amp; copy /y $(OutDir)cosumd12.dll $(OutDir)cosDriver</Command>
     </PreBuildEvent>
     <Inf>
       <TimeStamp>1.1.1.1</TimeStamp>
     </Inf>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <PreBuildEvent>
+      <Command>mkdir $(OutDir)cosDriver &amp; copy /y $(OutDir)cosumd12.dll $(OutDir)cosDriver</Command>
+    </PreBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <PreBuildEvent>
+      <Command>mkdir $(OutDir)cosDriver &amp; copy /y $(OutDir)cosumd12.dll $(OutDir)cosDriver</Command>
+    </PreBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
+    <PreBuildEvent>
+      <Command>mkdir $(OutDir)cosDriver &amp; copy /y $(OutDir)cosumd12.dll $(OutDir)cosDriver</Command>
+    </PreBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
+    <PreBuildEvent>
+      <Command>mkdir $(OutDir)cosDriver &amp; copy /y $(OutDir)cosumd12.dll $(OutDir)cosDriver</Command>
+    </PreBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <PreBuildEvent>
+      <Command>del $(OutDir)cosDriver &amp; mkdir $(OutDir)cosDriver &amp; copy /y $(OutDir)cosumd12.dll $(OutDir)cosDriver</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
