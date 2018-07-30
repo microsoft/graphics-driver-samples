@@ -20,11 +20,11 @@ public:
         m_rootSignature = *pArgs->pRootSignature_1_1;
 
         char * storage = (char *)this + sizeof(*this);
-        int storageSize = CalculateSize(pArgs) - sizeof(*this);
+        UINT storageSize = CalculateSize(pArgs) - sizeof(*this);
         UINT valueOffset = 0;
 
         m_pRootValueOffsets = (UINT *)storage;
-        size_t size = m_rootSignature.NumParameters * sizeof(UINT);
+        UINT size = m_rootSignature.NumParameters * sizeof(UINT);
 
         storageSize -= size;
         storage += size;
