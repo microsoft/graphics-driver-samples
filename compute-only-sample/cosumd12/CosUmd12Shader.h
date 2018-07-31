@@ -15,9 +15,9 @@ public:
         m_args = *pArgs;
 
         char * storage = (char *)this + sizeof(*this);
-        int storageSize = CalculateSize(pArgs) - sizeof(*this);
+        UINT storageSize = CalculateSize(pArgs) - sizeof(*this);
 
-        size_t size = m_args.pShaderCode[1] * sizeof(UINT);
+        UINT size = m_args.pShaderCode[1] * sizeof(UINT);
         ASSERT(storageSize >= size);
 
         UINT * dstCode = (UINT *)storage;
