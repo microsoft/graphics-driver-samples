@@ -129,7 +129,7 @@ CosUmd12CommandList::ResourceCopy(
     command->m_commandId = GpuCommandId::ResourceCopy;
     command->m_resourceCopy.m_srcGpuAddress.QuadPart = 0;
     command->m_resourceCopy.m_dstGpuAddress.QuadPart = 0;
-    command->m_resourceCopy.m_sizeBytes = pDstResource->GetDataSize();
+    command->m_resourceCopy.m_sizeBytes = (UINT)pDstResource->GetDataSize();
 
     UINT dstAllocIndex = m_pCurCommandBuffer->UseResource(pDstResource, true);
     UINT srcAllocIndex = m_pCurCommandBuffer->UseResource(pSrcResource, false);

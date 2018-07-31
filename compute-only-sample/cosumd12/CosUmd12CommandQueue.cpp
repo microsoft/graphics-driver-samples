@@ -16,7 +16,7 @@ CosUmd12CommandQueue::Standup()
     ZeroMemory(&m_createContext, sizeof(m_createContext));
 
     m_createContext.NodeOrdinal = 0;
-    m_createContext.EngineAffinity = 0;
+    m_createContext.EngineAffinity = 1;
     m_createContext.Flags.Value = 0;
     m_createContext.pPrivateDriverData = &cosContextExchange;
     m_createContext.PrivateDriverDataSize = sizeof(cosContextExchange);

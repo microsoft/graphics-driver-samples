@@ -1610,7 +1610,11 @@ CosKmAdapter::ValidateDmaBuffer(
             auto patch = &pPatchLocationList[i];
 
             allocationListSize;
-            NT_ASSERT(patch->AllocationIndex < allocationListSize);
+            if (patch->AllocationIndex >= allocationListSize)
+            {
+                NT_ASSERT(false);
+                return false;
+            }
 
 #if VC4
             auto allocation = &pAllocationList[patch->AllocationIndex];
