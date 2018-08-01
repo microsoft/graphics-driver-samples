@@ -19,7 +19,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
     return TRUE;
 }
 
-bool g_doNotStop = false;
+bool g_doNotStop = true;
 
 void StopInFunction(const char * function, const char * file, int line)
 {
