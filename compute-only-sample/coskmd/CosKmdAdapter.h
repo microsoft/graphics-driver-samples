@@ -2,13 +2,6 @@
 
 #include "CosKmd.h"
 
-#if VC4
-
-#include "Vc4Hw.h"
-#include "VC4Ddi.h"
-
-#endif
-
 #include "CosKmdAllocation.h"
 #include "CosKmdGlobal.h"
 
@@ -39,15 +32,6 @@ typedef struct _COSDMABUFSTATE
         struct
         {
             UINT    m_bRender           : 1;
-#if VC4
-
-            UINT    m_bRenderTargetRef  : 1;
-            UINT    m_bTileAllocMemRef  : 1;
-            UINT    m_bTileStateDataRef : 1;
-            UINT    m_NumDmaBufSelfRef  : 5;    // Up to 32 DMA buffer self reference
-            UINT    m_HasVC4ClearColors : 1;
-
-#endif
             UINT    m_bPresent          : 1;
             UINT    m_bPaging           : 1;
             UINT    m_bSwCommandBuffer  : 1;
@@ -69,18 +53,6 @@ typedef struct _COSDMABUFINFO
     LARGE_INTEGER               m_DmaBufferPhysicalAddress;
     UINT                        m_DmaBufferSize;
     COSDMABUFSTATE              m_DmaBufState;
-
-#if VC4
-
-    CosKmdAllocation           *m_pRenderTarget;
-    UINT                        m_RenderTargetPhysicalAddress;
-    const void*                 m_RenderTargetVirtualAddress;
-
-    D3DDDI_PATCHLOCATIONLIST    m_DmaBufSelfRef[VC4_MAX_DMA_BUFFER_SELF_REF];
-
-    VC4ClearColors              m_VC4ClearColors;
-
-#endif
 } COSDMABUFINFO;
 
 typedef struct _COSDMABUFSUBMISSION
@@ -94,13 +66,6 @@ typedef struct _COSDMABUFSUBMISSION
 
 typedef union _CosKmAdapterFlags
 {
-#if 0
-    struct
-    {
-        UINT    m_isVC4      : 1;
-    };
-#endif
-
     UINT        m_value;
 } CosKmAdapterFlags;
 
@@ -408,39 +373,7 @@ protected:
     BYTE                        m_deviceId[MAX_DEVICE_ID_LENGTH];
     ULONG                       m_deviceIdLength;
 
-#if 0
-    VC4_DISPLAY                 m_display;
-#endif
-
-#if !VC4
-
     const static int            kVidMemSegementSize = 1024 * 1024;
-#else
-
-    UINT                        m_localVidMemSegmentSize;
-
-    BYTE                       *m_pRenderingControlList;
-    UINT                        m_renderingControlListPhysicalAddress;
-    UINT                        m_tileAllocationMemoryPhysicalAddress;
-    UINT                        m_tileStateDataArrayPhysicalAddress;
-
-    BYTE                       *m_pControlListPool;
-    UINT                        m_controlListPoolPhysicalAddress;
-    UINT                        m_tileAllocPoolPhysicalAddress;
-    UINT                        m_tileStatePoolPhysicalAddress;
-
-    // Firmware device RPIQ
-    PFILE_OBJECT                m_pRpiqDevice;
-
-#if GPU_CACHE_WORKAROUND
-
-    UINT                        m_rtSizeJitter;
-
-#endif
-
-    UINT                        m_busAddressOffset;
-
-#endif
 
 public:
 

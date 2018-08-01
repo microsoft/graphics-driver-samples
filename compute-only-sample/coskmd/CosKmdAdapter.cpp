@@ -858,11 +858,7 @@ CosKmAdapter::QueryAdapterInfo(
         pCosAdapterInfo->m_wddmVersion = m_WDDMVersion;
 
         // Software APCI device only claims an interrupt resource
-#if VC4
-        pCosAdapterInfo->m_isSoftwareDevice = (m_flags.m_isVC4 != 1);
-#else
         pCosAdapterInfo->m_isSoftwareDevice = TRUE;
-#endif
 
         RtlCopyMemory(
             pCosAdapterInfo->m_deviceId,
@@ -1133,12 +1129,7 @@ CosKmAdapter::QueryAdapterInfo(
             pSegmentDesc[1].Flags.CacheCoherent = true;
             pSegmentDesc[1].Flags.DirectFlip = true;
             pSegmentDesc[1].CpuTranslatedAddress = CosKmdGlobal::s_videoMemoryPhysicalAddress; // cpu base physical address
-#if !VC4
             pSegmentDesc[1].Size = kVidMemSegementSize;
-#else
-            pSegmentDesc[1].Size = m_localVidMemSegmentSize;
-#endif
-
         }
     }
     break;
@@ -1536,48 +1527,12 @@ CosKmAdapter::PatchDmaBuffer(
             else
             {
                 // Patch HW command buffer
-#if VC4
-                UINT    physicalAddress =
-                    CosKmdGlobal::s_videoMemoryPhysicalAddress.LowPart +
-                    allocation->PhysicalAddress.LowPart +
-                    patch->AllocationOffset;
-
-                switch (patch->SlotId)
-                {
-                case VC4_SLOT_RT_BINNING_CONFIG:
-                    pDmaBufInfo->m_RenderTargetPhysicalAddress = physicalAddress;
-                    pDmaBufInfo->m_RenderTargetVirtualAddress = 
-                        static_cast<const BYTE*>(CosKmdGlobal::s_pVideoMemory) +
-                        allocation->PhysicalAddress.LowPart +
-                        patch->AllocationOffset;
-                    break;
-                case VC4_SLOT_TILE_ALLOCATION_MEMORY:
-                    *((UINT *)(pDmaBuf + patch->PatchOffset)) = m_tileAllocationMemoryPhysicalAddress + m_busAddressOffset;
-                    break;
-                case VC4_SLOT_TILE_STATE_DATA_ARRAY:
-                    *((UINT *)(pDmaBuf + patch->PatchOffset)) = m_tileStateDataArrayPhysicalAddress + m_busAddressOffset;
-                    break;
-                case VC4_SLOT_NV_SHADER_STATE:
-                case VC4_SLOT_BRANCH:
-                case VC4_SLOT_GL_SHADER_STATE:
-                case VC4_SLOT_FS_UNIFORM_ADDRESS:
-                case VC4_SLOT_VS_UNIFORM_ADDRESS:
-                case VC4_SLOT_CS_UNIFORM_ADDRESS:
-                    // When PrePatch happens in DdiRender, DMA buffer physical
-                    // address is not available, so DMA buffer self-reference
-                    // patches are handled in SubmitCommand
-                    break;
-                default:
-                    *((UINT *)(pDmaBuf + patch->PatchOffset)) = physicalAddress + m_busAddressOffset;
-                }
-#else
                 UINT    physicalAddress =
                     CosKmdGlobal::s_videoMemoryPhysicalAddress.LowPart +
                     allocation->PhysicalAddress.LowPart +
                     patch->AllocationOffset;
 
                 *((UINT *)(pDmaBuf + patch->PatchOffset)) = physicalAddress;
-#endif
             }
         }
     }
@@ -1596,9 +1551,6 @@ CosKmAdapter::ValidateDmaBuffer(
 {
     PBYTE           pDmaBuf = (PBYTE)pDmaBufInfo->m_pDmaBuffer;
     bool            bValidateDmaBuffer = true;
-#if VC4
-    COSDMABUFSTATE* pDmaBufState = &pDmaBufInfo->m_DmaBufState;
-#endif
 
     pDmaBuf;
     pAllocationList;
@@ -1615,78 +1567,7 @@ CosKmAdapter::ValidateDmaBuffer(
                 NT_ASSERT(false);
                 return false;
             }
-
-#if VC4
-            auto allocation = &pAllocationList[patch->AllocationIndex];
-
-            CosKmdDeviceAllocation * pCosKmdDeviceAllocation = (CosKmdDeviceAllocation *)allocation->hDeviceSpecificAllocation;
-
-
-            switch (patch->SlotId)
-            {
-            case VC4_SLOT_TILE_ALLOCATION_MEMORY:
-                if (pDmaBufState->m_bTileAllocMemRef)
-                {
-                    return false;   // Allow one per DMA buffer
-                }
-                else
-                {
-                    pDmaBufState->m_bTileAllocMemRef = 1;
-                }
-                break;
-            case VC4_SLOT_TILE_STATE_DATA_ARRAY:
-                if (pDmaBufState->m_bTileStateDataRef)
-                {
-                    return false;   // Allow one per DMA buffer
-                }
-                else
-                {
-                    pDmaBufState->m_bTileStateDataRef = 1;
-                }
-                break;
-            case VC4_SLOT_RT_BINNING_CONFIG:
-                if (pDmaBufState->m_bRenderTargetRef)
-                {
-                    return false;   // Allow one per DMA buffer
-                }
-                else
-                {
-                    pDmaBufInfo->m_pRenderTarget = pCosKmdDeviceAllocation->m_pCosKmdAllocation;
-                    pDmaBufState->m_bRenderTargetRef = 1;
-                }
-                break;
-            case VC4_SLOT_NV_SHADER_STATE:
-            case VC4_SLOT_BRANCH:
-            case VC4_SLOT_GL_SHADER_STATE:
-            case VC4_SLOT_FS_UNIFORM_ADDRESS:
-            case VC4_SLOT_VS_UNIFORM_ADDRESS:
-            case VC4_SLOT_CS_UNIFORM_ADDRESS:
-                if (pDmaBufState->m_NumDmaBufSelfRef == VC4_MAX_DMA_BUFFER_SELF_REF)
-                {
-                    return false;   // Allow up to VC4_MAX_DMA_BUFFER_SELF_REF
-                }
-                else
-                {
-                    pDmaBufInfo->m_DmaBufSelfRef[pDmaBufState->m_NumDmaBufSelfRef] = *patch;
-                    pDmaBufState->m_NumDmaBufSelfRef++;
-                }
-                break;
-            default:
-                break;
-            }
-
-#endif
         }
-
-#if VC4
-        if ((0 == pDmaBufState->m_bRenderTargetRef) ||
-            (0 == pDmaBufState->m_bTileAllocMemRef) ||
-            (0 == pDmaBufState->m_bTileStateDataRef))
-        {
-            bValidateDmaBuffer = false;
-        }
-#endif
-
     }
 
     return bValidateDmaBuffer;

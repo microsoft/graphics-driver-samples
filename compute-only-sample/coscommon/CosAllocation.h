@@ -6,10 +6,6 @@
 #include <d3d10umddi.h>
 #include <d3d12umddi.h>
 
-#if VC4
-#include <Vc4Hw.h>
-#endif
-
 enum CosHwLayout
 {
     Linear,
@@ -65,78 +61,3 @@ struct CosAllocationGroupExchange
     int     m_dummy;
 };
 
-#if VC4
-inline
-VC4_NON_HDR_FRAME_BUFFER_COLOR_FORMAT
-Vc4FrameBufferColorFormatFromDxgiFormat (
-    DXGI_FORMAT Format
-    )
-{
-    switch (Format) {
-    case DXGI_FORMAT_R8G8B8A8_UNORM:
-    case DXGI_FORMAT_B8G8R8A8_UNORM:
-        return VC4_NON_HDR_FRAME_BUFFER_COLOR_FORMAT::RGBA8888;
-    default:
-        NT_ASSERT(false);
-        return VC4_NON_HDR_FRAME_BUFFER_COLOR_FORMAT::RGBA8888;
-    }
-}
-
-inline VC4TileBufferPixelFormat Vc4TileBufferPixelFormatFromDxgiFormat (
-    DXGI_FORMAT Format
-    )
-{
-    switch (Format) {
-    case DXGI_FORMAT_R8G8B8A8_UNORM:
-    case DXGI_FORMAT_B8G8R8A8_UNORM:
-        return VC4_TILE_BUFFER_PIXEL_FORMAT_RGBA8888;
-    default:
-        NT_ASSERT(false);
-        return VC4_TILE_BUFFER_PIXEL_FORMAT_RGBA8888;
-    }
-}
-
-inline VC4_MEMORY_FORMAT Vc4MemoryFormatFromCosHwLayout (CosHwLayout Layout)
-{
-    switch (Layout) {
-    case CosHwLayout::Linear: return VC4_MEMORY_FORMAT::LINEAR;
-    case CosHwLayout::Tiled: return VC4_MEMORY_FORMAT::T_FORMAT;
-    default:
-        NT_ASSERT(false);
-        return VC4_MEMORY_FORMAT::LINEAR;
-    }
-}
-
-inline VC4TextureDataType Vc4TextureTypeFromDxgiFormat (
-    CosHwLayout Layout,
-    DXGI_FORMAT Format
-    )
-{
-    switch (Layout) {
-    case CosHwLayout::Linear:
-        switch (Format) {
-        case DXGI_FORMAT_R8G8B8A8_UNORM:
-        case DXGI_FORMAT_B8G8R8A8_UNORM:
-            return VC4_TEX_RGBA32R;
-        default:
-            NT_ASSERT(false);
-            return VC4_TEX_RGBA32R;
-        }
-        break;
-    case CosHwLayout::Tiled:
-        switch (Format) {
-        case DXGI_FORMAT_R8G8B8A8_UNORM:
-        case DXGI_FORMAT_B8G8R8A8_UNORM:
-            return VC4_TEX_RGBX8888; // XXX: shouldn't this be VC4_TEX_RGBA8888?
-            break;
-        default:
-            NT_ASSERT(false);
-            return VC4_TEX_RGBX8888;
-        }
-    default:
-        NT_ASSERT(false);
-        return VC4_TEX_RGBA32R;
-    }
-}
-
-#endif 

@@ -47,10 +47,6 @@
       <LinkLibraryDependencies>false</LinkLibraryDependencies>
       <CopyLocalSatelliteAssemblies>false</CopyLocalSatelliteAssemblies>
     </ProjectReference>
-    <ProjectReference Include="..\cosumd\cosumd.vcxproj">
-      <Project>{b87732a7-0d66-4692-96e2-2772bf77c3fc}</Project>
-      <LinkLibraryDependencies>false</LinkLibraryDependencies>
-    </ProjectReference>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{593E30CD-93AD-432A-B6A1-B59F85C77ACC}</ProjectGuid>
