@@ -88,10 +88,6 @@ CosKmContext::DdiRender(
     pDmaBufInfo->m_DmaBufferPhysicalAddress.QuadPart = 0;
     pDmaBufInfo->m_DmaBufferSize = pRender->DmaSize;
 
-#if VC4
-    pDmaBufInfo->m_pRenderTarget = NULL;
-#endif
-
     // Validate DMA buffer
     bool isValidDmaBuffer;
 
@@ -107,14 +103,6 @@ CosKmContext::DdiRender(
         COS_LOG_ERROR("DMA buffer is not valid. (pDmaBufInfo=0x%p)", pDmaBufInfo);
         return STATUS_INVALID_PARAMETER;
     }
-
-#if VC4
-    if (pCmdBufHeader->m_commandBufferHeader.m_hasVC4ClearColors)
-    {
-        pDmaBufInfo->m_DmaBufState.m_HasVC4ClearColors = 1;
-        pDmaBufInfo->m_VC4ClearColors = pCmdBufHeader->m_commandBufferHeader.m_vc4ClearColors;
-    }
-#endif
 
     // Perform pre-patch
     pCosKmAdapter->PatchDmaBuffer(

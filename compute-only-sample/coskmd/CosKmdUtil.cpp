@@ -18,12 +18,6 @@
 #include "CosKmdGlobal.h"
 #include "CosKmdUtil.h"
 
-#if VC4
-
-#include "Vc4Hw.h"
-
-#endif
-
 D3DDDIFORMAT
 TranslateDxgiFormat(
     DXGI_FORMAT dxgiFormat)
@@ -99,84 +93,6 @@ TranslateDxgiFormat(
         return D3DDDIFMT_UNKNOWN;
     }
 }
-
-#if VC4
-
-//
-// Make sure PDB file has type definition for VC4 Control List commands
-//
-
-// Code: 28
-static VC4StoreTileBufferGeneral   *pVC4StoreTileBufferGeneral = NULL;
-
-// Code: 32
-static VC4IndexedPrimitiveList     *pVC4IndexedPrimitiveList = NULL;
-
-// Code: 33
-static VC4VertexArrayPrimitives    *pVC4VertexArrayPrimitives = NULL;
-
-// Code: 56
-static VC4PrimitiveListFormat      *pVC4PrimitiveListFormat = NULL;
-
-// Code: 64
-static VC4GLShaderState            *pVC4GLShaderState = NULL;
-
-static VC4GLShaderStateRecord      *pVC4GLShaderStateRecord = NULL;
-
-static VC4VertexAttribute          *pVC4VertexAttribute = NULL;
-
-// Code: 65
-static VC4NVShaderState            *pVC4NVShaderState = NULL;
-
-static VC4NVShaderStateRecord      *pVC4NVShaderStateRecord = NULL;
-
-static VC4TextureConfigParameter0  *pVC4TextureConfigParameter0 = NULL;
-static VC4TextureConfigParameter1  *pVC4TextureConfigParameter1 = NULL;
-static VC4TextureDataType          vc4TextureDataType = { VC4_TEX_RGBA32R };
-
-// Code: 96
-static VC4ConfigBits               *pVC4ConfigBits = NULL;
-
-// Code: 97
-static VC4FlatShadeFlags           *pVC4FlatShadeFlags = NULL;
-
-// Code: 98
-static VC4PointSize                *pVC4PointSize = NULL;
-
-// Code: 99
-static VC4LineWidth                *pVC4LineWidth = NULL;
-
-// Code: 101
-static VC4DepthOffset              *pVC4DepthOffset = NULL;
-
-// Code: 102
-static VC4ClipWindow               *pVC4ClipWindow = NULL;
-
-// Code: 103
-static VC4ViewportOffset           *pVC4ViewportOffset = NULL;
-
-// Code: 104
-static VC4ZClippingPlanes          *pVC4ZClippingPlanes = NULL;
-
-// Code: 105
-static VC4ClipperXYScaling         *pVC4ClipperXYScaling = NULL;
-
-// Code: 106
-static VC4ClipperZScaleAndOffset   *pVC4ClipperZScaleAndOffset = NULL;
-
-// Code: 112,   Binning only
-static VC4TileBinningModeConfig    *pVC4TileBinningModeConfig = NULL;
-
-// Code: 113,   Rendering only
-static VC4TileRenderingModeConfig  *pVC4TileRenderingModeConfig = NULL;
-
-// Code: 114,   Rendering only
-static VC4ClearColors              *pVC4ClearColors = NULL;
-
-// Code: 115,   Rendering only
-static VC4TileCoordinates          *pVC4TileCoordinates = NULL;
-
-#endif
 
 #if USE_SIMPENROX
 
