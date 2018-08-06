@@ -1367,7 +1367,7 @@ HRESULT APIENTRY CosUmd12Device_Ddi_CreateMetaCommand(
     }
     else
     {
-        return E_INVALIDARG;
+        return DXGI_ERROR_UNSUPPORTED;
     }
 }
 
