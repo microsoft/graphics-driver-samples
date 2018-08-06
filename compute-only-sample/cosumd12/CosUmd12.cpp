@@ -23,9 +23,9 @@ bool g_doNotStop = true;
 
 void StopInFunction(const char * function, const char * file, int line)
 {
-    char output[128];
+    char output[256];
 
-    snprintf(output, sizeof(output), "Stopped in %s (%s:%d)", function, file, line);
+    snprintf(output, sizeof(output), "Stopped in %s (%s:%d)\n", function, file, line);
 
     OutputDebugStringA(output);
     if (!g_doNotStop) DebugBreak();
