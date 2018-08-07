@@ -285,6 +285,7 @@ HRESULT APIENTRY CosUmd12Adapter::GetCaps(
                 static const D3D12DDI_SHADER_MODEL supportedModels[] =
                 {
                     D3D12DDI_SHADER_MODEL_5_1_RELEASE_0011,
+                    D3D12DDI_SHADER_MODEL_6_0_RELEASE_0011,
                 };
 
                 if (pModelCaps->pShaderModelsSupported != nullptr)
