@@ -112,7 +112,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <PreBuildEvent>
-      <Command>del $(OutDir)cosDriver &amp; mkdir $(OutDir)cosDriver &amp; copy /y $(OutDir)cosumd12.dll $(OutDir)cosDriver</Command>
+      <Command>del $(OutDir)cosDriver &amp; mkdir $(OutDir)cosDriver &amp; copy /y $(OutDir)coskmd.sys $(OutDir)cosDriver &amp; copy /y $(OutDir)cosumd12.dll $(OutDir)cosDriver</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
