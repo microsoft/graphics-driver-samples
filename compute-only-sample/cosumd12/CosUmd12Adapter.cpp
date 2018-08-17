@@ -419,15 +419,11 @@ HRESULT APIENTRY CosUmd12Adapter::FillDdiTable(D3D12DDI_HADAPTER hAdapter, D3D12
         {
             // TODO: Talk with Jesse about where we indicate how many tables will get filled out and what they correspond to?  Is this documented somewhere?
 
-            if (uTableNum == Compute) {
-                memcpy(pTable, (void*) &g_CosUmd12ComputeCommandList_Ddi_0052, sizeof(g_CosUmd12ComputeCommandList_Ddi_0052));
-                pAdapter->m_hRTTable[Compute] = hTable;
-            } else if (uTableNum == Render) {
-                memcpy(pTable, (void*) &g_CosUmd12CommandList_Ddi_0052, sizeof(g_CosUmd12CommandList_Ddi_0052));
-                pAdapter->m_hRTTable[Render] = hTable;
-            } else {
-                STOP_IN_FUNCTION();
-            }
+            assert(uTableNum <= Render);
+
+            memcpy(pTable, (void*)&g_CosUmd12ComputeCommandList_Ddi_0052, sizeof(g_CosUmd12ComputeCommandList_Ddi_0052));
+            pAdapter->m_hRTTable[uTableNum] = hTable;
+
             break;
         }
         case D3D12DDI_TABLE_TYPE_COMMAND_QUEUE_3D:

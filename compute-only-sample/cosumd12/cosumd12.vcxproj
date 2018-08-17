@@ -268,7 +268,6 @@
     <ClCompile Include="CosUmd12Adapter.cpp" />
     <ClCompile Include="CosUmd12CommandBuffer.cpp" />
     <ClCompile Include="CosUmd12CommandList.cpp" />
-    <ClCompile Include="CosUmd12CommandListDddi.cpp" />
     <ClCompile Include="CosUmd12CommandPool.cpp" />
     <ClCompile Include="CosUmd12CommandQueue.cpp" />
     <ClCompile Include="CosUmd12CommandQueueDdi.cpp" />
