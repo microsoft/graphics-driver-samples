@@ -135,25 +135,25 @@ HRESULT APIENTRY Ddi_Dxgi_PresentMultiplaneOverlay1(
 
 DXGI1_4_DDI_BASE_FUNCTIONS g_CosUmd12Dxgi_Ddi =
 {
-    Ddi_Dxgi_Present,                                // pfnPresent
-    Ddi_Dxgi_GetGammaCaps,                           // pfnGetGammaCaps
-    Ddi_Dxgi_SetDisplayMode,                         // pfnSetDisplayMode
-    Ddi_Dxgi_SetResourcePriority,                    // pfnSetResourcePriority
-    Ddi_Dxgi_QueryResourceResidency,                 // pfnQueryResourceResidency
-    Ddi_Dxgi_RotateResourceIdentities,               // pfnRotateResourceIdentities
-    Ddi_Dxgi_Blt,                                    // pfnBlt
-    Ddi_Dxgi_ResolveSharedResource,                  // pfnResolveSharedResource
-    Ddi_Dxgi_Blt1,                                   // pfnBlt1
-    Ddi_Dxgi_OfferResources,                         // pfnOfferResources
-    Ddi_Dxgi_ReclaimResources,                       // pfnReclaimResources
-    Ddi_Dxgi_GetMultiplaneOverlayCaps,               // pfnGetMultiplaneOverlayCaps
-    Ddi_Dxgi_GetMultiplaneOverlayGroupCaps,          // pfnGetMultiplaneOverlayGroupCaps
-    nullptr,                                         // pfnReserved1
-    Ddi_Dxgi_PresentMultiplaneOverlay,               // pfnPresentMultiplaneOverlay
-    nullptr,                                         // pfnReserved2
-    Ddi_Dxgi_Present1,                               // pfnPresent1
-    Ddi_Dxgi_CheckPresentDurationSupport,            // pfnCheckPresentDurationSupport
-    Ddi_Dxgi_TrimResidencySet,                       // pfnTrimResidencySet
-    Ddi_Dxgi_CheckMultiplaneOverlayColorSpaceSupport,// pfnCheckMultiplaneOverlayColorSpaceSupport
-    Ddi_Dxgi_PresentMultiplaneOverlay1               // pfnPresentMultiplaneOverlay1
+    Ddi_Dxgi_Present,                                       // pfnPresent
+    Ddi_Dxgi_GetGammaCaps,                                  // pfnGetGammaCaps
+    Ddi_Dxgi_SetDisplayMode,                                // pfnSetDisplayMode
+    Ddi_Dxgi_SetResourcePriority,                       // pfnSetResourcePriority
+    Ddi_Dxgi_QueryResourceResidency,                    // pfnQueryResourceResidency
+    Ddi_Dxgi_RotateResourceIdentities,                      // pfnRotateResourceIdentities
+    Ddi_Dxgi_Blt,                                           // pfnBlt
+    Ddi_Dxgi_ResolveSharedResource,                     // pfnResolveSharedResource
+    Ddi_Dxgi_Blt1,                                          // pfnBlt1
+    Ddi_Dxgi_OfferResources,                            // pfnOfferResources
+    Ddi_Dxgi_ReclaimResources,                          // pfnReclaimResources
+    Ddi_Dxgi_GetMultiplaneOverlayCaps,                      // pfnGetMultiplaneOverlayCaps
+    Ddi_Dxgi_GetMultiplaneOverlayGroupCaps,                 // pfnGetMultiplaneOverlayGroupCaps
+    nullptr,                                                // pfnReserved1
+    Ddi_Dxgi_PresentMultiplaneOverlay,                      // pfnPresentMultiplaneOverlay
+    nullptr,                                                // pfnReserved2
+    Ddi_Dxgi_Present1,                                      // pfnPresent1
+    Ddi_Dxgi_CheckPresentDurationSupport,                   // pfnCheckPresentDurationSupport
+    Ddi_Dxgi_TrimResidencySet,                          // pfnTrimResidencySet
+    Ddi_Dxgi_CheckMultiplaneOverlayColorSpaceSupport,       // pfnCheckMultiplaneOverlayColorSpaceSupport
+    Ddi_Dxgi_PresentMultiplaneOverlay1                      // pfnPresentMultiplaneOverlay1
 };

@@ -58,11 +58,11 @@ void APIENTRY Ddi_CommandQueue_WaitForFence(
 
 D3D12DDI_COMMAND_QUEUE_FUNCS_CORE_0001 g_CosUmd12CommandQueue_Ddi_0001 =
 {
-    Ddi_CommandQueue_ExecuteCommandLists, // pfnExecuteCommandLists
-    nullptr,                              // pfnUnused
-    nullptr,                              // pfnUnused2
-    Ddi_CommandQueue_UpdateTileMappings,  // pfnUpdateTileMappings
-    Ddi_CommandQueue_CopyTileMappings,    // pfnCopyTileMappings
-    Ddi_CommandQueue_SignalFence,         // pfnSignalFence
-    Ddi_CommandQueue_WaitForFence         // pfnWaitForFence
+    Ddi_CommandQueue_ExecuteCommandLists,   // pfnExecuteCommandLists
+    nullptr,                                    // pfnUnused
+    nullptr,                                    // pfnUnused2
+    Ddi_CommandQueue_UpdateTileMappings,        // pfnUpdateTileMappings
+    Ddi_CommandQueue_CopyTileMappings,          // pfnCopyTileMappings
+    Ddi_CommandQueue_SignalFence,           // pfnSignalFence
+    Ddi_CommandQueue_WaitForFence           // pfnWaitForFence
 };
