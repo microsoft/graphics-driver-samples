@@ -183,10 +183,11 @@ void CosUmd12RootSignature::WriteHWRootDescriptor(
     UINT allocIndex = pCurCommandBuffer->UseAllocation(hAllocation, true);
 
     pCurCommandBuffer->SetPatchLocation(
-        pPatchLocations,
-        allocIndex,
-        hwDescriptorOffset,
-        allocationOffset);
+                        pPatchLocations,
+                        allocIndex,
+                        hwDescriptorOffset,
+                        0,
+                        allocationOffset);
 }
 
 void CosUmd12RootSignature::WriteHWRootSignature(
