@@ -71,9 +71,10 @@ void CosUmd12Descriptor::WriteHWDescriptor(
     UINT allocIndex = pCurCommandBuffer->UseAllocation(hAllocation, true);
 
     pCurCommandBuffer->SetPatchLocation(
-        pPatchLocations,
-        allocIndex,
-        hwDescriptorOffset,
-        allocationOffset);
+                        pPatchLocations,
+                        allocIndex,
+                        hwDescriptorOffset,
+                        0,
+                        allocationOffset);
 }
 
