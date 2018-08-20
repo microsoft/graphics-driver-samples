@@ -138,11 +138,13 @@ CosUmd12CommandList::ResourceCopy(
                             pPatchLocationList,
                             dstAllocIndex,
                             curCommandOffset + offsetof(GpuCommand, m_resourceCopy.m_dstGpuAddress),
+                            0,
                             pDstResource->GetHeapOffset());
     m_pCurCommandBuffer->SetPatchLocation(
                             pPatchLocationList,
                             srcAllocIndex,
                             curCommandOffset + offsetof(GpuCommand, m_resourceCopy.m_srcGpuAddress),
+                            0,
                             pSrcResource->GetHeapOffset());
 
     m_pCurCommandBuffer->CommitCommandBufferSpace(sizeof(*command), 2);
@@ -186,15 +188,17 @@ CosUmd12CommandList::GpuMemoryCopy(
     UINT srcAllocIndex = m_pCurCommandBuffer->UseAllocation((UINT)(srcGpuVa >> 32), false);
 
     m_pCurCommandBuffer->SetPatchLocation(
-        pPatchLocationList,
-        dstAllocIndex,
-        curCommandOffset + offsetof(GpuCommand, m_resourceCopy.m_dstGpuAddress),
-        (UINT)(dstGpuVa & 0xffffffff));
+                            pPatchLocationList,
+                            dstAllocIndex,
+                            curCommandOffset + offsetof(GpuCommand, m_resourceCopy.m_dstGpuAddress),
+                            0,
+                            (UINT)(dstGpuVa & 0xffffffff));
     m_pCurCommandBuffer->SetPatchLocation(
-        pPatchLocationList,
-        srcAllocIndex,
-        curCommandOffset + offsetof(GpuCommand, m_resourceCopy.m_srcGpuAddress),
-        (UINT)(srcGpuVa & 0xffffffff));
+                            pPatchLocationList,
+                            srcAllocIndex,
+                            curCommandOffset + offsetof(GpuCommand, m_resourceCopy.m_srcGpuAddress),
+                            0,
+                            (UINT)(srcGpuVa & 0xffffffff));
 
     m_pCurCommandBuffer->CommitCommandBufferSpace(sizeof(*command), 2);
 }
