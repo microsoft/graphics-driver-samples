@@ -691,8 +691,17 @@ HRESULT APIENTRY CosUmd12Device_Ddi_CreateHeapAndResource_0030(
 {
     CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
 
-    CosUmd12Heap * pHeap = NULL;
+    //
+    // Compute only driver supports only BUFFER
+    //
 
+    if (pResourceDesc->ResourceType != D3D12DDI_RT_BUFFER)
+    {
+        return DXGI_ERROR_UNSUPPORTED;
+    }
+
+    CosUmd12Heap * pHeap = NULL;
+    
     if (pHeapDesc != NULL) {
         STOP_IN_FUNCTION();
         pHeap = new (Heap.pDrvPrivate) CosUmd12Heap(pDevice, RtHeap, pHeapDesc);
@@ -1054,10 +1063,10 @@ void APIENTRY CosUmd12Device_Ddi_CheckResourceAllocationInfo_0022(
     UINT VisibleNodeMask,
     _Out_ D3D12DDI_RESOURCE_ALLOCATION_INFO_0022* pInfo)
 {
+    memset(pInfo, 0, sizeof(D3D12DDI_RESOURCE_ALLOCATION_INFO_0022));
+
     if (pDesc->ResourceType == D3D12DDI_RT_BUFFER)
     {
-        memset(pInfo, 0, sizeof(D3D12DDI_RESOURCE_ALLOCATION_INFO_0022));
-
         pInfo->ResourceDataSize = pDesc->Width;
         pInfo->ResourceDataAlignment = AlignmentRestriction;
         pInfo->AdditionalDataHeaderAlignment = 1;
