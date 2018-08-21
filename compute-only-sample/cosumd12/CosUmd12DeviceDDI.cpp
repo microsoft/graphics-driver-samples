@@ -669,6 +669,16 @@ D3D12DDI_HEAP_AND_RESOURCE_SIZES APIENTRY CosUmd12Device_Ddi_CalcPrivateHeapAndR
     return sizes;
 }
 
+//
+// There are 3 usage cases for CreateHeapAndResource:
+//
+// 1. Create both a heap and resource (from API CreateCommittedResource)
+// 2. Create just a heap (from API CreateHeap)
+// 3. Create a resouce in an existing heap (from API CreatePlacedResource)
+//
+// #1 is the common usage case by ML runtime
+//
+
 HRESULT APIENTRY CosUmd12Device_Ddi_CreateHeapAndResource_0030(
     D3D12DDI_HDEVICE Device,
     _In_opt_ const D3D12DDIARG_CREATEHEAP_0001* pHeapDesc,
@@ -679,7 +689,6 @@ HRESULT APIENTRY CosUmd12Device_Ddi_CreateHeapAndResource_0030(
     D3D12DDI_HPROTECTEDRESOURCESESSION_0030 hProtectedResourceSession, //TODO: DRM!
     D3D12DDI_HRESOURCE Resource)
 {
-    // TODO: Talk to whoever designed this and find out how it works
     CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
 
     CosUmd12Heap * pHeap = NULL;
@@ -689,6 +698,12 @@ HRESULT APIENTRY CosUmd12Device_Ddi_CreateHeapAndResource_0030(
         pHeap = new (Heap.pDrvPrivate) CosUmd12Heap(pDevice, RtHeap, pHeapDesc);
 
         pHeap->Standup();
+    }
+    else
+    {
+        // TODO : Test
+
+        pHeap = CosUmd12Heap::CastFrom(Heap);
     }
 
     if (pResourceDesc != NULL) {
