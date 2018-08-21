@@ -36,7 +36,7 @@ inline D3D12DDI_HMETACOMMAND_0052 CosUmd12MetaCommand::CastTo() const
     return MAKE_D3D12DDI_HMETACOMMAND_0052(const_cast< CosUmd12MetaCommand* >(this));
 }
 
-class CosUmd12MetaCommandIdentity
+class CosUmd12MetaCommandIdentity : public CosUmd12MetaCommand
 {
 public:
     explicit 
