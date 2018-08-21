@@ -203,6 +203,61 @@ CosUmd12CommandList::GpuMemoryCopy(
     m_pCurCommandBuffer->CommitCommandBufferSpace(sizeof(*command), 2);
 }
 
+void CosUmd12CommandList::CopyBufferRegion(
+    D3D12DDIARG_BUFFER_PLACEMENT& dst, 
+    D3D12DDIARG_BUFFER_PLACEMENT& src,
+    UINT64 bytesToCopy)
+{
+    CosUmd12Resource *  pDstResource = CosUmd12Resource::CastFrom(dst.BaseAddress.UMD.hResource);
+    CosUmd12Resource *  pSrcResource = CosUmd12Resource::CastFrom(src.BaseAddress.UMD.hResource);
+
+    BYTE *  pCommandBuffer;
+    UINT    curCommandOffset;
+    D3DDDI_PATCHLOCATIONLIST *  pPatchLocationList;
+
+    GpuCommand * command;
+
+    ReserveCommandBufferSpace(
+        true,                           // SW command
+        sizeof(*command),
+        &pCommandBuffer,
+        2,
+        2,
+        &curCommandOffset,
+        &pPatchLocationList);
+    if (NULL == pCommandBuffer)
+    {
+        return;
+    }
+
+    assert(pPatchLocationList != NULL);
+
+    command = reinterpret_cast<GpuCommand *>(pCommandBuffer);
+
+    command->m_commandId = GpuCommandId::ResourceCopy;
+    command->m_resourceCopy.m_srcGpuAddress.QuadPart = 0;
+    command->m_resourceCopy.m_dstGpuAddress.QuadPart = 0;
+    command->m_resourceCopy.m_sizeBytes = (UINT)bytesToCopy;
+
+    UINT dstAllocIndex = m_pCurCommandBuffer->UseResource(pDstResource, true);
+    UINT srcAllocIndex = m_pCurCommandBuffer->UseResource(pSrcResource, false);
+
+    m_pCurCommandBuffer->SetPatchLocation(
+                            pPatchLocationList,
+                            dstAllocIndex,
+                            curCommandOffset + offsetof(GpuCommand, m_resourceCopy.m_dstGpuAddress),
+                            0,
+                            pDstResource->GetHeapOffset() + (UINT)dst.BaseAddress.UMD.Offset);
+    m_pCurCommandBuffer->SetPatchLocation(
+                            pPatchLocationList,
+                            srcAllocIndex,
+                            curCommandOffset + offsetof(GpuCommand, m_resourceCopy.m_srcGpuAddress),
+                            0,
+                            pSrcResource->GetHeapOffset() + (UINT)src.BaseAddress.UMD.Offset);
+
+    m_pCurCommandBuffer->CommitCommandBufferSpace(sizeof(*command), 2);
+}
+
 void
 CosUmd12CommandList::ReserveCommandBufferSpace(
     bool                        bSwCommand,

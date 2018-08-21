@@ -154,6 +154,10 @@ void APIENTRY CosUmd12ComputeCommandList_Ddi_CopyBufferRegion_0003(
     UINT64 SrcBytes)
 {
     STOP_IN_FUNCTION();
+
+    CosUmd12CommandList * pCommandList = CosUmd12CommandList::CastFrom(CommandList);
+
+    pCommandList->CopyBufferRegion(Dst, Src, SrcBytes);
 }
 
 void APIENTRY CosUmd12ComputeCommandList_Ddi_ResourceResolveSubresource(

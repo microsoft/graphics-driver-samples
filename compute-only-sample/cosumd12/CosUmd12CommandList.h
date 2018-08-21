@@ -70,6 +70,7 @@ public:
         UINT ThreadGroupCountZ);
 
     void ResourceCopy(D3D12DDI_HRESOURCE DstResource, D3D12DDI_HRESOURCE SrcResource);
+    void CopyBufferRegion(D3D12DDIARG_BUFFER_PLACEMENT& dst, D3D12DDIARG_BUFFER_PLACEMENT& src, UINT64 bytesToCopy);
     void GpuMemoryCopy(D3D12_GPU_VIRTUAL_ADDRESS dstGpuVa, D3D12_GPU_VIRTUAL_ADDRESS srcGpuVa, UINT size);
 
     // Interface for Command Queue
