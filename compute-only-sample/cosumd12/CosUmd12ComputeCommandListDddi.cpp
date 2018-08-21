@@ -623,7 +623,7 @@ D3D12DDI_COMMAND_LIST_FUNCS_3D_0052 g_CosUmd12ComputeCommandList_Ddi_0052 =
     CosUmd12ComputeCommandList_Ddi_ClearRenderTargetView_0003,                  // pfnClearRenderTargetView
     CosUmd12ComputeCommandList_Ddi_ClearDepthStencilView_0003,                  // pfnClearDepthStencilView
     CosUmd12ComputeCommandList_Ddi_DiscardResource_0003,                    // pfnDiscardResource
-    CosUmd12ComputeCommandList_Ddi_CopyTextureRegion_0003,                  // pfnCopyTextureRegion
+    CosUmd12ComputeCommandList_Ddi_CopyTextureRegion_0003,                      // pfnCopyTextureRegion
     CosUmd12ComputeCommandList_Ddi_ResourceCopy,                            // pfnResourceCopy
     CosUmd12ComputeCommandList_Ddi_CopyTiles,                                   // pfnCopyTiles
     CosUmd12ComputeCommandList_Ddi_CopyBufferRegion_0003,                   // pfnCopyBufferRegion

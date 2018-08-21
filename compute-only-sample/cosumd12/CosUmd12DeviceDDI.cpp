@@ -1465,9 +1465,9 @@ D3D12DDI_DEVICE_FUNCS_CORE_0052 g_CosUmd12Device_Ddi_0052 =
     CosUmd12Device_Ddi_GetDescriptorSizeInBytes,                        // pfnGetDescriptorSizeInBytes
     CosUmd12Device_Ddi_GetCpuDescriptorHandleForHeapStart,              // pfnGetCPUDescriptorHandleForHeapStart
     CosUmd12Device_Ddi_GetGpuDescriptorHandleForHeapStart,              // pfnGetGPUDescriptorHandleForHeapStart
-    CosUmd12Device_Ddi_CreateShaderResourceView_0002,                   // pfnCreateShaderResourceView
+    CosUmd12Device_Ddi_CreateShaderResourceView_0002,                       // pfnCreateShaderResourceView
     CosUmd12Device_Ddi_CreateConstantBufferView,                        // pfnCreateConstantBufferView
-    CosUmd12Device_Ddi_CreateSampler,                                   // pfnCreateSampler
+    CosUmd12Device_Ddi_CreateSampler,                                       // pfnCreateSampler
     CosUmd12Device_Ddi_CreateUnorderedAccessView_0002,                  // pfnCreateUnorderedAccessView
     CosUmd12Device_Ddi_CreateRenderTargetView_0002,                         // pfnCreateRenderTargetView
     CosUmd12Device_Ddi_CreateDepthStencilView,                              // pfnCreateDepthStencilView
