@@ -311,7 +311,8 @@ CosUmd12CommandList::ReserveCommandBufferSpace(
                             ppPatchLocationList);
 }
 
-void CosUmd12CommandList::SetDescriptorHeaps(
+void
+CosUmd12CommandList::SetDescriptorHeaps(
     UINT numDescriptorHeaps,
     D3D12DDI_HDESCRIPTORHEAP * pDescriptorHeaps)
 {
