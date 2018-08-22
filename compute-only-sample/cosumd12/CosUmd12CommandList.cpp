@@ -312,6 +312,13 @@ CosUmd12CommandList::ReserveCommandBufferSpace(
 }
 
 void
+CosUmd12CommandList::SetRootSignature(
+    D3D12DDI_HROOTSIGNATURE rootSignature)
+{
+    m_pPipelineState->m_args.hRootSignature = rootSignature;
+}
+
+void
 CosUmd12CommandList::SetDescriptorHeaps(
     UINT numDescriptorHeaps,
     D3D12DDI_HDESCRIPTORHEAP * pDescriptorHeaps)

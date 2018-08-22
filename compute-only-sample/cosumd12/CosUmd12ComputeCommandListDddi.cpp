@@ -328,6 +328,10 @@ void APIENTRY CosUmd12ComputeCommandList_Ddi_SetComputeRootSignature(
     _In_ D3D12DDI_HROOTSIGNATURE RootSignature)
 {
     STOP_IN_FUNCTION();
+
+    CosUmd12CommandList * pCommandList = CosUmd12CommandList::CastFrom(CommandList);
+
+    pCommandList->SetRootSignature(RootSignature);
 }
 
 void APIENTRY CosUmd12ComputeCommandList_Ddi_SetGraphicsRootSignature(
@@ -364,6 +368,10 @@ void APIENTRY CosUmd12ComputeCommandList_Ddi_SetComputeRoot32BitConstant(
     UINT DestOffsetIn32BitValues)
 {
     STOP_IN_FUNCTION();
+
+    CosUmd12CommandList * pCommandList = CosUmd12CommandList::CastFrom(CommandList);
+
+    pCommandList->SetRoot32BitConstants(RootParameterIndex, 1, &SrcData, DestOffsetIn32BitValues);
 }
 
 void APIENTRY CosUmd12ComputeCommandList_Ddi_SetGraphicsRoot32BitConstant(
@@ -383,10 +391,6 @@ void APIENTRY CosUmd12ComputeCommandList_Ddi_SetComputeRoot32BitConstants_0003(
     UINT DestOffsetIn32BitValues)
 {
     STOP_IN_FUNCTION();
-
-    //
-    // TODO : Test
-    //
 
     CosUmd12CommandList * pCommandList = CosUmd12CommandList::CastFrom(CommandList);
 

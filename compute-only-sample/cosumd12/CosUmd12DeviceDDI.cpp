@@ -568,6 +568,12 @@ void APIENTRY CosUmd12Device_Ddi_CreateConstantBufferView(
     _In_ D3D12DDI_CPU_DESCRIPTOR_HANDLE DestDescriptor)
 {
     STOP_IN_FUNCTION();
+
+    //
+    // TODO : Test
+    //
+
+    CosUmd12Descriptor *pUavDescriptor = new ((void *)DestDescriptor.ptr) CosUmd12Descriptor(pDesc);
 }
 
 void APIENTRY CosUmd12Device_Ddi_CreateSampler(

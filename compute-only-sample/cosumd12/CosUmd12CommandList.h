@@ -46,6 +46,9 @@ public:
 
     void Close();
 
+    void SetRootSignature(
+        D3D12DDI_HROOTSIGNATURE rootSignature);
+
     void SetDescriptorHeaps(
         UINT numDescriptorHeaps,
         D3D12DDI_HDESCRIPTORHEAP * pDescriptorHeaps);
