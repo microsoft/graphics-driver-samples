@@ -36,38 +36,71 @@ inline D3D12DDI_HMETACOMMAND_0052 CosUmd12MetaCommand::CastTo() const
     return MAKE_D3D12DDI_HMETACOMMAND_0052(const_cast< CosUmd12MetaCommand* >(this));
 }
 
-class CosUmd12MetaCommandIdentity : public CosUmd12MetaCommand
+template <typename TCreationParameters>
+class TCosUmd12MetaCommand : public CosUmd12MetaCommand
 {
 public:
-    explicit 
-    CosUmd12MetaCommandIdentity(
-        CosUmd12Device* pDevice,
-        UINT nodeMask,
-        CONST void* pCreationParameters,
-        SIZE_T creationParametersDataSizeInBytes,
-        D3D12DDI_HRTMETACOMMAND_0052 rtMetaCommand)
+    explicit
+        TCosUmd12MetaCommand(
+            CosUmd12Device* pDevice,
+            UINT nodeMask,
+            CONST void* pCreationParameters,
+            SIZE_T creationParametersDataSizeInBytes,
+            D3D12DDI_HRTMETACOMMAND_0052 rtMetaCommand)
     {
         m_pDevice = pDevice;
-        memcpy(&m_identityMetaCommandCreationParameters, pCreationParameters, creationParametersDataSizeInBytes);
+        memcpy(&m_creationParameters, pCreationParameters, creationParametersDataSizeInBytes);
         m_rtMetaCommand = rtMetaCommand;
     }
 
-    ~CosUmd12MetaCommandIdentity()
+    ~TCosUmd12MetaCommand()
     {
     }
 
     static int CalculateSize(GUID& commandId)
     {
-        return sizeof(CosUmd12MetaCommandIdentity);
+        return sizeof(TCosUmd12MetaCommand);
     }
 
-    static D3D12DDIARG_META_COMMAND_PARAMETER_DESC m_identityMetaCommandCreationParametersDesc[];
-    static D3D12DDIARG_META_COMMAND_PARAMETER_DESC m_identityMetaCommandExecutionParametersDesc[];
+    static const UINT m_numCreationParameters;
+    static const D3D12DDIARG_META_COMMAND_PARAMETER_DESC m_creationParametersDesc[];
+    static const UINT m_numInitializationParameters;
+    static const D3D12DDIARG_META_COMMAND_PARAMETER_DESC m_initializationParametersDesc[];
+    static const UINT m_numExecutionParameters;
+    static const D3D12DDIARG_META_COMMAND_PARAMETER_DESC m_executionParametersDesc[];
 
     static HRESULT EnumerateMetaCommandParameters(
         D3D12DDI_META_COMMAND_PARAMETER_STAGE stage,
         UINT* pParameterCount,
-        D3D12DDIARG_META_COMMAND_PARAMETER_DESC* pParameterDescs);
+        D3D12DDIARG_META_COMMAND_PARAMETER_DESC* pParameterDescs)
+    {
+        switch (stage)
+        {
+        case D3D12DDI_META_COMMAND_PARAMETER_STAGE_CREATION:
+            *pParameterCount = m_numCreationParameters;
+            if (pParameterDescs)
+            {
+                memcpy(pParameterDescs, m_creationParametersDesc, m_numCreationParameters * sizeof(D3D12DDIARG_META_COMMAND_PARAMETER_DESC));
+            }
+            break;
+        case D3D12DDI_META_COMMAND_PARAMETER_STAGE_INITIALIZATION:
+            *pParameterCount = m_numInitializationParameters;
+            if (pParameterDescs)
+            {
+                memcpy(pParameterDescs, m_initializationParametersDesc, m_numInitializationParameters * sizeof(D3D12DDIARG_META_COMMAND_PARAMETER_DESC));
+            }
+            break;
+        case D3D12DDI_META_COMMAND_PARAMETER_STAGE_EXECUTION:
+            *pParameterCount = m_numExecutionParameters;
+            if (pParameterDescs)
+            {
+                memcpy(pParameterDescs, m_executionParametersDesc, m_numExecutionParameters * sizeof(D3D12DDIARG_META_COMMAND_PARAMETER_DESC));
+            }
+            break;
+        }
+
+        return S_OK;
+    }
 
     virtual void
     GetRequiredParameterInfo(
@@ -87,8 +120,10 @@ public:
         SIZE_T executionParametersSize);
 
 private:
+    TCreationParameters m_creationParameters;
     CosUmd12Device * m_pDevice;
-    IdentityMetaCommandCreationParameters m_identityMetaCommandCreationParameters;
     D3D12DDI_HRTMETACOMMAND_0052 m_rtMetaCommand;
 };
+
+typedef TCosUmd12MetaCommand<IdentityMetaCommandCreationParameters> CosUmd12MetaCommandIdentity;
 
