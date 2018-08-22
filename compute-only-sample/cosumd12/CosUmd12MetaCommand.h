@@ -51,7 +51,12 @@ public:
         m_pDevice = pDevice;
         m_rtMetaCommand = rtMetaCommand;
 
-        assert(sizeof(TCreationParameters) == creationParametersDataSizeInBytes);
+        if (sizeof(TCreationParameters) != creationParametersDataSizeInBytes)
+        {
+            m_pDevice->m_pUMCallbacks->pfnSetErrorCb(m_pDevice->m_hRTDevice, E_INVALIDARG);
+            return;
+        }
+
         memcpy(&m_creationParameters, pCreationParameters, creationParametersDataSizeInBytes);
     }
 
