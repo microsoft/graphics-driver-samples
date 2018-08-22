@@ -36,7 +36,7 @@ inline D3D12DDI_HMETACOMMAND_0052 CosUmd12MetaCommand::CastTo() const
     return MAKE_D3D12DDI_HMETACOMMAND_0052(const_cast< CosUmd12MetaCommand* >(this));
 }
 
-template <typename TCreationParameters>
+template <typename TCreationParameters, typename TInitializationParameters, typename TExecutionParameters>
 class TCosUmd12MetaCommand : public CosUmd12MetaCommand
 {
 public:
@@ -49,8 +49,10 @@ public:
             D3D12DDI_HRTMETACOMMAND_0052 rtMetaCommand)
     {
         m_pDevice = pDevice;
-        memcpy(&m_creationParameters, pCreationParameters, creationParametersDataSizeInBytes);
         m_rtMetaCommand = rtMetaCommand;
+
+        assert(sizeof(TCreationParameters) == creationParametersDataSizeInBytes);
+        memcpy(&m_creationParameters, pCreationParameters, creationParametersDataSizeInBytes);
     }
 
     ~TCosUmd12MetaCommand()
@@ -120,10 +122,12 @@ public:
         SIZE_T executionParametersSize);
 
 private:
-    TCreationParameters m_creationParameters;
     CosUmd12Device * m_pDevice;
     D3D12DDI_HRTMETACOMMAND_0052 m_rtMetaCommand;
+    TCreationParameters m_creationParameters;
+    TInitializationParameters m_initializationParameters;
+    TExecutionParameters m_executionParameters;
 };
 
-typedef TCosUmd12MetaCommand<IdentityMetaCommandCreationParameters> CosUmd12MetaCommandIdentity;
+typedef TCosUmd12MetaCommand<IdentityMetaCommandCreationParameters, UINT, UINT> CosUmd12MetaCommandIdentity;
 
