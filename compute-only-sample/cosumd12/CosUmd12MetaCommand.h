@@ -13,14 +13,14 @@ public:
 
     virtual void
     Initialize(
-        CONST void *pInitializationParameters,
-        SIZE_T initializationParametersSize) = NULL;
+        CONST void *pvInitializeDesc,
+        SIZE_T initializeDescSize) = NULL;
 
     virtual void
     Execute(
         CosUmd12CommandList * pCommandList,
-        CONST void *pExecutionParameters,
-        SIZE_T executionParametersSize) = NULL;
+        CONST void *pvExecuteDesc,
+        SIZE_T executeDescSize) = NULL;
 
     static CosUmd12MetaCommand* CastFrom(D3D12DDI_HMETACOMMAND_0052);
     D3D12DDI_HMETACOMMAND_0052 CastTo() const;
@@ -36,7 +36,7 @@ inline D3D12DDI_HMETACOMMAND_0052 CosUmd12MetaCommand::CastTo() const
     return MAKE_D3D12DDI_HMETACOMMAND_0052(const_cast< CosUmd12MetaCommand* >(this));
 }
 
-template <typename TCreationParameters, typename TInitializationParameters, typename TExecutionParameters>
+template <typename TCreateDesc, typename TInitializeDesc, typename TExecuteDesc>
 class TCosUmd12MetaCommand : public CosUmd12MetaCommand
 {
 public:
@@ -44,20 +44,20 @@ public:
         TCosUmd12MetaCommand(
             CosUmd12Device* pDevice,
             UINT nodeMask,
-            CONST void* pCreationParameters,
-            SIZE_T creationParametersDataSizeInBytes,
+            CONST void* pvCreateDesc,
+            SIZE_T createDescSizeInBytes,
             D3D12DDI_HRTMETACOMMAND_0052 rtMetaCommand)
     {
         m_pDevice = pDevice;
         m_rtMetaCommand = rtMetaCommand;
 
-        if (sizeof(TCreationParameters) != creationParametersDataSizeInBytes)
+        if (sizeof(TCreateDesc) != createDescSizeInBytes)
         {
             m_pDevice->m_pUMCallbacks->pfnSetErrorCb(m_pDevice->m_hRTDevice, E_INVALIDARG);
             return;
         }
 
-        memcpy(&m_creationParameters, pCreationParameters, creationParametersDataSizeInBytes);
+        memcpy(&m_createDesc, pvCreateDesc, createDescSizeInBytes);
     }
 
     ~TCosUmd12MetaCommand()
@@ -117,21 +117,21 @@ public:
 
     virtual void
     Initialize(
-        CONST void *pInitializationParameters,
-        SIZE_T initializationParametersSize);
+        CONST void *pvInitializeDesc,
+        SIZE_T initializeDescSize);
 
     virtual void
     Execute(
         CosUmd12CommandList * pCommandList,
-        CONST void *pExecutionParameters,
-        SIZE_T executionParametersSize);
+        CONST void *pvExecuteDesc,
+        SIZE_T executeDescSize);
 
 private:
     CosUmd12Device * m_pDevice;
     D3D12DDI_HRTMETACOMMAND_0052 m_rtMetaCommand;
-    TCreationParameters m_creationParameters;
-    TInitializationParameters m_initializationParameters;
-    TExecutionParameters m_executionParameters;
+    TCreateDesc m_createDesc;
+    TInitializeDesc m_initializeDesc;
+    TExecuteDesc m_executeDesc;
 };
 
 typedef TCosUmd12MetaCommand<IdentityMetaCommandCreationParameters, UINT, UINT> CosUmd12MetaCommandIdentity;

@@ -1356,8 +1356,8 @@ SIZE_T APIENTRY CosUmd12Device_Ddi_CalcPrivateMetaCommandSize(
     D3D12DDI_HDEVICE Device,
     GUID CommandId,
     UINT NodeMask,
-    CONST void* pCreationParameters,
-    SIZE_T CreationParametersDataSizeInBytes)
+    CONST void* pvCreateDesc,
+    SIZE_T CreateDescSizeInBytes)
 {
     STOP_IN_FUNCTION();
 
@@ -1375,8 +1375,8 @@ HRESULT APIENTRY CosUmd12Device_Ddi_CreateMetaCommand(
     D3D12DDI_HDEVICE Device,
     GUID CommandId,
     UINT NodeMask,
-    CONST void* pCreationParameters,
-    SIZE_T CreationParametersDataSizeInBytes,
+    CONST void* pvCreateDesc,
+    SIZE_T CreateDescSizeInBytes,
     D3D12DDI_HMETACOMMAND_0052 MetaCommand,
     D3D12DDI_HRTMETACOMMAND_0052 RtMetaCommand)
 {
@@ -1389,8 +1389,8 @@ HRESULT APIENTRY CosUmd12Device_Ddi_CreateMetaCommand(
         new (MetaCommand.pDrvPrivate) CosUmd12MetaCommandIdentity(
                                         pDevice,
                                         NodeMask,
-                                        pCreationParameters,
-                                        CreationParametersDataSizeInBytes,
+                                        pvCreateDesc,
+                                        CreateDescSizeInBytes,
                                         RtMetaCommand);
 
         return S_OK;

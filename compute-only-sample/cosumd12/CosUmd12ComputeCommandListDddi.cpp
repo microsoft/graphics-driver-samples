@@ -590,29 +590,29 @@ void APIENTRY CosUmd12ComputeCommandList_Ddi_SetViewInstanceMask_0033(
 VOID APIENTRY CosUmd12ComputeCommandList_Ddi_InitializeMetaCommand(
     D3D12DDI_HCOMMANDLIST CommandList,
     D3D12DDI_HMETACOMMAND_0052 MetaCommand,
-    _In_ CONST void *pInitializationParameters,
-    _In_ SIZE_T InitializationParametersSize)
+    _In_ CONST void *pvInitializeDesc,
+    _In_ SIZE_T InitializeDescSize)
 {
     STOP_IN_FUNCTION();
 
     CosUmd12CommandList * pCommandList = CosUmd12CommandList::CastFrom(CommandList);
     CosUmd12MetaCommand * pMetaCommand = CosUmd12MetaCommand::CastFrom(MetaCommand);
 
-    pMetaCommand->Initialize(pInitializationParameters, InitializationParametersSize);
+    pMetaCommand->Initialize(pvInitializeDesc, InitializeDescSize);
 }
 
 VOID APIENTRY CosUmd12ComputeCommandList_Ddi_ExecuteMetaCommand(
     D3D12DDI_HCOMMANDLIST CommandList,
     D3D12DDI_HMETACOMMAND_0052 MetaCommand,
-    _In_ CONST void *pExecutionParameters,
-    _In_ SIZE_T ExecutionParametersSize)
+    _In_ CONST void *pvExecuteDesc,
+    _In_ SIZE_T ExecuteDescSize)
 {
     STOP_IN_FUNCTION();
 
     CosUmd12CommandList * pCommandList = CosUmd12CommandList::CastFrom(CommandList);
     CosUmd12MetaCommand * pMetaCommand = CosUmd12MetaCommand::CastFrom(MetaCommand);
 
-    pMetaCommand->Execute(pCommandList, pExecutionParameters, ExecutionParametersSize);
+    pMetaCommand->Execute(pCommandList, pvExecuteDesc, ExecuteDescSize);
 }
 
 D3D12DDI_COMMAND_LIST_FUNCS_3D_0052 g_CosUmd12ComputeCommandList_Ddi_0052 =

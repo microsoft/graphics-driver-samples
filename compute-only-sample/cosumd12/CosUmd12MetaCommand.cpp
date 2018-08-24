@@ -30,27 +30,27 @@ CosUmd12MetaCommandIdentity::GetRequiredParameterInfo(
     UINT parameterIndex,
     _Out_ D3D12DDIARG_META_COMMAND_REQUIRED_PARAMETER_INFO* pInfo)
 {
-    pInfo->ResourceSize = m_creationParameters.BufferSize;
+    pInfo->ResourceSize = m_createDesc.BufferSize;
 }
 
 void
 CosUmd12MetaCommandIdentity::Initialize(
-    CONST void *pInitializationParameters,
-    SIZE_T initializationParametersSize)
+    CONST void *pvInitializeDesc,
+    SIZE_T initializeDescSize)
 {
 }
 
 void
 CosUmd12MetaCommandIdentity::Execute(
     CosUmd12CommandList * pCommandList,
-    CONST void *pvExecutionParameters,
-    SIZE_T executionParametersSize)
+    CONST void *pvExecuteDesc,
+    SIZE_T executeDescSize)
 {
-    IdentityMetaCommandExecutionParameters * pExecutionParameters = (IdentityMetaCommandExecutionParameters *)pvExecutionParameters;
+    IdentityMetaCommandExecutionParameters * pExecutionParameters = (IdentityMetaCommandExecutionParameters *)pvExecuteDesc;
 
     pCommandList->GpuMemoryCopy(
         pExecutionParameters->Output,
         pExecutionParameters->Input,
-        (UINT)m_creationParameters.BufferSize);
+        (UINT)m_createDesc.BufferSize);
 }
 
