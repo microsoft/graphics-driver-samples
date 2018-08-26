@@ -1,7 +1,7 @@
 #pragma once
 
 //
-//    Render Only Sample (Cos) Kernel Mode Driver (Kmd) Header
+//    Compute Only Sample (Cos) Kernel Mode Driver (Kmd) Header
 //
 //    Copyright (C) Microsoft.  All rights reserved.
 //
