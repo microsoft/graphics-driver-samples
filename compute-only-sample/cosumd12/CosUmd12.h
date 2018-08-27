@@ -27,6 +27,10 @@ void StopInFunction(const char * function, const char * file, int line);
 
 #include "CosUmd12Adapter.h"
 #include "CosUmd12Device.h"
+#include "CosUmd12CommandQueue.h"
+#include "CosUmd12Heap.h"
+#include "CosUmd12Resource.h"
+#include "CosUmd12CommandBuffer.h"
 #include "CosUmd12RootSignature.h"
 #include "CosUmd12Shader.h"
 #include "CosUmd12BlendState.h"
@@ -34,16 +38,10 @@ void StopInFunction(const char * function, const char * file, int line);
 #include "CosUmd12RasterizerState.h"
 #include "CosUmd12PipelineState.h"
 #include "CosUmd12Descriptor.h"
-#include "CosUmd12CommandQueue.h"
 #include "CosUmd12CommandPool.h"
 #include "CosUmd12CommandRecorder.h"
 #include "CosUmd12CommandList.h"
 #include "CosUmd12Fence.h"
-#include "CosUmd12Heap.h"
-#include "CosUmd12Resource.h"
-
-#include "CosUmd12CommandBuffer.h"
-
 #include "CosUmd12DescriptorHeap.h"
 
 #include "CosMetaCommand.h"

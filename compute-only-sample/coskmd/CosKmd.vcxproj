@@ -171,6 +171,7 @@
       </AdditionalUsingDirectories>
       <PreprocessorDefinitions>MLMC=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>
+      <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
     <Link>
     </Link>
@@ -193,6 +194,7 @@
       </AdditionalUsingDirectories>
       <PreprocessorDefinitions>MLMC=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>
+      <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
     <Link>
     </Link>
@@ -215,6 +217,7 @@
       </AdditionalUsingDirectories>
       <PreprocessorDefinitions>MLMC=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>
+      <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
     <Link>
     </Link>
