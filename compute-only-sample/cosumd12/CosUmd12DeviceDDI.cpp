@@ -1316,7 +1316,10 @@ VOID APIENTRY CosUmd12Device_Ddi_DestroySchedulingGroup(
 
 D3D12DDIARG_META_COMMAND_DESC CosUmd12Device::m_supportedMetaCommandDescs[] =
 {
-    { GUID_IDENTITY, L"Identity", D3D12DDI_GRAPHICS_STATE_NONE, D3D12DDI_GRAPHICS_STATE_NONE }
+    { GUID_IDENTITY, L"Identity", D3D12DDI_GRAPHICS_STATE_NONE, D3D12DDI_GRAPHICS_STATE_NONE },
+#if MLMC
+    { MetaCommand_Convolution, L"Convolution", D3D12DDI_GRAPHICS_STATE_NONE, D3D12DDI_GRAPHICS_STATE_NONE }
+#endif
 };
 
 HRESULT APIENTRY CosUmd12Device_Ddi_EnumerateMetaCommands(
@@ -1348,6 +1351,12 @@ HRESULT APIENTRY CosUmd12Device_Ddi_EnumerateMetaCommandParameters(
     {
         return CosUmd12MetaCommandIdentity::EnumerateMetaCommandParameters(Stage, pParameterCount, pParameterDescs);
     }
+#if MLMC
+    else if (IsEqualGUID(CommandId, MetaCommand_Convolution))
+    {
+        return CosUmd12MetaCommandConvolution::EnumerateMetaCommandParameters(Stage, pParameterCount, pParameterDescs);
+    }
+#endif
 
     return E_INVALIDARG;
 }
@@ -1365,6 +1374,12 @@ SIZE_T APIENTRY CosUmd12Device_Ddi_CalcPrivateMetaCommandSize(
     {
         return CosUmd12MetaCommandIdentity::CalculateSize(CommandId);
     }
+#if MLMC
+    else if (IsEqualGUID(CommandId, MetaCommand_Convolution))
+    {
+        return CosUmd12MetaCommandConvolution::CalculateSize(CommandId);
+    }
+#endif
     else
     {
         return 0;
@@ -1392,13 +1407,24 @@ HRESULT APIENTRY CosUmd12Device_Ddi_CreateMetaCommand(
                                         pvCreateDesc,
                                         CreateDescSizeInBytes,
                                         RtMetaCommand);
-
-        return S_OK;
     }
+#if MLMC
+    else if (IsEqualGUID(CommandId, MetaCommand_Convolution))
+    {
+        new (MetaCommand.pDrvPrivate) CosUmd12MetaCommandConvolution(
+                                        pDevice,
+                                        NodeMask,
+                                        pvCreateDesc,
+                                        CreateDescSizeInBytes,
+                                        RtMetaCommand);
+    }
+#endif
     else
     {
         return DXGI_ERROR_UNSUPPORTED;
     }
+
+    return S_OK;
 }
 
 VOID APIENTRY CosUmd12Device_Ddi_DestroyMetaCommand(

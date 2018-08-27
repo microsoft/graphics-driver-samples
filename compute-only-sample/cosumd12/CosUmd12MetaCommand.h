@@ -17,6 +17,9 @@ public:
         SIZE_T initializeDescSize) = NULL;
 
     virtual void
+    Compile() = NULL;
+
+    virtual void
     Execute(
         CosUmd12CommandList * pCommandList,
         CONST void *pvExecuteDesc,
@@ -36,17 +39,17 @@ inline D3D12DDI_HMETACOMMAND_0052 CosUmd12MetaCommand::CastTo() const
     return MAKE_D3D12DDI_HMETACOMMAND_0052(const_cast< CosUmd12MetaCommand* >(this));
 }
 
-template <typename TCreateDesc, typename TInitializeDesc, typename TExecuteDesc>
+template <typename TCreateDesc, typename TInitializeDesc, typename TExecuteDesc, MetaCommandId TMetaCommandId>
 class TCosUmd12MetaCommand : public CosUmd12MetaCommand
 {
 public:
     explicit
-        TCosUmd12MetaCommand(
-            CosUmd12Device* pDevice,
-            UINT nodeMask,
-            CONST void* pvCreateDesc,
-            SIZE_T createDescSizeInBytes,
-            D3D12DDI_HRTMETACOMMAND_0052 rtMetaCommand)
+    TCosUmd12MetaCommand(
+        CosUmd12Device* pDevice,
+        UINT nodeMask,
+        CONST void* pvCreateDesc,
+        SIZE_T createDescSizeInBytes,
+        D3D12DDI_HRTMETACOMMAND_0052 rtMetaCommand)
     {
         m_pDevice = pDevice;
         m_rtMetaCommand = rtMetaCommand;
@@ -58,6 +61,9 @@ public:
         }
 
         memcpy(&m_createDesc, pvCreateDesc, createDescSizeInBytes);
+
+        memset(&m_initializeDesc, 0, sizeof(m_initializeDesc));
+        memset(&m_executeDesc, 0, sizeof(m_executeDesc));
     }
 
     ~TCosUmd12MetaCommand()
@@ -113,6 +119,81 @@ public:
     GetRequiredParameterInfo(
         D3D12DDI_META_COMMAND_PARAMETER_STAGE stage,
         UINT parameterIndex,
+        D3D12DDIARG_META_COMMAND_REQUIRED_PARAMETER_INFO* pInfo)
+    {
+        pInfo->ResourceSize = 0;
+    }
+
+    virtual void
+    Initialize(
+        CONST void *pvInitializeDesc,
+        SIZE_T initializeDescSize)
+    {
+        if (0 == initializeDescSize)
+        {
+            return;
+        }
+
+        if (sizeof(m_initializeDesc) != initializeDescSize)
+        {
+            m_pDevice->m_pUMCallbacks->pfnSetErrorCb(m_pDevice->m_hRTDevice, E_INVALIDARG);
+            return;
+        }
+
+        memcpy(&m_initializeDesc, pvInitializeDesc, initializeDescSize);
+    }
+
+    //
+    // HW driver can compile meta command code at creation or intialization time
+    //
+    virtual void
+    Compile();
+
+    virtual void
+    Execute(
+        CosUmd12CommandList * pCommandList,
+        CONST void *pvExecuteDesc,
+        SIZE_T executeDescSize)
+    {
+        //
+        // Record the latest execute desc
+        //
+        assert(sizeof(m_executeDesc) == executeDescSize);
+        memcpy(&m_executeDesc, pvExecuteDesc, sizeof(m_executeDesc));
+
+        pCommandList->ExecuteMlMetaCommand(&m_createDesc, &m_executeDesc, TMetaCommandId);
+    }
+
+protected:
+    CosUmd12Device * m_pDevice;
+    D3D12DDI_HRTMETACOMMAND_0052 m_rtMetaCommand;
+    TCreateDesc m_createDesc;
+    TInitializeDesc m_initializeDesc;
+    TExecuteDesc m_executeDesc;
+};
+
+class CosUmd12MetaCommandIdentity : public TCosUmd12MetaCommand<IdentityMetaCommandCreationParameters, UINT, UINT, MetaCommandIdentity>
+{
+public:
+    CosUmd12MetaCommandIdentity(
+        CosUmd12Device* pDevice,
+        UINT nodeMask,
+        CONST void* pvCreateDesc,
+        SIZE_T createDescSizeInBytes,
+        D3D12DDI_HRTMETACOMMAND_0052 rtMetaCommand) :
+        TCosUmd12MetaCommand<IdentityMetaCommandCreationParameters, UINT, UINT, MetaCommandIdentity>(
+            pDevice,
+            nodeMask,
+            pvCreateDesc,
+            createDescSizeInBytes,
+            rtMetaCommand)
+    {
+    };
+
+    virtual void
+    GetRequiredParameterInfo(
+        D3D12DDI_META_COMMAND_PARAMETER_STAGE stage,
+        UINT parameterIndex,
         D3D12DDIARG_META_COMMAND_REQUIRED_PARAMETER_INFO* pInfo);
 
     virtual void
@@ -121,18 +202,17 @@ public:
         SIZE_T initializeDescSize);
 
     virtual void
+    Compile();
+
+    virtual void
     Execute(
         CosUmd12CommandList * pCommandList,
         CONST void *pvExecuteDesc,
         SIZE_T executeDescSize);
-
-private:
-    CosUmd12Device * m_pDevice;
-    D3D12DDI_HRTMETACOMMAND_0052 m_rtMetaCommand;
-    TCreateDesc m_createDesc;
-    TInitializeDesc m_initializeDesc;
-    TExecuteDesc m_executeDesc;
 };
 
-typedef TCosUmd12MetaCommand<IdentityMetaCommandCreationParameters, UINT, UINT> CosUmd12MetaCommandIdentity;
+#if MLMC
 
+typedef TCosUmd12MetaCommand<META_COMMAND_CREATE_CONVOLUTION_DESC, META_COMMAND_INITIALIZE_CONVOLUTION_DESC, META_COMMAND_EXECUTE_CONVOLUTION_DESC, MetaCommandConvolution> CosUmd12MetaCommandConvolution;
+
+#endif

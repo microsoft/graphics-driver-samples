@@ -8,6 +8,11 @@
 
 #include "CosUmd12.h"
 
+void
+TCosUmd12MetaCommand<IdentityMetaCommandCreationParameters, UINT, UINT, MetaCommandIdentity>::Compile()
+{
+}
+
 const UINT CosUmd12MetaCommandIdentity::m_numCreationParameters = 1;
 const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandIdentity::m_creationParametersDesc[] =
 {
@@ -41,6 +46,11 @@ CosUmd12MetaCommandIdentity::Initialize(
 }
 
 void
+CosUmd12MetaCommandIdentity::Compile()
+{
+}
+
+void
 CosUmd12MetaCommandIdentity::Execute(
     CosUmd12CommandList * pCommandList,
     CONST void *pvExecuteDesc,
@@ -54,3 +64,20 @@ CosUmd12MetaCommandIdentity::Execute(
         (UINT)m_createDesc.BufferSize);
 }
 
+#if MLMC
+
+const UINT CosUmd12MetaCommandConvolution::m_numCreationParameters = 0;
+const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandConvolution::m_creationParametersDesc[];
+
+const UINT CosUmd12MetaCommandConvolution::m_numInitializationParameters = 0;
+const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandConvolution::m_initializationParametersDesc[];
+
+const UINT CosUmd12MetaCommandConvolution::m_numExecutionParameters = 0;
+const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandConvolution::m_executionParametersDesc[];
+
+void
+CosUmd12MetaCommandConvolution::Compile()
+{
+}
+
+#endif
