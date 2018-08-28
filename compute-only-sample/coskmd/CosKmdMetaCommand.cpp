@@ -11,6 +11,10 @@ CosKmdExecuteMetaCommandConvolution(
 {
     UNREFERENCED_PARAMETER(pCreateDesc);
     UNREFERENCED_PARAMETER(pExecuteDesc);
+
+    MetaCommandId   metaCommandId;
+
+    metaCommandId = MetaCommandConvolution;
 }
 
 void
