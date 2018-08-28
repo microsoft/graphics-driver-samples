@@ -100,6 +100,7 @@ enum MetaCommandId
 {
     MetaCommandIdentity         = 1,    // TODO: Switch identity meta command to the new code path
 #if MLMC
+    MetaCommandNormalization    = 100,
     MetaCommandConvolution      = 101,
 #endif
 };

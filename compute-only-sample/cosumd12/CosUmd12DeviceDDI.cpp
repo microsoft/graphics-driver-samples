@@ -1318,6 +1318,7 @@ D3D12DDIARG_META_COMMAND_DESC CosUmd12Device::m_supportedMetaCommandDescs[] =
 {
     { GUID_IDENTITY,             L"Identity",      D3D12DDI_GRAPHICS_STATE_NONE, D3D12DDI_GRAPHICS_STATE_NONE },
 #if MLMC
+    { MetaCommand_Normalization, L"Normalization", D3D12DDI_GRAPHICS_STATE_NONE, D3D12DDI_GRAPHICS_STATE_NONE },
     { MetaCommand_Convolution,   L"Convolution",   D3D12DDI_GRAPHICS_STATE_NONE, D3D12DDI_GRAPHICS_STATE_NONE }
 #endif
 };
@@ -1352,6 +1353,10 @@ HRESULT APIENTRY CosUmd12Device_Ddi_EnumerateMetaCommandParameters(
         return CosUmd12MetaCommandIdentity::EnumerateMetaCommandParameters(Stage, pParameterCount, pParameterDescs);
     }
 #if MLMC
+    else if (IsEqualGUID(CommandId, MetaCommand_Normalization))
+    {
+        return CosUmd12MetaCommandNormalization::EnumerateMetaCommandParameters(Stage, pParameterCount, pParameterDescs);
+    }
     else if (IsEqualGUID(CommandId, MetaCommand_Convolution))
     {
         return CosUmd12MetaCommandConvolution::EnumerateMetaCommandParameters(Stage, pParameterCount, pParameterDescs);
@@ -1375,6 +1380,10 @@ SIZE_T APIENTRY CosUmd12Device_Ddi_CalcPrivateMetaCommandSize(
         return CosUmd12MetaCommandIdentity::CalculateSize(CommandId);
     }
 #if MLMC
+    else if (IsEqualGUID(CommandId, MetaCommand_Normalization))
+    {
+        return CosUmd12MetaCommandNormalization::CalculateSize(CommandId);
+    }
     else if (IsEqualGUID(CommandId, MetaCommand_Convolution))
     {
         return CosUmd12MetaCommandConvolution::CalculateSize(CommandId);
@@ -1409,6 +1418,15 @@ HRESULT APIENTRY CosUmd12Device_Ddi_CreateMetaCommand(
                                         RtMetaCommand);
     }
 #if MLMC
+    else if (IsEqualGUID(CommandId, MetaCommand_Normalization))
+    {
+        new (MetaCommand.pDrvPrivate) CosUmd12MetaCommandNormalization(
+                                        pDevice,
+                                        NodeMask,
+                                        pvCreateDesc,
+                                        CreateDescSizeInBytes,
+                                        RtMetaCommand);
+    }
     else if (IsEqualGUID(CommandId, MetaCommand_Convolution))
     {
         new (MetaCommand.pDrvPrivate) CosUmd12MetaCommandConvolution(

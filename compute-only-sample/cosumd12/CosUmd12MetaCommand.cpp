@@ -66,6 +66,20 @@ CosUmd12MetaCommandIdentity::Execute(
 
 #if MLMC
 
+const UINT CosUmd12MetaCommandNormalization::m_numCreationParameters = 0;
+const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandNormalization::m_creationParametersDesc[];
+
+const UINT CosUmd12MetaCommandNormalization::m_numInitializationParameters = 0;
+const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandNormalization::m_initializationParametersDesc[];
+
+const UINT CosUmd12MetaCommandNormalization::m_numExecutionParameters = 0;
+const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandNormalization::m_executionParametersDesc[];
+
+void
+CosUmd12MetaCommandNormalization::Compile()
+{
+}
+
 const UINT CosUmd12MetaCommandConvolution::m_numCreationParameters = 0;
 const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandConvolution::m_creationParametersDesc[];
 

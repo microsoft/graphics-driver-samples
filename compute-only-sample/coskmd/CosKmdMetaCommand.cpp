@@ -5,6 +5,19 @@
 #if MLMC
 
 static void
+CosKmdExecuteMetaCommandNormalization(
+    META_COMMAND_CREATE_NORMALIZATION_DESC *  pCreateDesc,
+    META_COMMAND_EXECUTE_NORMALIZATION_DESC * pExecuteDesc)
+{
+    UNREFERENCED_PARAMETER(pCreateDesc);
+    UNREFERENCED_PARAMETER(pExecuteDesc);
+
+    MetaCommandId   metaCommandId;
+
+    metaCommandId = MetaCommandNormalization;
+}
+
+static void
 CosKmdExecuteMetaCommandConvolution(
     META_COMMAND_CREATE_CONVOLUTION_DESC *  pCreateDesc,
     META_COMMAND_EXECUTE_CONVOLUTION_DESC * pExecuteDesc)
@@ -44,6 +57,15 @@ CosKmdExecuteMetaCommand(
 
     switch (pMetaCommand->m_metaCommandId)
     {
+    case MetaCommandNormalization:
+        {
+            META_COMMAND_CREATE_NORMALIZATION_DESC *  pCreateDesc = (META_COMMAND_CREATE_NORMALIZATION_DESC *)(pMetaCommand + 1);
+            META_COMMAND_EXECUTE_NORMALIZATION_DESC * pExecuteDesc = (META_COMMAND_EXECUTE_NORMALIZATION_DESC *)(pCreateDesc + 1);
+
+            CosKmdFixupResourceCpuAddress((GpuHWDescriptor *)pExecuteDesc, sizeof(*pExecuteDesc)/sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
+            CosKmdExecuteMetaCommandNormalization(pCreateDesc, pExecuteDesc);
+        }
+        break;
     case MetaCommandConvolution:
         {
             META_COMMAND_CREATE_CONVOLUTION_DESC *  pCreateDesc = (META_COMMAND_CREATE_CONVOLUTION_DESC *)(pMetaCommand + 1);
