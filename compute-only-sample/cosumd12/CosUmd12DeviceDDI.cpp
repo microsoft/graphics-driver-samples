@@ -1316,9 +1316,9 @@ VOID APIENTRY CosUmd12Device_Ddi_DestroySchedulingGroup(
 
 D3D12DDIARG_META_COMMAND_DESC CosUmd12Device::m_supportedMetaCommandDescs[] =
 {
-    { GUID_IDENTITY, L"Identity", D3D12DDI_GRAPHICS_STATE_NONE, D3D12DDI_GRAPHICS_STATE_NONE },
+    { GUID_IDENTITY,             L"Identity",      D3D12DDI_GRAPHICS_STATE_NONE, D3D12DDI_GRAPHICS_STATE_NONE },
 #if MLMC
-    { MetaCommand_Convolution, L"Convolution", D3D12DDI_GRAPHICS_STATE_NONE, D3D12DDI_GRAPHICS_STATE_NONE }
+    { MetaCommand_Convolution,   L"Convolution",   D3D12DDI_GRAPHICS_STATE_NONE, D3D12DDI_GRAPHICS_STATE_NONE }
 #endif
 };
 
