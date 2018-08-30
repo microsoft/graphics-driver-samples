@@ -135,7 +135,7 @@ CosKmExecuteMetaCommandRoiPooling(
 }
 
 void
-CosKmdFixupResourceCpuAddress(
+CosKmFixupResourceCpuAddress(
     GpuHWDescriptor *   pHwDescriptor,
     UINT                numDescriptors)
 {
@@ -166,7 +166,7 @@ CosKmExecuteMetaCommand(
             META_COMMAND_CREATE_NORMALIZATION_DESC *  pCreateDesc = (META_COMMAND_CREATE_NORMALIZATION_DESC *)(pMetaCommand + 1);
             META_COMMAND_EXECUTE_NORMALIZATION_DESC * pExecuteDesc = (META_COMMAND_EXECUTE_NORMALIZATION_DESC *)(pCreateDesc + 1);
 
-            CosKmdFixupResourceCpuAddress((GpuHWDescriptor *)pExecuteDesc, sizeof(*pExecuteDesc)/sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
+            CosKmFixupResourceCpuAddress((GpuHWDescriptor *)pExecuteDesc, sizeof(*pExecuteDesc)/sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
             CosKmExecuteMetaCommandNormalization(pCreateDesc, pExecuteDesc);
         }
         break;
@@ -175,7 +175,7 @@ CosKmExecuteMetaCommand(
             META_COMMAND_CREATE_CONVOLUTION_DESC *  pCreateDesc = (META_COMMAND_CREATE_CONVOLUTION_DESC *)(pMetaCommand + 1);
             META_COMMAND_EXECUTE_CONVOLUTION_DESC * pExecuteDesc = (META_COMMAND_EXECUTE_CONVOLUTION_DESC *)(pCreateDesc + 1);
 
-            CosKmdFixupResourceCpuAddress((GpuHWDescriptor *)pExecuteDesc, sizeof(*pExecuteDesc)/sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
+            CosKmFixupResourceCpuAddress((GpuHWDescriptor *)pExecuteDesc, sizeof(*pExecuteDesc)/sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
             CosKmExecuteMetaCommandConvolution(pCreateDesc, pExecuteDesc);
         }
         break;
@@ -184,7 +184,7 @@ CosKmExecuteMetaCommand(
             META_COMMAND_CREATE_GEMM_DESC *  pCreateDesc = (META_COMMAND_CREATE_GEMM_DESC *)(pMetaCommand + 1);
             META_COMMAND_EXECUTE_GEMM_DESC * pExecuteDesc = (META_COMMAND_EXECUTE_GEMM_DESC *)(pCreateDesc + 1);
 
-            CosKmdFixupResourceCpuAddress((GpuHWDescriptor *)pExecuteDesc, sizeof(*pExecuteDesc)/sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
+            CosKmFixupResourceCpuAddress((GpuHWDescriptor *)pExecuteDesc, sizeof(*pExecuteDesc)/sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
             CosKmExecuteMetaCommandGEMM(pCreateDesc, pExecuteDesc);
         }
         break;
@@ -193,7 +193,7 @@ CosKmExecuteMetaCommand(
             META_COMMAND_CREATE_GRU_DESC *  pCreateDesc = (META_COMMAND_CREATE_GRU_DESC *)(pMetaCommand + 1);
             META_COMMAND_EXECUTE_GRU_DESC * pExecuteDesc = (META_COMMAND_EXECUTE_GRU_DESC *)(pCreateDesc + 1);
 
-            CosKmdFixupResourceCpuAddress((GpuHWDescriptor *)pExecuteDesc, sizeof(*pExecuteDesc)/sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
+            CosKmFixupResourceCpuAddress((GpuHWDescriptor *)pExecuteDesc, sizeof(*pExecuteDesc)/sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
             CosKmExecuteMetaCommandGRU(pCreateDesc, pExecuteDesc);
         }
         break;
@@ -202,7 +202,7 @@ CosKmExecuteMetaCommand(
             META_COMMAND_CREATE_LSTM_DESC *  pCreateDesc = (META_COMMAND_CREATE_LSTM_DESC *)(pMetaCommand + 1);
             META_COMMAND_EXECUTE_LSTM_DESC * pExecuteDesc = (META_COMMAND_EXECUTE_LSTM_DESC *)(pCreateDesc + 1);
 
-            CosKmdFixupResourceCpuAddress((GpuHWDescriptor *)pExecuteDesc, sizeof(*pExecuteDesc)/sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
+            CosKmFixupResourceCpuAddress((GpuHWDescriptor *)pExecuteDesc, sizeof(*pExecuteDesc)/sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
             CosKmExecuteMetaCommandLSTM(pCreateDesc, pExecuteDesc);
         }
         break;
@@ -211,7 +211,7 @@ CosKmExecuteMetaCommand(
             META_COMMAND_CREATE_MVN_DESC *  pCreateDesc = (META_COMMAND_CREATE_MVN_DESC *)(pMetaCommand + 1);
             META_COMMAND_EXECUTE_MVN_DESC * pExecuteDesc = (META_COMMAND_EXECUTE_MVN_DESC *)(pCreateDesc + 1);
 
-            CosKmdFixupResourceCpuAddress((GpuHWDescriptor *)pExecuteDesc, sizeof(*pExecuteDesc)/sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
+            CosKmFixupResourceCpuAddress((GpuHWDescriptor *)pExecuteDesc, sizeof(*pExecuteDesc)/sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
             CosKmExecuteMetaCommandMVN(pCreateDesc, pExecuteDesc);
         }
         break;
@@ -220,7 +220,7 @@ CosKmExecuteMetaCommand(
             META_COMMAND_CREATE_POOLING_DESC *  pCreateDesc = (META_COMMAND_CREATE_POOLING_DESC *)(pMetaCommand + 1);
             META_COMMAND_EXECUTE_POOLING_DESC * pExecuteDesc = (META_COMMAND_EXECUTE_POOLING_DESC *)(pCreateDesc + 1);
 
-            CosKmdFixupResourceCpuAddress((GpuHWDescriptor *)pExecuteDesc, sizeof(*pExecuteDesc)/sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
+            CosKmFixupResourceCpuAddress((GpuHWDescriptor *)pExecuteDesc, sizeof(*pExecuteDesc)/sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
             CosKmExecuteMetaCommandPooling(pCreateDesc, pExecuteDesc);
         }
         break;
@@ -229,7 +229,7 @@ CosKmExecuteMetaCommand(
             META_COMMAND_CREATE_REDUCTION_DESC *  pCreateDesc = (META_COMMAND_CREATE_REDUCTION_DESC *)(pMetaCommand + 1);
             META_COMMAND_EXECUTE_REDUCTION_DESC * pExecuteDesc = (META_COMMAND_EXECUTE_REDUCTION_DESC *)(pCreateDesc + 1);
 
-            CosKmdFixupResourceCpuAddress((GpuHWDescriptor *)pExecuteDesc, sizeof(*pExecuteDesc)/sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
+            CosKmFixupResourceCpuAddress((GpuHWDescriptor *)pExecuteDesc, sizeof(*pExecuteDesc)/sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
             CosKmExecuteMetaCommandReduction(pCreateDesc, pExecuteDesc);
         }
         break;
@@ -238,7 +238,7 @@ CosKmExecuteMetaCommand(
             META_COMMAND_CREATE_RNN_DESC *  pCreateDesc = (META_COMMAND_CREATE_RNN_DESC *)(pMetaCommand + 1);
             META_COMMAND_EXECUTE_RNN_DESC * pExecuteDesc = (META_COMMAND_EXECUTE_RNN_DESC *)(pCreateDesc + 1);
 
-            CosKmdFixupResourceCpuAddress((GpuHWDescriptor *)pExecuteDesc, sizeof(*pExecuteDesc)/sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
+            CosKmFixupResourceCpuAddress((GpuHWDescriptor *)pExecuteDesc, sizeof(*pExecuteDesc)/sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
             CosKmExecuteMetaCommandRNN(pCreateDesc, pExecuteDesc);
         }
         break;
@@ -247,7 +247,7 @@ CosKmExecuteMetaCommand(
             META_COMMAND_CREATE_ROI_POOLING_DESC *  pCreateDesc = (META_COMMAND_CREATE_ROI_POOLING_DESC *)(pMetaCommand + 1);
             META_COMMAND_EXECUTE_ROI_POOLING_DESC * pExecuteDesc = (META_COMMAND_EXECUTE_ROI_POOLING_DESC *)(pCreateDesc + 1);
 
-            CosKmdFixupResourceCpuAddress((GpuHWDescriptor *)pExecuteDesc, sizeof(*pExecuteDesc)/sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
+            CosKmFixupResourceCpuAddress((GpuHWDescriptor *)pExecuteDesc, sizeof(*pExecuteDesc)/sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
             CosKmExecuteMetaCommandRoiPooling(pCreateDesc, pExecuteDesc);
         }
         break;
