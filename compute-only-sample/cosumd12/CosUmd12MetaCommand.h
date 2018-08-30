@@ -39,7 +39,10 @@ inline D3D12DDI_HMETACOMMAND_0052 CosUmd12MetaCommand::CastTo() const
     return MAKE_D3D12DDI_HMETACOMMAND_0052(const_cast< CosUmd12MetaCommand* >(this));
 }
 
-template <typename TCreateDesc, typename TInitializeDesc, typename TExecuteDesc, MetaCommandId TMetaCommandId>
+template <typename TCreateDesc,
+          typename TInitializeDesc,
+          typename TExecuteDesc,
+          MetaCommandId TMetaCommandId>
 class TCosUmd12MetaCommand : public CosUmd12MetaCommand
 {
 public:
@@ -172,7 +175,10 @@ protected:
     TExecuteDesc m_executeDesc;
 };
 
-class CosUmd12MetaCommandIdentity : public TCosUmd12MetaCommand<IdentityMetaCommandCreationParameters, UINT, UINT, MetaCommandIdentity>
+class CosUmd12MetaCommandIdentity : public TCosUmd12MetaCommand<IdentityMetaCommandCreationParameters,
+                                                                UINT,
+                                                                UINT,
+                                                                MetaCommandIdentity>
 {
 public:
     CosUmd12MetaCommandIdentity(
@@ -181,7 +187,10 @@ public:
         CONST void* pvCreateDesc,
         SIZE_T createDescSizeInBytes,
         D3D12DDI_HRTMETACOMMAND_0052 rtMetaCommand) :
-        TCosUmd12MetaCommand<IdentityMetaCommandCreationParameters, UINT, UINT, MetaCommandIdentity>(
+        TCosUmd12MetaCommand<IdentityMetaCommandCreationParameters, 
+                             UINT,
+                             UINT,
+                             MetaCommandIdentity>(
             pDevice,
             nodeMask,
             pvCreateDesc,
@@ -213,16 +222,54 @@ public:
 
 #if MLMC
 
-typedef TCosUmd12MetaCommand<META_COMMAND_CREATE_NORMALIZATION_DESC, META_COMMAND_INITIALIZE_NORMALIZATION_DESC, META_COMMAND_EXECUTE_NORMALIZATION_DESC, MetaCommandNormalization> CosUmd12MetaCommandNormalization;
-typedef TCosUmd12MetaCommand<META_COMMAND_CREATE_CONVOLUTION_DESC, META_COMMAND_INITIALIZE_CONVOLUTION_DESC, META_COMMAND_EXECUTE_CONVOLUTION_DESC, MetaCommandConvolution> CosUmd12MetaCommandConvolution;
+typedef TCosUmd12MetaCommand<META_COMMAND_CREATE_NORMALIZATION_DESC,
+                             META_COMMAND_INITIALIZE_NORMALIZATION_DESC,
+                             META_COMMAND_EXECUTE_NORMALIZATION_DESC,
+                             MetaCommandNormalization> CosUmd12MetaCommandNormalization;
 
-typedef TCosUmd12MetaCommand<META_COMMAND_CREATE_GEMM_DESC, META_COMMAND_INITIALIZE_GEMM_DESC, META_COMMAND_EXECUTE_GEMM_DESC, MetaCommandGEMM> CosUmd12MetaCommandGEMM;
-typedef TCosUmd12MetaCommand<META_COMMAND_CREATE_GRU_DESC, META_COMMAND_INITIALIZE_GRU_DESC, META_COMMAND_EXECUTE_GRU_DESC, MetaCommandGRU> CosUmd12MetaCommandGRU;
-typedef TCosUmd12MetaCommand<META_COMMAND_CREATE_LSTM_DESC, META_COMMAND_INITIALIZE_LSTM_DESC, META_COMMAND_EXECUTE_LSTM_DESC, MetaCommandLSTM> CosUmd12MetaCommandLSTM;
-typedef TCosUmd12MetaCommand<META_COMMAND_CREATE_MVN_DESC, META_COMMAND_INITIALIZE_MVN_DESC, META_COMMAND_EXECUTE_MVN_DESC, MetaCommandMVN> CosUmd12MetaCommandMVN;
-typedef TCosUmd12MetaCommand<META_COMMAND_CREATE_POOLING_DESC, META_COMMAND_INITIALIZE_POOLING_DESC, META_COMMAND_EXECUTE_POOLING_DESC, MetaCommandPooling> CosUmd12MetaCommandPooling;
-typedef TCosUmd12MetaCommand<META_COMMAND_CREATE_REDUCTION_DESC, META_COMMAND_INITIALIZE_REDUCTION_DESC, META_COMMAND_EXECUTE_REDUCTION_DESC, MetaCommandReduction> CosUmd12MetaCommandReduction;
-typedef TCosUmd12MetaCommand<META_COMMAND_CREATE_RNN_DESC, META_COMMAND_INITIALIZE_RNN_DESC, META_COMMAND_EXECUTE_RNN_DESC, MetaCommandRNN> CosUmd12MetaCommandRNN;
-typedef TCosUmd12MetaCommand<META_COMMAND_CREATE_ROI_POOLING_DESC, META_COMMAND_INITIALIZE_ROI_POOLING_DESC, META_COMMAND_EXECUTE_ROI_POOLING_DESC, MetaCommandRoiPooling> CosUmd12MetaCommandRoiPooling;
+typedef TCosUmd12MetaCommand<META_COMMAND_CREATE_CONVOLUTION_DESC,
+                             META_COMMAND_INITIALIZE_CONVOLUTION_DESC,
+                             META_COMMAND_EXECUTE_CONVOLUTION_DESC,
+                             MetaCommandConvolution> CosUmd12MetaCommandConvolution;
+
+typedef TCosUmd12MetaCommand<META_COMMAND_CREATE_GEMM_DESC,
+                             META_COMMAND_INITIALIZE_GEMM_DESC,
+                             META_COMMAND_EXECUTE_GEMM_DESC,
+                             MetaCommandGEMM> CosUmd12MetaCommandGEMM;
+
+typedef TCosUmd12MetaCommand<META_COMMAND_CREATE_GRU_DESC,
+                             META_COMMAND_INITIALIZE_GRU_DESC,
+                             META_COMMAND_EXECUTE_GRU_DESC,
+                             MetaCommandGRU> CosUmd12MetaCommandGRU;
+
+typedef TCosUmd12MetaCommand<META_COMMAND_CREATE_LSTM_DESC,
+                             META_COMMAND_INITIALIZE_LSTM_DESC,
+                             META_COMMAND_EXECUTE_LSTM_DESC,
+                             MetaCommandLSTM> CosUmd12MetaCommandLSTM;
+
+typedef TCosUmd12MetaCommand<META_COMMAND_CREATE_MVN_DESC,
+                             META_COMMAND_INITIALIZE_MVN_DESC,
+                             META_COMMAND_EXECUTE_MVN_DESC,
+                             MetaCommandMVN> CosUmd12MetaCommandMVN;
+
+typedef TCosUmd12MetaCommand<META_COMMAND_CREATE_POOLING_DESC,
+                             META_COMMAND_INITIALIZE_POOLING_DESC,
+                             META_COMMAND_EXECUTE_POOLING_DESC,
+                             MetaCommandPooling> CosUmd12MetaCommandPooling;
+
+typedef TCosUmd12MetaCommand<META_COMMAND_CREATE_REDUCTION_DESC,
+                             META_COMMAND_INITIALIZE_REDUCTION_DESC,
+                             META_COMMAND_EXECUTE_REDUCTION_DESC,
+                             MetaCommandReduction> CosUmd12MetaCommandReduction;
+
+typedef TCosUmd12MetaCommand<META_COMMAND_CREATE_RNN_DESC,
+                             META_COMMAND_INITIALIZE_RNN_DESC,
+                             META_COMMAND_EXECUTE_RNN_DESC,
+                             MetaCommandRNN> CosUmd12MetaCommandRNN;
+
+typedef TCosUmd12MetaCommand<META_COMMAND_CREATE_ROI_POOLING_DESC,
+                             META_COMMAND_INITIALIZE_ROI_POOLING_DESC,
+                             META_COMMAND_EXECUTE_ROI_POOLING_DESC,
+                             MetaCommandRoiPooling> CosUmd12MetaCommandRoiPooling;
 
 #endif
