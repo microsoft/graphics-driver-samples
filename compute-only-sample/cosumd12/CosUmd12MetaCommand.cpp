@@ -94,4 +94,116 @@ CosUmd12MetaCommandConvolution::Compile()
 {
 }
 
+const UINT CosUmd12MetaCommandGEMM::m_numCreationParameters = 0;
+const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandGEMM::m_creationParametersDesc[];
+
+const UINT CosUmd12MetaCommandGEMM::m_numInitializationParameters = 0;
+const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandGEMM::m_initializationParametersDesc[];
+
+const UINT CosUmd12MetaCommandGEMM::m_numExecutionParameters = 0;
+const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandGEMM::m_executionParametersDesc[];
+
+void
+CosUmd12MetaCommandGEMM::Compile()
+{
+}
+
+const UINT CosUmd12MetaCommandGRU::m_numCreationParameters = 0;
+const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandGRU::m_creationParametersDesc[];
+
+const UINT CosUmd12MetaCommandGRU::m_numInitializationParameters = 0;
+const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandGRU::m_initializationParametersDesc[];
+
+const UINT CosUmd12MetaCommandGRU::m_numExecutionParameters = 0;
+const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandGRU::m_executionParametersDesc[];
+
+void
+CosUmd12MetaCommandGRU::Compile()
+{
+}
+
+const UINT CosUmd12MetaCommandLSTM::m_numCreationParameters = 0;
+const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandLSTM::m_creationParametersDesc[];
+
+const UINT CosUmd12MetaCommandLSTM::m_numInitializationParameters = 0;
+const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandLSTM::m_initializationParametersDesc[];
+
+const UINT CosUmd12MetaCommandLSTM::m_numExecutionParameters = 0;
+const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandLSTM::m_executionParametersDesc[];
+
+void
+CosUmd12MetaCommandLSTM::Compile()
+{
+}
+
+const UINT CosUmd12MetaCommandMVN::m_numCreationParameters = 0;
+const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandMVN::m_creationParametersDesc[];
+
+const UINT CosUmd12MetaCommandMVN::m_numInitializationParameters = 0;
+const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandMVN::m_initializationParametersDesc[];
+
+const UINT CosUmd12MetaCommandMVN::m_numExecutionParameters = 0;
+const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandMVN::m_executionParametersDesc[];
+
+void
+CosUmd12MetaCommandMVN::Compile()
+{
+}
+
+const UINT CosUmd12MetaCommandPooling::m_numCreationParameters = 0;
+const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandPooling::m_creationParametersDesc[];
+
+const UINT CosUmd12MetaCommandPooling::m_numInitializationParameters = 0;
+const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandPooling::m_initializationParametersDesc[];
+
+const UINT CosUmd12MetaCommandPooling::m_numExecutionParameters = 0;
+const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandPooling::m_executionParametersDesc[];
+
+void
+CosUmd12MetaCommandPooling::Compile()
+{
+}
+
+const UINT CosUmd12MetaCommandReduction::m_numCreationParameters = 0;
+const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandReduction::m_creationParametersDesc[];
+
+const UINT CosUmd12MetaCommandReduction::m_numInitializationParameters = 0;
+const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandReduction::m_initializationParametersDesc[];
+
+const UINT CosUmd12MetaCommandReduction::m_numExecutionParameters = 0;
+const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandReduction::m_executionParametersDesc[];
+
+void
+CosUmd12MetaCommandReduction::Compile()
+{
+}
+
+const UINT CosUmd12MetaCommandRNN::m_numCreationParameters = 0;
+const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandRNN::m_creationParametersDesc[];
+
+const UINT CosUmd12MetaCommandRNN::m_numExecutionParameters = 0;
+const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandRNN::m_executionParametersDesc[];
+
+const UINT CosUmd12MetaCommandRNN::m_numInitializationParameters = 0;
+const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandRNN::m_initializationParametersDesc[];
+
+void
+CosUmd12MetaCommandRNN::Compile()
+{
+}
+
+const UINT CosUmd12MetaCommandRoiPooling::m_numCreationParameters = 0;
+const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandRoiPooling::m_creationParametersDesc[];
+
+const UINT CosUmd12MetaCommandRoiPooling::m_numInitializationParameters = 0;
+const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandRoiPooling::m_initializationParametersDesc[];
+
+const UINT CosUmd12MetaCommandRoiPooling::m_numExecutionParameters = 0;
+const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandRoiPooling::m_executionParametersDesc[];
+
+void
+CosUmd12MetaCommandRoiPooling::Compile()
+{
+}
+
 #endif

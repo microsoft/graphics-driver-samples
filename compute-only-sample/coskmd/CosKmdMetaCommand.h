@@ -4,6 +4,6 @@
 #include "CosGpuCommand.h"
 
 void
-CosKmdExecuteMetaCommand(
+CosKmExecuteMetaCommand(
     GpuHwMetaCommand *  pMetaCommand);
 

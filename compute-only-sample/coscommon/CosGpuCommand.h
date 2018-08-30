@@ -102,6 +102,14 @@ enum MetaCommandId
 #if MLMC
     MetaCommandNormalization    = 100,
     MetaCommandConvolution      = 101,
+    MetaCommandGEMM             = 102,
+    MetaCommandGRU              = 103,
+    MetaCommandLSTM             = 104,
+    MetaCommandMVN              = 105,
+    MetaCommandPooling          = 106,
+    MetaCommandReduction        = 107,
+    MetaCommandRNN              = 108,
+    MetaCommandRoiPooling       = 109
 #endif
 };
 

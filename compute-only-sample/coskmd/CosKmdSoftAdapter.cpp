@@ -156,7 +156,7 @@ CosKmdSoftAdapter::ProcessHWRenderBuffer(
             {
                 GpuHwMetaCommand *  pMetaCommand = (GpuHwMetaCommand *)pGpuCommand;
 
-                CosKmdExecuteMetaCommand(pMetaCommand);
+                CosKmExecuteMetaCommand(pMetaCommand);
 
                 commandSize = pMetaCommand->m_commandSize;
             }

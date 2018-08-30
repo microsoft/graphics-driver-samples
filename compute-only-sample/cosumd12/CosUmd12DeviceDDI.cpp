@@ -1319,7 +1319,15 @@ D3D12DDIARG_META_COMMAND_DESC CosUmd12Device::m_supportedMetaCommandDescs[] =
     { GUID_IDENTITY,             L"Identity",      D3D12DDI_GRAPHICS_STATE_NONE, D3D12DDI_GRAPHICS_STATE_NONE },
 #if MLMC
     { MetaCommand_Normalization, L"Normalization", D3D12DDI_GRAPHICS_STATE_NONE, D3D12DDI_GRAPHICS_STATE_NONE },
-    { MetaCommand_Convolution,   L"Convolution",   D3D12DDI_GRAPHICS_STATE_NONE, D3D12DDI_GRAPHICS_STATE_NONE }
+    { MetaCommand_Convolution,   L"Convolution",   D3D12DDI_GRAPHICS_STATE_NONE, D3D12DDI_GRAPHICS_STATE_NONE },
+    { MetaCommand_GEMM,          L"GEMM",          D3D12DDI_GRAPHICS_STATE_NONE, D3D12DDI_GRAPHICS_STATE_NONE },
+    { MetaCommand_GRU,           L"GRU",           D3D12DDI_GRAPHICS_STATE_NONE, D3D12DDI_GRAPHICS_STATE_NONE },
+    { MetaCommand_LSTM,          L"LSTM",          D3D12DDI_GRAPHICS_STATE_NONE, D3D12DDI_GRAPHICS_STATE_NONE },
+    { MetaCommand_MVN,           L"NVM",           D3D12DDI_GRAPHICS_STATE_NONE, D3D12DDI_GRAPHICS_STATE_NONE },
+    { MetaCommand_Pooling,       L"Pooling",       D3D12DDI_GRAPHICS_STATE_NONE, D3D12DDI_GRAPHICS_STATE_NONE },
+    { MetaCommand_Reduction,     L"Reduction",     D3D12DDI_GRAPHICS_STATE_NONE, D3D12DDI_GRAPHICS_STATE_NONE },
+    { MetaCommand_RNN,           L"RNN",           D3D12DDI_GRAPHICS_STATE_NONE, D3D12DDI_GRAPHICS_STATE_NONE },
+    { MetaCommand_RoiPooling,    L"RoiPooling",    D3D12DDI_GRAPHICS_STATE_NONE, D3D12DDI_GRAPHICS_STATE_NONE }
 #endif
 };
 
@@ -1361,6 +1369,38 @@ HRESULT APIENTRY CosUmd12Device_Ddi_EnumerateMetaCommandParameters(
     {
         return CosUmd12MetaCommandConvolution::EnumerateMetaCommandParameters(Stage, pParameterCount, pParameterDescs);
     }
+    else if (IsEqualGUID(CommandId, MetaCommand_GEMM))
+    {
+        return CosUmd12MetaCommandGEMM::EnumerateMetaCommandParameters(Stage, pParameterCount, pParameterDescs);
+    }
+    else if (IsEqualGUID(CommandId, MetaCommand_GRU))
+    {
+        return CosUmd12MetaCommandGRU::EnumerateMetaCommandParameters(Stage, pParameterCount, pParameterDescs);
+    }
+    else if (IsEqualGUID(CommandId, MetaCommand_LSTM))
+    {
+        return CosUmd12MetaCommandLSTM::EnumerateMetaCommandParameters(Stage, pParameterCount, pParameterDescs);
+    }
+    else if (IsEqualGUID(CommandId, MetaCommand_MVN))
+    {
+        return CosUmd12MetaCommandMVN::EnumerateMetaCommandParameters(Stage, pParameterCount, pParameterDescs);
+    }
+    else if (IsEqualGUID(CommandId, MetaCommand_Pooling))
+    {
+        return CosUmd12MetaCommandPooling::EnumerateMetaCommandParameters(Stage, pParameterCount, pParameterDescs);
+    }
+    else if (IsEqualGUID(CommandId, MetaCommand_Reduction))
+    {
+        return CosUmd12MetaCommandReduction::EnumerateMetaCommandParameters(Stage, pParameterCount, pParameterDescs);
+    }
+    else if (IsEqualGUID(CommandId, MetaCommand_RNN))
+    {
+        return CosUmd12MetaCommandRNN::EnumerateMetaCommandParameters(Stage, pParameterCount, pParameterDescs);
+    }
+    else if (IsEqualGUID(CommandId, MetaCommand_RoiPooling))
+    {
+        return CosUmd12MetaCommandRoiPooling::EnumerateMetaCommandParameters(Stage, pParameterCount, pParameterDescs);
+    }
 #endif
 
     return E_INVALIDARG;
@@ -1387,6 +1427,38 @@ SIZE_T APIENTRY CosUmd12Device_Ddi_CalcPrivateMetaCommandSize(
     else if (IsEqualGUID(CommandId, MetaCommand_Convolution))
     {
         return CosUmd12MetaCommandConvolution::CalculateSize(CommandId);
+    }
+    else if (IsEqualGUID(CommandId, MetaCommand_GEMM))
+    {
+        return CosUmd12MetaCommandGEMM::CalculateSize(CommandId);
+    }
+    else if (IsEqualGUID(CommandId, MetaCommand_GRU))
+    {
+        return CosUmd12MetaCommandGRU::CalculateSize(CommandId);
+    }
+    else if (IsEqualGUID(CommandId, MetaCommand_LSTM))
+    {
+        return CosUmd12MetaCommandLSTM::CalculateSize(CommandId);
+    }
+    else if (IsEqualGUID(CommandId, MetaCommand_MVN))
+    {
+        return CosUmd12MetaCommandMVN::CalculateSize(CommandId);
+    }
+    else if (IsEqualGUID(CommandId, MetaCommand_Pooling))
+    {
+        return CosUmd12MetaCommandPooling::CalculateSize(CommandId);
+    }
+    else if (IsEqualGUID(CommandId, MetaCommand_Reduction))
+    {
+        return CosUmd12MetaCommandReduction::CalculateSize(CommandId);
+    }
+    else if (IsEqualGUID(CommandId, MetaCommand_RNN))
+    {
+        return CosUmd12MetaCommandRNN::CalculateSize(CommandId);
+    }
+    else if (IsEqualGUID(CommandId, MetaCommand_RoiPooling))
+    {
+        return CosUmd12MetaCommandRoiPooling::CalculateSize(CommandId);
     }
 #endif
     else
@@ -1430,6 +1502,78 @@ HRESULT APIENTRY CosUmd12Device_Ddi_CreateMetaCommand(
     else if (IsEqualGUID(CommandId, MetaCommand_Convolution))
     {
         new (MetaCommand.pDrvPrivate) CosUmd12MetaCommandConvolution(
+                                        pDevice,
+                                        NodeMask,
+                                        pvCreateDesc,
+                                        CreateDescSizeInBytes,
+                                        RtMetaCommand);
+    }
+    else if (IsEqualGUID(CommandId, MetaCommand_GEMM))
+    {
+        new (MetaCommand.pDrvPrivate) CosUmd12MetaCommandGEMM(
+                                        pDevice,
+                                        NodeMask,
+                                        pvCreateDesc,
+                                        CreateDescSizeInBytes,
+                                        RtMetaCommand);
+    }
+    else if (IsEqualGUID(CommandId, MetaCommand_GRU))
+    {
+        new (MetaCommand.pDrvPrivate) CosUmd12MetaCommandGRU(
+                                        pDevice,
+                                        NodeMask,
+                                        pvCreateDesc,
+                                        CreateDescSizeInBytes,
+                                        RtMetaCommand);
+    }
+    else if (IsEqualGUID(CommandId, MetaCommand_LSTM))
+    {
+        new (MetaCommand.pDrvPrivate) CosUmd12MetaCommandLSTM(
+                                        pDevice,
+                                        NodeMask,
+                                        pvCreateDesc,
+                                        CreateDescSizeInBytes,
+                                        RtMetaCommand);
+    }
+    else if (IsEqualGUID(CommandId, MetaCommand_MVN))
+    {
+        new (MetaCommand.pDrvPrivate) CosUmd12MetaCommandMVN(
+                                        pDevice,
+                                        NodeMask,
+                                        pvCreateDesc,
+                                        CreateDescSizeInBytes,
+                                        RtMetaCommand);
+    }
+    else if (IsEqualGUID(CommandId, MetaCommand_Pooling))
+    {
+        new (MetaCommand.pDrvPrivate) CosUmd12MetaCommandPooling(
+                                        pDevice,
+                                        NodeMask,
+                                        pvCreateDesc,
+                                        CreateDescSizeInBytes,
+                                        RtMetaCommand);
+    }
+    else if (IsEqualGUID(CommandId, MetaCommand_Reduction))
+    {
+        new (MetaCommand.pDrvPrivate) CosUmd12MetaCommandReduction(
+                                        pDevice,
+                                        NodeMask,
+                                        pvCreateDesc,
+                                        CreateDescSizeInBytes,
+                                        RtMetaCommand);
+    }
+    else if (IsEqualGUID(CommandId, MetaCommand_RNN))
+    {
+        new (MetaCommand.pDrvPrivate) CosUmd12MetaCommandRNN(
+                                        pDevice,
+                                        NodeMask,
+                                        pvCreateDesc,
+                                        CreateDescSizeInBytes,
+                                        RtMetaCommand);
+    }
+    else if (IsEqualGUID(CommandId, MetaCommand_RoiPooling))
+    {
+        new (MetaCommand.pDrvPrivate) CosUmd12MetaCommandRoiPooling(
                                         pDevice,
                                         NodeMask,
                                         pvCreateDesc,
