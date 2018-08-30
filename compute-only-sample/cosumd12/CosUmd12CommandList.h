@@ -76,11 +76,11 @@ public:
     void CopyBufferRegion(D3D12DDIARG_BUFFER_PLACEMENT& dst, D3D12DDIARG_BUFFER_PLACEMENT& src, UINT64 bytesToCopy);
     void GpuMemoryCopy(D3D12_GPU_VIRTUAL_ADDRESS dstGpuVa, D3D12_GPU_VIRTUAL_ADDRESS srcGpuVa, UINT size);
 
-    template <typename TCreateDesc, typename TExecuteDesc>
-    void ExecuteMlMetaCommand(TCreateDesc * pCreateDesc, TExecuteDesc *  pExecuteDesc, MetaCommandId metaCommandId)
+    template <typename THwMetaCommand, typename THwIoTable>
+    void ExecuteMlMetaCommand(THwMetaCommand * pHwMetaCommand, THwIoTable * pHwIoTable, MetaCommandId metaCommandId)
     {
-        UINT numPatchLocations = sizeof(TExecuteDesc)/sizeof(D3D12_GPU_DESCRIPTOR_HANDLE);
-        UINT commandSize = sizeof(GpuHwMetaCommand) + sizeof(TCreateDesc) + numPatchLocations*sizeof(GpuHWDescriptor);
+        UINT numPatchLocations = sizeof(THwIoTable)/sizeof(D3D12_GPU_DESCRIPTOR_HANDLE);
+        UINT commandSize = sizeof(GpuHwMetaCommand) + sizeof(THwMetaCommand) + numPatchLocations*sizeof(GpuHWDescriptor);
 
         BYTE * pCommandBuf;
         UINT curCommandOffset;
@@ -107,10 +107,10 @@ public:
         pMetaCommand->m_metaCommandId = metaCommandId;
 
         // Copy the meta command META_COMMAND_CREATE_*_DESC
-        memcpy(pMetaCommand + 1, pCreateDesc, sizeof(TCreateDesc));
+        memcpy(pMetaCommand + 1, pHwMetaCommand, sizeof(THwMetaCommand));
 
         // Clear the resource descriptors
-        GpuHWDescriptor *   pHwDescriptors = (GpuHWDescriptor *)(pCommandBuf + sizeof(GpuHwMetaCommand) + sizeof(TCreateDesc));
+        GpuHWDescriptor *   pHwDescriptors = (GpuHWDescriptor *)(pCommandBuf + sizeof(GpuHwMetaCommand) + sizeof(THwMetaCommand));
         memset(pHwDescriptors, 0, numPatchLocations*sizeof(GpuHWDescriptor));
 
         //
@@ -123,9 +123,9 @@ public:
         //
         //
         
-        D3D12_GPU_DESCRIPTOR_HANDLE *   pGpuDescriptorHandle = (D3D12_GPU_DESCRIPTOR_HANDLE *)pExecuteDesc;
+        D3D12_GPU_DESCRIPTOR_HANDLE *   pGpuDescriptorHandle = (D3D12_GPU_DESCRIPTOR_HANDLE *)pHwIoTable;
         CosUmd12DescriptorHeap *        pUavHeap = m_pDescriptorHeaps[D3D12DDI_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV];
-        UINT                            hwDescriptorOffset = curCommandOffset + sizeof(GpuHwMetaCommand) + sizeof(TCreateDesc);
+        UINT                            hwDescriptorOffset = curCommandOffset + sizeof(GpuHwMetaCommand) + sizeof(THwMetaCommand);
         UINT                            i, numPatchLocationsUsed;
 
         for (i = 0, numPatchLocationsUsed = 0; i < numPatchLocations; i++, pGpuDescriptorHandle++)

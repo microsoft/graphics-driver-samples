@@ -9,7 +9,12 @@
 #include "CosUmd12.h"
 
 void
-TCosUmd12MetaCommand<IdentityMetaCommandCreationParameters, UINT, UINT, MetaCommandIdentity>::Compile()
+TCosUmd12MetaCommand<IdentityMetaCommandCreationParameters, UINT, UINT, MetaCommandIdentity, UINT, UINT>::Compile()
+{
+}
+
+void
+TCosUmd12MetaCommand<IdentityMetaCommandCreationParameters, UINT, UINT, MetaCommandIdentity, UINT, UINT>::BindHwIoTableAndReadyHwMetaCommand()
 {
 }
 
@@ -51,6 +56,11 @@ CosUmd12MetaCommandIdentity::Compile()
 }
 
 void
+CosUmd12MetaCommandIdentity::BindHwIoTableAndReadyHwMetaCommand()
+{
+}
+
+void
 CosUmd12MetaCommandIdentity::Execute(
     CosUmd12CommandList * pCommandList,
     CONST void *pvExecuteDesc,
@@ -80,6 +90,14 @@ CosUmd12MetaCommandNormalization::Compile()
 {
 }
 
+void
+CosUmd12MetaCommandNormalization::BindHwIoTableAndReadyHwMetaCommand()
+{
+    memcpy(&m_hwIoTable, &m_executeDesc, sizeof(m_hwIoTable));
+
+    memcpy(&m_hwMetaCommand, &m_createDesc, sizeof(m_hwMetaCommand));
+}
+
 const UINT CosUmd12MetaCommandConvolution::m_numCreationParameters = 0;
 const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandConvolution::m_creationParametersDesc[];
 
@@ -92,6 +110,14 @@ const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandConvolution::m_
 void
 CosUmd12MetaCommandConvolution::Compile()
 {
+}
+
+void
+CosUmd12MetaCommandConvolution::BindHwIoTableAndReadyHwMetaCommand()
+{
+    memcpy(&m_hwIoTable, &m_executeDesc, sizeof(m_hwIoTable));
+
+    memcpy(&m_hwMetaCommand, &m_createDesc, sizeof(m_hwMetaCommand));
 }
 
 const UINT CosUmd12MetaCommandGEMM::m_numCreationParameters = 0;
@@ -108,6 +134,14 @@ CosUmd12MetaCommandGEMM::Compile()
 {
 }
 
+void
+CosUmd12MetaCommandGEMM::BindHwIoTableAndReadyHwMetaCommand()
+{
+    memcpy(&m_hwIoTable, &m_executeDesc, sizeof(m_hwIoTable));
+
+    memcpy(&m_hwMetaCommand, &m_createDesc, sizeof(m_hwMetaCommand));
+}
+
 const UINT CosUmd12MetaCommandGRU::m_numCreationParameters = 0;
 const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandGRU::m_creationParametersDesc[];
 
@@ -120,6 +154,14 @@ const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandGRU::m_executio
 void
 CosUmd12MetaCommandGRU::Compile()
 {
+}
+
+void
+CosUmd12MetaCommandGRU::BindHwIoTableAndReadyHwMetaCommand()
+{
+    memcpy(&m_hwIoTable, &m_executeDesc, sizeof(m_hwIoTable));
+
+    memcpy(&m_hwMetaCommand, &m_createDesc, sizeof(m_hwMetaCommand));
 }
 
 const UINT CosUmd12MetaCommandLSTM::m_numCreationParameters = 0;
@@ -136,6 +178,14 @@ CosUmd12MetaCommandLSTM::Compile()
 {
 }
 
+void
+CosUmd12MetaCommandLSTM::BindHwIoTableAndReadyHwMetaCommand()
+{
+    memcpy(&m_hwIoTable, &m_executeDesc, sizeof(m_hwIoTable));
+
+    memcpy(&m_hwMetaCommand, &m_createDesc, sizeof(m_hwMetaCommand));
+}
+
 const UINT CosUmd12MetaCommandMVN::m_numCreationParameters = 0;
 const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandMVN::m_creationParametersDesc[];
 
@@ -148,6 +198,14 @@ const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandMVN::m_executio
 void
 CosUmd12MetaCommandMVN::Compile()
 {
+}
+
+void
+CosUmd12MetaCommandMVN::BindHwIoTableAndReadyHwMetaCommand()
+{
+    memcpy(&m_hwIoTable, &m_executeDesc, sizeof(m_hwIoTable));
+
+    memcpy(&m_hwMetaCommand, &m_createDesc, sizeof(m_hwMetaCommand));
 }
 
 const UINT CosUmd12MetaCommandPooling::m_numCreationParameters = 0;
@@ -164,6 +222,14 @@ CosUmd12MetaCommandPooling::Compile()
 {
 }
 
+void
+CosUmd12MetaCommandPooling::BindHwIoTableAndReadyHwMetaCommand()
+{
+    memcpy(&m_hwIoTable, &m_executeDesc, sizeof(m_hwIoTable));
+
+    memcpy(&m_hwMetaCommand, &m_createDesc, sizeof(m_hwMetaCommand));
+}
+
 const UINT CosUmd12MetaCommandReduction::m_numCreationParameters = 0;
 const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandReduction::m_creationParametersDesc[];
 
@@ -176,6 +242,14 @@ const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandReduction::m_ex
 void
 CosUmd12MetaCommandReduction::Compile()
 {
+}
+
+void
+CosUmd12MetaCommandReduction::BindHwIoTableAndReadyHwMetaCommand()
+{
+    memcpy(&m_hwIoTable, &m_executeDesc, sizeof(m_hwIoTable));
+
+    memcpy(&m_hwMetaCommand, &m_createDesc, sizeof(m_hwMetaCommand));
 }
 
 const UINT CosUmd12MetaCommandRNN::m_numCreationParameters = 0;
@@ -192,6 +266,14 @@ CosUmd12MetaCommandRNN::Compile()
 {
 }
 
+void
+CosUmd12MetaCommandRNN::BindHwIoTableAndReadyHwMetaCommand()
+{
+    memcpy(&m_hwIoTable, &m_executeDesc, sizeof(m_hwIoTable));
+
+    memcpy(&m_hwMetaCommand, &m_createDesc, sizeof(m_hwMetaCommand));
+}
+
 const UINT CosUmd12MetaCommandRoiPooling::m_numCreationParameters = 0;
 const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandRoiPooling::m_creationParametersDesc[];
 
@@ -204,6 +286,14 @@ const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandRoiPooling::m_e
 void
 CosUmd12MetaCommandRoiPooling::Compile()
 {
+}
+
+void
+CosUmd12MetaCommandRoiPooling::BindHwIoTableAndReadyHwMetaCommand()
+{
+    memcpy(&m_hwIoTable, &m_executeDesc, sizeof(m_hwIoTable));
+
+    memcpy(&m_hwMetaCommand, &m_createDesc, sizeof(m_hwMetaCommand));
 }
 
 #endif

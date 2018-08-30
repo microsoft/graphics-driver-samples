@@ -122,17 +122,20 @@ struct GpuHwMetaCommand
 
 #if MLMC
     //
-    // Followed by META_COMMAND_CREATE_*_DESC
+    // Followed by THwMetaCommand structure (per type of meta command)
+    //
+    // COSD commonly reuses META_COMMAND_CREATE_*_DESC
+    //
+    // For HW driver it may contain compiled code for meta command and
+    // other info for its execution
     //
 
     //
-    // Followed by same number of PHYSICAL_ADDRESS "slots" as
+    // Followed by THwIoTable structure (per type of meta command)
+    //
+    // COSD commonly reuses META_COMMAND_EXECUTE_*_DESC
+    // So it commonly has the same number of PHYSICAL_ADDRESS "slots" as
     // D3D12_GPU_DESCRIPTOR_HANDLE in META_COMMAND_EXECUTE_*_DESC
-    //
-
-    //
-    // For HW driver followed by the compiled code for meta command or other
-    // info for its execution
     //
 #endif
 };
