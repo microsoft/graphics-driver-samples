@@ -327,4 +327,11 @@ typedef TCosUmd12MetaCommand<META_COMMAND_CREATE_ROI_POOLING_DESC,
                              META_COMMAND_CREATE_ROI_POOLING_DESC,
                              META_COMMAND_EXECUTE_ROI_POOLING_DESC> CosUmd12MetaCommandRoiPooling;
 
+typedef TCosUmd12MetaCommand<META_COMMAND_CREATE_COPY_TENSOR_DESC,
+                             META_COMMAND_INITIALIZE_COPY_TENSOR_DESC,
+                             META_COMMAND_EXECUTE_COPY_TENSOR_DESC,
+                             MetaCommandCopyTensor,
+                             HW_META_COMMAND_COPY_TENSOR,
+                             HW_IO_TABLE_COPY_TENSOR> CosUmd12MetaCommandCopyTensor;
+
 #endif

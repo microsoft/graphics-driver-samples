@@ -4,6 +4,32 @@
 
 #if MLMC
 
+static UINT
+CosKmGetTensorElementSize(
+    META_COMMAND_TENSOR_DATA_TYPE   dstDataType,
+    META_COMMAND_TENSOR_DATA_TYPE   srcDataType)
+{
+    // No support for type conversion
+    if (dstDataType != srcDataType)
+    {
+        return 0;
+    }
+
+    switch (dstDataType)
+    {
+    case META_COMMAND_TENSOR_DATA_TYPE_FLOAT16:
+        return 2;
+        break;
+    case META_COMMAND_TENSOR_DATA_TYPE_FLOAT32:
+    case META_COMMAND_TENSOR_DATA_TYPE_UINT32:
+        return 4;
+        break;
+    default:
+        return 0;
+        break;
+    }
+}
+
 static void
 CosKmExecuteMetaCommandNormalization(
     META_COMMAND_CREATE_NORMALIZATION_DESC *  pCreateDesc,
@@ -134,6 +160,29 @@ CosKmExecuteMetaCommandRoiPooling(
     metaCommandId = MetaCommandRoiPooling;
 }
 
+static void
+CosKmExecuteMetaCommandCopyTensor(
+    HW_META_COMMAND_COPY_TENSOR *   pHwMetaCommand,
+    HW_IO_TABLE_COPY_TENSOR *   pHwIoTable)
+{
+    UINT dataSize;
+
+    if (pHwMetaCommand->DstDesc.Stride[0] != pHwMetaCommand->SrcDesc.Stride[0])
+    {
+        return;
+    }
+
+    dataSize = ((UINT)pHwMetaCommand->DstDesc.Stride[0])*
+               CosKmGetTensorElementSize(
+                pHwMetaCommand->DstDesc.DataType,
+                pHwMetaCommand->SrcDesc.DataType);
+
+    memcpy(
+        (BYTE*)pHwIoTable->DstResource.ptr,
+        (BYTE*)pHwIoTable->SrcResource.ptr,
+        dataSize);
+}
+
 void
 CosKmFixupResourceCpuAddress(
     GpuHWDescriptor *   pHwDescriptor,
@@ -249,6 +298,15 @@ CosKmExecuteMetaCommand(
 
             CosKmFixupResourceCpuAddress((GpuHWDescriptor *)pExecuteDesc, sizeof(*pExecuteDesc)/sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
             CosKmExecuteMetaCommandRoiPooling(pCreateDesc, pExecuteDesc);
+        }
+        break;
+    case MetaCommandCopyTensor:
+        {
+            HW_META_COMMAND_COPY_TENSOR *  pHwMetaCommand = (HW_META_COMMAND_COPY_TENSOR *)(pMetaCommand + 1);
+            HW_IO_TABLE_COPY_TENSOR * pHwIoTable = (HW_IO_TABLE_COPY_TENSOR *)(pHwMetaCommand + 1);
+
+            CosKmFixupResourceCpuAddress((GpuHWDescriptor *)pHwIoTable, sizeof(*pHwIoTable)/sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
+            CosKmExecuteMetaCommandCopyTensor(pHwMetaCommand, pHwIoTable);
         }
         break;
     default:

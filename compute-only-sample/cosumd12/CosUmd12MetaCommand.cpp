@@ -296,4 +296,30 @@ CosUmd12MetaCommandRoiPooling::BindHwIoTableAndReadyHwMetaCommand()
     memcpy(&m_hwMetaCommand, &m_createDesc, sizeof(m_hwMetaCommand));
 }
 
+const UINT CosUmd12MetaCommandCopyTensor::m_numCreationParameters = 0;
+const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandCopyTensor::m_creationParametersDesc[];
+
+const UINT CosUmd12MetaCommandCopyTensor::m_numInitializationParameters = 0;
+const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandCopyTensor::m_initializationParametersDesc[];
+
+const UINT CosUmd12MetaCommandCopyTensor::m_numExecutionParameters = 0;
+const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandCopyTensor::m_executionParametersDesc[];
+
+void
+CosUmd12MetaCommandCopyTensor::Compile()
+{
+}
+
+void
+CosUmd12MetaCommandCopyTensor::BindHwIoTableAndReadyHwMetaCommand()
+{
+    m_hwIoTable.DstResource = m_executeDesc.DstResource;
+    m_hwIoTable.SrcResource = m_executeDesc.SrcResource;
+    m_hwIoTable.TemporaryResource = m_executeDesc.TemporaryResource;
+
+    m_hwMetaCommand.DstDesc = m_executeDesc.DstDesc;
+    m_hwMetaCommand.SrcDesc = m_executeDesc.SrcDesc;
+    m_hwMetaCommand.BindFlags = m_createDesc.BindFlags;
+}
+
 #endif

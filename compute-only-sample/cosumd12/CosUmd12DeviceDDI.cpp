@@ -1327,7 +1327,8 @@ D3D12DDIARG_META_COMMAND_DESC CosUmd12Device::m_supportedMetaCommandDescs[] =
     { MetaCommand_Pooling,       L"Pooling",       D3D12DDI_GRAPHICS_STATE_NONE, D3D12DDI_GRAPHICS_STATE_NONE },
     { MetaCommand_Reduction,     L"Reduction",     D3D12DDI_GRAPHICS_STATE_NONE, D3D12DDI_GRAPHICS_STATE_NONE },
     { MetaCommand_RNN,           L"RNN",           D3D12DDI_GRAPHICS_STATE_NONE, D3D12DDI_GRAPHICS_STATE_NONE },
-    { MetaCommand_RoiPooling,    L"RoiPooling",    D3D12DDI_GRAPHICS_STATE_NONE, D3D12DDI_GRAPHICS_STATE_NONE }
+    { MetaCommand_RoiPooling,    L"RoiPooling",    D3D12DDI_GRAPHICS_STATE_NONE, D3D12DDI_GRAPHICS_STATE_NONE },
+    { MetaCommand_CopyTensor,    L"CopyTensor",    D3D12DDI_GRAPHICS_STATE_NONE, D3D12DDI_GRAPHICS_STATE_NONE }
 #endif
 };
 
@@ -1401,6 +1402,10 @@ HRESULT APIENTRY CosUmd12Device_Ddi_EnumerateMetaCommandParameters(
     {
         return CosUmd12MetaCommandRoiPooling::EnumerateMetaCommandParameters(Stage, pParameterCount, pParameterDescs);
     }
+    else if (IsEqualGUID(CommandId, MetaCommand_CopyTensor))
+    {
+        return CosUmd12MetaCommandCopyTensor::EnumerateMetaCommandParameters(Stage, pParameterCount, pParameterDescs);
+    }
 #endif
 
     return E_INVALIDARG;
@@ -1459,6 +1464,10 @@ SIZE_T APIENTRY CosUmd12Device_Ddi_CalcPrivateMetaCommandSize(
     else if (IsEqualGUID(CommandId, MetaCommand_RoiPooling))
     {
         return CosUmd12MetaCommandRoiPooling::CalculateSize(CommandId);
+    }
+    else if (IsEqualGUID(CommandId, MetaCommand_CopyTensor))
+    {
+        return CosUmd12MetaCommandCopyTensor::CalculateSize(CommandId);
     }
 #endif
     else
@@ -1580,6 +1589,22 @@ HRESULT APIENTRY CosUmd12Device_Ddi_CreateMetaCommand(
                                         CreateDescSizeInBytes,
                                         RtMetaCommand);
     }
+#if 0
+    //
+    // Enable only for Windows build newer than 18231
+    // Since it is used to prepare data for other meta commands, only enable after solid testing
+    // Meanwhile ResourceCopy and CopyBufferRegion can be relied upon
+    //
+    else if (IsEqualGUID(CommandId, MetaCommand_CopyTensor))
+    {
+        new (MetaCommand.pDrvPrivate) CosUmd12MetaCommandCopyTensor(
+            pDevice,
+            NodeMask,
+            pvCreateDesc,
+            CreateDescSizeInBytes,
+            RtMetaCommand);
+    }
+#endif
 #endif
     else
     {

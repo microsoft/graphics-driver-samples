@@ -109,9 +109,28 @@ enum MetaCommandId
     MetaCommandPooling          = 106,
     MetaCommandReduction        = 107,
     MetaCommandRNN              = 108,
-    MetaCommandRoiPooling       = 109
+    MetaCommandRoiPooling       = 109,
+    MetaCommandCopyTensor       = 110
 #endif
 };
+
+#if MLMC
+
+struct HW_META_COMMAND_COPY_TENSOR
+{
+    META_COMMAND_TENSOR_DESC DstDesc;
+    META_COMMAND_TENSOR_DESC SrcDesc;
+    META_COMMAND_BIND_FLAGS BindFlags;
+};
+
+struct HW_IO_TABLE_COPY_TENSOR
+{
+    D3D12_GPU_DESCRIPTOR_HANDLE DstResource;
+    D3D12_GPU_DESCRIPTOR_HANDLE SrcResource;
+    D3D12_GPU_DESCRIPTOR_HANDLE TemporaryResource;
+};
+
+#endif
 
 struct GpuHwMetaCommand
 {
