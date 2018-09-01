@@ -631,7 +631,7 @@ D3D12DDI_COMMAND_LIST_FUNCS_3D_0052 g_CosUmd12ComputeCommandList_Ddi_0052 =
     CosUmd12ComputeCommandList_Ddi_ResourceCopy,                            // pfnResourceCopy
     CosUmd12ComputeCommandList_Ddi_CopyTiles,                                   // pfnCopyTiles
     CosUmd12ComputeCommandList_Ddi_CopyBufferRegion_0003,                   // pfnCopyBufferRegion
-    CosUmd12ComputeCommandList_Ddi_ResourceResolveSubresource,              // pfnResourceResolveSubresource
+    CosUmd12ComputeCommandList_Ddi_ResourceResolveSubresource,                  // pfnResourceResolveSubresource
     CosUmd12ComputeCommandList_Ddi_ExecuteBundle,                           // pfnExecuteBundle
     CosUmd12ComputeCommandList_Ddi_ExecuteIndirect,                             // pfnExecuteIndirect
     CosUmd12ComputeCommandList_Ddi_ResourceBarrier_0022,                    // pfnResourceBarrier
@@ -640,7 +640,7 @@ D3D12DDI_COMMAND_LIST_FUNCS_3D_0052 g_CosUmd12ComputeCommandList_Ddi_0052 =
     CosUmd12ComputeCommandList_Ddi_BeginQuery_0003,                         // pfnBeginQuery
     CosUmd12ComputeCommandList_Ddi_EndQuery_0003,                           // pfnEndQuery
     CosUmd12ComputeCommandList_Ddi_ResolveQueryData,                        // pfnResolveQueryData
-    CosUmd12ComputeCommandList_Ddi_SetPredication,                              // pfnSetPredication
+    CosUmd12ComputeCommandList_Ddi_SetPredication,                          // pfnSetPredication
     CosUmd12ComputeCommandList_Ddi_IaSetTopology_0003,                          // pfnIaSetTopology    
     CosUmd12ComputeCommandList_Ddi_RsSetViewports_0003,                         // pfnRsSetViewports
     CosUmd12ComputeCommandList_Ddi_RsSetScissorRects_0003,                      // pfnRsSetScissorRects
@@ -668,13 +668,13 @@ D3D12DDI_COMMAND_LIST_FUNCS_3D_0052 g_CosUmd12ComputeCommandList_Ddi_0052 =
     CosUmd12ComputeCommandList_Ddi_OmSetRenderTargets_0003,                     // pfnOMSetRenderTargets
     CosUmd12ComputeCommandList_Ddi_SetMarker,                               // pfnSetMarker
     CosUmd12ComputeCommandList_Ddi_ClearRootArguments,                      // pfnClearRootArguments
-    CosUmd12ComputeCommandList_Ddi_AtomicCopyBufferRegion_0003,             // pfnAtomicCopyBufferRegion
+    CosUmd12ComputeCommandList_Ddi_AtomicCopyBufferRegion_0003,                 // pfnAtomicCopyBufferRegion
     CosUmd12ComputeCommandList_Ddi_OmSetDepthBounds_0025,                       // pfnOMSetDepthBounds
-    CosUmd12ComputeCommandList_Ddi_SetSamplePositions_0027,                 // pfnSetSamplePositions
-    CosUmd12ComputeCommandList_Ddi_ResourceResolveSubresourceRegion,        // pfnResourceResolveSubresourceRegion
+    CosUmd12ComputeCommandList_Ddi_SetSamplePositions_0027,                     // pfnSetSamplePositions
+    CosUmd12ComputeCommandList_Ddi_ResourceResolveSubresourceRegion,            // pfnResourceResolveSubresourceRegion
     CosUmd12ComputeCommandList_Ddi_SetProtectedResourceSession_0030,            // pfnSetProtectedResourceSession
     CosUmd12ComputeCommandList_Ddi_WriteBufferImmediate_0032,               // pfnWriteBufferImmediate
-    CosUmd12ComputeCommandList_Ddi_SetViewInstanceMask_0033,                // pfnSetViewInstanceMask
+    CosUmd12ComputeCommandList_Ddi_SetViewInstanceMask_0033,                    // pfnSetViewInstanceMask
     CosUmd12ComputeCommandList_Ddi_InitializeMetaCommand,                   // pfnInitializeMetaCommand
     CosUmd12ComputeCommandList_Ddi_ExecuteMetaCommand                       // pfnExecuteMetaCommand
 };

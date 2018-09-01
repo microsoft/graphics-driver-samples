@@ -1654,7 +1654,7 @@ D3D12DDI_DEVICE_FUNCS_CORE_0052 g_CosUmd12Device_Ddi_0052 =
     CosUmd12Device_Ddi_CalcPrivateShaderSize_0026,                      // pfnCalcPrivateShaderSize
     CosUmd12Device_Ddi_CreateVertexShader_0026,                             // pfnCreateVertexShader
     CosUmd12Device_Ddi_CreatePixelShader_0026,                              // pfnCreatePixelShader
-    CosUmd12Device_Ddi_CreateGeometryShader_0026,                       // pfnCreateGeometryShader
+    CosUmd12Device_Ddi_CreateGeometryShader_0026,                           // pfnCreateGeometryShader
     CosUmd12Device_Ddi_CreateComputeShader_0026,                        // pfnCreateComputeShader
     CosUmd12Device_Ddi_CalcPrivateGeometryShaderWithStreamOutput_0026,      // pfnCalcPrivateGeometryShaderWithStreamOutput
     CosUmd12Device_Ddi_CreateGeometryShaderWithStreamOutput_0026,           // pfnCreateGeometryShaderWithStreamOutput
@@ -1669,9 +1669,9 @@ D3D12DDI_DEVICE_FUNCS_CORE_0052 g_CosUmd12Device_Ddi_0052 =
     CosUmd12Device_Ddi_CreateCommandPool_0040,                          // pfnCreateCommandPool
     CosUmd12Device_Ddi_DestroyCommandPool_0040,                         // pfnDestroyCommandPool
     CosUmd12Device_Ddi_ResetCommandPool_0040,                           // pfnResetCommandPool
-    CosUmd12Device_Ddi_CalcPrivatePipelineStateSize_0033,                   // pfnCalcPrivatePipelineStateSize
-    CosUmd12Device_Ddi_CreatePipelineState_0033,                            // pfnCreatePipelineState
-    CosUmd12Device_Ddi_DestroyPipelineState,                                // pfnDestroyPipelineState
+    CosUmd12Device_Ddi_CalcPrivatePipelineStateSize_0033,               // pfnCalcPrivatePipelineStateSize
+    CosUmd12Device_Ddi_CreatePipelineState_0033,                        // pfnCreatePipelineState
+    CosUmd12Device_Ddi_DestroyPipelineState,                            // pfnDestroyPipelineState
     CosUmd12Device_Ddi_CalcPrivateCommandListSize_0040,                 // pfnCalcPrivateCommandListSize
     CosUmd12Device_Ddi_CreateCommandList_0040,                          // pfnCreateCommandList
     CosUmd12Device_Ddi_DestroyCommandList,                              // pfnDestroyCommandList
