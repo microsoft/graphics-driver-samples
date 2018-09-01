@@ -277,7 +277,7 @@
     <ClCompile Include="CosUmd12CommandPool.cpp" />
     <ClCompile Include="CosUmd12CommandQueue.cpp" />
     <ClCompile Include="CosUmd12CommandQueueDdi.cpp" />
-    <ClCompile Include="CosUmd12ComputeCommandListDddi.cpp" />
+    <ClCompile Include="CosUmd12ComputeCommandListDdi.cpp" />
     <ClCompile Include="CosUmd12Descriptor.cpp" />
     <ClCompile Include="CosUmd12DescriptorHeap.cpp" />
     <ClCompile Include="CosUmd12Device.cpp" />

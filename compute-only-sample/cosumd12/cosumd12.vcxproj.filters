@@ -89,9 +89,6 @@
     <ClCompile Include="CosUmd12CommandQueueDdi.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="CosUmd12ComputeCommandListDddi.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="CosUmd12DeviceDdi.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -129,6 +126,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="CosUmd12MetaCommand.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CosUmd12ComputeCommandListDdi.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
