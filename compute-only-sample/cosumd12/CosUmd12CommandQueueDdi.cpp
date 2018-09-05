@@ -5,7 +5,7 @@ void APIENTRY Ddi_CommandQueue_ExecuteCommandLists(
     UINT Count,
     _In_reads_(Count) const D3D12DDI_HCOMMANDLIST* pCommandLists)
 {
-    STOP_IN_FUNCTION();
+    TRACE_FUNCTION();
 
     CosUmd12CommandQueue * pCommandQueue = CosUmd12CommandQueue::CastFrom(CommandQueue);
 
@@ -25,6 +25,7 @@ void APIENTRY Ddi_CommandQueue_UpdateTileMappings(
     _In_reads_opt_(NumRanges) const UINT* pRangeTileCounts,
     D3D12DDI_TILE_MAPPING_FLAGS Flags)
 {
+    UNEXPECTED_DDI();
 }
 
 void APIENTRY Ddi_CommandQueue_CopyTileMappings(
@@ -46,14 +47,14 @@ void APIENTRY Ddi_CommandQueue_SignalFence(
     D3D12DDI_HCOMMANDQUEUE CommandQueue,
     D3D12DDIARG_FENCE_OPERATION* pOperation)
 {
-    STOP_IN_FUNCTION();
+    TRACE_FUNCTION();
 }
 
 void APIENTRY Ddi_CommandQueue_WaitForFence(
     D3D12DDI_HCOMMANDQUEUE CommandQueue,
     D3D12DDIARG_FENCE_OPERATION* pOperation)
 {
-    STOP_IN_FUNCTION();
+    TRACE_FUNCTION();
 }
 
 D3D12DDI_COMMAND_QUEUE_FUNCS_CORE_0001 g_CosUmd12CommandQueue_Ddi_0001 =

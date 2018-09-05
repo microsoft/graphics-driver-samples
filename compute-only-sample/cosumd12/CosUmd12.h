@@ -15,11 +15,19 @@ typedef _Return_type_success_(return >= 0) LONG NTSTATUS;
 
 #include <list>
 
-void StopInFunction(const char * function, const char * file, int line);
+void TraceFunction(const char * function, const char * file, int line);
 
-#define STOP_IN_FUNCTION() StopInFunction(__FUNCTION__, __FILE__, __LINE__);
+#define TRACE_FUNCTION() TraceFunction(__FUNCTION__, __FILE__, __LINE__);
 
-#define ASSERT(cond) if (!(cond)) STOP_IN_FUNCTION()
+void AssertFunction(const char * function, const char * file, int line);
+
+#define ASSERT_FUNCTION() AssertFunction(__FUNCTION__, __FILE__, __LINE__);
+
+#define ASSERT(cond) if (!(cond)) ASSERT_FUNCTION()
+
+void UnexpectedDdi(const char * function, const char * file, int line);
+
+#define UNEXPECTED_DDI() UnexpectedDdi(__FUNCTION__, __FILE__, __LINE__);
 
 #include "CosAllocation.h"
 #include "CosContext.h"

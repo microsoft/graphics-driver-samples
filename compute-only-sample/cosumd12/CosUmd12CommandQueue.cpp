@@ -56,7 +56,7 @@ CosUmd12CommandQueue::ExecuteCommandLists(
     UINT Count,
     const D3D12DDI_HCOMMANDLIST* pCommandLists)
 {
-    STOP_IN_FUNCTION();
+    TRACE_FUNCTION();
 
     for (UINT i = 0; i < Count; i++)
     {

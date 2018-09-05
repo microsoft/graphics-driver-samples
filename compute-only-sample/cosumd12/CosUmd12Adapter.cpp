@@ -372,7 +372,7 @@ HRESULT APIENTRY CosUmd12Adapter::GetCaps(
 
         default:
         {
-            STOP_IN_FUNCTION();
+            TRACE_FUNCTION();
             hr = E_NOTIMPL;
             break;
         }
@@ -478,13 +478,13 @@ HRESULT APIENTRY CosUmd12Adapter::FillDdiTable(D3D12DDI_HADAPTER hAdapter, D3D12
         case D3D12DDI_TABLE_TYPE_0030_CONTENT_PROTECTION_CALLBACKS:
         case D3D12DDI_TABLE_TYPE_0030_DEVICE_CONTENT_PROTECTION_STREAMING:
         {
-            STOP_IN_FUNCTION();
+            TRACE_FUNCTION();
             hr = E_UNEXPECTED;
         }
 
         default:
         {
-            STOP_IN_FUNCTION();
+            TRACE_FUNCTION();
             hr = E_UNEXPECTED;
         }
     }
