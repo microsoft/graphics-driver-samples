@@ -246,20 +246,17 @@
   <ItemGroup>
     <ClInclude Include="CosUmd12.h" />
     <ClInclude Include="CosUmd12Adapter.h" />
-    <ClInclude Include="CosUmd12BlendState.h" />
     <ClInclude Include="CosUmd12CommandBuffer.h" />
     <ClInclude Include="CosUmd12CommandList.h" />
     <ClInclude Include="CosUmd12CommandPool.h" />
     <ClInclude Include="CosUmd12CommandQueue.h" />
     <ClInclude Include="CosUmd12CommandRecorder.h" />
-    <ClInclude Include="CosUmd12DepthStencilState.h" />
     <ClInclude Include="CosUmd12DescriptorHeap.h" />
     <ClInclude Include="CosUmd12Device.h" />
     <ClInclude Include="CosUmd12Fence.h" />
     <ClInclude Include="CosUmd12Heap.h" />
     <ClInclude Include="CosUmd12MetaCommand.h" />
     <ClInclude Include="CosUmd12PipelineState.h" />
-    <ClInclude Include="CosUmd12RasterizerState.h" />
     <ClInclude Include="CosUmd12Resource.h" />
     <ClInclude Include="CosUmd12RootSignature.h" />
     <ClInclude Include="CosUmd12Shader.h" />

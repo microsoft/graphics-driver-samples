@@ -158,7 +158,7 @@ SIZE_T APIENTRY CosUmd12Device_Ddi_CalcPrivateBlendStateSize_0010(
 {
     UNEXPECTED_DDI();
 
-    return CosUmd12BlendState::CalculateSize(pDesc);
+    return 0;
 }
 
 void APIENTRY CosUmd12Device_Ddi_CreateBlendState_0010(
@@ -167,9 +167,6 @@ void APIENTRY CosUmd12Device_Ddi_CreateBlendState_0010(
     D3D12DDI_HBLENDSTATE BlendState)
 {
     UNEXPECTED_DDI();
-
-    CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
-    CosUmd12BlendState * pBlendState = new (BlendState.pDrvPrivate) CosUmd12BlendState(pDevice, pDesc);
 }
 
 void APIENTRY CosUmd12Device_Ddi_DestroyBlendState(
@@ -177,11 +174,6 @@ void APIENTRY CosUmd12Device_Ddi_DestroyBlendState(
     D3D12DDI_HBLENDSTATE BlendState)
 {
     UNEXPECTED_DDI();
-
-    CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
-    CosUmd12BlendState * pBlendState = CosUmd12BlendState::CastFrom(BlendState);
-
-    pBlendState->~CosUmd12BlendState();
 }
 
 SIZE_T APIENTRY CosUmd12Device_Ddi_CalcPrivateDepthStencilStateSize_0025(
@@ -190,7 +182,7 @@ SIZE_T APIENTRY CosUmd12Device_Ddi_CalcPrivateDepthStencilStateSize_0025(
 {
     UNEXPECTED_DDI();
 
-    return CosUmd12DepthStencilState::CalculateSize(pDesc);
+    return 0;
 }
 
 void APIENTRY CosUmd12Device_Ddi_CreateDepthStencilState_0025(
@@ -199,9 +191,6 @@ void APIENTRY CosUmd12Device_Ddi_CreateDepthStencilState_0025(
     D3D12DDI_HDEPTHSTENCILSTATE DepthStencilState)
 {
     UNEXPECTED_DDI();
-
-    CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
-    CosUmd12DepthStencilState * pShader = new (DepthStencilState.pDrvPrivate) CosUmd12DepthStencilState(pDevice, pDesc);
 }
 
 void APIENTRY CosUmd12Device_Ddi_DestroyDepthStencilState(
@@ -209,11 +198,6 @@ void APIENTRY CosUmd12Device_Ddi_DestroyDepthStencilState(
     D3D12DDI_HDEPTHSTENCILSTATE DepthStencilState)
 {
     UNEXPECTED_DDI();
-
-    CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
-    CosUmd12DepthStencilState * pDepthStencilState = CosUmd12DepthStencilState::CastFrom(DepthStencilState);
-
-    pDepthStencilState->~CosUmd12DepthStencilState();
 }
 
 SIZE_T APIENTRY CosUmd12Device_Ddi_CalcPrivateRasterizerStateSize_0010(
@@ -222,7 +206,7 @@ SIZE_T APIENTRY CosUmd12Device_Ddi_CalcPrivateRasterizerStateSize_0010(
 {
     UNEXPECTED_DDI();
 
-    return CosUmd12RasterizerState::CalculateSize(pDesc);
+    return 0;
 }
 
 void APIENTRY CosUmd12Device_Ddi_CreateRasterizerState_0010(
@@ -231,9 +215,6 @@ void APIENTRY CosUmd12Device_Ddi_CreateRasterizerState_0010(
     D3D12DDI_HRASTERIZERSTATE RasterizerState)
 {
     UNEXPECTED_DDI();
-
-    CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
-    CosUmd12RasterizerState * pRasterizerState = new (RasterizerState.pDrvPrivate) CosUmd12RasterizerState(pDevice, pDesc);
 }
 
 void APIENTRY CosUmd12Device_Ddi_DestroyRasterizerState(
@@ -241,11 +222,6 @@ void APIENTRY CosUmd12Device_Ddi_DestroyRasterizerState(
     D3D12DDI_HRASTERIZERSTATE RasterizerState)
 {
     UNEXPECTED_DDI();
-
-    CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
-    CosUmd12RasterizerState * pRasterizerState = CosUmd12RasterizerState::CastFrom(RasterizerState);
-
-    pRasterizerState->~CosUmd12RasterizerState();
 }
 
 SIZE_T APIENTRY CosUmd12Device_Ddi_CalcPrivateShaderSize_0026(

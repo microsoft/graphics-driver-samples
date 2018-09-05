@@ -30,15 +30,6 @@
     <ClInclude Include="CosUmd12Shader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="CosUmd12BlendState.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="CosUmd12DepthStencilState.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="CosUmd12RasterizerState.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="CosUmd12PipelineState.h">
       <Filter>Header Files</Filter>
     </ClInclude>
