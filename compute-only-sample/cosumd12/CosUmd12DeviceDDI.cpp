@@ -773,8 +773,15 @@ void APIENTRY CosUmd12Device_Ddi_DestroyHeapAndResource(
     CosUmd12Heap * pHeap = CosUmd12Heap::CastFrom(Heap);
     CosUmd12Resource * pResource = CosUmd12Resource::CastFrom(Resource);
 
-    if (pHeap != NULL) pHeap->~CosUmd12Heap();
-    if (pResource != NULL) pResource->~CosUmd12Resource();
+    if (pHeap != NULL)
+    {
+        pHeap->~CosUmd12Heap();
+    }
+
+    if (pResource != NULL)
+    {
+        pResource->~CosUmd12Resource();
+    }
 }
 
 HRESULT APIENTRY CosUmd12Device_Ddi_MakeResident_0001(
@@ -998,14 +1005,16 @@ HRESULT APIENTRY CosUmd12Device_Ddi_OpenHeapAndResource_0043(
     CosUmd12Heap * pHeap = new (Heap.pDrvPrivate) CosUmd12Heap(pDevice);
     CosUmd12Resource * pResource = new (Resource.pDrvPrivate) CosUmd12Resource(pDevice, RtResource);
 
-    if (pDesc->NumAllocations == 1) {
+    if (pDesc->NumAllocations == 1)
+    {
         ASSERT(pDesc->pOpenAllocationInfo->PrivateDriverDataSize == sizeof(CosAllocationExchange));
         CosAllocationExchange * pAllocation = (CosAllocationExchange *)pDesc->pOpenAllocationInfo->pPrivateDriverData;
         ASSERT(pAllocation->m_magic == CosAllocationExchange::kMagic);
 
         pResource->Initialize(pAllocation);
-
-    } else {
+    }
+    else
+    {
         TRACE_FUNCTION();
         return E_NOTIMPL;
     }
