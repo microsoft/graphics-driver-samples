@@ -239,9 +239,6 @@ void APIENTRY CosUmd12Device_Ddi_CreateVertexShader_0026(
     D3D12DDI_HSHADER Shader)
 {
     UNEXPECTED_DDI();
-
-    CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
-    CosUmd12Shader * pShader = new (Shader.pDrvPrivate) CosUmd12Shader(pDevice, pDesc);
 }
 
 void APIENTRY CosUmd12Device_Ddi_CreatePixelShader_0026(
@@ -250,9 +247,6 @@ void APIENTRY CosUmd12Device_Ddi_CreatePixelShader_0026(
     D3D12DDI_HSHADER Shader)
 {
     UNEXPECTED_DDI();
-
-    CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
-    CosUmd12Shader * pShader = new (Shader.pDrvPrivate) CosUmd12Shader(pDevice, pDesc);
 }
 
 void APIENTRY CosUmd12Device_Ddi_CreateGeometryShader_0026(
@@ -261,9 +255,6 @@ void APIENTRY CosUmd12Device_Ddi_CreateGeometryShader_0026(
     D3D12DDI_HSHADER Shader)
 {
     UNEXPECTED_DDI();
-
-    CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
-    CosUmd12Shader * pShader = new (Shader.pDrvPrivate) CosUmd12Shader(pDevice, pDesc);
 }
 
 void APIENTRY CosUmd12Device_Ddi_CreateComputeShader_0026(
