@@ -1683,7 +1683,7 @@ D3D12DDI_DEVICE_FUNCS_CORE_0052 g_CosUmd12Device_Ddi_0052 =
 {
     CosUmd12Device_Ddi_CheckFormatSupport,                              // pfnCheckFormatSupport
     CosUmd12Device_Ddi_CheckMultisampleQualityLevels,                       // pfnCheckMultisampleQualityLevels
-    CosUmd12Device_Ddi_GetMipPacking,                                   // pfnGetMipPacking
+    CosUmd12Device_Ddi_GetMipPacking,                                       // pfnGetMipPacking
     CosUmd12Device_Ddi_CalcPrivateElementLayoutSize_0010,                   // pfnCalcPrivateElementLayoutSize
     CosUmd12Device_Ddi_CreateElementLayout_0010,                            // pfnCreateElementLayout
     CosUmd12Device_Ddi_DestroyElementLayout,                                // pfnDestroyElementLayout
