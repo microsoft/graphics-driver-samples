@@ -9,3 +9,4 @@ Release
 *.suo
 *.ipch
 *.opendb
+MetaCommandDefinitions.h

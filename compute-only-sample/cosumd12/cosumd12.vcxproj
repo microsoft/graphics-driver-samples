@@ -141,9 +141,10 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;COSUMD12_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MLMC=0;_DEBUG;COSUMD12_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -156,9 +157,10 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;COSUMD12_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MLMC=0;_DEBUG;COSUMD12_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -171,9 +173,10 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;COSUMD12_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MLMC=0;_DEBUG;COSUMD12_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -188,9 +191,10 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;COSUMD12_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MLMC=0;NDEBUG;COSUMD12_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -207,9 +211,10 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;COSUMD12_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MLMC=0;NDEBUG;COSUMD12_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -226,9 +231,10 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;COSUMD12_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MLMC=0;NDEBUG;COSUMD12_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -240,20 +246,17 @@
   <ItemGroup>
     <ClInclude Include="CosUmd12.h" />
     <ClInclude Include="CosUmd12Adapter.h" />
-    <ClInclude Include="CosUmd12BlendState.h" />
     <ClInclude Include="CosUmd12CommandBuffer.h" />
     <ClInclude Include="CosUmd12CommandList.h" />
     <ClInclude Include="CosUmd12CommandPool.h" />
     <ClInclude Include="CosUmd12CommandQueue.h" />
     <ClInclude Include="CosUmd12CommandRecorder.h" />
-    <ClInclude Include="CosUmd12DepthStencilState.h" />
     <ClInclude Include="CosUmd12DescriptorHeap.h" />
     <ClInclude Include="CosUmd12Device.h" />
     <ClInclude Include="CosUmd12Fence.h" />
     <ClInclude Include="CosUmd12Heap.h" />
     <ClInclude Include="CosUmd12MetaCommand.h" />
     <ClInclude Include="CosUmd12PipelineState.h" />
-    <ClInclude Include="CosUmd12RasterizerState.h" />
     <ClInclude Include="CosUmd12Resource.h" />
     <ClInclude Include="CosUmd12RootSignature.h" />
     <ClInclude Include="CosUmd12Shader.h" />
@@ -268,11 +271,10 @@
     <ClCompile Include="CosUmd12Adapter.cpp" />
     <ClCompile Include="CosUmd12CommandBuffer.cpp" />
     <ClCompile Include="CosUmd12CommandList.cpp" />
-    <ClCompile Include="CosUmd12CommandListDddi.cpp" />
     <ClCompile Include="CosUmd12CommandPool.cpp" />
     <ClCompile Include="CosUmd12CommandQueue.cpp" />
     <ClCompile Include="CosUmd12CommandQueueDdi.cpp" />
-    <ClCompile Include="CosUmd12ComputeCommandListDddi.cpp" />
+    <ClCompile Include="CosUmd12ComputeCommandListDdi.cpp" />
     <ClCompile Include="CosUmd12Descriptor.cpp" />
     <ClCompile Include="CosUmd12DescriptorHeap.cpp" />
     <ClCompile Include="CosUmd12Device.cpp" />

@@ -11,10 +11,6 @@
 
 //#include "CosUmdShader.h"
 
-//#include "CosUmdBlendState.h"
-//#include "CosUmdRasterizerState.h"
-//#include "CosUmdDepthStencilState.h"
-
 #ifndef PAGE_SIZE
 #define PAGE_SIZE 4096
 #endif

@@ -1057,82 +1057,6 @@ CosKmAdapter::QueryAdapterInfo(
     }
     break;
 
-    case DXGKQAITYPE_QUERYSEGMENT3:
-    {
-        if (pQueryAdapterInfo->OutputDataSize < sizeof(DXGK_QUERYSEGMENTOUT3))
-        {
-            COS_ASSERTION(
-                "Output buffer is too small. (pQueryAdapterInfo->OutputDataSize=%d, sizeof(DXGK_QUERYSEGMENTOUT3)=%d)",
-                pQueryAdapterInfo->OutputDataSize,
-                sizeof(DXGK_QUERYSEGMENTOUT3));
-            return STATUS_BUFFER_TOO_SMALL;
-        }
-
-        DXGK_QUERYSEGMENTOUT3   *pSegmentInfo = (DXGK_QUERYSEGMENTOUT3*)pQueryAdapterInfo->pOutputData;
-
-        if (!pSegmentInfo[0].pSegmentDescriptor)
-        {
-            pSegmentInfo->NbSegment = 2;
-        }
-        else
-        {
-            DXGK_SEGMENTDESCRIPTOR3 *pSegmentDesc = pSegmentInfo->pSegmentDescriptor;
-
-            //
-            // Private data size should be the maximum of UMD and KMD and the same size must
-            // be reported in DxgkDdiCreateContext for paging engine
-            //
-            pSegmentInfo->PagingBufferPrivateDataSize = sizeof(COSUMDDMAPRIVATEDATA2);
-
-            pSegmentInfo->PagingBufferSegmentId = COSD_SEGMENT_APERTURE;
-            pSegmentInfo->PagingBufferSize = PAGE_SIZE;
-
-            //
-            // Fill out aperture segment descriptor
-            //
-            memset(&pSegmentDesc[0], 0, sizeof(pSegmentDesc[0]));
-
-            pSegmentDesc[0].Flags.Aperture = TRUE;
-
-            //
-            // TODO[bhouse] What does marking it CacheCoherent mean?  What are the side effects?
-            //              What happens if we don't mark CacheCoherent?
-            //
-            pSegmentDesc[0].Flags.CacheCoherent = TRUE;
-
-            //
-            // TODO[bhouse] BaseAddress should never be used.  Do we need to set this still?
-            //
-
-            pSegmentDesc[0].BaseAddress.QuadPart = COSD_SEGMENT_APERTURE_BASE_ADDRESS;
-
-            //
-            // Our fake apperture is not really visible and doesn't need to be.  We
-            // still need to lie that it is visible reporting a bad physical address
-            // that will never be used. This is a legacy requirement of the DX stack.
-            //
-
-            pSegmentDesc[0].CpuTranslatedAddress.QuadPart = 0xFFFFFFFE00000000;
-            pSegmentDesc[0].Flags.CpuVisible = TRUE;
-
-            pSegmentDesc[0].Size = kApertureSegmentSize;
-            pSegmentDesc[0].CommitLimit = kApertureSegmentSize;
-
-            //
-            // Setup local video memory segment
-            //
-
-            memset(&pSegmentDesc[1], 0, sizeof(pSegmentDesc[1]));
-
-            pSegmentDesc[1].BaseAddress.QuadPart = 0LL; // Gpu base physical address
-            pSegmentDesc[1].Flags.CpuVisible = true;
-            pSegmentDesc[1].Flags.CacheCoherent = true;
-            pSegmentDesc[1].Flags.DirectFlip = true;
-            pSegmentDesc[1].CpuTranslatedAddress = CosKmdGlobal::s_videoMemoryPhysicalAddress; // cpu base physical address
-            pSegmentDesc[1].Size = kVidMemSegementSize;
-        }
-    }
-    break;
 
     case DXGKQAITYPE_QUERYSEGMENT4:
     {
@@ -1174,7 +1098,7 @@ CosKmAdapter::QueryAdapterInfo(
             pLocalVidMemSegmentDesc->Flags.CacheCoherent = true;
             pLocalVidMemSegmentDesc->Flags.DirectFlip = true;
             pLocalVidMemSegmentDesc->CpuTranslatedAddress = CosKmdGlobal::s_videoMemoryPhysicalAddress; // cpu base physical address
-            pLocalVidMemSegmentDesc->Size = kVidMemSegementSize;
+            pLocalVidMemSegmentDesc->Size = CosKmdGlobal::s_videoMemorySize;
         }
     }
     break;

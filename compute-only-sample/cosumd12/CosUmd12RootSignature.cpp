@@ -15,7 +15,7 @@ CosUmd12RootSignature::SetRootDescriptorTable(
     UINT rootParameterIndex,
     D3D12DDI_GPU_DESCRIPTOR_HANDLE baseDescriptor)
 {
-    STOP_IN_FUNCTION();
+    TRACE_FUNCTION();
 
     CosUmd12DescriptorHeap * pDescriptorHeap = NULL;
 
@@ -36,8 +36,8 @@ CosUmd12RootSignature::SetRootDescriptorTable(
 
     D3D12DDI_GPU_VIRTUAL_ADDRESS heapGpuAddress = pDescriptorHeap->GetGpuAddress();
 
-    ASSERT(baseDescriptor.ptr > heapGpuAddress);
-    ASSERT((baseDescriptor.ptr - heapGpuAddress) % sizeof(CosUmd12Descriptor));
+    ASSERT(baseDescriptor.ptr >= heapGpuAddress);
+    ASSERT(0 == ((baseDescriptor.ptr - heapGpuAddress) % sizeof(CosUmd12Descriptor)));
 
     UINT gpuVaOffset = (UINT)(baseDescriptor.ptr - pDescriptorHeap->GetGpuAddress());
 
@@ -52,7 +52,7 @@ CosUmd12RootSignature::SetRoot32BitConstants(
     const void* pSrcData,
     UINT destOffsetIn32BitValues)
 {
-    STOP_IN_FUNCTION();
+    TRACE_FUNCTION();
 
     FLOAT * pRootConstant = (FLOAT *)(pRootValues + m_pRootValueOffsets[rootParameterIndex]);
 
@@ -65,7 +65,7 @@ CosUmd12RootSignature::SetRootView(
     UINT rootParameterIndex,
     D3D12DDI_GPU_VIRTUAL_ADDRESS bufferLocation)
 {
-    STOP_IN_FUNCTION();
+    TRACE_FUNCTION();
 
     *((D3D12DDI_GPU_VIRTUAL_ADDRESS *)(pRootValues + m_pRootValueOffsets[rootParameterIndex])) = bufferLocation;
 }
