@@ -302,7 +302,11 @@ void APIENTRY CosUmd12ComputeCommandList_Ddi_SetPipelineState(
     TRACE_FUNCTION();
 
     CosUmd12CommandList * pCommandList = CosUmd12CommandList::CastFrom(CommandList);
-    ASSERT(pCommandList->IsComputeType());
+
+    if (!pCommandList->IsComputeType())
+    {
+        UNEXPECTED_DDI();
+    }
 
     CosUmd12PipelineState * pPipelineState = CosUmd12PipelineState::CastFrom(PipelineState);
 
