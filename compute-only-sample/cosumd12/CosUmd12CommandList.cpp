@@ -417,7 +417,7 @@ CosUmd12CommandList::Dispatch(
     GpuHwComputeShaderDisptch * pCSDispath = (GpuHwComputeShaderDisptch *)(pCommandBuf + hwRootSignatureSetCommandSize);
 
     pCSDispath->m_commandId = ComputeShaderDispatch;
-    pCSDispath->m_commandSize = commandSize;
+    pCSDispath->m_commandSize = commandSize - hwRootSignatureSetCommandSize;
 
     //
     // TODO: Retrieve num threads per group from shader
