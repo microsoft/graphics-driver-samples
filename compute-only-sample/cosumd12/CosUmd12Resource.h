@@ -23,7 +23,7 @@ public:
 
     explicit CosUmd12Resource(CosUmd12Device* pDevice, const D3D12DDIARG_CREATERESOURCE_0003 *pDesc)
     {
-        STOP_IN_FUNCTION();
+        TRACE_FUNCTION();
 
         m_pDevice = pDevice;
         m_hRTResource.handle = NULL;

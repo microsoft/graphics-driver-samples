@@ -30,15 +30,6 @@
     <ClInclude Include="CosUmd12Shader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="CosUmd12BlendState.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="CosUmd12DepthStencilState.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="CosUmd12RasterizerState.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="CosUmd12PipelineState.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -89,16 +80,10 @@
     <ClCompile Include="CosUmd12CommandQueueDdi.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="CosUmd12ComputeCommandListDddi.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="CosUmd12DeviceDdi.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="CosUmd12DxgiDdi.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="CosUmd12CommandListDddi.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="CosUmd12ExtendedFeaturesDdi.cpp">
@@ -132,6 +117,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="CosUmd12MetaCommand.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CosUmd12ComputeCommandListDdi.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

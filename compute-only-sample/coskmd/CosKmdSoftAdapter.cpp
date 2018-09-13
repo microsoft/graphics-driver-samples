@@ -5,6 +5,7 @@
 
 #include "CosKmdSoftAdapter.h"
 #include "CosGpuCommand.h"
+#include "CosKmdMetaCommand.h"
 
 void * CosKmdSoftAdapter::operator new(size_t size)
 {
@@ -149,6 +150,15 @@ CosKmdSoftAdapter::ProcessHWRenderBuffer(
                 }
 
                 commandSize = pCSDispatch->m_commandSize;
+            }
+            break;
+        case MetaCommandExecute:
+            {
+                GpuHwMetaCommand *  pMetaCommand = (GpuHwMetaCommand *)pGpuCommand;
+
+                CosKmExecuteMetaCommand(pMetaCommand);
+
+                commandSize = pMetaCommand->m_commandSize;
             }
             break;
         default:

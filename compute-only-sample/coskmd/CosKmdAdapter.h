@@ -373,8 +373,6 @@ protected:
     BYTE                        m_deviceId[MAX_DEVICE_ID_LENGTH];
     ULONG                       m_deviceIdLength;
 
-    const static int            kVidMemSegementSize = 1024 * 1024;
-
 public:
 
     DEVICE_POWER_STATE          m_AdapterPowerDState;

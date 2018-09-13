@@ -1,5 +1,20 @@
 #pragma once
 
+#if MLMC
+
+#ifndef __d3d12_h__
+
+typedef struct D3D12_GPU_DESCRIPTOR_HANDLE
+{
+    UINT64 ptr;
+} D3D12_GPU_DESCRIPTOR_HANDLE;
+
+#endif
+
+#include "MetaCommandDefinitions.h"
+
+#endif
+
 #pragma warning(disable:4201)
 
 enum GpuCommandId
@@ -8,7 +23,8 @@ enum GpuCommandId
     ResourceCopy,
     Header = 'CSCB',
     RootSignatureSet = 'RTSS',
-    ComputeShaderDispatch = 'CSDP'
+    ComputeShaderDispatch = 'CSDP',
+    MetaCommandExecute = 'MCEX'
 };
 
 struct GpuCommandBufferHeader
@@ -78,6 +94,69 @@ struct GpuHwComputeShaderDisptch
     //
     // Followed by shader binary code
     //
+};
+
+enum MetaCommandId
+{
+    MetaCommandIdentity         = 1,    // TODO: Switch identity meta command to the new code path
+#if MLMC
+    MetaCommandNormalization    = 100,
+    MetaCommandConvolution      = 101,
+    MetaCommandGEMM             = 102,
+    MetaCommandGRU              = 103,
+    MetaCommandLSTM             = 104,
+    MetaCommandMVN              = 105,
+    MetaCommandPooling          = 106,
+    MetaCommandReduction        = 107,
+    MetaCommandRNN              = 108,
+    MetaCommandRoiPooling       = 109,
+    MetaCommandCopyTensor       = 110
+#endif
+};
+
+#if MLMC
+
+struct HW_META_COMMAND_COPY_TENSOR
+{
+    META_COMMAND_TENSOR_DESC DstDesc;
+    META_COMMAND_TENSOR_DESC SrcDesc;
+    META_COMMAND_BIND_FLAGS BindFlags;
+};
+
+struct HW_IO_TABLE_COPY_TENSOR
+{
+    D3D12_GPU_DESCRIPTOR_HANDLE DstResource;
+    D3D12_GPU_DESCRIPTOR_HANDLE SrcResource;
+    D3D12_GPU_DESCRIPTOR_HANDLE TemporaryResource;
+};
+
+#endif
+
+struct GpuHwMetaCommand
+{
+    GpuCommandId    m_commandId;
+    UINT            m_commandSize;
+
+    MetaCommandId   m_metaCommandId;
+
+#if MLMC
+    //
+    // Followed by THwMetaCommand structure (per type of meta command)
+    //
+    // COSD commonly reuses META_COMMAND_CREATE_*_DESC
+    //
+    // For HW driver it may contain compiled code for meta command and
+    // other info for its execution
+    //
+
+    //
+    // Followed by THwIoTable structure (per type of meta command)
+    //
+    // COSD commonly reuses META_COMMAND_EXECUTE_*_DESC
+    // So it commonly has the same number of PHYSICAL_ADDRESS "slots" as
+    // D3D12_GPU_DESCRIPTOR_HANDLE in META_COMMAND_EXECUTE_*_DESC
+    //
+#endif
 };
 
 struct GpuCommand

@@ -41,6 +41,7 @@
     <ClCompile Include="CosKmdDdi.cpp" />
     <ClCompile Include="CosKmdDevice.cpp" />
     <ClCompile Include="CosKmdGlobal.cpp" />
+    <ClCompile Include="CosKmdMetaCommand.cpp" />
     <ClCompile Include="CosKmdSoftAdapter.cpp" />
     <ClCompile Include="CosKmdUtil.cpp" />
     <ClCompile Include="CosKmdPower.cpp" />
@@ -57,6 +58,7 @@
     <ClInclude Include="CosKmdDdi.h" />
     <ClInclude Include="CosKmdDevice.h" />
     <ClInclude Include="CosKmdGlobal.h" />
+    <ClInclude Include="CosKmdMetaCommand.h" />
     <ClInclude Include="CosKmdResource.h" />
     <ClInclude Include="CosKmdSoftAdapter.h" />
     <ClInclude Include="CosKmdUtil.h" />
@@ -167,7 +169,9 @@
       <WarningLevel>Level4</WarningLevel>
       <AdditionalUsingDirectories>
       </AdditionalUsingDirectories>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MLMC=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>
+      <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
     <Link>
     </Link>
@@ -177,7 +181,8 @@
       <WarningLevel>Level4</WarningLevel>
       <AdditionalUsingDirectories>
       </AdditionalUsingDirectories>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MLMC=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
     </Link>
@@ -187,7 +192,9 @@
       <WarningLevel>Level4</WarningLevel>
       <AdditionalUsingDirectories>
       </AdditionalUsingDirectories>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MLMC=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>
+      <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
     <Link>
     </Link>
@@ -197,7 +204,8 @@
       <WarningLevel>Level4</WarningLevel>
       <AdditionalUsingDirectories>
       </AdditionalUsingDirectories>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MLMC=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
     </Link>
@@ -207,7 +215,9 @@
       <WarningLevel>Level4</WarningLevel>
       <AdditionalUsingDirectories>
       </AdditionalUsingDirectories>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MLMC=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>
+      <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
     <Link>
     </Link>
@@ -217,7 +227,8 @@
       <WarningLevel>Level4</WarningLevel>
       <AdditionalUsingDirectories>
       </AdditionalUsingDirectories>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MLMC=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
     </Link>
@@ -227,7 +238,8 @@
       <WarningLevel>Level4</WarningLevel>
       <AdditionalUsingDirectories>
       </AdditionalUsingDirectories>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MLMC=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
     </Link>
@@ -237,7 +249,8 @@
       <WarningLevel>Level4</WarningLevel>
       <AdditionalUsingDirectories>
       </AdditionalUsingDirectories>
-      <PreprocessorDefinitions>VC4=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MLMC=0;VC4=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
     </Link>
