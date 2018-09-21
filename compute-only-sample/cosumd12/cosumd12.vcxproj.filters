@@ -66,6 +66,15 @@
     <ClInclude Include="CosUmd12MetaCommand.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CosUmd12CommandQueueGpuVa.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CosUmd12CommandBufferGpuVa.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CosUmd12CommandListGpuVa.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CosUmd12.cpp">
@@ -120,6 +129,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="CosUmd12ComputeCommandListDdi.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CosUmd12CommandQueueGpuVa.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CosUmd12CommandBufferGpuVa.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CosUmd12CommandListGpuVa.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

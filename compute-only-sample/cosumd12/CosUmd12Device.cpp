@@ -27,16 +27,48 @@ CosUmd12Device::CosUmd12Device(
     assert(pArgs->hDrvDevice.pDrvPrivate == (void *) this);
 
     assert(m_Interface == D3D12DDI_INTERFACE_VERSION_R5);
+
+#if GPUVA
+
+    m_latestPagingFenceValue = 0L;
+
+#endif
 }
 
 void CosUmd12Device::Standup()
 {
+#if GPUVA
+
+    HRESULT hr;
+
+    memset(&m_pagingQueueDesc, 0, sizeof(m_pagingQueueDesc));
+
+    m_pagingQueueDesc.Priority = D3DDDI_PAGINGQUEUE_PRIORITY_NORMAL;
+
+    hr = m_pKMCallbacks->pfnCreatePagingQueueCb(m_hRTDevice.handle, &m_pagingQueueDesc);
+    if (FAILED(hr))
+    {
+        m_pUMCallbacks->pfnSetErrorCb(m_hRTDevice, D3DDDIERR_DEVICEREMOVED);
+    }
+
+#endif
+
     m_curUniqueAddress = 0x100000000;
+
 }
 
 //----------------------------------------------------------------------------------------------------------------------------------
 void CosUmd12Device::Teardown()
 {
+#if GPUVA
+
+    D3DDDI_DESTROYPAGINGQUEUE destroyPagingQueue = {};
+
+    destroyPagingQueue.hPagingQueue = m_pagingQueueDesc.hPagingQueue;
+
+    m_pKMCallbacks->pfnDestroyPagingQueueCb(m_hRTDevice.handle, &destroyPagingQueue);
+
+#endif
 }
 
 //----------------------------------------------------------------------------------------------------------------------------------
@@ -44,6 +76,42 @@ CosUmd12Device::~CosUmd12Device()
 {
     // do nothing
 }
+
+#if GPUVA
+
+void CosUmd12Device::TrackPagingFence(
+    UINT64  newPagingFenceValue)
+{
+    if (newPagingFenceValue <= m_latestPagingFenceValue)
+    {
+        return;
+    }
+
+    m_latestPagingFenceValue = newPagingFenceValue;
+}
+
+void CosUmd12Device::WaitForPagingOperation(
+    HANDLE  hContext)
+{
+    if ((*((UINT *)m_pagingQueueDesc.FenceValueCPUVirtualAddress)) >= m_latestPagingFenceValue)
+    {
+        return;
+    }
+
+    HRESULT hr;
+
+    D3DDDICB_WAITFORSYNCHRONIZATIONOBJECTFROMGPU    waitFromGpu = { 0 };
+
+    waitFromGpu.hContext = hContext;
+    waitFromGpu.ObjectCount = 1;
+    waitFromGpu.ObjectHandleArray = &m_pagingQueueDesc.hSyncObject;
+    waitFromGpu.MonitoredFenceValueArray = &m_latestPagingFenceValue;
+
+    hr = m_pKMCallbacks->pfnWaitForSynchronizationObjectFromGpuCb(m_hRTDevice.handle, &waitFromGpu);
+    ASSERT(S_OK == hr);
+}
+
+#endif
 
 D3D12DDI_GPU_VIRTUAL_ADDRESS CosUmd12Device::AllocateUniqueAddress(UINT size)
 {

@@ -61,5 +61,29 @@ const int C_COSD_GPU_ENGINE_COUNT = 1;
 
 #endif
 
+#if GPUVA
+
+//
+// The DDI_N indicates DDI call sequence during adapter initialization
+//
+
+#define GPUVA_INIT_DDI_1    1
+#define GPUVA_INIT_DDI_2    1
+#define GPUVA_INIT_DDI_3    1
+#define GPUVA_INIT_DDI_4    1
+#define GPUVA_INIT_DDI_5    1
+#define GPUVA_INIT_DDI_6    1
+#define GPUVA_INIT_DDI_7    1
+#define GPUVA_INIT_DDI_8    1
+
+//
+// The current GPUVA implementation declares 1 aperture segment
+// so the implicit system memory segment (created by OS) is 2.
+//
+
+#define IMPLICIT_SYSTEM_MEMORY_SEGMENT_ID   2
+
+#endif
+
 // #define GPU_CACHE_WORKAROUND 1
 

@@ -8,7 +8,7 @@
 
 #include "CosUmd12.h"
 
-#if !GPUVA
+#if GPUVA
 
 HRESULT 
 CosUmd12CommandQueue::Standup()
@@ -29,7 +29,7 @@ CosUmd12CommandQueue::Standup()
     // Calling pfnCreateContextCb in UM callbacks
     //
 
-    hr = m_pDevice->m_pUMCallbacks->pfnCreateContextCb(m_hRTCommandQueue, &m_createContext);
+    hr = m_pDevice->m_pUMCallbacks->pfnCreateContextVirtualCb(m_hRTCommandQueue, &m_createContext);
 
     return hr;
 }
@@ -70,34 +70,31 @@ CosUmd12CommandQueue::ExecuteCommandLists(
 
 HRESULT
 CosUmd12CommandQueue::ExecuteCommandBuffer(
-    BYTE *                      pCommandBuffer,
-    UINT                        commandBufferLength,
-    D3DDDI_ALLOCATIONLIST *     pAllocationList,
-    UINT                        numAllocations,
-    D3DDDI_PATCHLOCATIONLIST *  pPatchLocationList,
-    UINT                        numPatchLocations)
+    D3DGPU_VIRTUAL_ADDRESS  commandBufferGpuVa,
+    UINT                    commandBufferLength,
+    BYTE *                  pCommamndBuffer)
 {
-    D3DDDICB_RENDER render;
+    m_pDevice->WaitForPagingOperation(m_createContext.hContext);
 
-    memset(&render, 0, sizeof(render));
+    D3DDDICB_SUBMITCOMMAND submitCommand;
 
-    render.hContext = m_createContext.hContext;
+    memset(&submitCommand, 0, sizeof(submitCommand));
 
-    render.BroadcastContextCount = 0;
+    submitCommand.Commands = commandBufferGpuVa;
+    submitCommand.CommandLength = commandBufferLength;
 
-    render.CommandLength = commandBufferLength;
-    render.NumAllocations = numAllocations;
-    render.NumPatchLocations = numPatchLocations;
+    submitCommand.BroadcastContextCount = 1;
+    submitCommand.BroadcastContext[0] = m_createContext.hContext;
 
     //
-    // Copy the command buffer, allocation list and patch location list to ones provided by kernel runtime
+    // Passing the UM command buffer pointer to KMD for debugging purpose only
     //
 
-    RtlCopyMemory(m_createContext.pCommandBuffer, pCommandBuffer, commandBufferLength);
-    RtlCopyMemory(m_createContext.pAllocationList, pAllocationList, numAllocations*sizeof(D3DDDI_ALLOCATIONLIST));
-    RtlCopyMemory(m_createContext.pPatchLocationList, pPatchLocationList, numPatchLocations*sizeof(D3DDDI_PATCHLOCATIONLIST));
+    submitCommand.pPrivateDriverData = &pCommamndBuffer;
+    submitCommand.PrivateDriverDataSize = sizeof(pCommamndBuffer);
 
-    return m_pDevice->m_pKMCallbacks->pfnRenderCb(m_pDevice->m_hRTDevice.handle, &render);
+    return m_pDevice->m_pKMCallbacks->pfnSubmitCommandCb(m_pDevice->m_hRTDevice.handle, &submitCommand);
 }
 
-#endif  // !GPUVA
+#endif  // GPUVA
+

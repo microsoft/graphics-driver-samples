@@ -41,6 +41,9 @@ typedef struct _COSDMABUFSTATE
             UINT    m_bPreempted        : 1;
             UINT    m_bReset            : 1;
             UINT    m_bCompleted        : 1;
+#if GPUVA
+            UINT    m_bGpuVaCommandBuffer : 1;
+#endif
         };
 
         UINT        m_Value;
@@ -50,7 +53,13 @@ typedef struct _COSDMABUFSTATE
 typedef struct _COSDMABUFINFO
 {
     PBYTE                       m_pDmaBuffer;
-    LARGE_INTEGER               m_DmaBufferPhysicalAddress;
+    union
+    {
+#if GPUVA
+        D3DGPU_VIRTUAL_ADDRESS  m_DmaBufferGpuVa;
+#endif
+        LARGE_INTEGER           m_DmaBufferPhysicalAddress;
+    };
     UINT                        m_DmaBufferSize;
     COSDMABUFSTATE              m_DmaBufState;
 } COSDMABUFINFO;
@@ -286,6 +295,11 @@ protected:
 
     virtual void ProcessRenderBuffer(COSDMABUFSUBMISSION * pDmaBufSubmission) = 0;
     virtual void ProcessHWRenderBuffer(COSDMABUFSUBMISSION * pDmaBufSubmission) = 0;
+#if GPUVA
+
+    virtual void ProcessGpuVaRenderBuffer(COSDMABUFSUBMISSION * pDmaBufSubmission) = 0;
+
+#endif
 
 private:
 
@@ -527,3 +541,14 @@ void MoveToNextCommand(TypeCur pCurCommand, TypeNext &pNextCommand)
     pNextCommand = (TypeNext)(pCurCommand + 1);
 }
 
+#if GPUVA
+
+#define COS_GPU_VA_BIT_COUNT        0x20
+#define COS_PAGE_TABLE_LEVEL_COUNT  2
+
+#define COS_PAGE_TABLE_SIZE         (4*PAGE_SIZE)
+
+#define COSD_APERTURE_SEGMENT_BASE_ADDRESS  0xC0000000
+#define COSD_APERTURE_SEGMENT_SIZE          16*1024*1024
+
+#endif

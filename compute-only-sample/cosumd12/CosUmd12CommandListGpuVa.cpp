@@ -14,7 +14,7 @@
 
 #include "CosUmd12.h"
 
-#if !GPUVA
+#if GPUVA
 
 HRESULT CosUmd12CommandList::StandUp()
 {
@@ -105,50 +105,25 @@ CosUmd12CommandList::ResourceCopy(
     CosUmd12Resource *  pSrcResource = CosUmd12Resource::CastFrom(SrcResource);
 
     BYTE *  pCommandBuffer;
-    UINT    curCommandOffset;
-    D3DDDI_PATCHLOCATIONLIST *  pPatchLocationList;
 
     GpuCommand * command;
 
     ReserveCommandBufferSpace(
-        true,                           // SW command
         sizeof(*command),
-        &pCommandBuffer,
-        2,
-        2,
-        &curCommandOffset,
-        &pPatchLocationList);
+        &pCommandBuffer);
     if (NULL == pCommandBuffer)
     {
         return;
     }
 
-    assert(pPatchLocationList != NULL);
-
     command = reinterpret_cast<GpuCommand *>(pCommandBuffer);
 
     command->m_commandId = GpuCommandId::ResourceCopy;
-    command->m_resourceCopy.m_srcGpuAddress.QuadPart = 0;
-    command->m_resourceCopy.m_dstGpuAddress.QuadPart = 0;
+    command->m_resourceCopy.m_dstGpuAddress.QuadPart = pDstResource->GetGpuVa();
+    command->m_resourceCopy.m_srcGpuAddress.QuadPart = pSrcResource->GetGpuVa();
     command->m_resourceCopy.m_sizeBytes = (UINT)pDstResource->GetDataSize();
 
-    UINT dstAllocIndex = m_pCurCommandBuffer->UseResource(pDstResource, true);
-    UINT srcAllocIndex = m_pCurCommandBuffer->UseResource(pSrcResource, false);
-
-    m_pCurCommandBuffer->SetPatchLocation(
-                            pPatchLocationList,
-                            dstAllocIndex,
-                            curCommandOffset + offsetof(GpuCommand, m_resourceCopy.m_dstGpuAddress),
-                            0,
-                            pDstResource->GetHeapOffset());
-    m_pCurCommandBuffer->SetPatchLocation(
-                            pPatchLocationList,
-                            srcAllocIndex,
-                            curCommandOffset + offsetof(GpuCommand, m_resourceCopy.m_srcGpuAddress),
-                            0,
-                            pSrcResource->GetHeapOffset());
-
-    m_pCurCommandBuffer->CommitCommandBufferSpace(sizeof(*command), 2);
+    m_pCurCommandBuffer->CommitCommandBufferSpace(sizeof(*command));
 }
 
 void
@@ -159,49 +134,25 @@ CosUmd12CommandList::GpuMemoryCopy(
 {
     BYTE *  pCommandBuffer;
     UINT    curCommandOffset;
-    D3DDDI_PATCHLOCATIONLIST *  pPatchLocationList;
 
     GpuCommand * command;
 
     ReserveCommandBufferSpace(
-        true,                           // SW command
         sizeof(*command),
-        &pCommandBuffer,
-        2,
-        2,
-        &curCommandOffset,
-        &pPatchLocationList);
+        &pCommandBuffer);
     if (NULL == pCommandBuffer)
     {
         return;
     }
 
-    assert(pPatchLocationList != NULL);
-
     command = reinterpret_cast<GpuCommand *>(pCommandBuffer);
 
     command->m_commandId = GpuCommandId::ResourceCopy;
-    command->m_resourceCopy.m_srcGpuAddress.QuadPart = 0;
-    command->m_resourceCopy.m_dstGpuAddress.QuadPart = 0;
+    command->m_resourceCopy.m_dstGpuAddress.QuadPart = dstGpuVa;
+    command->m_resourceCopy.m_srcGpuAddress.QuadPart = srcGpuVa;
     command->m_resourceCopy.m_sizeBytes = size;
 
-    UINT dstAllocIndex = m_pCurCommandBuffer->UseAllocation((UINT)(dstGpuVa >> 32), true);
-    UINT srcAllocIndex = m_pCurCommandBuffer->UseAllocation((UINT)(srcGpuVa >> 32), false);
-
-    m_pCurCommandBuffer->SetPatchLocation(
-                            pPatchLocationList,
-                            dstAllocIndex,
-                            curCommandOffset + offsetof(GpuCommand, m_resourceCopy.m_dstGpuAddress),
-                            0,
-                            (UINT)(dstGpuVa & 0xffffffff));
-    m_pCurCommandBuffer->SetPatchLocation(
-                            pPatchLocationList,
-                            srcAllocIndex,
-                            curCommandOffset + offsetof(GpuCommand, m_resourceCopy.m_srcGpuAddress),
-                            0,
-                            (UINT)(srcGpuVa & 0xffffffff));
-
-    m_pCurCommandBuffer->CommitCommandBufferSpace(sizeof(*command), 2);
+    m_pCurCommandBuffer->CommitCommandBufferSpace(sizeof(*command));
 }
 
 void CosUmd12CommandList::CopyBufferRegion(
@@ -213,70 +164,35 @@ void CosUmd12CommandList::CopyBufferRegion(
     CosUmd12Resource *  pSrcResource = CosUmd12Resource::CastFrom(src.BaseAddress.UMD.hResource);
 
     BYTE *  pCommandBuffer;
-    UINT    curCommandOffset;
-    D3DDDI_PATCHLOCATIONLIST *  pPatchLocationList;
 
     GpuCommand * command;
 
     ReserveCommandBufferSpace(
-        true,                           // SW command
         sizeof(*command),
-        &pCommandBuffer,
-        2,
-        2,
-        &curCommandOffset,
-        &pPatchLocationList);
+        &pCommandBuffer);
     if (NULL == pCommandBuffer)
     {
         return;
     }
 
-    assert(pPatchLocationList != NULL);
-
     command = reinterpret_cast<GpuCommand *>(pCommandBuffer);
 
     command->m_commandId = GpuCommandId::ResourceCopy;
-    command->m_resourceCopy.m_srcGpuAddress.QuadPart = 0;
-    command->m_resourceCopy.m_dstGpuAddress.QuadPart = 0;
+    command->m_resourceCopy.m_dstGpuAddress.QuadPart = pDstResource->GetGpuVa() + dst.BaseAddress.UMD.Offset;
+    command->m_resourceCopy.m_srcGpuAddress.QuadPart = pSrcResource->GetGpuVa() + src.BaseAddress.UMD.Offset;
     command->m_resourceCopy.m_sizeBytes = (UINT)bytesToCopy;
 
-    UINT dstAllocIndex = m_pCurCommandBuffer->UseResource(pDstResource, true);
-    UINT srcAllocIndex = m_pCurCommandBuffer->UseResource(pSrcResource, false);
-
-    m_pCurCommandBuffer->SetPatchLocation(
-                            pPatchLocationList,
-                            dstAllocIndex,
-                            curCommandOffset + offsetof(GpuCommand, m_resourceCopy.m_dstGpuAddress),
-                            0,
-                            pDstResource->GetHeapOffset() + (UINT)dst.BaseAddress.UMD.Offset);
-    m_pCurCommandBuffer->SetPatchLocation(
-                            pPatchLocationList,
-                            srcAllocIndex,
-                            curCommandOffset + offsetof(GpuCommand, m_resourceCopy.m_srcGpuAddress),
-                            0,
-                            pSrcResource->GetHeapOffset() + (UINT)src.BaseAddress.UMD.Offset);
-
-    m_pCurCommandBuffer->CommitCommandBufferSpace(sizeof(*command), 2);
+    m_pCurCommandBuffer->CommitCommandBufferSpace(sizeof(*command));
 }
 
 void
 CosUmd12CommandList::ReserveCommandBufferSpace(
-    bool                        bSwCommand,
     UINT                        commandSize,
-    BYTE **                     ppCommandBuffer,
-    UINT                        allocationListSize,
-    UINT                        patchLocationSize,
-    UINT *                      pCurCommandOffset,
-    D3DDDI_PATCHLOCATIONLIST ** ppPatchLocationList)
+    BYTE **                     ppCommandBuffer)
 {
     m_pCurCommandBuffer->ReserveCommandBufferSpace(
-                            bSwCommand,
                             commandSize,
-                            ppCommandBuffer,
-                            allocationListSize,
-                            patchLocationSize,
-                            pCurCommandOffset,
-                            ppPatchLocationList);
+                            ppCommandBuffer);
 
     //
     // The current command buffer has enough space for the new command
@@ -303,13 +219,8 @@ CosUmd12CommandList::ReserveCommandBufferSpace(
     m_pCurCommandBuffer = m_pCommandPool->AcquireCommandBuffer(m_args.QueueFlags);
 
     m_pCurCommandBuffer->ReserveCommandBufferSpace(
-                            bSwCommand,
                             commandSize,
-                            ppCommandBuffer,
-                            allocationListSize,
-                            patchLocationSize,
-                            pCurCommandOffset,
-                            ppPatchLocationList);
+                            ppCommandBuffer);
 }
 
 void
@@ -384,6 +295,12 @@ CosUmd12CommandList::Dispatch(
     UINT curCommandOffset;
     D3DDDI_PATCHLOCATIONLIST * pPatchLocationList;
 
+#if GPUVA
+
+    // TODO : Create allocation for Descriptor Heap
+
+#else
+
     //
     // State setup and Dispatch command have to be in the same command buffer, so the space for them
     // in the command buffer is reserved at once
@@ -437,6 +354,9 @@ CosUmd12CommandList::Dispatch(
     //
 
     m_pCurCommandBuffer->CommitCommandBufferSpace(commandSize, numPatchLocations);
+
+#endif
 }
 
-#endif // !GPUVA
+#endif
+

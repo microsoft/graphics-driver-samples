@@ -19,7 +19,17 @@ CosUmd12Resource::Standup(CosUmd12Heap * pHeap)
     return S_OK;
 }
 
+#if GPUVA
+
+D3D12DDI_GPU_VIRTUAL_ADDRESS CosUmd12Resource::GetGpuVa()
+{
+    return m_pHeap->GetGpuVa() + m_desc.ReuseBufferGPUVA.BaseAddress.UMD.Offset;
+}
+
+#endif
+
 D3D12DDI_GPU_VIRTUAL_ADDRESS CosUmd12Resource::GetUniqueAddress()
 {
     return (((D3D12DDI_GPU_VIRTUAL_ADDRESS)m_pHeap->GetAllocationHandle()) << 32) | m_desc.ReuseBufferGPUVA.BaseAddress.UMD.Offset;
 }
+

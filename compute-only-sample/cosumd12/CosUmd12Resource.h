@@ -84,6 +84,8 @@ public:
         return m_pHeap->m_hKMAllocation;
     }
 
+    D3D12DDI_GPU_VIRTUAL_ADDRESS GetGpuVa();
+
 private:
 
     static const int kMagic = 'rsrc';

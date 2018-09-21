@@ -10,6 +10,8 @@
 
 #include "CosUmd12.h"
 
+#if !GPUVA
+
 CosUmd12CommandBuffer * CosUmd12CommandBuffer::Create()
 {
     UINT size;
@@ -194,3 +196,4 @@ CosUmd12CommandBuffer::Execute(CosUmd12CommandQueue * pCommandQueue)
                             m_patchLocationListPos);
 }
 
+#endif  // !GPUVA

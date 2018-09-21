@@ -26,6 +26,11 @@ protected:
 
     virtual void ProcessRenderBuffer(COSDMABUFSUBMISSION * pDmaBufSubmission);
     virtual void ProcessHWRenderBuffer(COSDMABUFSUBMISSION * pDmaBufSubmission);
+#if GPUVA
+
+    virtual void ProcessGpuVaRenderBuffer(COSDMABUFSUBMISSION * pDmaBufSubmission);
+
+#endif
 
     virtual NTSTATUS Start(
         IN_PDXGK_START_INFO     DxgkStartInfo,
