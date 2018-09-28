@@ -80,6 +80,18 @@ public:
             IN_CONST_HANDLE                         hAdapter,
             IN_CONST_PDXGKARG_SUBMITCOMMANDVIRTUAL  pSubmitCommandVirtual);
 
+    static VOID
+        __stdcall
+        CosKmdDdi::DdiSetRootPageTable(
+            IN_CONST_HANDLE                     hAdapter,
+            IN_CONST_PDXGKARG_SETROOTPAGETABLE  pSetPageTable);
+
+    static SIZE_T
+        __stdcall
+        CosKmdDdi::DdiGetRootPageTableSize(
+            IN_CONST_HANDLE                     hAdapter,
+            INOUT_PDXGKARG_GETROOTPAGETABLESIZE pArgs);
+
     static NTSTATUS
         __stdcall
         DdiPreemptCommand(

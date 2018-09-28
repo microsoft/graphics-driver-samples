@@ -3,6 +3,7 @@
 #include "CosKmd.h"
 
 class CosKmAdapter;
+struct CosKmdProcess;
 
 class CosKmDevice
 {
@@ -33,6 +34,12 @@ private:
 
     DXGK_CREATEDEVICEFLAGS  m_Flags;
     HANDLE                  m_hRTDevice;
+
+#if GPUVA
+
+    CosKmdProcess *         m_pKmdProcess;
+
+#endif
 
 public:
 

@@ -8,6 +8,7 @@
 #include "CosKmdAllocation.h"
 #include "CosKmdUtil.h"
 
+// GPUVA_INIT_DDI_7
 NTSTATUS __stdcall CosKmDevice::DdiCreateDevice(
     IN_CONST_HANDLE hAdapter,
     INOUT_PDXGKARG_CREATEDEVICE pCreateDevice)
@@ -19,6 +20,14 @@ NTSTATUS __stdcall CosKmDevice::DdiCreateDevice(
         COS_LOG_LOW_MEMORY("Failed to allocate CosKmDevice.");
         return STATUS_NO_MEMORY;
     }
+
+#if GPUVA
+
+    CosKmDevice *   pCosKmDevice = (CosKmDevice *)pCreateDevice->hDevice;
+
+    pCosKmDevice->m_pKmdProcess = (CosKmdProcess *)pCreateDevice->hKmdProcess;
+
+#endif
 
     return STATUS_SUCCESS;
 }

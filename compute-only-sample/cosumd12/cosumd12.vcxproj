@@ -141,7 +141,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>MLMC=0;_DEBUG;COSUMD12_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MLMC=0;GPUVA=0;_DEBUG;COSUMD12_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>
@@ -247,9 +247,12 @@
     <ClInclude Include="CosUmd12.h" />
     <ClInclude Include="CosUmd12Adapter.h" />
     <ClInclude Include="CosUmd12CommandBuffer.h" />
+    <ClInclude Include="CosUmd12CommandBufferGpuVa.h" />
     <ClInclude Include="CosUmd12CommandList.h" />
+    <ClInclude Include="CosUmd12CommandListGpuVa.h" />
     <ClInclude Include="CosUmd12CommandPool.h" />
     <ClInclude Include="CosUmd12CommandQueue.h" />
+    <ClInclude Include="CosUmd12CommandQueueGpuVa.h" />
     <ClInclude Include="CosUmd12CommandRecorder.h" />
     <ClInclude Include="CosUmd12DescriptorHeap.h" />
     <ClInclude Include="CosUmd12Device.h" />
@@ -270,10 +273,13 @@
     </ClCompile>
     <ClCompile Include="CosUmd12Adapter.cpp" />
     <ClCompile Include="CosUmd12CommandBuffer.cpp" />
+    <ClCompile Include="CosUmd12CommandBufferGpuVa.cpp" />
     <ClCompile Include="CosUmd12CommandList.cpp" />
+    <ClCompile Include="CosUmd12CommandListGpuVa.cpp" />
     <ClCompile Include="CosUmd12CommandPool.cpp" />
     <ClCompile Include="CosUmd12CommandQueue.cpp" />
     <ClCompile Include="CosUmd12CommandQueueDdi.cpp" />
+    <ClCompile Include="CosUmd12CommandQueueGpuVa.cpp" />
     <ClCompile Include="CosUmd12ComputeCommandListDdi.cpp" />
     <ClCompile Include="CosUmd12Descriptor.cpp" />
     <ClCompile Include="CosUmd12DescriptorHeap.cpp" />

@@ -171,6 +171,19 @@ CosKmdSoftAdapter::ProcessHWRenderBuffer(
     }
 }
 
+#if GPUVA
+
+void
+CosKmdSoftAdapter::ProcessGpuVaRenderBuffer(
+    COSDMABUFSUBMISSION *   pDmaBufSubmission)
+{
+    UNREFERENCED_PARAMETER(pDmaBufSubmission);
+
+    // TODO: emulate command buffer submitted with GPU VA from UMD
+}
+
+#endif
+
 BOOLEAN CosKmdSoftAdapter::InterruptRoutine(
     IN_ULONG        MessageNumber)
 {

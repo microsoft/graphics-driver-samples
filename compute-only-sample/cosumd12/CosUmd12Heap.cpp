@@ -55,7 +55,75 @@ CosUmd12Heap::Standup()
 
     m_hKMAllocation = allocate.pAllocationInfo[0].hAllocation;
 
+#if GPUVA
+
+    do
+    {
+        D3DDDI_MAPGPUVIRTUALADDRESS mapGpuVa = {};
+
+        //
+        // Driver can optionally use Base/Min/Max address to position a resource's GPU VA
+        //
+
+        mapGpuVa.hPagingQueue = m_pDevice->m_pagingQueueDesc.hPagingQueue;
+        mapGpuVa.hAllocation = m_hKMAllocation;
+
+        hr = m_pDevice->m_pKMCallbacks->pfnMapGpuVirtualAddressCb(m_pDevice->m_hRTDevice.handle, &mapGpuVa);
+        if ((hr == E_PENDING) || (hr == S_OK))
+        {
+            m_gpuVa = mapGpuVa.VirtualAddress;
+            m_pagingFenceValue = mapGpuVa.PagingFenceValue;
+
+            hr = S_OK;
+        }
+
+        if (FAILED(hr))
+        {
+            break;
+        }
+
+        //
+        // Driver need to make internally created resources resident
+        //
+        if (nullptr == m_hRTHeap.handle)
+        {
+            D3DDDI_MAKERESIDENT makeResident = {};
+
+            makeResident.hPagingQueue = m_pDevice->m_pagingQueueDesc.hPagingQueue;
+            makeResident.NumAllocations = 1;
+            makeResident.AllocationList = &m_hKMAllocation;
+            makeResident.PriorityList = nullptr;
+            makeResident.Flags.MustSucceed = 1;
+
+            hr = m_pDevice->m_pKMCallbacks->pfnMakeResidentCb(m_pDevice->m_hRTDevice.handle, &makeResident);
+            if ((hr == E_PENDING) || (hr == S_OK))
+            {
+                m_pagingFenceValue = makeResident.PagingFenceValue;
+
+                hr = S_OK;
+            }
+        }
+    } while (false);
+
+    if (FAILED(hr))
+    {
+        D3D12DDICB_DEALLOCATE_0022 deallocate = {};
+
+        deallocate.HandleList = &m_hKMAllocation;
+        deallocate.NumAllocations = 1;
+
+        m_pDevice->m_pUMCallbacks->pfnDeallocateCb(m_pDevice->m_hRTDevice, &deallocate);
+
+        return hr;
+    }
+
+    m_pDevice->TrackPagingFence(m_pagingFenceValue);
+
+#else
+
     m_uniqueAddress = m_pDevice->AllocateUniqueAddress(m_hwSizeBytes);
+
+#endif
 
     return hr;
 }
