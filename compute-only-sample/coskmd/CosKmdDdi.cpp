@@ -199,6 +199,7 @@ NTSTATUS __stdcall CosKmdDdi::DdiGetStandardAllocationDriverData(
     return pCosKmdAdapter->GetStandardAllocationDriverData(pGetStandardAllocationDriverData);
 }
 
+#if GPUVA
 
 NTSTATUS
 __stdcall
@@ -213,6 +214,29 @@ CosKmdDdi::DdiSubmitCommandVirtual(
     return pCosKmdAdapter->SubmitCommandVirtual(pSubmitCommandVirtual);
 }
 
+SIZE_T
+__stdcall
+CosKmdDdi::DdiGetRootPageTableSize(
+    IN_CONST_HANDLE                     /*hAdapter*/,
+    INOUT_PDXGKARG_GETROOTPAGETABLESIZE /*pArgs*/)
+{
+    return COS_PAGE_TABLE_SIZE;
+}
+
+VOID
+__stdcall
+CosKmdDdi::DdiSetRootPageTable(
+    IN_CONST_HANDLE                     /*hAdapter*/,
+    IN_CONST_PDXGKARG_SETROOTPAGETABLE  pSetPageTable)
+{
+    CosKmContext  *pCosKmContext = CosKmContext::Cast(pSetPageTable->hContext);
+
+    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hContext=%lx\n", __FUNCTION__, pSetPageTable->hContext);
+
+    return pCosKmContext->SetRootPageTable(pSetPageTable);
+}
+
+#endif
 
 NTSTATUS
 __stdcall

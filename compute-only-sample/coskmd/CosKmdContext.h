@@ -39,6 +39,13 @@ protected:
 
     DXGK_CREATECONTEXTFLAGS m_Flags;
 
+#if GPUVA
+
+    D3DGPU_PHYSICAL_ADDRESS m_rootPageTableAddress;
+    UINT                    m_numRootPageTableEntries;
+
+#endif
+
 public:
 
     UINT
@@ -71,6 +78,14 @@ public:
     NTSTATUS
         RenderKm(
             INOUT_PDXGKARG_RENDER   pRender);
+
+#if GPUVA
+
+    VOID
+        SetRootPageTable(
+            IN_CONST_PDXGKARG_SETROOTPAGETABLE  pSetPageTable);
+
+#endif
 
 public: // PAGED
 

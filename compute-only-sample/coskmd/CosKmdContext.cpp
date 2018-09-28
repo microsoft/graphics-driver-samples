@@ -118,6 +118,7 @@ CosKmContext::DdiRender(
     return STATUS_SUCCESS;
 }
 
+// GPUVA_INIT_DDI_8
 NTSTATUS
 __stdcall
 CosKmContext::DdiCreateContext(
@@ -148,23 +149,41 @@ CosKmContext::DdiCreateContext(
     //
     DXGK_CONTEXTINFO   *pContextInfo = &pCreateContext->ContextInfo;
 
-#if 1
-    pContextInfo->DmaBufferSegmentSet = 0;  // Use physical contiguos memory
-#else
-    pContextInfo->DmaBufferSegmentSet = 1 << (COSD_SEGMENT_APERTURE - 1);
-#endif
-    pContextInfo->DmaBufferSize = COSD_COMMAND_BUFFER_SIZE;
-    pContextInfo->DmaBufferPrivateDataSize = sizeof(COSDMABUFINFO);
+#if GPUVA
 
-    if (pCreateContext->Flags.GdiContext)
+    if (pCreateContext->Flags.VirtualAddressing)
     {
-        pContextInfo->AllocationListSize = DXGK_ALLOCATION_LIST_SIZE_GDICONTEXT;
-        pContextInfo->PatchLocationListSize = DXGK_ALLOCATION_LIST_SIZE_GDICONTEXT;
+        pContextInfo->Caps.DriverManagesResidency = 1;
+
+        //
+        // For SubmitCommandCb from UMD, the private data must be the beginning
+        // portion of the KM DMA buffer private data. That implies that the UMD
+        // private data size must not exceed the DmaBufferPrivateDataSize here.
+        //
+
+        pContextInfo->DmaBufferPrivateDataSize = sizeof(COSDMABUFINFO);
     }
     else
+#endif
     {
-        pContextInfo->AllocationListSize = C_COSD_ALLOCATION_LIST_SIZE;
-        pContextInfo->PatchLocationListSize = C_COSD_PATCH_LOCATION_LIST_SIZE;
+#if 1
+        pContextInfo->DmaBufferSegmentSet = 0;  // Use physical contiguos memory
+#else
+        pContextInfo->DmaBufferSegmentSet = 1 << (COSD_SEGMENT_APERTURE - 1);
+#endif
+        pContextInfo->DmaBufferSize = COSD_COMMAND_BUFFER_SIZE;
+        pContextInfo->DmaBufferPrivateDataSize = sizeof(COSDMABUFINFO);
+
+        if (pCreateContext->Flags.GdiContext)
+        {
+            pContextInfo->AllocationListSize = DXGK_ALLOCATION_LIST_SIZE_GDICONTEXT;
+            pContextInfo->PatchLocationListSize = DXGK_ALLOCATION_LIST_SIZE_GDICONTEXT;
+        }
+        else
+        {
+            pContextInfo->AllocationListSize = C_COSD_ALLOCATION_LIST_SIZE;
+            pContextInfo->PatchLocationListSize = C_COSD_PATCH_LOCATION_LIST_SIZE;
+        }
     }
 
     pCreateContext->hContext = pCosKmContext;
@@ -198,6 +217,18 @@ CosKmContext::RenderKm(
     NT_ASSERT(FALSE);
     return STATUS_SUCCESS;
 }
+
+#if GPUVA
+
+VOID
+CosKmContext::SetRootPageTable(
+    IN_CONST_PDXGKARG_SETROOTPAGETABLE  pSetPageTable)
+{
+    m_rootPageTableAddress = pSetPageTable->Address;
+    m_numRootPageTableEntries = pSetPageTable->NumEntries;
+}
+
+#endif
 
 COS_PAGED_SEGMENT_BEGIN; //===================================================
 

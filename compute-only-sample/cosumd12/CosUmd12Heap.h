@@ -42,6 +42,15 @@ public:
     HRESULT Map(void** pHeapData);
     void Unmap();
 
+#if GPUVA
+
+    D3D12DDI_GPU_VIRTUAL_ADDRESS GetGpuVa()
+    {
+        return m_gpuVa;
+    }
+
+#endif
+
     D3DKMT_HANDLE GetAllocationHandle()
     {
         return m_hKMAllocation;
@@ -58,7 +67,16 @@ private:
     D3DKMT_HANDLE m_hKMAllocation;
     BYTE * m_pCpuAddress;
 
+#if GPUVA
+
+    D3D12DDI_GPU_VIRTUAL_ADDRESS m_gpuVa;
+    UINT64 m_pagingFenceValue;
+
+#else
+
     D3D12DDI_GPU_VIRTUAL_ADDRESS m_uniqueAddress;
+
+#endif
 };
 
 inline CosUmd12Heap* CosUmd12Heap::CastFrom(D3D12DDI_HHEAP hHeap)

@@ -35,17 +35,35 @@ void UnexpectedDdi(const char * function, const char * file, int line);
 
 #include "CosUmd12Adapter.h"
 #include "CosUmd12Device.h"
+
+#if GPUVA
+#include "CosUmd12CommandQueueGpuVa.h"
+#else
 #include "CosUmd12CommandQueue.h"
+#endif
+
 #include "CosUmd12Heap.h"
 #include "CosUmd12Resource.h"
+
+#if GPUVA
+#include "CosUmd12CommandBufferGpuVa.h"
+#else
 #include "CosUmd12CommandBuffer.h"
+#endif
+
 #include "CosUmd12RootSignature.h"
 #include "CosUmd12Shader.h"
 #include "CosUmd12PipelineState.h"
 #include "CosUmd12Descriptor.h"
 #include "CosUmd12CommandPool.h"
 #include "CosUmd12CommandRecorder.h"
+
+#if GPUVA
+#include "CosUmd12CommandListGpuVa.h"
+#else
 #include "CosUmd12CommandList.h"
+#endif
+
 #include "CosUmd12Fence.h"
 #include "CosUmd12DescriptorHeap.h"
 

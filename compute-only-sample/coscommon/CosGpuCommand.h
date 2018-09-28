@@ -33,7 +33,12 @@ struct GpuCommandBufferHeader
     {
         struct
         {
-            UINT    m_swCommandBuffer   : 1;
+            UINT    m_swCommandBuffer       : 1;
+#if GPUVA
+
+            UINT    m_gpuVaCommandBuffer    : 1;
+
+#endif
         };
 
         UINT        m_value;

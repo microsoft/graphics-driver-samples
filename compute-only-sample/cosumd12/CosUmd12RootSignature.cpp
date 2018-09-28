@@ -177,6 +177,9 @@ void CosUmd12RootSignature::WriteHWRootDescriptor(
     UINT hwDescriptorOffset,
     D3DDDI_PATCHLOCATIONLIST * &pPatchLocations)
 {
+#if GPUVA
+#else
+
     D3DKMT_HANDLE hAllocation = (D3DKMT_HANDLE)(resourceGpuVA >> 32);
     UINT allocationOffset = (UINT)(resourceGpuVA & 0xFFFFFFFF);
 
@@ -188,6 +191,8 @@ void CosUmd12RootSignature::WriteHWRootDescriptor(
                         hwDescriptorOffset,
                         0,
                         allocationOffset);
+
+#endif
 }
 
 void CosUmd12RootSignature::WriteHWRootSignature(

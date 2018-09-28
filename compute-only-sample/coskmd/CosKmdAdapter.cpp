@@ -9,6 +9,7 @@
 #include "CosKmdAllocation.h"
 #include "CosKmdContext.h"
 #include "CosKmdResource.h"
+#include "CosKmdProcess.h"
 #include "CosKmdGlobal.h"
 #include "CosKmdUtil.h"
 #include "CosGpuCommand.h"
@@ -137,6 +138,12 @@ void CosKmAdapter::DoWork(void)
                 ProcessPagingBuffer(pDmaBufSubmission);
 
             }
+#if GPUVA
+            else if (pDmaBufInfo->m_DmaBufState.m_bGpuVaCommandBuffer)
+            {
+                ProcessGpuVaRenderBuffer(pDmaBufSubmission);
+            }
+#endif
             else if (pDmaBufInfo->m_DmaBufState.m_bSwCommandBuffer)
             {
                 //
@@ -617,6 +624,38 @@ CosKmAdapter::BuildPagingBuffer(
     }
     break;
 
+#if GPUVA
+
+    case DXGK_OPERATION_UPDATE_PAGE_TABLE:
+    {
+        DXGK_PTE *  pHwPte = (DXGK_PTE *)pArgs->UpdatePageTable.PageTableAddress.CpuVirtual;
+        DXGK_PTE *  pOsPte = pArgs->UpdatePageTable.pPageTableEntries;
+
+        //
+        // When Repeat bit is set, HW PTEs are replicated from OS PTE
+        //
+        UINT        osPteInc = pArgs->UpdatePageTable.Flags.Repeat ? 0 : 1;
+
+        pHwPte += pArgs->UpdatePageTable.StartIndex;
+
+        for (UINT i = 0; i < pArgs->UpdatePageTable.NumPageTableEntries; i++)
+        {
+            *pHwPte = *pOsPte;
+
+            pHwPte++;
+            pOsPte += osPteInc;
+        }
+    }
+    break;
+
+    case DXGK_OPERATION_FLUSH_TLB:
+    {
+        // HW driver should flush the TLB
+    }
+    break;
+
+#endif
+
     default:
     {
         NT_ASSERT(false);
@@ -781,16 +820,35 @@ CosKmAdapter::CreateAllocation(
     pAllocationInfo->pAllocationUsageHint = NULL;
     pAllocationInfo->PhysicalAdapterIndex = 0;
     pAllocationInfo->PitchAlignedSize = 0;
-    pAllocationInfo->PreferredSegment.Value = 0;
-    pAllocationInfo->PreferredSegment.SegmentId0 = COSD_SEGMENT_VIDEO_MEMORY;
-    pAllocationInfo->PreferredSegment.Direction0 = 0;
 
     // zero-size allocations are not allowed
     NT_ASSERT(pCosAllocation->m_hwSizeBytes != 0);
     pAllocationInfo->Size = pCosAllocation->m_hwSizeBytes;
 
+#if GPUVA
+
+    //
+    // If the allocation is backed by system memory, then the driver should
+    // specify the implicit system memory segment in the allocation info.
+    //
+
+    pAllocationInfo->PreferredSegment.Value = 0;
+    pAllocationInfo->PreferredSegment.SegmentId0 = IMPLICIT_SYSTEM_MEMORY_SEGMENT_ID;
+    pAllocationInfo->PreferredSegment.Direction0 = 0;
+
+    pAllocationInfo->SupportedReadSegmentSet = 1 << (IMPLICIT_SYSTEM_MEMORY_SEGMENT_ID - 1);
+    pAllocationInfo->SupportedWriteSegmentSet = 1 << (IMPLICIT_SYSTEM_MEMORY_SEGMENT_ID - 1);
+
+#else
+
+    pAllocationInfo->PreferredSegment.Value = 0;
+    pAllocationInfo->PreferredSegment.SegmentId0 = COSD_SEGMENT_VIDEO_MEMORY;
+    pAllocationInfo->PreferredSegment.Direction0 = 0;
+
     pAllocationInfo->SupportedReadSegmentSet = 1 << (COSD_SEGMENT_VIDEO_MEMORY - 1);
     pAllocationInfo->SupportedWriteSegmentSet = 1 << (COSD_SEGMENT_VIDEO_MEMORY - 1);
+
+#endif
 
     if (pCreateAllocation->Flags.Resource && pCreateAllocation->hResource == NULL && pCosKmdResource != NULL)
     {
@@ -977,7 +1035,12 @@ CosKmAdapter::QueryAdapterInfo(
 #if 1
         pDriverCaps->MemoryManagementCaps.CrossAdapterResource = 1;
 #endif
+#if GPUVA_INIT_DDI_1
 
+        pDriverCaps->MemoryManagementCaps.VirtualAddressingSupported = 1;
+        pDriverCaps->MemoryManagementCaps.GpuMmuSupported = 1;
+
+#endif
         //
         // TODO[bhouse] GpuEngineTopology
         //
@@ -1086,6 +1149,28 @@ CosKmAdapter::QueryAdapterInfo(
             pSegmentInfo->PagingBufferSegmentId = 0;    // Use physical contiguous memory
             pSegmentInfo->PagingBufferSize = PAGE_SIZE;
 
+#if GPUVA_INIT_DDI_5
+
+            //
+            // Setup aperture segment, which is only used for allocation with AccessedPhysically
+            //
+            DXGK_SEGMENTDESCRIPTOR4 *pApertureSegmentDesc = (DXGK_SEGMENTDESCRIPTOR4 *)(pSegmentInfo->pSegmentDescriptor);
+
+            memset(pApertureSegmentDesc, 0, sizeof(*pApertureSegmentDesc));
+
+            pApertureSegmentDesc->Flags.Aperture = true;
+            pApertureSegmentDesc->Flags.CpuVisible = true;
+            pApertureSegmentDesc->Flags.CacheCoherent = true;
+            pApertureSegmentDesc->Flags.PitchAlignment = true;
+            pApertureSegmentDesc->Flags.PreservedDuringStandby = true;
+            pApertureSegmentDesc->Flags.PreservedDuringHibernate = true;
+
+            pApertureSegmentDesc->BaseAddress.QuadPart = COSD_APERTURE_SEGMENT_BASE_ADDRESS;    // Gpu base physical address
+            pApertureSegmentDesc->CpuTranslatedAddress.QuadPart = 0xFFFFFFFE00000000;           // Cpu base physical address
+            pApertureSegmentDesc->Size = COSD_APERTURE_SEGMENT_SIZE;
+
+#else
+
             //
             // Setup local video memory segment
             //
@@ -1099,6 +1184,8 @@ CosKmAdapter::QueryAdapterInfo(
             pLocalVidMemSegmentDesc->Flags.DirectFlip = true;
             pLocalVidMemSegmentDesc->CpuTranslatedAddress = CosKmdGlobal::s_videoMemoryPhysicalAddress; // cpu base physical address
             pLocalVidMemSegmentDesc->Size = CosKmdGlobal::s_videoMemorySize;
+
+#endif
         }
     }
     break;
@@ -1156,6 +1243,66 @@ CosKmAdapter::QueryAdapterInfo(
         }
     }
     break;
+
+#if GPUVA_INIT_DDI_2
+
+    case DXGKQAITYPE_GPUMMUCAPS:
+    {
+        DXGK_GPUMMUCAPS *pGpuMmuCaps = (DXGK_GPUMMUCAPS *)pQueryAdapterInfo->pOutputData;
+
+        memset(pGpuMmuCaps, 0, sizeof(DXGK_GPUMMUCAPS));
+
+        pGpuMmuCaps->ZeroInPteSupported = 1;
+        pGpuMmuCaps->CacheCoherentMemorySupported = 1;
+
+        pGpuMmuCaps->PageTableUpdateMode = DXGK_PAGETABLEUPDATE_CPU_VIRTUAL;
+
+        pGpuMmuCaps->VirtualAddressBitCount = COS_GPU_VA_BIT_COUNT;
+        pGpuMmuCaps->PageTableLevelCount = COS_PAGE_TABLE_LEVEL_COUNT;
+    }
+    break;
+
+#endif
+
+#if GPUVA_INIT_DDI_3
+
+    case DXGKQAITYPE_PAGETABLELEVELDESC:
+    {
+        //
+        // In GPUVA mode, COSD supports 1 aperture segment with SegmentId of 1.
+        // So the implicit system memory segment has the SegmentId of 2.
+        //
+        // COSD uses page table in system memory, so sets PageTableSegmentId to 2
+        //
+        // COSD reuses DXGK_PTE for page table entry, so each page table is 16K.
+        //
+
+        static DXGK_PAGE_TABLE_LEVEL_DESC s_CosPageTableLevelDesc[2] =
+        {
+            {
+                10,                     // PageTableIndexBitCount
+                2,                      // PageTableSegmentId
+                2,                      // PagingProcessPageTableSegmentId
+                COS_PAGE_TABLE_SIZE,    // PageTableSizeInBytes
+                0,                      // PageTableAlignmentInBytes
+            },
+            {
+                10,                     // PageTableIndexBitCount
+                2,                      // PageTableSegmentId
+                2,                      // PagingProcessPageTableSegmentId
+                COS_PAGE_TABLE_SIZE,    // PageTableSizeInBytes
+                0,                      // PageTableAlignmentInBytes
+            }
+        };
+
+        UINT PageTableLevel = *((UINT *)pQueryAdapterInfo->pInputData);
+        DXGK_PAGE_TABLE_LEVEL_DESC *pPageTableLevelDesc = (DXGK_PAGE_TABLE_LEVEL_DESC *)pQueryAdapterInfo->pOutputData;
+
+        *pPageTableLevelDesc = s_CosPageTableLevelDesc[PageTableLevel];
+    }
+    break;
+
+#endif
 
     case DXGKQAITYPE_HISTORYBUFFERPRECISION:
     {
@@ -1217,18 +1364,71 @@ CosKmAdapter::GetNodeMetadata(
         L"3DNode%02X",
         NodeOrdinal);
 
+#if GPUVA_INIT_DDI_4
+
+    pGetNodeMetadata->GpuMmuSupported = 1;
+
+#endif
 
     return STATUS_SUCCESS;
 }
 
+#if GPUVA
 
 NTSTATUS
 CosKmAdapter::SubmitCommandVirtual(
-    IN_CONST_PDXGKARG_SUBMITCOMMANDVIRTUAL  /*pSubmitCommandVirtual*/)
+    IN_CONST_PDXGKARG_SUBMITCOMMANDVIRTUAL  pSubmitCommandVirtual)
 {
-    COS_ASSERTION("Not implemented");
-    return STATUS_NOT_IMPLEMENTED;
+    COSDMABUFINFO * pDmaBufInfo = (COSDMABUFINFO *)pSubmitCommandVirtual->pDmaBufferPrivateData;
+
+    //
+    // m_pDmaBuffer from UMD is for debugging purpose only
+    //
+
+    pDmaBufInfo->m_DmaBufferGpuVa = pSubmitCommandVirtual->DmaBufferVirtualAddress;
+    pDmaBufInfo->m_DmaBufferSize = pSubmitCommandVirtual->DmaBufferSize;
+
+    pDmaBufInfo->m_DmaBufState.m_Value = 0;
+    pDmaBufInfo->m_DmaBufState.m_bGpuVaCommandBuffer = 1;
+
+    pDmaBufInfo->m_DmaBufState.m_bPaging = pSubmitCommandVirtual->Flags.Paging;
+    pDmaBufInfo->m_DmaBufState.m_bPreempted = pSubmitCommandVirtual->Flags.Resubmission;
+
+    //
+    // TODO : Using flattened parameters for QueueDmaBuffer()
+    //
+
+    DXGKARG_SUBMITCOMMAND   submitCommand = { 0 };
+
+    submitCommand.hContext = pSubmitCommandVirtual->hContext;
+
+    submitCommand.DmaBufferPhysicalAddress.QuadPart = pSubmitCommandVirtual->DmaBufferVirtualAddress;
+    submitCommand.DmaBufferSize = pSubmitCommandVirtual->DmaBufferSize;
+    
+    submitCommand.DmaBufferSubmissionStartOffset = 0;
+    submitCommand.DmaBufferSubmissionEndOffset = pSubmitCommandVirtual->DmaBufferSize;
+
+    submitCommand.pDmaBufferPrivateData = pDmaBufInfo;
+    submitCommand.DmaBufferPrivateDataSize = pSubmitCommandVirtual->DmaBufferPrivateDataSize;
+
+    submitCommand.SubmissionFenceId = pSubmitCommandVirtual->SubmissionFenceId;
+
+    submitCommand.Flags = pSubmitCommandVirtual->Flags;
+
+    submitCommand.EngineOrdinal = pSubmitCommandVirtual->EngineOrdinal;
+    submitCommand.NodeOrdinal = pSubmitCommandVirtual->NodeOrdinal;
+
+    QueueDmaBuffer(&submitCommand);
+
+    //
+    // Wake up the worker thread for the GPU node
+    //
+    KeSetEvent(&m_workerThreadEvent, 0, FALSE);
+
+    return S_OK;
 }
+
+#endif
 
 NTSTATUS
 CosKmAdapter::PreemptCommand(
@@ -1284,19 +1484,40 @@ CosKmAdapter::CollectDbgInfo(
 
 NTSTATUS
 CosKmAdapter::CreateProcess(
-    IN DXGKARG_CREATEPROCESS* /*pArgs*/)
+    IN DXGKARG_CREATEPROCESS   *pArgs)
 {
-    // pArgs->hKmdProcess = 0;
+#if GPUVA_INIT_DDI_6
+
+    CosKmdProcess *  pCosKmdProcess;
+
+    pCosKmdProcess = (CosKmdProcess *)ExAllocatePoolWithTag(NonPagedPoolNx, sizeof(CosKmdProcess), 'COSD');
+    if (NULL == pCosKmdProcess)
+    {
+        return STATUS_NO_MEMORY;
+    }
+
+    pCosKmdProcess->m_dummy = 0;
+
+    pArgs->hKmdProcess = pCosKmdProcess;
+
+    return STATUS_SUCCESS;
+
+#else
+
+    pArgs->hKmdProcess = 0;
     COS_ASSERTION("Not implemented");
     return STATUS_NOT_IMPLEMENTED;
+
+#endif
 }
 
 NTSTATUS
 CosKmAdapter::DestroyProcess(
-    IN HANDLE /*KmdProcessHandle*/)
+    IN HANDLE KmdProcessHandle)
 {
-    COS_ASSERTION("Not implemented");
-    return STATUS_NOT_IMPLEMENTED;
+    ExFreePoolWithTag(KmdProcessHandle, 'COSD');
+
+    return STATUS_SUCCESS;
 }
 
 void

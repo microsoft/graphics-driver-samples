@@ -338,6 +338,7 @@ HRESULT APIENTRY CosUmd12Device_Ddi_CreateCommandQueue_0050(
     TRACE_FUNCTION();
 
     CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
+
     CosUmd12CommandQueue * pCommandQueue = new (DrvCommandQueue.pDrvPrivate) CosUmd12CommandQueue(pDevice, RTCommandQueue, pDesc);
 
     return pCommandQueue->Standup();
@@ -1106,7 +1107,15 @@ D3D12DDI_GPU_VIRTUAL_ADDRESS APIENTRY CosUmd12Device_Ddi_CheckResourceVirtualAdd
 
     CosUmd12Resource * pResource = (CosUmd12Resource *)Resource.pDrvPrivate;
 
+#if GPUVA
+
+    return pResource->GetGpuVa();
+
+#else
+
     return pResource->GetUniqueAddress();
+
+#endif
 }
 
 void APIENTRY CosUmd12Device_Ddi_CheckResourceAllocationInfo_0022(

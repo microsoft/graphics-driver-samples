@@ -16,7 +16,15 @@ CosUmd12CommandBuffer *
 CosUmd12CommandPool::AcquireCommandBuffer(
     D3D12DDI_COMMAND_QUEUE_FLAGS queueFlags)
 {
+#if GPUVA
+
+    return CosUmd12CommandBuffer::Create(m_pDevice);
+
+#else
+
     return CosUmd12CommandBuffer::Create();
+
+#endif
 }
 
 void
