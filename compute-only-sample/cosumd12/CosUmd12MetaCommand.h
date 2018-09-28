@@ -134,6 +134,19 @@ public:
         UINT parameterIndex,
         D3D12DDIARG_META_COMMAND_REQUIRED_PARAMETER_INFO* pInfo)
     {
+        ASSERT(D3D12DDI_META_COMMAND_PARAMETER_STAGE_EXECUTION == stage);
+
+        //
+        // When CopyTensor Meta Command is implemented, tensor resource's size
+        // must be calculated based on a particular tensor's chosen HW layout.
+        //
+        // parameterIndex is the index for tensor resources in META_COMMAND_EXECUTE_*_DESC
+        //
+        // Except for PersistentResource and TemporaryResource which are internal to the 
+        // driver, META_COMMAND_TENSOR_DESC or META_COMMAND_OPTIONAL_TENSOR_DESC for other
+        // tensor resources can be found by parameterIndex in META_COMMAND_CREATE_*_DESC
+        //
+
         pInfo->ResourceSize = 0;
     }
 

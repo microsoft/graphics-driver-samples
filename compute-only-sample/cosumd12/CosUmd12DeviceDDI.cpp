@@ -1654,9 +1654,16 @@ HRESULT APIENTRY CosUmd12Device_Ddi_CreateMetaCommand(
     }
 #if 0
     //
+    // Implementation of CopyTensor Meta Command indicates driver's preferrence for
+    // HW specific tensor layout (META_COMMAND_TENSOR_LAYOUT_UNKNOWN)
+    //
+    // Accordingly, GetRequiredParameterInfo() Ddi must calculate a tensor resource's
+    // size based on its chosen HW layout.
+    //
     // Enable only for Windows build newer than 18231
     // Since it is used to prepare data for other meta commands, only enable after solid testing
-    // Meanwhile ResourceCopy and CopyBufferRegion can be relied upon
+    //
+    // ResourceCopy and CopyBufferRegion are used for META_COMMAND_TENSOR_LAYOUT_STANDARD
     //
     else if (IsEqualGUID(CommandId, MetaCommand_CopyTensor))
     {
