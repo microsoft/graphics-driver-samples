@@ -22,15 +22,15 @@ Note, due to limitations of the Raspberry Pi 2 the sample driver running on the 
 
 # Roles
 
-##Project Coordinator
+## Project Coordinator
 
 There is only one active project coordinator who oversees all aspects of the project.  This role is currently filled by a development engineer at Microsoft.
 
-##Microsoft Developer
+## Microsoft Developer
 
 Individual microsoft developers contribute source to the project following the submission process outlined below without further review.
 
-##Solo Developer
+## Solo Developer
 
 Individuals not part of Microsoft contribute source to the project following the submission process outlined below but those submissions will be reviewed by the Project Coordinator before inclusion in the project. It is highly recommended that solo developers work with the project coordinator prior to submission to ensure that their contributions are in aligned with the goals of the project, not already being addressed by other contributors and are likely to be accepted once the work is complete.
 
