@@ -140,7 +140,6 @@ CosUmd12CommandBuffer::CommitCommandBufferSpace(
 // so a search of the Allocation List is necessary
 //
 
-
 UINT
 CosUmd12CommandBuffer::UseResource(
     CosUmd12Resource *  pResource,
