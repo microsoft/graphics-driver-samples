@@ -7,6 +7,12 @@ class CosUmd12Device;
 class CosUmd12DescriptorHeap
 {
 public:
+    static HRESULT
+    Create(
+        CosUmd12Device *    pDevice,
+        _In_ const D3D12DDIARG_CREATE_DESCRIPTOR_HEAP_0001 *    pDesc,
+        D3D12DDI_HDESCRIPTORHEAP DescriptorHeap);
+
     explicit CosUmd12DescriptorHeap(CosUmd12Device * pDevice, const D3D12DDIARG_CREATE_DESCRIPTOR_HEAP_0001 * pDesc)
     {
         m_pDevice = pDevice;
