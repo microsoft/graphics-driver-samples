@@ -8,6 +8,8 @@
 
 #include "CosUmd12.h"
 
+#if !RS_2LEVEL
+
 void 
 CosUmd12RootSignature::SetRootDescriptorTable(
     BYTE * pRootValues,
@@ -322,3 +324,6 @@ void CosUmd12RootSignature::WriteHWRootSignature(
         }
     }
 }
+
+#endif  // !RS_2LEVEL
+
