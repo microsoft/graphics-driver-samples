@@ -70,13 +70,16 @@ private:
 #if GPUVA
 
     D3D12DDI_GPU_VIRTUAL_ADDRESS m_gpuVa;
-    UINT64 m_pagingFenceValue;
 
 #else
 
     D3D12DDI_GPU_VIRTUAL_ADDRESS m_uniqueAddress;
 
 #endif
+
+    UINT64 m_pagingFenceValue;
+
+
 };
 
 inline CosUmd12Heap* CosUmd12Heap::CastFrom(D3D12DDI_HHEAP hHeap)
