@@ -24,6 +24,9 @@ enum GpuCommandId
     Header = 'CSCB',
     RootSignatureSet = 'RTSS',
     ComputeShaderDispatch = 'CSDP',
+    QwordWrite = 'QWWT',
+    DescriptorHeapSet = 'DHST',
+    RootSignature2LevelSet = 'RS2S',
     MetaCommandExecute = 'MCEX'
 };
 
@@ -51,6 +54,64 @@ struct GpuResourceCopy
     PHYSICAL_ADDRESS    m_srcGpuAddress;
     UINT                m_sizeBytes;
 };
+
+#if RS_2LEVEL
+
+struct GpuHwQwordWrite
+{
+    GpuCommandId        m_commandId;
+
+    PHYSICAL_ADDRESS    m_gpuAddress;
+    ULONGLONG           m_data;
+};
+
+enum GpuHwDescriptorType
+{
+    COS_CBV = 1,
+    COS_SRV = 2,
+    COS_UAV = 3,
+};
+
+struct GpuHwConstantBufferView
+{
+    UINT m_sizeInBytes;
+    UINT m_padding;
+};
+
+struct GpuHwUnorderAccessView
+{
+    DXGI_FORMAT                                 m_format;
+    D3D12DDI_RESOURCE_DIMENSION                 m_resourceDimension;
+    D3D12DDIARG_BUFFER_UNORDERED_ACCESS_VIEW    m_buffer;
+};
+
+struct GpuHWDescriptor
+{
+    GpuHwDescriptorType         m_type;
+    union
+    {
+        GpuHwConstantBufferView m_cbv;
+        GpuHwUnorderAccessView  m_uav;
+    };
+    PHYSICAL_ADDRESS            m_resourceGpuAddress;
+};
+
+struct GpuHwDescriptorHeapSet
+{
+    GpuCommandId        m_commandId;
+
+    PHYSICAL_ADDRESS    m_descriptorHeapGpuAddress;
+};
+
+struct GpuHWRootSignature2LSet
+{
+    GpuCommandId    m_commandId;
+    UINT            m_commandSize;
+
+    BYTE            m_rootValues[1];
+};
+
+#else
 
 //
 // A constant register is loaded directly with Root Constant value or through a Constant Buffer
@@ -84,6 +145,8 @@ struct GpuHWRootSignatureSet
     // Followed by number Srv + Uav of GpuHWDescriptor
     //
 };
+
+#endif  // RS_2LEVEL
 
 struct GpuHwComputeShaderDisptch
 {

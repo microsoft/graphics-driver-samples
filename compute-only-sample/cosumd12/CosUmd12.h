@@ -51,10 +51,18 @@ void UnexpectedDdi(const char * function, const char * file, int line);
 #include "CosUmd12CommandBuffer.h"
 #endif
 
+#if RS_2LEVEL
+#include "CosUmd12RootSignature2L.h"
+#else
 #include "CosUmd12RootSignature.h"
+#endif
 #include "CosUmd12Shader.h"
 #include "CosUmd12PipelineState.h"
+#if RS_2LEVEL
+#include "CosUmd12Descriptor2L.h"
+#else
 #include "CosUmd12Descriptor.h"
+#endif
 #include "CosUmd12CommandPool.h"
 #include "CosUmd12CommandRecorder.h"
 
@@ -65,7 +73,11 @@ void UnexpectedDdi(const char * function, const char * file, int line);
 #endif
 
 #include "CosUmd12Fence.h"
+#if RS_2LEVEL
+#include "CosUmd12DescriptorHeap2L.h"
+#else
 #include "CosUmd12DescriptorHeap.h"
+#endif
 
 #include "CosMetaCommand.h"
 #include "CosUmd12MetaCommand.h"

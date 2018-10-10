@@ -72,6 +72,12 @@ public:
 
     bool IsCommandBufferEmpty();
 
+    void
+    RecordGpuAddressReference(
+        D3D12DDI_GPU_VIRTUAL_ADDRESS resourceGpuVA,
+        UINT commandBufferOffset,
+        D3DDDI_PATCHLOCATIONLIST * &pPatchLocations);
+
     // Interface for Command Queue
     HRESULT Execute(CosUmd12CommandQueue * pCommandQueue);
 
