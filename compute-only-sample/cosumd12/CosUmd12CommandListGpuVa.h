@@ -79,8 +79,8 @@ public:
     template <typename THwMetaCommand, typename THwIoTable>
     void ExecuteMlMetaCommand(THwMetaCommand * pHwMetaCommand, THwIoTable * pHwIoTable, MetaCommandId metaCommandId)
     {
-        UINT numHwDescriptors = sizeof(THwIoTable) / sizeof(D3D12_GPU_DESCRIPTOR_HANDLE);
-        UINT commandSize = sizeof(GpuHwMetaCommand) + sizeof(THwMetaCommand) + numHwDescriptors * sizeof(GpuHWDescriptor);
+        UINT numHwDescriptors = sizeof(THwIoTable)/sizeof(D3D12_GPU_DESCRIPTOR_HANDLE);
+        UINT commandSize = sizeof(GpuHwMetaCommand) + sizeof(THwMetaCommand) + numHwDescriptors*sizeof(GpuHWDescriptor);
 
         BYTE * pCommandBuf;
 
@@ -104,7 +104,7 @@ public:
 
         // Clear the resource descriptors
         GpuHWDescriptor *   pHwDescriptors = (GpuHWDescriptor *)(pCommandBuf + sizeof(GpuHwMetaCommand) + sizeof(THwMetaCommand));
-        memset(pHwDescriptors, 0, numHwDescriptors * sizeof(GpuHWDescriptor));
+        memset(pHwDescriptors, 0, numHwDescriptors*sizeof(GpuHWDescriptor));
 
         //
         // TODO : Create allocation for Descriptor Heap
@@ -128,8 +128,8 @@ public:
         {
             if (pGpuDescriptorHandle->ptr)
             {
-                UINT descriptorIndex = (UINT)((pGpuDescriptorHandle->ptr -
-                    pUavHeap->GetGpuAddress())) / sizeof(CosUmd12Descriptor);
+                UINT descriptorIndex = (UINT)((pGpuDescriptorHandle->ptr - pUavHeap->GetGpuAddress())/
+                                              sizeof(CosUmd12Descriptor));
 
                 CosUmd12Descriptor * pDescriptor = pUavHeap->GetCpuAddress() + descriptorIndex;
 

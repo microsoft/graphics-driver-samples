@@ -526,9 +526,8 @@ HRESULT APIENTRY CosUmd12Device_Ddi_CreateDescriptorHeap_0001(
     TRACE_FUNCTION();
 
     CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
-    CosUmd12DescriptorHeap * pDescriptorHeap = new(DescriptorHeap.pDrvPrivate) CosUmd12DescriptorHeap(pDevice, pDesc);
 
-    return S_OK;
+    return CosUmd12DescriptorHeap::Create(pDevice, pDesc, DescriptorHeap);
 }
 
 void APIENTRY CosUmd12Device_Ddi_DestroyDescriptorHeap(

@@ -63,12 +63,8 @@ public:
 
     static D3D12DDIARG_META_COMMAND_DESC m_supportedMetaCommandDescs[];
 
-#if GPUVA
-
     void TrackPagingFence(UINT64 newPagingFenceValue);
     void WaitForPagingOperation(HANDLE hContext);
-
-#endif
 
 public:
 
@@ -79,12 +75,8 @@ public:
     const D3D12DDI_CORELAYER_DEVICECALLBACKS_0050*   m_pUMCallbacks;
     const D3DDDI_DEVICECALLBACKS*   m_pKMCallbacks;
 
-#if GPUVA
-
     D3DDDICB_CREATEPAGINGQUEUE      m_pagingQueueDesc;
     UINT64                          m_latestPagingFenceValue;
-
-#endif
 
     D3D12DDI_GPU_VIRTUAL_ADDRESS    m_curUniqueAddress;
 

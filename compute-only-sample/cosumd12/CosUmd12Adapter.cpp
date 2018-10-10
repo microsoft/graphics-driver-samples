@@ -165,7 +165,23 @@ HRESULT APIENTRY CosUmd12Adapter::GetCaps(
     {
         assert(pCaps->DataSize == sizeof(D3D12DDI_3DPIPELINELEVEL));
         D3D12DDI_3DPIPELINELEVEL* pPipelineCaps = (D3D12DDI_3DPIPELINELEVEL*)pCaps->pData;
-        *pPipelineCaps = D3D12DDI_3DPIPELINELEVEL_12_1; // TODO Is pipeline level == feature level?
+
+        //
+        // Pipeline Level maps to API Feature Level
+        //
+        // Each Pipeline Level has a set of minimal requirements for features
+        // or capabilities that HW and driver are required to support
+        //
+
+#if USE_RESOURCE_BINDING_TIER_1
+
+        *pPipelineCaps = D3D12DDI_3DPIPELINELEVEL_11_0;
+
+#else
+
+        *pPipelineCaps = D3D12DDI_3DPIPELINELEVEL_12_1;
+
+#endif
         break;
     }
 
@@ -200,11 +216,24 @@ HRESULT APIENTRY CosUmd12Adapter::GetCaps(
         assert(pCaps->DataSize == sizeof(D3D12DDI_D3D12_OPTIONS_DATA_0052));
         D3D12DDI_D3D12_OPTIONS_DATA_0052* pOptions = (D3D12DDI_D3D12_OPTIONS_DATA_0052*)pCaps->pData;
 
-        // TODO: Find out what is required to meet D3D12DDI_RESOURCE_BINDING_TIER_1
+#if USE_RESOURCE_BINDING_TIER_1
+        
+        //
+        // D3D12DDI_RESOURCE_BINDING_TIER_1 is the mininal requirement for
+        // resource binding on D3D12DDI_3DPIPELINELEVEL_11_0 HW/driver
+        //
+
+        pOptions->ResourceBindingTier = D3D12DDI_RESOURCE_BINDING_TIER_1;
+
+        pOptions->TiledResourcesTier = D3D12DDI_TILED_RESOURCES_TIER_NOT_SUPPORTED;
+
+#else
+
         pOptions->ResourceBindingTier = D3D12DDI_RESOURCE_BINDING_TIER_2; // FL 12.0+  must report tier+
 
         pOptions->TiledResourcesTier = D3D12DDI_TILED_RESOURCES_TIER_2; // FL 12.0+ must report tier 2+
 
+#endif
         pOptions->CrossNodeSharingTier = D3D12DDI_CROSS_NODE_SHARING_TIER_NOT_SUPPORTED;
 
         pOptions->VPAndRTArrayIndexFromAnyShaderFeedingRasterizerSupportedWithoutGSEmulation = FALSE;

@@ -61,6 +61,156 @@ CosKmdSoftAdapter::ProcessRenderBuffer(
     }
 }
 
+#if RS_2LEVEL
+
+void
+CosKmdSoftAdapter::ProcessHWRenderBuffer(
+    COSDMABUFSUBMISSION * pDmaBufSubmission)
+{
+    COSDMABUFINFO * pDmaBufInfo = pDmaBufSubmission->m_pDmaBufInfo;
+
+    NT_ASSERT(false == pDmaBufInfo->m_DmaBufState.m_bSwCommandBuffer);
+
+    BYTE * pGpuCommand = pDmaBufInfo->m_pDmaBuffer + pDmaBufSubmission->m_StartOffset;
+    BYTE * pEndofCommand = pDmaBufInfo->m_pDmaBuffer + pDmaBufSubmission->m_EndOffset;
+    UINT64 commandSize;
+
+    BOOL bDescriptorTableSet = false;
+    GpuHWDescriptor * pDescriptorTable = NULL;
+    BOOL bRootSignatureSet = false;
+    BYTE * pRootValues = NULL;
+
+    for (; pGpuCommand < pEndofCommand; pGpuCommand += commandSize)
+    {
+        switch (*((GpuCommandId *)pGpuCommand))
+        {
+        case Header:
+        case Nop:
+            commandSize = sizeof(GpuCommand);
+            break;
+        case QwordWrite:
+            {
+                GpuHwQwordWrite * pQwordWrite = (GpuHwQwordWrite *)pGpuCommand;
+
+                ULONGLONG * pGpuAddress = (ULONGLONG *)(((PBYTE)CosKmdGlobal::s_pVideoMemory) +
+                                                        (pQwordWrite->m_gpuAddress.QuadPart - CosKmdGlobal::s_videoMemoryPhysicalAddress.QuadPart));
+                *pGpuAddress = pQwordWrite->m_data;
+
+                commandSize = sizeof(GpuHwQwordWrite);
+            }
+            break;
+        case DescriptorHeapSet:
+            {
+                GpuHwDescriptorHeapSet * pDescriptorHeapSet = (GpuHwDescriptorHeapSet *)pGpuCommand;
+
+                bDescriptorTableSet = true;
+
+                pDescriptorTable = (GpuHWDescriptor *)(((PBYTE)CosKmdGlobal::s_pVideoMemory) +
+                                                       (pDescriptorHeapSet->m_descriptorHeapGpuAddress.QuadPart - CosKmdGlobal::s_videoMemoryPhysicalAddress.QuadPart));
+
+                commandSize = sizeof(GpuHwDescriptorHeapSet);
+            }
+            break;
+        case RootSignature2LevelSet:
+            {
+                GpuHWRootSignature2LSet * pRootSignatureSet = (GpuHWRootSignature2LSet *)pGpuCommand;
+
+                bRootSignatureSet = true;
+
+                pRootValues = pRootSignatureSet->m_rootValues;
+
+                commandSize = pRootSignatureSet->m_commandSize;
+            }
+            break;
+        case ComputeShaderDispatch:
+            {
+                GpuHwComputeShaderDisptch * pCSDispatch = (GpuHwComputeShaderDisptch *)pGpuCommand;
+
+                if (bRootSignatureSet)
+                {
+                    KFLOATING_SAVE floatingSave;
+
+                    KeSaveFloatingPointState(&floatingSave);
+
+                    //
+                    // Shader compiler generates code according to Root Signature passed in at 
+                    // compilation time, so that shader code can access the root values with 
+                    // offset at the runtime.
+                    //
+
+#if ENABLE_FOR_COSTEST
+
+                    UINT numElements =  pCSDispatch->m_numThreadPerGroup*
+                                        pCSDispatch->m_threadGroupCountX*
+                                        pCSDispatch->m_threadGroupCountY*
+                                        pCSDispatch->m_threadGroupCountZ;
+
+                    UINT * pIntIn1 = (UINT *)(((PBYTE)CosKmdGlobal::s_pVideoMemory) + 
+                                              ((*(LONGLONG *)(pRootValues + 0)) - CosKmdGlobal::s_videoMemoryPhysicalAddress.QuadPart));
+
+                    UINT * pIntIn2 = (UINT *)(((PBYTE)CosKmdGlobal::s_pVideoMemory) + 
+                                              ((*(LONGLONG *)(pRootValues + 8)) - CosKmdGlobal::s_videoMemoryPhysicalAddress.QuadPart));
+
+                    UINT * pIntOut = (UINT *)(((PBYTE)CosKmdGlobal::s_pVideoMemory) +
+                                              ((*(LONGLONG *)(pRootValues + 0x10)) - CosKmdGlobal::s_videoMemoryPhysicalAddress.QuadPart));
+
+                    for (UINT i = 0; i < numElements; i++)
+                    {
+                        *pIntOut++ = *pIntIn1++ + *pIntIn2++;
+                        *((FLOAT *)pIntOut++) = *((FLOAT *)pIntIn1++) + *((FLOAT *)pIntIn2++);
+                    }
+
+#elif ENABLE_FOR_COSTEST2
+
+                    UINT numElements =  pCSDispatch->m_numThreadPerGroup*
+                                        pCSDispatch->m_threadGroupCountX*
+                                        pCSDispatch->m_threadGroupCountY*
+                                        pCSDispatch->m_threadGroupCountZ;
+
+                    UINT * pIntIn1 = (UINT *)(((PBYTE)CosKmdGlobal::s_pVideoMemory) + 
+                                              ((*(LONGLONG *)(pRootValues + 0)) - CosKmdGlobal::s_videoMemoryPhysicalAddress.QuadPart));
+
+                    UINT * pIntIn2 = (UINT *)(((PBYTE)CosKmdGlobal::s_pVideoMemory) + 
+                                              ((*(LONGLONG *)(pRootValues + 8)) - CosKmdGlobal::s_videoMemoryPhysicalAddress.QuadPart));
+
+                    UINT * pIntOut = (UINT *)(((PBYTE)CosKmdGlobal::s_pVideoMemory) + 
+                                              (pDescriptorTable[1 + 1].m_resourceGpuAddress.QuadPart - CosKmdGlobal::s_videoMemoryPhysicalAddress.QuadPart));
+
+                    for (UINT i = 0; i < numElements; i++)
+                    {
+                        *pIntOut++ = *pIntIn1++ + *pIntIn2++;
+                        *((FLOAT *)pIntOut++) = *((FLOAT *)pIntIn1++) + *((FLOAT *)pIntIn2++);
+                    }
+
+#endif
+
+                    KeRestoreFloatingPointState(&floatingSave);
+                }
+
+                commandSize = pCSDispatch->m_commandSize;
+            }
+            break;
+        case MetaCommandExecute:
+            {
+                GpuHwMetaCommand *  pMetaCommand = (GpuHwMetaCommand *)pGpuCommand;
+
+                CosKmExecuteMetaCommand(pMetaCommand);
+
+                commandSize = pMetaCommand->m_commandSize;
+            }
+            break;
+        default:
+            {
+                NT_ASSERT(false);
+                commandSize = pEndofCommand - pGpuCommand;
+            }
+            break;
+        }
+    }
+}
+
+#else
+
 void
 CosKmdSoftAdapter::ProcessHWRenderBuffer(
     COSDMABUFSUBMISSION * pDmaBufSubmission)
@@ -170,6 +320,8 @@ CosKmdSoftAdapter::ProcessHWRenderBuffer(
         }
     }
 }
+
+#endif  // !RS_2LEVEL
 
 #if GPUVA
 

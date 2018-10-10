@@ -37,8 +37,6 @@ CosUmd12Device::CosUmd12Device(
 
 void CosUmd12Device::Standup()
 {
-#if GPUVA
-
     HRESULT hr;
 
     memset(&m_pagingQueueDesc, 0, sizeof(m_pagingQueueDesc));
@@ -50,8 +48,6 @@ void CosUmd12Device::Standup()
     {
         m_pUMCallbacks->pfnSetErrorCb(m_hRTDevice, D3DDDIERR_DEVICEREMOVED);
     }
-
-#endif
 
     m_curUniqueAddress = 0x100000000;
 
@@ -76,8 +72,6 @@ CosUmd12Device::~CosUmd12Device()
 {
     // do nothing
 }
-
-#if GPUVA
 
 void CosUmd12Device::TrackPagingFence(
     UINT64  newPagingFenceValue)
@@ -110,8 +104,6 @@ void CosUmd12Device::WaitForPagingOperation(
     hr = m_pKMCallbacks->pfnWaitForSynchronizationObjectFromGpuCb(m_hRTDevice.handle, &waitFromGpu);
     ASSERT(S_OK == hr);
 }
-
-#endif
 
 D3D12DDI_GPU_VIRTUAL_ADDRESS CosUmd12Device::AllocateUniqueAddress(UINT size)
 {

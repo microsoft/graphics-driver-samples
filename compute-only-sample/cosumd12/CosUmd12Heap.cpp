@@ -55,10 +55,10 @@ CosUmd12Heap::Standup()
 
     m_hKMAllocation = allocate.pAllocationInfo[0].hAllocation;
 
-#if GPUVA
-
     do
     {
+#if GPUVA
+
         D3DDDI_MAPGPUVIRTUALADDRESS mapGpuVa = {};
 
         //
@@ -81,6 +81,8 @@ CosUmd12Heap::Standup()
         {
             break;
         }
+
+#endif
 
         //
         // Driver need to make internally created resources resident
@@ -119,7 +121,7 @@ CosUmd12Heap::Standup()
 
     m_pDevice->TrackPagingFence(m_pagingFenceValue);
 
-#else
+#if !GPUVA
 
     m_uniqueAddress = m_pDevice->AllocateUniqueAddress(m_hwSizeBytes);
 
