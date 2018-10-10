@@ -1672,12 +1672,12 @@ CosKmAdapter::PatchDmaBuffer(
             else
             {
                 // Patch HW command buffer
-                UINT    physicalAddress =
+                LONGLONG    physicalAddress =
                     CosKmdGlobal::s_videoMemoryPhysicalAddress.LowPart +
                     allocation->PhysicalAddress.LowPart +
                     patch->AllocationOffset;
 
-                *((UINT *)(pDmaBuf + patch->PatchOffset)) = physicalAddress;
+                *((LONGLONG *)(pDmaBuf + patch->PatchOffset)) = physicalAddress;
             }
         }
     }
