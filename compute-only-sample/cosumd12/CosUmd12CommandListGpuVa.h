@@ -128,8 +128,8 @@ public:
         {
             if (pGpuDescriptorHandle->ptr)
             {
-                UINT descriptorIndex = (UINT)((pGpuDescriptorHandle->ptr -
-                                               pUavHeap->GetGpuAddress()))/sizeof(CosUmd12Descriptor);
+                UINT descriptorIndex = (UINT)((pGpuDescriptorHandle->ptr - pUavHeap->GetGpuAddress())/
+                                              sizeof(CosUmd12Descriptor));
 
                 CosUmd12Descriptor * pDescriptor = pUavHeap->GetCpuAddress() + descriptorIndex;
 

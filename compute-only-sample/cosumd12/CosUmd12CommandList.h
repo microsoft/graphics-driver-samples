@@ -131,8 +131,8 @@ public:
                 D3D12DDI_GPU_VIRTUAL_ADDRESS resourceAddressField = pGpuDescriptorHandle->ptr +
                                                                     FIELD_OFFSET(GpuHWDescriptor, m_resourceGpuAddress);
 
-                UINT descriptorIndex = (UINT)((pGpuDescriptorHandle->ptr -
-                                               pUavHeap->GetGpuAddress()))/sizeof(CosUmd12Descriptor);
+                UINT descriptorIndex = (UINT)((pGpuDescriptorHandle->ptr - pUavHeap->GetGpuAddress())/
+                                              sizeof(CosUmd12Descriptor));
 
                 CosUmd12Descriptor * pDescriptor = pUavHeap->GetCpuAddress() + descriptorIndex;
                 GpuHWDescriptor * pHwDescriptor = pUavHeap->m_pHwDescriptors + descriptorIndex;
@@ -257,8 +257,8 @@ public:
         {
             if (pGpuDescriptorHandle->ptr)
             {
-                UINT descriptorIndex = (UINT)((pGpuDescriptorHandle->ptr - 
-                                               pUavHeap->GetGpuAddress()))/sizeof(CosUmd12Descriptor);
+                UINT descriptorIndex = (UINT)((pGpuDescriptorHandle->ptr - pUavHeap->GetGpuAddress())/
+                                              sizeof(CosUmd12Descriptor));
 
                 CosUmd12Descriptor * pDescriptor = pUavHeap->GetCpuAddress() + descriptorIndex;
 
