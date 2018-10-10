@@ -82,7 +82,7 @@ public:
     void ExecuteMlMetaCommand(THwMetaCommand * pHwMetaCommand, THwIoTable * pHwIoTable, MetaCommandId metaCommandId)
     {
         D3D12_GPU_DESCRIPTOR_HANDLE * pGpuDescriptorHandle = (D3D12_GPU_DESCRIPTOR_HANDLE *)pHwIoTable;
-        UINT numMetaCmdDescriptors = sizeof(THwIoTable) / sizeof(D3D12_GPU_DESCRIPTOR_HANDLE);
+        UINT numMetaCmdDescriptors = sizeof(THwIoTable)/sizeof(D3D12_GPU_DESCRIPTOR_HANDLE);
         UINT numDescriptorsUsed = 0;
 
         for (UINT i = 0; i < numMetaCmdDescriptors; i++, pGpuDescriptorHandle++)
@@ -97,7 +97,7 @@ public:
         // 1 patch location for each descriptor and 2 for each GpuHwQwordWrite to patch the descriptor on GPU
         //
 
-        UINT numPatchLocations = numDescriptorsUsed + numDescriptorsUsed * 2;
+        UINT numPatchLocations = numDescriptorsUsed + numDescriptorsUsed*2;
         UINT commandSize = numDescriptorsUsed * sizeof(GpuHwQwordWrite) +
             sizeof(GpuHwMetaCommand) +
             sizeof(THwMetaCommand) +
@@ -129,10 +129,10 @@ public:
             if (pGpuDescriptorHandle->ptr)
             {
                 D3D12DDI_GPU_VIRTUAL_ADDRESS resourceAddressField = pGpuDescriptorHandle->ptr +
-                    FIELD_OFFSET(GpuHWDescriptor, m_resourceGpuAddress);
+                                                                    FIELD_OFFSET(GpuHWDescriptor, m_resourceGpuAddress);
 
                 UINT descriptorIndex = (UINT)((pGpuDescriptorHandle->ptr -
-                    pUavHeap->GetGpuAddress())) / sizeof(CosUmd12Descriptor);
+                                               pUavHeap->GetGpuAddress()))/sizeof(CosUmd12Descriptor);
 
                 CosUmd12Descriptor * pDescriptor = pUavHeap->GetCpuAddress() + descriptorIndex;
                 GpuHWDescriptor * pHwDescriptor = pUavHeap->m_pHwDescriptors + descriptorIndex;
@@ -169,7 +169,7 @@ public:
         GpuHwMetaCommand *  pMetaCommand = (GpuHwMetaCommand *)pGpuHwQwordWrite;
 
         pMetaCommand->m_commandId = MetaCommandExecute;
-        pMetaCommand->m_commandSize = commandSize - numDescriptorsUsed * sizeof(GpuHwQwordWrite);
+        pMetaCommand->m_commandSize = commandSize - numDescriptorsUsed*sizeof(GpuHwQwordWrite);
 
         pMetaCommand->m_metaCommandId = metaCommandId;
 
