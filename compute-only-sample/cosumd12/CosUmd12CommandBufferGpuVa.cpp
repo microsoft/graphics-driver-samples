@@ -93,9 +93,6 @@ void CosUmd12CommandBuffer::Teardown()
 
 CosUmd12CommandBuffer::~CosUmd12CommandBuffer()
 {
-    Teardown();
-
-    free(this);
 }
 
 bool CosUmd12CommandBuffer::IsCommandBufferEmpty()

@@ -30,5 +30,13 @@ CosUmd12CommandPool::AcquireCommandBuffer(
 void
 CosUmd12CommandPool::ReleaseCommandBuffer(CosUmd12CommandBuffer * pCommandBuffer)
 {
+#if GPUVA
+
+    delete pCommandBuffer;
+
+#else
+
     pCommandBuffer->~CosUmd12CommandBuffer();
+
+#endif
 }
