@@ -295,28 +295,19 @@ CosUmd12CommandList::Dispatch(
     UINT curCommandOffset;
     D3DDDI_PATCHLOCATIONLIST * pPatchLocationList;
 
-#if GPUVA
-
-    // TODO : Create allocation for Descriptor Heap
-
-#else
+    // TODO : Disallow Dispatch without Descriptor Heap
 
     //
     // State setup and Dispatch command have to be in the same command buffer, so the space for them
     // in the command buffer is reserved at once
     //
 
-    hwRootSignatureSetCommandSize = commandSize = pRootSignature->GetHwRootSignatureSize(&numPatchLocations);
-    commandSize += sizeof(GpuHwComputeShaderDisptch) + pComputeShader->m_args.pShaderCode[1] * sizeof(UINT);
+    hwRootSignatureSetCommandSize = commandSize = pRootSignature->GetHwRootSignatureSize();
+    commandSize += sizeof(GpuHwComputeShaderDisptch) + pComputeShader->m_args.pShaderCode[1]*sizeof(UINT);
 
     ReserveCommandBufferSpace(
-        false,                          // HW command
         commandSize,
-        (BYTE **)&pCommandBuf,
-        numPatchLocations,
-        numPatchLocations,
-        &curCommandOffset,
-        &pPatchLocationList);
+        (BYTE **)&pCommandBuf);
     if (NULL == pCommandBuf)
     {
         return;
@@ -326,7 +317,7 @@ CosUmd12CommandList::Dispatch(
     // Write the Root Signature into the command list
     //
 
-    pRootSignature->WriteHWRootSignature(m_rootValues, m_pDescriptorHeaps, m_pCurCommandBuffer, pCommandBuf, curCommandOffset, pPatchLocationList);
+    pRootSignature->WriteHWRootSignature(m_rootValues, m_pDescriptorHeaps, pCommandBuf);
 
     //
     // Write Dispatch command into the Command List
@@ -353,9 +344,7 @@ CosUmd12CommandList::Dispatch(
     // Commit both commands into the command buffer
     //
 
-    m_pCurCommandBuffer->CommitCommandBufferSpace(commandSize, numPatchLocations);
-
-#endif
+    m_pCurCommandBuffer->CommitCommandBufferSpace(commandSize);
 }
 
 #endif

@@ -31,10 +31,10 @@ public:
         m_uav = *pDesc;
     }
 
-#if GPUVA
+#if GPUVA_SYSMEM_DH
 
     void WriteHWDescriptor(
-        GpuHWDescriptor *   pHwDescriptor) const;
+        D3D12DDI_GPU_VIRTUAL_ADDRESS * pResourceGpuVa) const;
 
 #endif
 

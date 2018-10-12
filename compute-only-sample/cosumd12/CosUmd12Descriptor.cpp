@@ -8,10 +8,10 @@
 
 #include "CosUmd12.h"
 
-#if GPUVA
+#if GPUVA_SYSMEM_DH
 
 void CosUmd12Descriptor::WriteHWDescriptor(
-    GpuHWDescriptor *   pHwDescriptor) const
+    D3D12DDI_GPU_VIRTUAL_ADDRESS * pResourceGpuVa) const
 {
     D3D12DDI_GPU_VIRTUAL_ADDRESS resourceGpuVa;
     UINT allocationOffset = 0;
@@ -45,10 +45,12 @@ void CosUmd12Descriptor::WriteHWDescriptor(
         break;
     }
 
-    pHwDescriptor->m_resourceGpuAddress.QuadPart = resourceGpuVa;
+    *pResourceGpuVa = resourceGpuVa;
 }
 
 #endif
+
+#if !GPUVA
 
 void CosUmd12Descriptor::WriteHWDescriptor(
     CosUmd12CommandBuffer * pCurCommandBuffer,
@@ -107,8 +109,6 @@ void CosUmd12Descriptor::WriteHWDescriptor(
         break;
     }
 
-#if !GPUVA
-
     D3DKMT_HANDLE hAllocation = (D3DKMT_HANDLE)(resourceGpuVA >> 32);
     allocationOffset += (UINT)(resourceGpuVA & 0xFFFFFFFF);
 
@@ -120,7 +120,7 @@ void CosUmd12Descriptor::WriteHWDescriptor(
                         hwDescriptorOffset,
                         0,
                         allocationOffset);
+}
 
 #endif
-}
 

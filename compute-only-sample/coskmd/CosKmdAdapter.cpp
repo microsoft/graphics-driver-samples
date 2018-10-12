@@ -143,7 +143,7 @@ void CosKmAdapter::DoWork(void)
             {
                 ProcessGpuVaRenderBuffer(pDmaBufSubmission);
             }
-#endif
+#else
             else if (pDmaBufInfo->m_DmaBufState.m_bSwCommandBuffer)
             {
                 //
@@ -156,6 +156,7 @@ void CosKmAdapter::DoWork(void)
             {
                 ProcessHWRenderBuffer(pDmaBufSubmission);
             }
+#endif
 
             NotifyDmaBufCompletion(pDmaBufSubmission);
 

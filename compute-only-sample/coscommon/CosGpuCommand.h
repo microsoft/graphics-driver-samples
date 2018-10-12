@@ -55,7 +55,7 @@ struct GpuResourceCopy
     UINT                m_sizeBytes;
 };
 
-#if RS_2LEVEL
+#if GPUVA || RS_2LEVEL
 
 struct GpuHwQwordWrite
 {
