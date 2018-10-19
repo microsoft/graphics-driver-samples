@@ -16,6 +16,19 @@
 #include "CosKmdAcpi.h"
 #include "CosKmdUtil.h"
 
+//
+// Global variable to set in kernel debugger for triggering Preemption
+//
+
+BOOLEAN g_bTriggerPreemption = FALSE;
+
+//
+// 60 seconds : Stall duration for "preemptable" long running DMA buffer
+//
+
+#define COS_DMA_BUF_STALL_DURATION  -60*1000*1000*10L
+
+
 void * CosKmAdapter::operator new(size_t size)
 {
     return ExAllocatePoolWithTag(NonPagedPoolNx, size, 'COSD');
@@ -100,18 +113,40 @@ void CosKmAdapter::WorkerThread(void * inThis)
 void CosKmAdapter::DoWork(void)
 {
     bool done = false;
+    KEVENT dmaBufStallEvent;
+
+    KeInitializeEvent(&dmaBufStallEvent, SynchronizationEvent, FALSE);
 
     while (!done)
     {
-        NTSTATUS status = KeWaitForSingleObject(
-            &m_workerThreadEvent,
-            Executive,
-            KernelMode,
-            FALSE,
-            NULL);
+        PVOID       waitEvents[2];
+        NTSTATUS    status;
+        
+        waitEvents[0] = &m_workerThreadEvent;
+        waitEvents[1] = &m_preemptionEvent;
 
-        status;
-        NT_ASSERT(status == STATUS_SUCCESS);
+        status = KeWaitForMultipleObjects(
+                    2,
+                    waitEvents,
+                    WaitAny,
+                    Executive,
+                    KernelMode,
+                    FALSE,          // Alertable
+                    NULL,
+                    NULL);
+
+        if (STATUS_WAIT_1 == status)
+        {
+            //
+            // Notify completion of Preemption request
+            //
+
+            NotifyPreemptionCompletion();
+
+            continue;
+        }
+
+        NT_ASSERT(status == STATUS_WAIT_0);
 
         if (m_workerExit)
         {
@@ -128,6 +163,80 @@ void CosKmAdapter::DoWork(void)
             }
 
             COSDMABUFINFO * pDmaBufInfo = pDmaBufSubmission->m_pDmaBufInfo;
+
+            if (0 != pDmaBufInfo->m_DmaBufStallDuration)
+            {
+                LARGE_INTEGER   timeout;
+                ULONG64         waitStart, waitEnd, waitTicks;
+
+                //
+                // Simulate long running DMA buffer with stall so that it can be preempted
+                //
+
+                waitEvents[0] = &dmaBufStallEvent;
+                waitEvents[1] = &m_preemptionEvent;
+
+                timeout.QuadPart = pDmaBufInfo->m_DmaBufStallDuration;
+
+                KeQueryTickCount(&waitStart);
+
+                status =  KeWaitForMultipleObjects(
+                            2,
+                            waitEvents,
+                            WaitAny,
+                            Executive,
+                            KernelMode,
+                            FALSE,          // Alertable
+                            &timeout,
+                            NULL);
+
+                KeQueryTickCount(&waitEnd);
+
+                if (STATUS_WAIT_1 == status)
+                {
+                    //
+                    // Preemption requested
+                    //
+                    // HW driver need to save progression state of the preempted DMA buffer for resumption
+                    //
+
+                    pDmaBufInfo->m_DmaBufState.m_bPreempted = 1;
+
+                    waitTicks = waitEnd - waitStart;
+                    if (0 == waitTicks)
+                    {
+                        waitTicks = 1;
+                    }
+
+                    //
+                    // Subtract the time already stalled
+                    //
+
+                    pDmaBufInfo->m_DmaBufStallDuration += waitTicks*KeQueryTimeIncrement();
+                    if (pDmaBufInfo->m_DmaBufStallDuration > 0)
+                    {
+                        pDmaBufInfo->m_DmaBufStallDuration = 0;
+                    }
+
+                    ExInterlockedInsertTailList(&m_dmaBufSubmissionFree, &pDmaBufSubmission->m_QueueEntry, &m_dmaBufQueueLock);
+
+                    //
+                    // Notify completion of Preemption request
+                    //
+
+                    NotifyPreemptionCompletion();
+
+                    break;
+                }
+                else if (STATUS_TIMEOUT == status)
+                {
+                    pDmaBufInfo->m_DmaBufStallDuration = 0;
+                }
+                else
+                {
+                    NT_ASSERT(false);
+                }
+            }
 
             if (pDmaBufInfo->m_DmaBufState.m_bPaging)
             {
@@ -187,6 +296,25 @@ CosKmAdapter::DequeueDmaBuffer(
     }
 
     return CONTAINING_RECORD(pDmaEntry, COSDMABUFSUBMISSION, m_QueueEntry);
+}
+
+void
+CosKmAdapter::EmptyDmaBufferQueue()
+{
+    KIRQL                   OldIrql;
+
+    KeAcquireSpinLock(&m_dmaBufQueueLock, &OldIrql);
+
+    while (!IsListEmpty(&m_dmaBufQueue))
+    {
+        LIST_ENTRY *pQueueEntry;
+
+        pQueueEntry = RemoveHeadList(&m_dmaBufQueue);
+
+        InsertTailList(&m_dmaBufSubmissionFree, pQueueEntry);
+    }
+
+    KeReleaseSpinLock(&m_dmaBufQueueLock, OldIrql);
 }
 
 void
@@ -325,6 +453,52 @@ CosKmAdapter::NotifyDmaBufCompletion(
     {
         m_ErrorHit.m_NotifyDmaBufCompletion = 1;
     }
+
+    //
+    // Keep track of last completed fence ID for Preemption request afterward
+    //
+
+    m_lastCompletetdFenceId = pDmaBufSubmission->m_SubmissionFenceId;
+}
+
+void
+CosKmAdapter::NotifyPreemptionCompletion()
+{
+    //
+    // Remove the queued DMA buffers which will be submitted again
+    //
+
+    EmptyDmaBufferQueue();
+
+    //
+    // Notify the VidSch of the completion of the Preemption request
+    //
+
+    NTSTATUS    Status;
+
+    RtlZeroMemory(&m_interruptData, sizeof(m_interruptData));
+
+    m_interruptData.InterruptType = DXGK_INTERRUPT_DMA_PREEMPTED;
+    m_interruptData.DmaPreempted.PreemptionFenceId = m_preemptionRequest.PreemptionFenceId;
+    m_interruptData.DmaPreempted.LastCompletedFenceId = m_lastCompletetdFenceId;
+    m_interruptData.DmaPreempted.NodeOrdinal = m_preemptionRequest.NodeOrdinal;
+    m_interruptData.DmaPreempted.EngineOrdinal = m_preemptionRequest.EngineOrdinal;
+
+    BOOLEAN bRet;
+
+    Status = m_DxgkInterface.DxgkCbSynchronizeExecution(
+        m_DxgkInterface.DeviceHandle,
+        SynchronizeNotifyInterrupt,
+        this,
+        0,
+        &bRet);
+
+    if (!NT_SUCCESS(Status))
+    {
+        m_ErrorHit.m_NotifyPreemptionCompletion = 1;
+    }
+
+    m_lastCompeletedPreemptionFenceId = m_preemptionRequest.PreemptionFenceId;
 }
 
 BOOLEAN CosKmAdapter::SynchronizeNotifyInterrupt(PVOID inThis)
@@ -366,12 +540,17 @@ CosKmAdapter::Start(
     m_NumNodes = C_COSD_GPU_ENGINE_COUNT;
 
     //
-    // Initialize worker
+    // Initialize work thread and Preemption request events
     //
 
     KeInitializeEvent(&m_workerThreadEvent, SynchronizationEvent, FALSE);
+    KeInitializeEvent(&m_preemptionEvent, SynchronizationEvent, FALSE);
 
     m_workerExit = false;
+
+    //
+    // Initialize worker thread
+    //
 
     OBJECT_ATTRIBUTES   ObjectAttributes;
     HANDLE              hWorkerThread;
@@ -1432,9 +1611,24 @@ CosKmAdapter::SubmitCommandVirtual(
 
 NTSTATUS
 CosKmAdapter::PreemptCommand(
-    IN_CONST_PDXGKARG_PREEMPTCOMMAND    /*pPreemptCommand*/)
+    IN_CONST_PDXGKARG_PREEMPTCOMMAND    pPreemptCommand)
 {
-    COS_LOG_WARNING("Not implemented");
+    //
+    // Preemption request is non-blocking
+    // It is guaranteed that there is only 1 pending preemption request
+    //
+    // HW driver should issue the request to HW and return
+    //
+    // Completion of the preemption request should be notified by interrupt
+    //
+    // Progression state of the preempted DMA buffer should be saved in
+    // DMA buffer private data or inside DMA buffer itself
+    //
+
+    m_preemptionRequest = *pPreemptCommand;
+
+    KeSetEvent(&m_preemptionEvent, 0, FALSE);
+
     return STATUS_SUCCESS;
 }
 
@@ -1449,20 +1643,12 @@ NTSTATUS
 CosKmAdapter::CancelCommand(
     IN_CONST_PDXGKARG_CANCELCOMMAND /*pCancelCommand*/)
 {
-    COS_ASSERTION("Not implemented");
-    return STATUS_NOT_IMPLEMENTED;
-}
+    //
+    // DMA buffer to be cancelled is guaranteed to be NOT queued in HW
+    //
+    // If needed, HW driver can take this opportunity to clean up DMA buffer private data
+    //
 
-NTSTATUS
-CosKmAdapter::QueryCurrentFence(
-    INOUT_PDXGKARG_QUERYCURRENTFENCE pCurrentFence)
-{
-    COS_LOG_WARNING("Not implemented");
-
-    NT_ASSERT(pCurrentFence->NodeOrdinal == 0);
-    NT_ASSERT(pCurrentFence->EngineOrdinal == 0);
-
-    pCurrentFence->CurrentFence = 0;
     return STATUS_SUCCESS;
 }
 
@@ -1741,6 +1927,22 @@ CosKmAdapter::QueueDmaBuffer(
     if (!pDmaBufInfo->m_DmaBufState.m_bSubmittedOnce)
     {
         pDmaBufInfo->m_DmaBufState.m_bSubmittedOnce = 1;
+
+        //
+        // Trigger Preemption by emulating long running DMA buffer with stall
+        //
+
+        if ((!pDmaBufInfo->m_DmaBufState.m_bPaging) &&
+            g_bTriggerPreemption)
+        {
+            pDmaBufInfo->m_DmaBufStallDuration = COS_DMA_BUF_STALL_DURATION;
+
+            //
+            // Reset the trigger for Preemption which was set using kernel debugger
+            //
+
+            g_bTriggerPreemption = false;
+        }
     }
 
     NT_ASSERT(!IsListEmpty(&m_dmaBufSubmissionFree));
@@ -1754,6 +1956,8 @@ CosKmAdapter::QueueDmaBuffer(
     pDmaBufSubmission->m_SubmissionFenceId = pSubmitCommand->SubmissionFenceId;
 
     InsertTailList(&m_dmaBufQueue, &pDmaBufSubmission->m_QueueEntry);
+
+    m_lastSubmittedFenceId = pSubmitCommand->SubmissionFenceId;
 
     KeReleaseSpinLock(&m_dmaBufQueueLock, OldIrql);
 }

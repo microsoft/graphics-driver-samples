@@ -62,6 +62,8 @@ typedef struct _COSDMABUFINFO
     };
     UINT                        m_DmaBufferSize;
     COSDMABUFSTATE              m_DmaBufState;
+
+    LONGLONG                    m_DmaBufStallDuration;
 } COSDMABUFINFO;
 
 typedef struct _COSDMABUFSUBMISSION
@@ -136,11 +138,6 @@ public:
     NTSTATUS
         CancelCommand(
             IN_CONST_PDXGKARG_CANCELCOMMAND pCancelCommand);
-
-    NTSTATUS
-        QueryCurrentFence(
-            INOUT_PDXGKARG_QUERYCURRENTFENCE   pCurrentFence);
-
 
     NTSTATUS
         QueryEngineStatus(
@@ -307,9 +304,11 @@ private:
     void DoWork(void);
     void DpcRoutine(void);
     void NotifyDmaBufCompletion(COSDMABUFSUBMISSION * pDmaBufSubmission);
+    void NotifyPreemptionCompletion();
     static BOOLEAN SynchronizeNotifyInterrupt(PVOID SynchronizeContext);
     BOOLEAN SynchronizeNotifyInterrupt();
     COSDMABUFSUBMISSION * DequeueDmaBuffer(KSPIN_LOCK * pDmaBufQueueLock);
+    void EmptyDmaBufferQueue();
     void ProcessPagingBuffer(COSDMABUFSUBMISSION * pDmaBufSubmission);
     static void HwDmaBufCompletionDpcRoutine(KDPC *, PVOID, PVOID, PVOID);
 
@@ -386,6 +385,15 @@ protected:
 
     BYTE                        m_deviceId[MAX_DEVICE_ID_LENGTH];
     ULONG                       m_deviceIdLength;
+
+    UINT                        m_lastSubmittedFenceId;
+    UINT                        m_lastCompletetdFenceId;
+
+    UINT                        m_lastCompeletedPreemptionFenceId;
+
+    DXGKARG_PREEMPTCOMMAND      m_preemptionRequest;
+
+    KEVENT                      m_preemptionEvent;
 
 public:
 
