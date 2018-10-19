@@ -1643,8 +1643,13 @@ NTSTATUS
 CosKmAdapter::CancelCommand(
     IN_CONST_PDXGKARG_CANCELCOMMAND /*pCancelCommand*/)
 {
-    COS_ASSERTION("Not implemented");
-    return STATUS_NOT_IMPLEMENTED;
+    //
+    // DMA buffer to be cancelled is guaranteed to be NOT queued in HW
+    //
+    // If needed, HW driver can take this opportunity to clean up DMA buffer private data
+    //
+
+    return STATUS_SUCCESS;
 }
 
 NTSTATUS
