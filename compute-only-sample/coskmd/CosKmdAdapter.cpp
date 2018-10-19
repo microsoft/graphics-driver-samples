@@ -1653,19 +1653,6 @@ CosKmAdapter::CancelCommand(
 }
 
 NTSTATUS
-CosKmAdapter::QueryCurrentFence(
-    INOUT_PDXGKARG_QUERYCURRENTFENCE pCurrentFence)
-{
-    COS_LOG_WARNING("Not implemented");
-
-    NT_ASSERT(pCurrentFence->NodeOrdinal == 0);
-    NT_ASSERT(pCurrentFence->EngineOrdinal == 0);
-
-    pCurrentFence->CurrentFence = 0;
-    return STATUS_SUCCESS;
-}
-
-NTSTATUS
 CosKmAdapter::ResetEngine(
     INOUT_PDXGKARG_RESETENGINE  /*pResetEngine*/)
 {

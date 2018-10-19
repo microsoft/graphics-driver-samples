@@ -140,11 +140,6 @@ public:
             IN_CONST_PDXGKARG_CANCELCOMMAND pCancelCommand);
 
     NTSTATUS
-        QueryCurrentFence(
-            INOUT_PDXGKARG_QUERYCURRENTFENCE   pCurrentFence);
-
-
-    NTSTATUS
         QueryEngineStatus(
             INOUT_PDXGKARG_QUERYENGINESTATUS    pQueryEngineStatus);
 
