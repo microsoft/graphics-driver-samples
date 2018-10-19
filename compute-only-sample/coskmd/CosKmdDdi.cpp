@@ -282,14 +282,14 @@ CosKmdDdi::DdiCancelCommand(
 NTSTATUS
 __stdcall
 CosKmdDdi::DdiQueryCurrentFence(
-    IN_CONST_HANDLE                    hAdapter,
-    INOUT_PDXGKARG_QUERYCURRENTFENCE   pCurrentFence)
+    IN_CONST_HANDLE                    /* hAdapter */,
+    INOUT_PDXGKARG_QUERYCURRENTFENCE   /* pCurrentFence */)
 {
-    CosKmAdapter  *pCosKmdAdapter = CosKmAdapter::Cast(hAdapter);
+    //
+    // Deprecated, but a stub is needed for now
+    //
 
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n", __FUNCTION__, hAdapter);
-
-    return pCosKmdAdapter->QueryCurrentFence(pCurrentFence);
+    return STATUS_NOT_IMPLEMENTED;
 }
 
 
