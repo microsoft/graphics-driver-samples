@@ -93,16 +93,6 @@ CosKmAdapter::AddAdapter(
     return STATUS_SUCCESS;
 }
 
-NTSTATUS
-CosKmAdapter::QueryEngineStatus(
-    DXGKARG_QUERYENGINESTATUS  *pQueryEngineStatus)
-{
-    COS_LOG_TRACE("QueryEngineStatus was called.");
-
-    pQueryEngineStatus->EngineStatus.Responsive = 1;
-    return STATUS_SUCCESS;
-}
-
 void CosKmAdapter::WorkerThread(void * inThis)
 {
     CosKmAdapter  *pCosKmAdapter = CosKmAdapter::Cast(inThis);
@@ -1632,12 +1622,6 @@ CosKmAdapter::PreemptCommand(
     return STATUS_SUCCESS;
 }
 
-NTSTATUS
-CosKmAdapter::RestartFromTimeout(void)
-{
-    COS_ASSERTION("Not implemented");
-    return STATUS_NOT_IMPLEMENTED;
-}
 
 NTSTATUS
 CosKmAdapter::CancelCommand(
@@ -1653,16 +1637,55 @@ CosKmAdapter::CancelCommand(
 }
 
 NTSTATUS
-CosKmAdapter::ResetEngine(
-    INOUT_PDXGKARG_RESETENGINE  /*pResetEngine*/)
+CosKmAdapter::ResetFromTimeout(void)
 {
-    COS_LOG_WARNING("Not implemented");
-    return STATUS_SUCCESS;
+    COS_ASSERTION("Not implemented");
+    return STATUS_NOT_IMPLEMENTED;
+}
+
+NTSTATUS
+CosKmAdapter::RestartFromTimeout(void)
+{
+    COS_ASSERTION("Not implemented");
+    return STATUS_NOT_IMPLEMENTED;
 }
 
 NTSTATUS
 CosKmAdapter::CollectDbgInfo(
     IN_CONST_PDXGKARG_COLLECTDBGINFO        /*pCollectDbgInfo*/)
+{
+    COS_LOG_WARNING("Not implemented");
+    return STATUS_SUCCESS;
+}
+
+_Use_decl_annotations_
+NTSTATUS CosKmAdapter::QueryDependentEngineGroup(
+    DXGKARG_QUERYDEPENDENTENGINEGROUP* ArgsPtr
+)
+{
+    PAGED_CODE();
+    COS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    NT_ASSERT(ArgsPtr->NodeOrdinal == 0);
+    NT_ASSERT(ArgsPtr->EngineOrdinal == 0);
+
+    ArgsPtr->DependentNodeOrdinalMask = 0;
+    return STATUS_SUCCESS;
+}
+
+NTSTATUS
+CosKmAdapter::QueryEngineStatus(
+    DXGKARG_QUERYENGINESTATUS  *pQueryEngineStatus)
+{
+    COS_LOG_TRACE("QueryEngineStatus was called.");
+
+    pQueryEngineStatus->EngineStatus.Responsive = 1;
+    return STATUS_SUCCESS;
+}
+
+NTSTATUS
+CosKmAdapter::ResetEngine(
+    INOUT_PDXGKARG_RESETENGINE  /*pResetEngine*/)
 {
     COS_LOG_WARNING("Not implemented");
     return STATUS_SUCCESS;
@@ -1753,13 +1776,6 @@ CosKmAdapter::Escape(
         break;
     }
 
-    COS_ASSERTION("Not implemented");
-    return STATUS_NOT_IMPLEMENTED;
-}
-
-NTSTATUS
-CosKmAdapter::ResetFromTimeout(void)
-{
     COS_ASSERTION("Not implemented");
     return STATUS_NOT_IMPLEMENTED;
 }
@@ -2420,21 +2436,6 @@ NTSTATUS CosKmAdapter::QueryVidPnHWCapability (
 
     NT_ASSERT(!CosKmdGlobal::IsRenderOnly());
     return STATUS_NOT_SUPPORTED;
-}
-
-_Use_decl_annotations_
-NTSTATUS CosKmAdapter::QueryDependentEngineGroup (
-    DXGKARG_QUERYDEPENDENTENGINEGROUP* ArgsPtr
-    )
-{
-    PAGED_CODE();
-    COS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-
-    NT_ASSERT(ArgsPtr->NodeOrdinal == 0);
-    NT_ASSERT(ArgsPtr->EngineOrdinal == 0);
-
-    ArgsPtr->DependentNodeOrdinalMask = 0;
-    return STATUS_SUCCESS;
 }
 
 _Use_decl_annotations_
