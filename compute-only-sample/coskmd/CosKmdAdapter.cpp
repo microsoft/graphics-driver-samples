@@ -536,6 +536,35 @@ CosKmAdapter::Start(
     KeInitializeEvent(&m_workerThreadEvent, SynchronizationEvent, FALSE);
     KeInitializeEvent(&m_preemptionEvent, SynchronizationEvent, FALSE);
 
+    //
+    // Intialize DMA buffer queue and lock
+    //
+
+    InitializeListHead(&m_dmaBufSubmissionFree);
+    for (UINT i = 0; i < m_maxDmaBufQueueLength; i++)
+    {
+        InsertHeadList(&m_dmaBufSubmissionFree, &m_dmaBufSubssions[i].m_QueueEntry);
+    }
+
+    InitializeListHead(&m_dmaBufQueue);
+    KeInitializeSpinLock(&m_dmaBufQueueLock);
+
+    //
+    // Initialize HW DMA buffer compeletion DPC and event
+    //
+
+    KeInitializeEvent(&m_hwDmaBufCompletionEvent, SynchronizationEvent, FALSE);
+    KeInitializeDpc(&m_hwDmaBufCompletionDpc, HwDmaBufCompletionDpcRoutine, this);
+
+    //
+    // Initialize Fence IDs
+    //
+
+    m_lastSubmittedFenceId = 0;
+    m_lastCompletetdFenceId = 0;
+
+    m_lastCompeletedPreemptionFenceId = 0;
+
     m_workerExit = false;
 
     //
@@ -626,26 +655,6 @@ CosKmAdapter::Start(
     //
 
     memset(m_aperturePageTable, 0, sizeof(m_aperturePageTable));
-
-    //
-    // Intialize DMA buffer queue and lock
-    //
-
-    InitializeListHead(&m_dmaBufSubmissionFree);
-    for (UINT i = 0; i < m_maxDmaBufQueueLength; i++)
-    {
-        InsertHeadList(&m_dmaBufSubmissionFree, &m_dmaBufSubssions[i].m_QueueEntry);
-    }
-
-    InitializeListHead(&m_dmaBufQueue);
-    KeInitializeSpinLock(&m_dmaBufQueueLock);
-
-    //
-    // Initialize HW DMA buffer compeletion DPC and event
-    //
-
-    KeInitializeEvent(&m_hwDmaBufCompletionEvent, SynchronizationEvent, FALSE);
-    KeInitializeDpc(&m_hwDmaBufCompletionDpc, HwDmaBufCompletionDpcRoutine, this);
 
     COS_LOG_TRACE("Adapter was successfully started.");
     return STATUS_SUCCESS;

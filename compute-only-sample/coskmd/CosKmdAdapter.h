@@ -372,6 +372,15 @@ protected:
     LIST_ENTRY                  m_dmaBufQueue;
     KSPIN_LOCK                  m_dmaBufQueueLock;
 
+    UINT                        m_lastSubmittedFenceId;
+    UINT                        m_lastCompletetdFenceId;
+
+    UINT                        m_lastCompeletedPreemptionFenceId;
+
+    DXGKARG_PREEMPTCOMMAND      m_preemptionRequest;
+
+    KEVENT                      m_preemptionEvent;
+
     KDPC                        m_hwDmaBufCompletionDpc;
     KEVENT                      m_hwDmaBufCompletionEvent;
 
@@ -385,15 +394,6 @@ protected:
 
     BYTE                        m_deviceId[MAX_DEVICE_ID_LENGTH];
     ULONG                       m_deviceIdLength;
-
-    UINT                        m_lastSubmittedFenceId;
-    UINT                        m_lastCompletetdFenceId;
-
-    UINT                        m_lastCompeletedPreemptionFenceId;
-
-    DXGKARG_PREEMPTCOMMAND      m_preemptionRequest;
-
-    KEVENT                      m_preemptionEvent;
 
 public:
 
