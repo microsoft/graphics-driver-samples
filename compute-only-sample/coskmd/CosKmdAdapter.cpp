@@ -566,6 +566,15 @@ CosKmAdapter::Start(
     KeInitializeEvent(&m_hwDmaBufCompletionEvent, SynchronizationEvent, FALSE);
     KeInitializeDpc(&m_hwDmaBufCompletionDpc, HwDmaBufCompletionDpcRoutine, this);
 
+    //
+    // Initialize Fence IDs
+    //
+
+    m_lastSubmittedFenceId = 0;
+    m_lastCompletetdFenceId = 0;
+
+    m_lastCompeletedPreemptionFenceId = 0;
+
     m_workerExit = false;
 
     //
