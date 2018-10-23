@@ -392,8 +392,6 @@ protected:
 
     DXGKARGCB_NOTIFY_INTERRUPT_DATA m_interruptData;
 
-    DXGKARG_RESETENGINE        *m_pResetEngine;
-
     BOOL                        m_bReadyToHandleInterrupt;
 
     DXGK_DEVICE_INFO            m_deviceInfo;
