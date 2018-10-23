@@ -73,6 +73,7 @@ typedef struct _COSDMABUFSUBMISSION
     UINT            m_StartOffset;
     UINT            m_EndOffset;
     UINT            m_SubmissionFenceId;
+    bool            m_bSimulateHang;
 } COSDMABUFSUBMISSION;
 
 typedef union _CosKmAdapterFlags
@@ -380,6 +381,11 @@ protected:
     DXGKARG_PREEMPTCOMMAND      m_preemptionRequest;
 
     KEVENT                      m_preemptionEvent;
+
+    bool                        m_bInHangState;
+    
+    KEVENT                      m_resetRequestEvent;
+    KEVENT                      m_resetCompletionEvent;
 
     KDPC                        m_hwDmaBufCompletionDpc;
     KEVENT                      m_hwDmaBufCompletionEvent;

@@ -52,7 +52,6 @@ cosumd12.dll,,,0x4000
 
 [ComputeOnlySample_AddReg]
 HKR,,UserModeDriverName,%REG_MULTI_SZ%,cosumd12.dll,cosumd12.dll,cosumd12.dll,cosumd12.dll
-HKLM,"SYSTEM\CurrentControlSet\Control\GraphicsDrivers",TdrDebugMode,%REG_DWORD%,1
 HKLM,"SYSTEM\CurrentControlSet\Control\GraphicsDrivers\MemoryManager",DirectFlipMemoryRequirement,%REG_DWORD%,0
 
 ; Service Installation
