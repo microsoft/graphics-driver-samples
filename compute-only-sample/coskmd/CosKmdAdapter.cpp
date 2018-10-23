@@ -16,6 +16,8 @@
 #include "CosKmdAcpi.h"
 #include "CosKmdUtil.h"
 
+#include "bugcodes.h"
+
 //
 // Global variable to set in kernel debugger for triggering Preemption
 //
@@ -28,6 +30,17 @@ BOOLEAN g_bTriggerPreemption = FALSE;
 
 #define COS_DMA_BUF_STALL_DURATION  -60*1000*1000*10L
 
+//
+// Global variable to set in kernel debugger for triggering Engine Reset (lightweight reset)
+//
+
+BOOLEAN g_bTriggerEngineReset = false;
+
+//
+// Global variable to set in kernel debugger for triggering TDR (heavyweight reset)
+//
+
+BOOLEAN g_bTriggerTDR = false;
 
 void * CosKmAdapter::operator new(size_t size)
 {
@@ -93,16 +106,6 @@ CosKmAdapter::AddAdapter(
     return STATUS_SUCCESS;
 }
 
-NTSTATUS
-CosKmAdapter::QueryEngineStatus(
-    DXGKARG_QUERYENGINESTATUS  *pQueryEngineStatus)
-{
-    COS_LOG_TRACE("QueryEngineStatus was called.");
-
-    pQueryEngineStatus->EngineStatus.Responsive = 1;
-    return STATUS_SUCCESS;
-}
-
 void CosKmAdapter::WorkerThread(void * inThis)
 {
     CosKmAdapter  *pCosKmAdapter = CosKmAdapter::Cast(inThis);
@@ -119,14 +122,15 @@ void CosKmAdapter::DoWork(void)
 
     while (!done)
     {
-        PVOID       waitEvents[2];
+        PVOID       waitEvents[3];
         NTSTATUS    status;
         
         waitEvents[0] = &m_workerThreadEvent;
         waitEvents[1] = &m_preemptionEvent;
+        waitEvents[2] = &m_resetRequestEvent;
 
         status = KeWaitForMultipleObjects(
-                    2,
+                    ARRAYSIZE(waitEvents),
                     waitEvents,
                     WaitAny,
                     Executive,
@@ -142,6 +146,18 @@ void CosKmAdapter::DoWork(void)
             //
 
             NotifyPreemptionCompletion();
+
+            continue;
+        }
+        if (STATUS_WAIT_2 == status)
+        {
+            EmptyDmaBufferQueue();
+
+            //
+            // Signal back to the waiting DDI thread
+            //
+
+            KeSetEvent(&m_resetCompletionEvent, 0, FALSE);
 
             continue;
         }
@@ -423,6 +439,15 @@ CosKmAdapter::NotifyDmaBufCompletion(
 {
     COSDMABUFINFO * pDmaBufInfo = pDmaBufSubmission->m_pDmaBufInfo;
 
+    if (pDmaBufSubmission->m_bSimulateHang)
+    {
+        //
+        // Emulate HW hang by NOT reporting DMA buffer completion
+        //
+
+        return;
+    }
+
     if (! pDmaBufInfo->m_DmaBufState.m_bPaging)
     {
         pDmaBufInfo->m_DmaBufState.m_bCompleted = 1;
@@ -574,6 +599,15 @@ CosKmAdapter::Start(
     m_lastCompletetdFenceId = 0;
 
     m_lastCompeletedPreemptionFenceId = 0;
+
+    //
+    // Initialize TDR related fields
+    //
+
+    m_bInHangState = false;
+
+    KeInitializeEvent(&m_resetRequestEvent, SynchronizationEvent, FALSE);
+    KeInitializeEvent(&m_resetCompletionEvent, SynchronizationEvent, FALSE);
 
     m_workerExit = false;
 
@@ -1641,12 +1675,6 @@ CosKmAdapter::PreemptCommand(
     return STATUS_SUCCESS;
 }
 
-NTSTATUS
-CosKmAdapter::RestartFromTimeout(void)
-{
-    COS_ASSERTION("Not implemented");
-    return STATUS_NOT_IMPLEMENTED;
-}
 
 NTSTATUS
 CosKmAdapter::CancelCommand(
@@ -1662,18 +1690,138 @@ CosKmAdapter::CancelCommand(
 }
 
 NTSTATUS
-CosKmAdapter::ResetEngine(
-    INOUT_PDXGKARG_RESETENGINE  /*pResetEngine*/)
+CosKmAdapter::ResetFromTimeout(void)
 {
-    COS_LOG_WARNING("Not implemented");
+    //
+    // DdiResetFromTimeout is blocking, 
+    // KMD should finish resetting the adapter before returning.
+    //
+
+    KeSetEvent(&m_resetRequestEvent, 0, FALSE);
+
+    KeWaitForSingleObject(
+        &m_resetCompletionEvent,
+        Executive,
+        KernelMode,
+        FALSE,
+        NULL);
+
+    m_bInHangState = false;
+
+    return STATUS_SUCCESS;
+}
+
+NTSTATUS
+CosKmAdapter::RestartFromTimeout(void)
+{
+    //
+    // Driver and HW need to get ready to accept and run new DMA buffers
+    //
+
     return STATUS_SUCCESS;
 }
 
 NTSTATUS
 CosKmAdapter::CollectDbgInfo(
-    IN_CONST_PDXGKARG_COLLECTDBGINFO        /*pCollectDbgInfo*/)
+    IN_CONST_PDXGKARG_COLLECTDBGINFO    pCollectDbgInfo)
 {
-    COS_LOG_WARNING("Not implemented");
+    //
+    // Driver should collect enough (SW and HW) info for debugging the 
+    // lightweight reset (Engine Reset with Reason VIDEO_ENGINE_TIMEOUT_DETECTED) or
+    // heavyweight reset (TDR/Full Adapter Reset with Reason VIDEO_TDR_TIMEOUT_DETECTED)
+    //
+
+    switch (pCollectDbgInfo->Reason)
+    {
+    case VIDEO_ENGINE_TIMEOUT_DETECTED:
+    case VIDEO_TDR_TIMEOUT_DETECTED:
+        if (sizeof(*this) < pCollectDbgInfo->BufferSize)
+        {
+            memcpy(pCollectDbgInfo->pBuffer, this, sizeof(*this));
+        }
+        break;
+    default:
+        NT_ASSERT(false);
+        break;
+    }
+
+    return STATUS_SUCCESS;
+}
+
+_Use_decl_annotations_
+NTSTATUS CosKmAdapter::QueryDependentEngineGroup(
+    DXGKARG_QUERYDEPENDENTENGINEGROUP* ArgsPtr
+)
+{
+    PAGED_CODE();
+    COS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    NT_ASSERT(ArgsPtr->NodeOrdinal == 0);
+    NT_ASSERT(ArgsPtr->EngineOrdinal == 0);
+
+    //
+    // COSD supports only a single node (please see C_COSD_GPU_ENGINE_COUNT)
+    //
+
+    ArgsPtr->DependentNodeOrdinalMask = 1;
+
+    return STATUS_SUCCESS;
+}
+
+NTSTATUS
+CosKmAdapter::QueryEngineStatus(
+    DXGKARG_QUERYENGINESTATUS  *pQueryEngineStatus)
+{
+    COS_LOG_TRACE("QueryEngineStatus was called.");
+
+    //
+    // DdiQueryEngineStatus is called when app has requested to disable TDR
+    // with D3D12_COMMAND_QUEUE_FLAG_DISABLE_GPU_TIMEOUT on a per D3D12 Command
+    // Queue basis or by UMD with DisableGpuTimeout for context creation.
+    //
+    // A long running DMA buffer should be preemptable to yield to other DMA buffer
+    // and driver should be able to return its progression here.
+    //
+
+    pQueryEngineStatus->EngineStatus.Responsive = 1;
+
+    return STATUS_SUCCESS;
+}
+
+NTSTATUS
+CosKmAdapter::ResetEngine(
+    INOUT_PDXGKARG_RESETENGINE  pResetEngine)
+{
+    NT_ASSERT(pResetEngine->NodeOrdinal == 0);
+    NT_ASSERT(pResetEngine->EngineOrdinal == 0);
+
+    //
+    // DdiResetEngine is blocking, 
+    // KMD should finish resetting the engine before returning.
+    //
+
+    KeSetEvent(&m_resetRequestEvent, 0, FALSE);
+
+    KeWaitForSingleObject(
+        &m_resetCompletionEvent,
+        Executive,
+        KernelMode,
+        FALSE,
+        NULL);
+
+    m_bInHangState = false;
+
+    //
+    // Use the Fence Id for the last Submited but un-Completed DMA buffer
+    //
+
+    pResetEngine->LastAbortedFenceId = m_lastSubmittedFenceId;
+
+    //
+    // Except for paging node, TDR (heavyweight reset) is attempted to recover
+    // from ResetEngine (lightweight reset) failure
+    //
+
     return STATUS_SUCCESS;
 }
 
@@ -1762,13 +1910,6 @@ CosKmAdapter::Escape(
         break;
     }
 
-    COS_ASSERTION("Not implemented");
-    return STATUS_NOT_IMPLEMENTED;
-}
-
-NTSTATUS
-CosKmAdapter::ResetFromTimeout(void)
-{
     COS_ASSERTION("Not implemented");
     return STATUS_NOT_IMPLEMENTED;
 }
@@ -1933,6 +2074,20 @@ CosKmAdapter::QueueDmaBuffer(
         m_ErrorHit.m_PreparationError = 1;
     }
 
+    //
+    // Allowing only one trigger for simplification
+    //
+
+    if (g_bTriggerTDR)
+    {
+        g_bTriggerEngineReset = false;
+        g_bTriggerPreemption = false;
+    }
+    if (g_bTriggerEngineReset)
+    {
+        g_bTriggerPreemption = false;
+    }
+
     if (!pDmaBufInfo->m_DmaBufState.m_bSubmittedOnce)
     {
         pDmaBufInfo->m_DmaBufState.m_bSubmittedOnce = 1;
@@ -1952,6 +2107,30 @@ CosKmAdapter::QueueDmaBuffer(
 
             g_bTriggerPreemption = false;
         }
+
+        //
+        // Timeout of regular DMA buffer triggers Engine Reset (lightweight reset)
+        //
+
+        if (g_bTriggerEngineReset &&
+            (!pDmaBufInfo->m_DmaBufState.m_bPaging))
+        {
+            g_bTriggerEngineReset = false;
+
+            m_bInHangState = true;
+        }
+    }
+
+    //
+    // Timeout of paging buffer or failure from DdiResetEngine triggers TDR (heavyweight reset)
+    //
+
+    if (g_bTriggerTDR &&
+        pDmaBufInfo->m_DmaBufState.m_bPaging)
+    {
+        g_bTriggerTDR = false;
+
+        m_bInHangState = true;
     }
 
     NT_ASSERT(!IsListEmpty(&m_dmaBufSubmissionFree));
@@ -1963,6 +2142,12 @@ CosKmAdapter::QueueDmaBuffer(
     pDmaBufSubmission->m_StartOffset = pSubmitCommand->DmaBufferSubmissionStartOffset;
     pDmaBufSubmission->m_EndOffset = pSubmitCommand->DmaBufferSubmissionEndOffset;
     pDmaBufSubmission->m_SubmissionFenceId = pSubmitCommand->SubmissionFenceId;
+
+    //
+    // Adapter remains in Hang state until reset (ResetEngine or ResetFromTimeout)
+    //
+
+    pDmaBufSubmission->m_bSimulateHang = m_bInHangState;
 
     InsertTailList(&m_dmaBufQueue, &pDmaBufSubmission->m_QueueEntry);
 
@@ -2429,21 +2614,6 @@ NTSTATUS CosKmAdapter::QueryVidPnHWCapability (
 
     NT_ASSERT(!CosKmdGlobal::IsRenderOnly());
     return STATUS_NOT_SUPPORTED;
-}
-
-_Use_decl_annotations_
-NTSTATUS CosKmAdapter::QueryDependentEngineGroup (
-    DXGKARG_QUERYDEPENDENTENGINEGROUP* ArgsPtr
-    )
-{
-    PAGED_CODE();
-    COS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-
-    NT_ASSERT(ArgsPtr->NodeOrdinal == 0);
-    NT_ASSERT(ArgsPtr->EngineOrdinal == 0);
-
-    ArgsPtr->DependentNodeOrdinalMask = 0;
-    return STATUS_SUCCESS;
 }
 
 _Use_decl_annotations_

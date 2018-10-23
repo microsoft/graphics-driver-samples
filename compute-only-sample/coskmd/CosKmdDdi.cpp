@@ -253,19 +253,6 @@ CosKmdDdi::DdiPreemptCommand(
 
 
 NTSTATUS
-__stdcall CALLBACK
-CosKmdDdi::DdiRestartFromTimeout(
-    IN_CONST_HANDLE     hAdapter)
-{
-    CosKmAdapter  *pCosKmdAdapter = CosKmAdapter::Cast(hAdapter);
-
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n", __FUNCTION__, hAdapter);
-
-    return pCosKmdAdapter->RestartFromTimeout();
-}
-
-
-NTSTATUS
 __stdcall
 CosKmdDdi::DdiCancelCommand(
     IN_CONST_HANDLE                 hAdapter,
@@ -281,6 +268,46 @@ CosKmdDdi::DdiCancelCommand(
 
 NTSTATUS
 __stdcall
+CosKmdDdi::DdiResetFromTimeout(
+    IN_CONST_HANDLE     hAdapter)
+{
+    CosKmAdapter  *pCosKmdAdapter = CosKmAdapter::Cast(hAdapter);
+
+    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n", __FUNCTION__, hAdapter);
+
+    return pCosKmdAdapter->ResetFromTimeout();
+}
+
+
+NTSTATUS
+__stdcall CALLBACK
+CosKmdDdi::DdiRestartFromTimeout(
+    IN_CONST_HANDLE     hAdapter)
+{
+    CosKmAdapter  *pCosKmdAdapter = CosKmAdapter::Cast(hAdapter);
+
+    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n", __FUNCTION__, hAdapter);
+
+    return pCosKmdAdapter->RestartFromTimeout();
+}
+
+
+NTSTATUS
+__stdcall
+CosKmdDdi::DdiCollectDbgInfo(
+    IN_CONST_HANDLE                         hAdapter,
+    IN_CONST_PDXGKARG_COLLECTDBGINFO        pCollectDbgInfo)
+{
+    CosKmAdapter  *pCosKmdAdapter = CosKmAdapter::Cast(hAdapter);
+
+    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n", __FUNCTION__, hAdapter);
+
+    return pCosKmdAdapter->CollectDbgInfo(pCollectDbgInfo);
+}
+
+
+NTSTATUS
+__stdcall
 CosKmdDdi::DdiQueryCurrentFence(
     IN_CONST_HANDLE                    /* hAdapter */,
     INOUT_PDXGKARG_QUERYCURRENTFENCE   /* pCurrentFence */)
@@ -290,6 +317,33 @@ CosKmdDdi::DdiQueryCurrentFence(
     //
 
     return STATUS_NOT_IMPLEMENTED;
+}
+
+
+_Use_decl_annotations_
+NTSTATUS CosKmdDdi::DdiQueryDependentEngineGroup(
+    HANDLE const hAdapter,
+    DXGKARG_QUERYDEPENDENTENGINEGROUP* ArgsPtr
+)
+{
+    PAGED_CODE();
+    COS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    return CosKmAdapter::Cast(hAdapter)->QueryDependentEngineGroup(ArgsPtr);
+}
+
+
+NTSTATUS
+__stdcall
+CosKmdDdi::DdiQueryEngineStatus(
+    IN_CONST_HANDLE                     hAdapter,
+    INOUT_PDXGKARG_QUERYENGINESTATUS    pQueryEngineStatus)
+{
+    CosKmAdapter  *pCosKmdAdapter = CosKmAdapter::Cast(hAdapter);
+
+    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n", __FUNCTION__, hAdapter);
+
+    return pCosKmdAdapter->QueryEngineStatus(pQueryEngineStatus);
 }
 
 
@@ -309,22 +363,6 @@ CosKmdDdi::DdiResetEngine(
 
 NTSTATUS
 __stdcall
-CosKmdDdi::DdiQueryEngineStatus(
-    IN_CONST_HANDLE                     hAdapter,
-    INOUT_PDXGKARG_QUERYENGINESTATUS    pQueryEngineStatus)
-{
-    CosKmAdapter  *pCosKmdAdapter = CosKmAdapter::Cast(hAdapter);
-
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n", __FUNCTION__, hAdapter);
-
-    return pCosKmdAdapter->QueryEngineStatus(pQueryEngineStatus);
-}
-
-
-
-
-NTSTATUS
-__stdcall
 CosKmdDdi::DdiControlInterrupt(
     IN_CONST_HANDLE                 hAdapter,
     IN_CONST_DXGK_INTERRUPT_TYPE    InterruptType,
@@ -335,20 +373,6 @@ CosKmdDdi::DdiControlInterrupt(
     DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n", __FUNCTION__, hAdapter);
 
     return pCosKmdAdapter->ControlInterrupt(InterruptType, EnableInterrupt);
-}
-
-
-NTSTATUS
-__stdcall
-CosKmdDdi::DdiCollectDbgInfo(
-    IN_CONST_HANDLE                         hAdapter,
-    IN_CONST_PDXGKARG_COLLECTDBGINFO        pCollectDbgInfo)
-{
-    CosKmAdapter  *pCosKmdAdapter = CosKmAdapter::Cast(hAdapter);
-
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n", __FUNCTION__, hAdapter);
-
-    return pCosKmdAdapter->CollectDbgInfo(pCollectDbgInfo);
 }
 
 
@@ -449,18 +473,6 @@ CosKmdDdi::DdiEscape(
     DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n", __FUNCTION__, hAdapter);
 
     return pCosKmdAdapter->Escape(pEscape);
-}
-
-NTSTATUS
-__stdcall
-CosKmdDdi::DdiResetFromTimeout(
-    IN_CONST_HANDLE     hAdapter)
-{
-    CosKmAdapter  *pCosKmdAdapter = CosKmAdapter::Cast(hAdapter);
-
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n", __FUNCTION__, hAdapter);
-
-    return pCosKmdAdapter->ResetFromTimeout();
 }
 
 
@@ -623,18 +635,6 @@ NTSTATUS CosKmdDdi::DdiOpenAllocation (
     COS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     return CosKmDevice::Cast(hDevice)->OpenAllocation(ArgsPtr);
-}
-
-_Use_decl_annotations_
-NTSTATUS CosKmdDdi::DdiQueryDependentEngineGroup (
-    HANDLE const hAdapter,
-    DXGKARG_QUERYDEPENDENTENGINEGROUP* ArgsPtr
-    )
-{
-    PAGED_CODE();
-    COS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-
-    return CosKmAdapter::Cast(hAdapter)->QueryDependentEngineGroup(ArgsPtr);
 }
 
 #if 0
