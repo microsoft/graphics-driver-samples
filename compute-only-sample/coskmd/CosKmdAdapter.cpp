@@ -182,8 +182,8 @@ void CosKmAdapter::DoWork(void)
 
             if (0 != pDmaBufInfo->m_DmaBufStallDuration)
             {
-                LARGE_INTEGER   timeout;
-                ULONG64         waitStart, waitEnd, waitTicks;
+                LARGE_INTEGER   timeout, waitStart, waitEnd;
+                ULONG64         waitTicks;
 
                 //
                 // Simulate long running DMA buffer with stall so that it can be preempted
@@ -218,7 +218,7 @@ void CosKmAdapter::DoWork(void)
 
                     pDmaBufInfo->m_DmaBufState.m_bPreempted = 1;
 
-                    waitTicks = waitEnd - waitStart;
+                    waitTicks = waitEnd.QuadPart - waitStart.QuadPart;
                     if (0 == waitTicks)
                     {
                         waitTicks = 1;
