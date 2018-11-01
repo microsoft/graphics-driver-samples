@@ -173,15 +173,7 @@ HRESULT APIENTRY CosUmd12Adapter::GetCaps(
         // or capabilities that HW and driver are required to support
         //
 
-#if USE_RESOURCE_BINDING_TIER_1
-
-        *pPipelineCaps = D3D12DDI_3DPIPELINELEVEL_11_0;
-
-#else
-
-        *pPipelineCaps = D3D12DDI_3DPIPELINELEVEL_12_1;
-
-#endif
+        *pPipelineCaps = D3D12DDI_3DPIPELINELEVEL_1_0_CORE;
         break;
     }
 

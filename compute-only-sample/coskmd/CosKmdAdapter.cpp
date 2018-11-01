@@ -1339,6 +1339,10 @@ CosKmAdapter::QueryAdapterInfo(
         // TODO[bhouse] MaxOverlayPlanes
         //
 
+        //
+        // Indicate MCDM
+        //
+        pDriverCaps->MiscCaps.MCDM = 1;
     }
     break;
 
