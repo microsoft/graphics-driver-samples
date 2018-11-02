@@ -42,7 +42,7 @@ public:
     HRESULT Map(void** pHeapData);
     void Unmap();
 
-#if GPUVA
+#if COS_GPUVA_SUPPORT
 
     D3D12DDI_GPU_VIRTUAL_ADDRESS GetGpuVa()
     {
@@ -67,7 +67,7 @@ private:
     D3DKMT_HANDLE m_hKMAllocation;
     BYTE * m_pCpuAddress;
 
-#if GPUVA
+#if COS_GPUVA_SUPPORT
 
     D3D12DDI_GPU_VIRTUAL_ADDRESS m_gpuVa;
 

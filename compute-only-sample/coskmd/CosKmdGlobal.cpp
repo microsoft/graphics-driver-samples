@@ -19,12 +19,6 @@ void * CosKmdGlobal::s_pVideoMemory = NULL;
 PHYSICAL_ADDRESS CosKmdGlobal::s_videoMemoryPhysicalAddress;
 bool CosKmdGlobal::s_bRenderOnly;
 
-#if USE_SIMPENROX
-
-extern bool g_bUseSimPenrose;
-
-#endif
-
 void
 CosKmdGlobal::DdiUnload(
     void)
@@ -268,7 +262,10 @@ NTSTATUS CosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
     DriverInitializationData.DxgkDdiOpenAllocation = CosKmdDdi::DdiOpenAllocation;
     DriverInitializationData.DxgkDdiCloseAllocation = CosKmDevice::DdiCloseAllocation;
 
+#if COS_PHYSICAL_SUPPORT
     DriverInitializationData.DxgkDdiPatch = CosKmdDdi::DdiPatch;
+#endif
+
     DriverInitializationData.DxgkDdiSubmitCommand = CosKmdDdi::DdiSubmitCommand;
     DriverInitializationData.DxgkDdiBuildPagingBuffer = CosKmdDdi::DdiBuildPagingBuffer;
     DriverInitializationData.DxgkDdiPreemptCommand = CosKmdDdi::DdiPreemptCommand;
@@ -309,15 +306,13 @@ NTSTATUS CosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
 
     DriverInitializationData.DxgkDdiGetNodeMetadata = CosKmdDdi::DdiGetNodeMetadata;
 
-#if GPUVA
-
+#if COS_GPUVA_SUPPORT
     DriverInitializationData.DxgkDdiSubmitCommandVirtual = CosKmdDdi::DdiSubmitCommandVirtual;
     DriverInitializationData.DxgkDdiSetRootPageTable = CosKmdDdi::DdiSetRootPageTable;
     DriverInitializationData.DxgkDdiGetRootPageTableSize = CosKmdDdi::DdiGetRootPageTableSize;
 
     DriverInitializationData.DxgkDdiCreateProcess = CosKmdDdi::DdiCreateProcess;
     DriverInitializationData.DxgkDdiDestroyProcess = CosKmdDdi::DdiDestroyProcess;
-
 #endif
 
     DriverInitializationData.DxgkDdiCalibrateGpuClock = CosKmdDdi::DdiCalibrateGpuClock;

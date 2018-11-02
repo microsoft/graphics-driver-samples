@@ -14,7 +14,7 @@
 
 #include "CosUmd12.h"
 
-#if GPUVA
+#if COS_GPUVA_SUPPORT
 
 HRESULT CosUmd12CommandList::StandUp()
 {
@@ -295,7 +295,7 @@ CosUmd12CommandList::Dispatch(
     UINT curCommandOffset;
     D3DDDI_PATCHLOCATIONLIST * pPatchLocationList;
 
-#if GPUVA
+#if COS_GPUVA_SUPPORT
 
     // TODO : Create allocation for Descriptor Heap
 

@@ -8,7 +8,7 @@
 
 #include "CosUmd12.h"
 
-#if GPUVA
+#if COS_GPUVA_SUPPORT
 
 void CosUmd12Descriptor::WriteHWDescriptor(
     GpuHWDescriptor *   pHwDescriptor) const
@@ -107,7 +107,7 @@ void CosUmd12Descriptor::WriteHWDescriptor(
         break;
     }
 
-#if !GPUVA
+#if !COS_GPUVA_SUPPORT
 
     D3DKMT_HANDLE hAllocation = (D3DKMT_HANDLE)(resourceGpuVA >> 32);
     allocationOffset += (UINT)(resourceGpuVA & 0xFFFFFFFF);

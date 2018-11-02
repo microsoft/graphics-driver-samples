@@ -1106,7 +1106,7 @@ D3D12DDI_GPU_VIRTUAL_ADDRESS APIENTRY CosUmd12Device_Ddi_CheckResourceVirtualAdd
 
     CosUmd12Resource * pResource = (CosUmd12Resource *)Resource.pDrvPrivate;
 
-#if GPUVA
+#if COS_GPUVA_SUPPORT
 
     return pResource->GetGpuVa();
 

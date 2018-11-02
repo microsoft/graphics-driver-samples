@@ -41,7 +41,7 @@ typedef struct _COSDMABUFSTATE
             UINT    m_bPreempted        : 1;
             UINT    m_bReset            : 1;
             UINT    m_bCompleted        : 1;
-#if GPUVA
+#if COS_GPUVA_SUPPORT
             UINT    m_bGpuVaCommandBuffer : 1;
 #endif
         };
@@ -53,13 +53,11 @@ typedef struct _COSDMABUFSTATE
 typedef struct _COSDMABUFINFO
 {
     PBYTE                       m_pDmaBuffer;
-    union
-    {
-#if GPUVA
-        D3DGPU_VIRTUAL_ADDRESS  m_DmaBufferGpuVa;
+#if COS_GPUVA_SUPPORT
+    D3DGPU_VIRTUAL_ADDRESS      m_DmaBufferGpuVa;
+#else
+    LARGE_INTEGER               m_DmaBufferPhysicalAddress;
 #endif
-        LARGE_INTEGER           m_DmaBufferPhysicalAddress;
-    };
     UINT                        m_DmaBufferSize;
     COSDMABUFSTATE              m_DmaBufState;
 
@@ -260,6 +258,7 @@ public:
         CONST D3DDDI_PATCHLOCATIONLIST* pPatchLocationList,
         UINT                            patchAllocationList);
 
+#if COS_PHYSICAL_SUPPORT
     void
     PatchDmaBuffer(
         COSDMABUFINFO*                  pDmaBufInfo,
@@ -267,6 +266,7 @@ public:
         UINT                            allocationListSize,
         CONST D3DDDI_PATCHLOCATIONLIST* pPatchLocationList,
         UINT                            patchAllocationList);
+#endif
 
 protected:
 
@@ -293,7 +293,7 @@ protected:
 
     virtual void ProcessRenderBuffer(COSDMABUFSUBMISSION * pDmaBufSubmission) = 0;
     virtual void ProcessHWRenderBuffer(COSDMABUFSUBMISSION * pDmaBufSubmission) = 0;
-#if GPUVA
+#if COS_GPUVA_SUPPORT
 
     virtual void ProcessGpuVaRenderBuffer(COSDMABUFSUBMISSION * pDmaBufSubmission) = 0;
 
@@ -328,7 +328,7 @@ protected:
 
     UINT GetAperturePhysicalAddress(UINT apertureAddress)
     {
-        UINT pageIndex = (apertureAddress - COSD_SEGMENT_APERTURE_BASE_ADDRESS) / kPageSize;
+        UINT pageIndex = (apertureAddress - COS_SEGMENT_APERTURE_BASE_ADDRESS) / kPageSize;
 
         return ((UINT)m_aperturePageTable[pageIndex])*kPageSize + (apertureAddress & (kPageSize - 1));
     };
@@ -404,8 +404,8 @@ public:
     DEVICE_POWER_STATE          m_AdapterPowerDState;
     BOOLEAN                     m_PowerManagementStarted;
     UINT                        m_NumPowerComponents;
-    DXGK_POWER_RUNTIME_COMPONENT m_PowerComponents[C_COSD_GPU_ENGINE_COUNT];
-    UINT                         m_EnginePowerFState[C_COSD_GPU_ENGINE_COUNT];
+    DXGK_POWER_RUNTIME_COMPONENT m_PowerComponents[C_COS_GPU_ENGINE_COUNT];
+    UINT                         m_EnginePowerFState[C_COS_GPU_ENGINE_COUNT];
 
     UINT                        m_NumNodes;
     DXGK_WDDMVERSION            m_WDDMVersion;
@@ -553,14 +553,14 @@ void MoveToNextCommand(TypeCur pCurCommand, TypeNext &pNextCommand)
     pNextCommand = (TypeNext)(pCurCommand + 1);
 }
 
-#if GPUVA
+#if COS_GPUVA_SUPPORT
 
 #define COS_GPU_VA_BIT_COUNT        0x20
 #define COS_PAGE_TABLE_LEVEL_COUNT  2
 
 #define COS_PAGE_TABLE_SIZE         (4*PAGE_SIZE)
 
-#define COSD_APERTURE_SEGMENT_BASE_ADDRESS  0xC0000000
-#define COSD_APERTURE_SEGMENT_SIZE          16*1024*1024
+#define COS_APERTURE_SEGMENT_BASE_ADDRESS  0xC0000000
+#define COS_APERTURE_SEGMENT_SIZE          16*1024*1024
 
 #endif

@@ -19,7 +19,7 @@ CosUmd12Resource::Standup(CosUmd12Heap * pHeap)
     return S_OK;
 }
 
-#if GPUVA
+#if COS_GPUVA_SUPPORT
 
 D3D12DDI_GPU_VIRTUAL_ADDRESS CosUmd12Resource::GetGpuVa()
 {

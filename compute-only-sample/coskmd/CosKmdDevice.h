@@ -35,7 +35,7 @@ private:
     DXGK_CREATEDEVICEFLAGS  m_Flags;
     HANDLE                  m_hRTDevice;
 
-#if GPUVA
+#if COS_GPUVA_SUPPORT
 
     CosKmdProcess *         m_pKmdProcess;
 

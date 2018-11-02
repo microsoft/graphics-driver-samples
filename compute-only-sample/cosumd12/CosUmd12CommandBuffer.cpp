@@ -10,7 +10,7 @@
 
 #include "CosUmd12.h"
 
-#if !GPUVA
+#if !COS_GPUVA_SUPPORT
 
 CosUmd12CommandBuffer * CosUmd12CommandBuffer::Create()
 {
@@ -18,9 +18,9 @@ CosUmd12CommandBuffer * CosUmd12CommandBuffer::Create()
 
     size = 
         sizeof(CosUmd12CommandBuffer) +
-        sizeof(BYTE)*COSD_COMMAND_BUFFER_SIZE +
-        sizeof(D3DDDI_ALLOCATIONLIST)*C_COSD_ALLOCATION_LIST_SIZE +
-        sizeof(D3DDDI_PATCHLOCATIONLIST)*C_COSD_PATCH_LOCATION_LIST_SIZE;
+        sizeof(BYTE)*COS_COMMAND_BUFFER_SIZE +
+        sizeof(D3DDDI_ALLOCATIONLIST)*C_COS_ALLOCATION_LIST_SIZE +
+        sizeof(D3DDDI_PATCHLOCATIONLIST)*C_COS_PATCH_LOCATION_LIST_SIZE;
 
     VOID * pMem;
     
@@ -30,7 +30,7 @@ CosUmd12CommandBuffer * CosUmd12CommandBuffer::Create()
         return NULL;
     }
 
-    CosUmd12CommandBuffer * pCommandBuffer = new (pMem) CosUmd12CommandBuffer(COSD_COMMAND_BUFFER_SIZE, C_COSD_ALLOCATION_LIST_SIZE, C_COSD_PATCH_LOCATION_LIST_SIZE);
+    CosUmd12CommandBuffer * pCommandBuffer = new (pMem) CosUmd12CommandBuffer(COS_COMMAND_BUFFER_SIZE, C_COS_ALLOCATION_LIST_SIZE, C_COS_PATCH_LOCATION_LIST_SIZE);
 
     return pCommandBuffer;
 }
@@ -214,4 +214,4 @@ CosUmd12CommandBuffer::Execute(CosUmd12CommandQueue * pCommandQueue)
                             m_patchLocationListPos);
 }
 
-#endif  // !GPUVA
+#endif  // !COS_GPUVA_SUPPORT

@@ -14,7 +14,7 @@
 
 #include "CosUmd12.h"
 
-#if !GPUVA
+#if !COS_GPUVA_SUPPORT
 
 HRESULT CosUmd12CommandList::StandUp()
 {
@@ -439,4 +439,4 @@ CosUmd12CommandList::Dispatch(
     m_pCurCommandBuffer->CommitCommandBufferSpace(commandSize, numPatchLocations);
 }
 
-#endif // !GPUVA
+#endif // !COS_GPUVA_SUPPORT

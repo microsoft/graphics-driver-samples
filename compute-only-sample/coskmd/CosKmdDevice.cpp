@@ -21,7 +21,7 @@ NTSTATUS __stdcall CosKmDevice::DdiCreateDevice(
         return STATUS_NO_MEMORY;
     }
 
-#if GPUVA
+#if COS_GPUVA_SUPPORT
 
     CosKmDevice *   pCosKmDevice = (CosKmDevice *)pCreateDevice->hDevice;
 

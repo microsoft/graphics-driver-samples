@@ -94,7 +94,7 @@ TranslateDxgiFormat(
     }
 }
 
-#if USE_SIMPENROX
+#ifdef USE_SIMPENROX
 
 extern "C"
 {

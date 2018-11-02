@@ -45,9 +45,11 @@ public:
         IN_CONST_HANDLE                     hAdapter,
         IN_CONST_PDXGKARG_SUBMITCOMMAND     pSubmitCommand);
 
+#if COS_PHYSICAL_SUPPORT
     static NTSTATUS __stdcall DdiPatch(
         IN_CONST_HANDLE             hAdapter,
         IN_CONST_PDXGKARG_PATCH     pPatch);
+#endif
 
     static NTSTATUS __stdcall DdiCreateAllocation(
         IN_CONST_HANDLE                     hAdapter,
@@ -146,6 +148,7 @@ public:
             IN_CONST_HANDLE         hContext,
             INOUT_PDXGKARG_PRESENT  pPresent);
 
+#if COS_GPUVA_SUPPORT
     static NTSTATUS
         __stdcall
         DdiCreateProcess(
@@ -157,6 +160,7 @@ public:
         DdiDestroyProcess(
             IN_PVOID pMiniportDeviceContext,
             IN HANDLE KmdProcessHandle);
+#endif
 
     static void
         __stdcall
