@@ -74,6 +74,8 @@ private:
 
     bool CreateDevice()
     {
+        D3D12EnableExperimentalFeatures(1, &D3D12ComputeOnlyDevices, NULL, 0);
+
         ID3D12Device * pDevice;
 
         HRESULT hr = D3D12CreateDevice(m_pAdapter, D3D_FEATURE_LEVEL_1_0_CORE, IID_PPV_ARGS(&pDevice));
