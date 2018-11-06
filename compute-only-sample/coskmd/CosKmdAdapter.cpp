@@ -558,9 +558,9 @@ CosKmAdapter::Start(
     *NumberOfChildren = 0;
 
     //
-    // Sample for 2.0 model currently
+    // 2.6 model is required for Compute Only devices
     //
-    m_WDDMVersion = DXGKDDI_WDDMv2;
+    m_WDDMVersion = DXGKDDI_WDDMv2_6;
 
     m_NumNodes = C_COSD_GPU_ENGINE_COUNT;
 
