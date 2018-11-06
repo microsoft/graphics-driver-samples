@@ -16,7 +16,7 @@ CosUmd12CommandBuffer *
 CosUmd12CommandPool::AcquireCommandBuffer(
     D3D12DDI_COMMAND_QUEUE_FLAGS queueFlags)
 {
-#if GPUVA
+#if COS_GPUVA_SUPPORT
 
     return CosUmd12CommandBuffer::Create(m_pDevice);
 
@@ -30,7 +30,7 @@ CosUmd12CommandPool::AcquireCommandBuffer(
 void
 CosUmd12CommandPool::ReleaseCommandBuffer(CosUmd12CommandBuffer * pCommandBuffer)
 {
-#if GPUVA
+#if COS_GPUVA_SUPPORT
 
     delete pCommandBuffer;
 

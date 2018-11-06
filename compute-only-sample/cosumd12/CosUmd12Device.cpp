@@ -28,7 +28,7 @@ CosUmd12Device::CosUmd12Device(
 
     assert(m_Interface == D3D12DDI_INTERFACE_VERSION_R5);
 
-#if GPUVA
+#if COS_GPUVA_SUPPORT
 
     m_latestPagingFenceValue = 0L;
 
@@ -56,7 +56,7 @@ void CosUmd12Device::Standup()
 //----------------------------------------------------------------------------------------------------------------------------------
 void CosUmd12Device::Teardown()
 {
-#if GPUVA
+#if COS_GPUVA_SUPPORT
 
     D3DDDI_DESTROYPAGINGQUEUE destroyPagingQueue = {};
 

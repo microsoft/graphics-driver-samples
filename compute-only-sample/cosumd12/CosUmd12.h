@@ -36,7 +36,7 @@ void UnexpectedDdi(const char * function, const char * file, int line);
 #include "CosUmd12Adapter.h"
 #include "CosUmd12Device.h"
 
-#if GPUVA
+#if COS_GPUVA_SUPPORT
 #include "CosUmd12CommandQueueGpuVa.h"
 #else
 #include "CosUmd12CommandQueue.h"
@@ -45,7 +45,7 @@ void UnexpectedDdi(const char * function, const char * file, int line);
 #include "CosUmd12Heap.h"
 #include "CosUmd12Resource.h"
 
-#if GPUVA
+#if COS_GPUVA_SUPPORT
 #include "CosUmd12CommandBufferGpuVa.h"
 #else
 #include "CosUmd12CommandBuffer.h"
@@ -66,7 +66,7 @@ void UnexpectedDdi(const char * function, const char * file, int line);
 #include "CosUmd12CommandPool.h"
 #include "CosUmd12CommandRecorder.h"
 
-#if GPUVA
+#if COS_GPUVA_SUPPORT
 #include "CosUmd12CommandListGpuVa.h"
 #else
 #include "CosUmd12CommandList.h"

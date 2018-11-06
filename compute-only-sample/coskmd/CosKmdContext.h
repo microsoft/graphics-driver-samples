@@ -39,7 +39,7 @@ protected:
 
     DXGK_CREATECONTEXTFLAGS m_Flags;
 
-#if GPUVA
+#if COS_GPUVA_SUPPORT
 
     D3DGPU_PHYSICAL_ADDRESS m_rootPageTableAddress;
     UINT                    m_numRootPageTableEntries;
@@ -79,7 +79,7 @@ public:
         RenderKm(
             INOUT_PDXGKARG_RENDER   pRender);
 
-#if GPUVA
+#if COS_GPUVA_SUPPORT
 
     VOID
         SetRootPageTable(

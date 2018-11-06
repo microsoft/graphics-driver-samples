@@ -1001,6 +1001,18 @@ HRESULT APIENTRY CosUmd12Device_Ddi_OpenHeapAndResource_0043(
 {
     TRACE_FUNCTION();
 
+#if 1
+
+    //
+    // Return failure before Ddi_OpenHeapAndResouce is properly implemented
+    //
+    // E_OUTOFMEMORY is allowed and doesn't trigger device removal
+    //
+
+    return E_OUTOFMEMORY;
+
+#else
+
     CosUmd12Device * pDevice = CosUmd12Device::CastFrom(Device);
     CosUmd12Heap * pHeap = new (Heap.pDrvPrivate) CosUmd12Heap(pDevice);
     CosUmd12Resource * pResource = new (Resource.pDrvPrivate) CosUmd12Resource(pDevice, RtResource);
@@ -1020,6 +1032,8 @@ HRESULT APIENTRY CosUmd12Device_Ddi_OpenHeapAndResource_0043(
     }
 
     return S_OK;
+
+#endif
 }
 
 void APIENTRY CosUmd12Device_Ddi_CopyDescriptors_0003(
@@ -1106,7 +1120,7 @@ D3D12DDI_GPU_VIRTUAL_ADDRESS APIENTRY CosUmd12Device_Ddi_CheckResourceVirtualAdd
 
     CosUmd12Resource * pResource = (CosUmd12Resource *)Resource.pDrvPrivate;
 
-#if GPUVA
+#if COS_GPUVA_SUPPORT
 
     return pResource->GetGpuVa();
 

@@ -263,7 +263,7 @@ void CosKmAdapter::DoWork(void)
                 ProcessPagingBuffer(pDmaBufSubmission);
 
             }
-#if GPUVA
+#if COS_GPUVA_SUPPORT
             else if (pDmaBufInfo->m_DmaBufState.m_bGpuVaCommandBuffer)
             {
                 ProcessGpuVaRenderBuffer(pDmaBufSubmission);
@@ -350,7 +350,7 @@ CosKmAdapter::ProcessPagingBuffer(
         {
         case DXGK_OPERATION_FILL:
         {
-            NT_ASSERT(pPagingBuffer->Fill.Destination.SegmentId == COSD_SEGMENT_VIDEO_MEMORY);
+            NT_ASSERT(pPagingBuffer->Fill.Destination.SegmentId == COS_SEGMENT_VIDEO_MEMORY);
             NT_ASSERT(pPagingBuffer->Fill.FillSize % sizeof(ULONG) == 0);
 
             ULONG * const startAddress = reinterpret_cast<ULONG*>(
@@ -371,7 +371,7 @@ CosKmAdapter::ProcessPagingBuffer(
             CSHORT  savedMdlFlags = 0;
             PBYTE   pKmAddrToUnmap = NULL;
 
-            if (pPagingBuffer->Transfer.Source.SegmentId == COSD_SEGMENT_VIDEO_MEMORY)
+            if (pPagingBuffer->Transfer.Source.SegmentId == COS_SEGMENT_VIDEO_MEMORY)
             {
                 pSource = ((BYTE *)CosKmdGlobal::s_pVideoMemory) + pPagingBuffer->Transfer.Source.SegmentAddress.QuadPart;
             }
@@ -390,7 +390,7 @@ CosKmAdapter::ProcessPagingBuffer(
                 pSource += (pPagingBuffer->Transfer.MdlOffset*PAGE_SIZE);
             }
 
-            if (pPagingBuffer->Transfer.Destination.SegmentId == COSD_SEGMENT_VIDEO_MEMORY)
+            if (pPagingBuffer->Transfer.Destination.SegmentId == COS_SEGMENT_VIDEO_MEMORY)
             {
                 pDestination = ((BYTE *)CosKmdGlobal::s_pVideoMemory) + pPagingBuffer->Transfer.Destination.SegmentAddress.QuadPart;
             }
@@ -562,7 +562,7 @@ CosKmAdapter::Start(
     //
     m_WDDMVersion = DXGKDDI_WDDMv2_6;
 
-    m_NumNodes = C_COSD_GPU_ENGINE_COUNT;
+    m_NumNodes = C_COS_GPU_ENGINE_COUNT;
 
     //
     // Initialize work thread and Preemption request events
@@ -846,7 +846,7 @@ CosKmAdapter::BuildPagingBuffer(
     }
     break;
 
-#if GPUVA
+#if COS_GPUVA_SUPPORT
 
     case DXGK_OPERATION_UPDATE_PAGE_TABLE:
     {
@@ -894,7 +894,7 @@ CosKmAdapter::BuildPagingBuffer(
 
     // Record DMA buffer information only when it is newly used
     COSDMABUFINFO * pDmaBufInfo = (COSDMABUFINFO *)pArgs->pDmaBufferPrivateData;
-    if (pDmaBufInfo && (pArgs->DmaSize == COSD_PAGING_BUFFER_SIZE))
+    if (pDmaBufInfo && (pArgs->DmaSize == COS_PAGING_BUFFER_SIZE))
     {
         pDmaBufInfo->m_DmaBufState.m_Value = 0;
         pDmaBufInfo->m_DmaBufState.m_bPaging = 1;
@@ -937,6 +937,7 @@ CosKmAdapter::SubmitCommand(
     return Status;
 }
 
+#if COS_PHYSICAL_SUPPORT
 NTSTATUS
 CosKmAdapter::Patch(
     IN_CONST_PDXGKARG_PATCH     pPatch)
@@ -960,6 +961,7 @@ CosKmAdapter::Patch(
 
     return STATUS_SUCCESS;
 }
+#endif
 
 NTSTATUS
 CosKmAdapter::CreateAllocation(
@@ -1047,7 +1049,7 @@ CosKmAdapter::CreateAllocation(
     NT_ASSERT(pCosAllocation->m_hwSizeBytes != 0);
     pAllocationInfo->Size = pCosAllocation->m_hwSizeBytes;
 
-#if GPUVA
+#if COS_GPUVA_SUPPORT
 
     //
     // If the allocation is backed by system memory, then the driver should
@@ -1064,11 +1066,11 @@ CosKmAdapter::CreateAllocation(
 #else
 
     pAllocationInfo->PreferredSegment.Value = 0;
-    pAllocationInfo->PreferredSegment.SegmentId0 = COSD_SEGMENT_VIDEO_MEMORY;
+    pAllocationInfo->PreferredSegment.SegmentId0 = COS_SEGMENT_VIDEO_MEMORY;
     pAllocationInfo->PreferredSegment.Direction0 = 0;
 
-    pAllocationInfo->SupportedReadSegmentSet = 1 << (COSD_SEGMENT_VIDEO_MEMORY - 1);
-    pAllocationInfo->SupportedWriteSegmentSet = 1 << (COSD_SEGMENT_VIDEO_MEMORY - 1);
+    pAllocationInfo->SupportedReadSegmentSet = 1 << (COS_SEGMENT_VIDEO_MEMORY - 1);
+    pAllocationInfo->SupportedWriteSegmentSet = 1 << (COS_SEGMENT_VIDEO_MEMORY - 1);
 
 #endif
 
@@ -1134,7 +1136,7 @@ CosKmAdapter::QueryAdapterInfo(
         }
         COSADAPTERINFO* pCosAdapterInfo = (COSADAPTERINFO*)pQueryAdapterInfo->pOutputData;
 
-        pCosAdapterInfo->m_version = COSD_VERSION;
+        pCosAdapterInfo->m_version = COS_VERSION;
         pCosAdapterInfo->m_wddmVersion = m_WDDMVersion;
 
         // Software APCI device only claims an interrupt resource
@@ -1257,7 +1259,8 @@ CosKmAdapter::QueryAdapterInfo(
 #if 1
         pDriverCaps->MemoryManagementCaps.CrossAdapterResource = 1;
 #endif
-#if GPUVA_INIT_DDI_1
+
+#if COS_GPUVA_SUPPORT
 
         pDriverCaps->MemoryManagementCaps.VirtualAddressingSupported = 1;
         pDriverCaps->MemoryManagementCaps.GpuMmuSupported = 1;
@@ -1375,7 +1378,7 @@ CosKmAdapter::QueryAdapterInfo(
             pSegmentInfo->PagingBufferSegmentId = 0;    // Use physical contiguous memory
             pSegmentInfo->PagingBufferSize = PAGE_SIZE;
 
-#if GPUVA_INIT_DDI_5
+#if COS_GPUVA_SUPPORT
 
             //
             // Setup aperture segment, which is only used for allocation with AccessedPhysically
@@ -1391,9 +1394,9 @@ CosKmAdapter::QueryAdapterInfo(
             pApertureSegmentDesc->Flags.PreservedDuringStandby = true;
             pApertureSegmentDesc->Flags.PreservedDuringHibernate = true;
 
-            pApertureSegmentDesc->BaseAddress.QuadPart = COSD_APERTURE_SEGMENT_BASE_ADDRESS;    // Gpu base physical address
+            pApertureSegmentDesc->BaseAddress.QuadPart = COS_APERTURE_SEGMENT_BASE_ADDRESS;    // Gpu base physical address
             pApertureSegmentDesc->CpuTranslatedAddress.QuadPart = 0xFFFFFFFE00000000;           // Cpu base physical address
-            pApertureSegmentDesc->Size = COSD_APERTURE_SEGMENT_SIZE;
+            pApertureSegmentDesc->Size = COS_APERTURE_SEGMENT_SIZE;
 
 #else
 
@@ -1470,7 +1473,7 @@ CosKmAdapter::QueryAdapterInfo(
     }
     break;
 
-#if GPUVA_INIT_DDI_2
+#if COS_GPUVA_SUPPORT
 
     case DXGKQAITYPE_GPUMMUCAPS:
     {
@@ -1488,14 +1491,10 @@ CosKmAdapter::QueryAdapterInfo(
     }
     break;
 
-#endif
-
-#if GPUVA_INIT_DDI_3
-
     case DXGKQAITYPE_PAGETABLELEVELDESC:
     {
         //
-        // In GPUVA mode, COSD supports 1 aperture segment with SegmentId of 1.
+        // In GpuVA mode, COSD supports 1 aperture segment with SegmentId of 1.
         // So the implicit system memory segment has the SegmentId of 2.
         //
         // COSD uses page table in system memory, so sets PageTableSegmentId to 2
@@ -1590,7 +1589,7 @@ CosKmAdapter::GetNodeMetadata(
         L"3DNode%02X",
         NodeOrdinal);
 
-#if GPUVA_INIT_DDI_4
+#if COS_GPUVA_SUPPORT
 
     pGetNodeMetadata->GpuMmuSupported = 1;
 
@@ -1599,7 +1598,7 @@ CosKmAdapter::GetNodeMetadata(
     return STATUS_SUCCESS;
 }
 
-#if GPUVA
+#if COS_GPUVA_SUPPORT
 
 NTSTATUS
 CosKmAdapter::SubmitCommandVirtual(
@@ -1764,7 +1763,7 @@ NTSTATUS CosKmAdapter::QueryDependentEngineGroup(
     NT_ASSERT(ArgsPtr->EngineOrdinal == 0);
 
     //
-    // COSD supports only a single node (please see C_COSD_GPU_ENGINE_COUNT)
+    // COSD supports only a single node (please see C_COS_GPU_ENGINE_COUNT)
     //
 
     ArgsPtr->DependentNodeOrdinalMask = 1;
@@ -1829,11 +1828,13 @@ CosKmAdapter::ResetEngine(
     return STATUS_SUCCESS;
 }
 
+// TODO: Should this only be defined if COS_GPUVA_SUPPORT?
+
 NTSTATUS
 CosKmAdapter::CreateProcess(
     IN DXGKARG_CREATEPROCESS   *pArgs)
 {
-#if GPUVA_INIT_DDI_6
+#if COS_GPUVA_SUPPORT
 
     CosKmdProcess *  pCosKmdProcess;
 
@@ -1974,6 +1975,7 @@ CosKmAdapter::ResetDevice(void)
     COS_ASSERTION("Not implemented");
 }
 
+#if COS_PHYSICAL_SUPPORT
 void
 CosKmAdapter::PatchDmaBuffer(
     COSDMABUFINFO*                  pDmaBufInfo,
@@ -2001,7 +2003,7 @@ CosKmAdapter::PatchDmaBuffer(
             DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "Patch buffer offset %lx allocation offset %lx\n", patch->PatchOffset, patch->AllocationOffset);
 
             // Patch in dma buffer
-            NT_ASSERT(allocation->SegmentId == COSD_SEGMENT_VIDEO_MEMORY);
+            NT_ASSERT(allocation->SegmentId == COS_SEGMENT_VIDEO_MEMORY);
             if (pDmaBufInfo->m_DmaBufState.m_bSwCommandBuffer)
             {
                 PHYSICAL_ADDRESS    allocAddress;
@@ -2022,6 +2024,7 @@ CosKmAdapter::PatchDmaBuffer(
         }
     }
 }
+#endif
 
 //
 // TODO[indyz]: Add proper validation for DMA buffer

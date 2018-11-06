@@ -8,7 +8,7 @@
 
 #include "CosUmd12.h"
 
-#if GPUVA
+#if COS_GPUVA_SUPPORT
 
 HRESULT 
 CosUmd12CommandQueue::Standup()
@@ -96,5 +96,5 @@ CosUmd12CommandQueue::ExecuteCommandBuffer(
     return m_pDevice->m_pKMCallbacks->pfnSubmitCommandCb(m_pDevice->m_hRTDevice.handle, &submitCommand);
 }
 
-#endif  // GPUVA
+#endif  // COS_GPUVA_SUPPORT
 

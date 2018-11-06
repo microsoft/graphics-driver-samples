@@ -10,7 +10,7 @@
 
 #include "CosUmd12.h"
 
-#if GPUVA
+#if COS_GPUVA_SUPPORT
 
 CosUmd12CommandBuffer *
 CosUmd12CommandBuffer::Create(
@@ -18,7 +18,7 @@ CosUmd12CommandBuffer::Create(
 {
     D3D12DDIARG_CREATEHEAP_0001 heapDesc;
 
-    heapDesc.ByteSize = COSD_COMMAND_BUFFER_SIZE;
+    heapDesc.ByteSize = COS_COMMAND_BUFFER_SIZE;
     heapDesc.Alignment = PAGE_SIZE;
     heapDesc.MemoryPool = D3D12DDI_MEMORY_POOL_L0;
     heapDesc.CPUPageProperty = D3D12DDI_CPU_PAGE_PROPERTY_WRITE_COMBINE;
@@ -140,5 +140,5 @@ CosUmd12CommandBuffer::Execute(CosUmd12CommandQueue * pCommandQueue)
     return S_OK;
 }
 
-#endif  // GPUVA
+#endif  // COS_GPUVA_SUPPORT
 

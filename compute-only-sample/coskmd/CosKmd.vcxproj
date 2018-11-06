@@ -49,6 +49,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\coscommon\CosAllocation.h" />
+    <ClInclude Include="..\coscommon\CosContext.h" />
     <ClInclude Include="..\coscommon\CosGpuCommand.h" />
     <ClInclude Include="CosKmd.h" />
     <ClInclude Include="CosKmdAcpi.h" />
@@ -173,6 +174,7 @@
       <PreprocessorDefinitions>MLMC=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>
       <SupportJustMyCode>false</SupportJustMyCode>
+      <TreatSpecificWarningsAsErrors>4668;%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
     </ClCompile>
     <Link>
     </Link>
@@ -184,6 +186,7 @@
       </AdditionalUsingDirectories>
       <PreprocessorDefinitions>MLMC=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>
+      <TreatSpecificWarningsAsErrors>4668;%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
     </ClCompile>
     <Link>
     </Link>
@@ -193,9 +196,10 @@
       <WarningLevel>Level4</WarningLevel>
       <AdditionalUsingDirectories>
       </AdditionalUsingDirectories>
-      <PreprocessorDefinitions>RS_2LEVEL=0;ENABLE_FOR_COSTEST=0;MLMC=0;GPUVA=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>RS_2LEVEL=0;ENABLE_FOR_COSTEST=0;MLMC=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>
       <SupportJustMyCode>false</SupportJustMyCode>
+      <TreatSpecificWarningsAsErrors>4668;%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
     </ClCompile>
     <Link>
     </Link>
@@ -207,6 +211,7 @@
       </AdditionalUsingDirectories>
       <PreprocessorDefinitions>MLMC=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>
+      <TreatSpecificWarningsAsErrors>4668;%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
     </ClCompile>
     <Link>
     </Link>
@@ -219,6 +224,7 @@
       <PreprocessorDefinitions>MLMC=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>
       <SupportJustMyCode>false</SupportJustMyCode>
+      <TreatSpecificWarningsAsErrors>4668;%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
     </ClCompile>
     <Link>
     </Link>
@@ -230,6 +236,7 @@
       </AdditionalUsingDirectories>
       <PreprocessorDefinitions>MLMC=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>
+      <TreatSpecificWarningsAsErrors>4668;%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
     </ClCompile>
     <Link>
     </Link>
@@ -241,6 +248,7 @@
       </AdditionalUsingDirectories>
       <PreprocessorDefinitions>MLMC=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>
+      <TreatSpecificWarningsAsErrors>4668;%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
     </ClCompile>
     <Link>
     </Link>
@@ -252,6 +260,7 @@
       </AdditionalUsingDirectories>
       <PreprocessorDefinitions>MLMC=0;VC4=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>
+      <TreatSpecificWarningsAsErrors>4668;%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
     </ClCompile>
     <Link>
     </Link>

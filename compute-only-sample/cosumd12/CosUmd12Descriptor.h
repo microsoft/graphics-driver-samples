@@ -31,7 +31,7 @@ public:
         m_uav = *pDesc;
     }
 
-#if GPUVA
+#if COS_GPUVA_SUPPORT
 
     void WriteHWDescriptor(
         GpuHWDescriptor *   pHwDescriptor) const;

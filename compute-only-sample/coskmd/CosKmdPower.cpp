@@ -89,7 +89,7 @@ CosKmAdapter::InitializePowerComponentInfo()
         // Validate number of power compoment
         ULONG numPowerCompoment;
         Status = acpiParser.GetValue<ULONG>(&numPowerCompoment);
-        if (!NT_SUCCESS(Status) || (numPowerCompoment != C_COSD_GPU_ENGINE_COUNT)) // currently only GPU node
+        if (!NT_SUCCESS(Status) || (numPowerCompoment != C_COS_GPU_ENGINE_COUNT)) // currently only GPU node
         {
             return STATUS_ACPI_INVALID_DATA;
         }

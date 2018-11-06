@@ -33,7 +33,7 @@ CosKmContext::DdiRender(
 
 #ifdef SSR_END_DMA
     __try {
-        memcpy(pRender->pDmaBuffer, pRender->pCommand, COSD_COMMAND_BUFFER_SIZE);
+        memcpy(pRender->pDmaBuffer, pRender->pCommand, COS_COMMAND_BUFFER_SIZE);
     }
 #else
     __try {
@@ -85,7 +85,11 @@ CosKmContext::DdiRender(
     pDmaBufInfo->m_DmaBufState.m_bSwCommandBuffer = pCmdBufHeader->m_commandBufferHeader.m_swCommandBuffer;
 
     pDmaBufInfo->m_pDmaBuffer = (PBYTE)pRender->pDmaBuffer;
+#if COS_PHYSICAL_SUPPORT
     pDmaBufInfo->m_DmaBufferPhysicalAddress.QuadPart = 0;
+#else
+    pDmaBufInfo->m_DmaBufferGpuVa = 0;
+#endif
     pDmaBufInfo->m_DmaBufferSize = pRender->DmaSize;
 
     // Validate DMA buffer
@@ -104,6 +108,7 @@ CosKmContext::DdiRender(
         return STATUS_INVALID_PARAMETER;
     }
 
+#if COS_PHYSICAL_SUPPORT
     // Perform pre-patch
     pCosKmAdapter->PatchDmaBuffer(
         pDmaBufInfo,
@@ -111,6 +116,7 @@ CosKmContext::DdiRender(
         pRender->AllocationListSize,
         pPatchLocationList,
         pRender->PatchLocationListInSize);
+#endif
 
     // Must update pDmaBuffer to reflect what space we used
     pRender->pDmaBuffer = (char *)pRender->pDmaBuffer + pRender->CommandLength;
@@ -149,7 +155,7 @@ CosKmContext::DdiCreateContext(
     //
     DXGK_CONTEXTINFO   *pContextInfo = &pCreateContext->ContextInfo;
 
-#if GPUVA
+#if COS_GPUVA_SUPPORT
 
     if (pCreateContext->Flags.VirtualAddressing)
     {
@@ -169,21 +175,15 @@ CosKmContext::DdiCreateContext(
 #if 1
         pContextInfo->DmaBufferSegmentSet = 0;  // Use physical contiguos memory
 #else
-        pContextInfo->DmaBufferSegmentSet = 1 << (COSD_SEGMENT_APERTURE - 1);
+        pContextInfo->DmaBufferSegmentSet = 1 << (COS_SEGMENT_APERTURE - 1);
 #endif
-        pContextInfo->DmaBufferSize = COSD_COMMAND_BUFFER_SIZE;
+        pContextInfo->DmaBufferSize = COS_COMMAND_BUFFER_SIZE;
         pContextInfo->DmaBufferPrivateDataSize = sizeof(COSDMABUFINFO);
 
-        if (pCreateContext->Flags.GdiContext)
-        {
-            pContextInfo->AllocationListSize = DXGK_ALLOCATION_LIST_SIZE_GDICONTEXT;
-            pContextInfo->PatchLocationListSize = DXGK_ALLOCATION_LIST_SIZE_GDICONTEXT;
-        }
-        else
-        {
-            pContextInfo->AllocationListSize = C_COSD_ALLOCATION_LIST_SIZE;
-            pContextInfo->PatchLocationListSize = C_COSD_PATCH_LOCATION_LIST_SIZE;
-        }
+        NT_ASSERT(!pCreateContext->Flags.GdiContext);
+
+        pContextInfo->AllocationListSize = C_COS_ALLOCATION_LIST_SIZE;
+        pContextInfo->PatchLocationListSize = C_COS_PATCH_LOCATION_LIST_SIZE;
     }
 
     pCreateContext->hContext = pCosKmContext;
@@ -218,7 +218,7 @@ CosKmContext::RenderKm(
     return STATUS_SUCCESS;
 }
 
-#if GPUVA
+#if COS_GPUVA_SUPPORT
 
 VOID
 CosKmContext::SetRootPageTable(

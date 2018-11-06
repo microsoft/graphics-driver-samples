@@ -57,7 +57,7 @@ CosUmd12Heap::Standup()
 
     do
     {
-#if GPUVA
+#if COS_GPUVA_SUPPORT
 
         D3DDDI_MAPGPUVIRTUALADDRESS mapGpuVa = {};
 
@@ -121,7 +121,7 @@ CosUmd12Heap::Standup()
 
     m_pDevice->TrackPagingFence(m_pagingFenceValue);
 
-#if !GPUVA
+#if !COS_GPUVA_SUPPORT
 
     m_uniqueAddress = m_pDevice->AllocateUniqueAddress(m_hwSizeBytes);
 

@@ -116,6 +116,7 @@ NTSTATUS __stdcall CosKmdDdi::DdiSubmitCommand(
     return pCosKmdAdapter->SubmitCommand(pSubmitCommand);
 }
 
+#if COS_PHYSICAL_SUPPORT
 NTSTATUS __stdcall CosKmdDdi::DdiPatch(
     IN_CONST_HANDLE             hAdapter,
     IN_CONST_PDXGKARG_PATCH     pPatch)
@@ -126,6 +127,7 @@ NTSTATUS __stdcall CosKmdDdi::DdiPatch(
 
     return pCosKmdAdapter->Patch(pPatch);
 }
+#endif
 
 NTSTATUS __stdcall CosKmdDdi::DdiCreateAllocation(
     IN_CONST_HANDLE                     hAdapter,
@@ -199,7 +201,7 @@ NTSTATUS __stdcall CosKmdDdi::DdiGetStandardAllocationDriverData(
     return pCosKmdAdapter->GetStandardAllocationDriverData(pGetStandardAllocationDriverData);
 }
 
-#if GPUVA
+#if COS_GPUVA_SUPPORT
 
 NTSTATUS
 __stdcall
@@ -389,7 +391,7 @@ CosKmdDdi::DdiPresent(
     return pCosKmdContext->Present(pPresent);
 }
 
-
+#if COS_GPUVA_SUPPORT
 NTSTATUS
 __stdcall
 CosKmdDdi::DdiCreateProcess(
@@ -416,7 +418,7 @@ CosKmdDdi::DdiDestroyProcess(
 
     return pCosKmdAdapter->DestroyProcess(KmdProcessHandle);
 }
-
+#endif
 
 void
 __stdcall

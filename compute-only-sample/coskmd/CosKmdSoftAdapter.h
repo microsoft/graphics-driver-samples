@@ -26,7 +26,7 @@ protected:
 
     virtual void ProcessRenderBuffer(COSDMABUFSUBMISSION * pDmaBufSubmission);
     virtual void ProcessHWRenderBuffer(COSDMABUFSUBMISSION * pDmaBufSubmission);
-#if GPUVA
+#if COS_GPUVA_SUPPORT
 
     virtual void ProcessGpuVaRenderBuffer(COSDMABUFSUBMISSION * pDmaBufSubmission);
 
