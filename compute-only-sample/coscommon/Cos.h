@@ -1,5 +1,16 @@
 #pragma once
 
+//
+// The official DDI versions are listed in d3dukmdt.h as verfied by
+// IS_OFFICIAL_DDI_INTERFACE_VERSION(version)
+//
+// DXGKDDI_INTERFACE_VERSION by default is the highest/current version
+// defined in d3dukmdt.h. If a lower version is used, it must be one of
+// the official versions.
+//
+// Otherwise DxgkInitialize() fails and driver is unloaded.
+//
+
 #define DXGKDDI_INTERFACE_VERSION 0xA00A    // WDDM 2.5
 
 // Defines needed due to problems in video.h when we turned on warning 4668
