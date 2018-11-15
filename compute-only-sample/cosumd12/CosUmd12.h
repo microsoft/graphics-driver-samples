@@ -2,6 +2,8 @@
 
 #include <windows.h>
 
+#include "Cos.h"
+
 //
 // Must define NTSTATUS due to d3dkmddi.h which is included by d3d10umddi.h
 //
