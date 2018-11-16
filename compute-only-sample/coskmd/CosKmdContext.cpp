@@ -209,13 +209,16 @@ CosKmContext::DdiDestroyContext(
 }
 
 NTSTATUS
-CosKmContext::RenderKm(
-    INOUT_PDXGKARG_RENDER   pRender)
+__stdcall
+CosKmContext::DdiFormatHistoryBuffer(
+    IN_CONST_HANDLE                 hContext,
+    IN DXGKARG_FORMATHISTORYBUFFER* pFormatData)
 {
-    pRender;
+    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hContext=%lx\n", __FUNCTION__, hContext);
 
-    NT_ASSERT(FALSE);
-    return STATUS_SUCCESS;
+    pFormatData;
+
+    return STATUS_NOT_IMPLEMENTED;
 }
 
 #if COS_GPUVA_SUPPORT
@@ -230,26 +233,3 @@ CosKmContext::SetRootPageTable(
 
 #endif
 
-COS_PAGED_SEGMENT_BEGIN; //===================================================
-
-_Use_decl_annotations_
-NTSTATUS CosKmContext::Present (DXGKARG_PRESENT* Args)
-{
-    PAGED_CODE();
-    COS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-
-    COS_LOG_WARNING(
-        "Kernel-mode DxgkDdiPresent should not be called in direct-flip case! (Flags=%s %s %s %s %s %s %s %s)",
-        Args->Flags.Blt ? "Blt" : "",
-        Args->Flags.ColorFill ? "ColorFill" : "",
-        Args->Flags.Flip ? "Flip" : "",
-        Args->Flags.FlipWithNoWait ? "FlipWithNoWait" : "",
-        Args->Flags.SrcColorKey ? "SrcColorKey" : "",
-        Args->Flags.DstColorKey ? "DstColorKey" : "",
-        Args->Flags.LinearToSrgb ? "LinearToSrgb" : "",
-        Args->Flags.Rotate ? "Rotate" : "");
-
-    return STATUS_SUCCESS;
-}
-
-COS_PAGED_SEGMENT_END; //=====================================================
