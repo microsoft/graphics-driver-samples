@@ -1713,6 +1713,12 @@ CosKmAdapter::ResetFromTimeout(void)
 
     m_bInHangState = false;
 
+    //
+    // Implicitly sync up : Graphics runtime considers all submitted Fence Id as completed.
+    //
+
+    m_lastCompletetdFenceId = m_lastSubmittedFenceId;
+
     return STATUS_SUCCESS;
 }
 
@@ -1821,6 +1827,12 @@ CosKmAdapter::ResetEngine(
     //
 
     pResetEngine->LastAbortedFenceId = m_lastSubmittedFenceId;
+
+    //
+    // Implicitly sync up : Graphics runtime considers all submitted Fence Id as completed.
+    //
+
+    m_lastCompletetdFenceId = m_lastSubmittedFenceId;
 
     //
     // Except for paging node, TDR (heavyweight reset) is attempted to recover
