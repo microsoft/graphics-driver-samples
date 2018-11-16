@@ -1606,14 +1606,20 @@ CosKmAdapter::SubmitCommandVirtual(
     // m_pDmaBuffer from UMD is for debugging purpose only
     //
 
-    pDmaBufInfo->m_DmaBufferGpuVa = pSubmitCommandVirtual->DmaBufferVirtualAddress;
-    pDmaBufInfo->m_DmaBufferSize = pSubmitCommandVirtual->DmaBufferSize;
+    if (!pSubmitCommandVirtual->Flags.Resubmission)
+    {
+        pDmaBufInfo->m_DmaBufferGpuVa = pSubmitCommandVirtual->DmaBufferVirtualAddress;
+        pDmaBufInfo->m_DmaBufferSize = pSubmitCommandVirtual->DmaBufferSize;
 
-    pDmaBufInfo->m_DmaBufState.m_Value = 0;
-    pDmaBufInfo->m_DmaBufState.m_bGpuVaCommandBuffer = 1;
+        pDmaBufInfo->m_DmaBufState.m_Value = 0;
+        pDmaBufInfo->m_DmaBufState.m_bGpuVaCommandBuffer = 1;
 
-    pDmaBufInfo->m_DmaBufState.m_bPaging = pSubmitCommandVirtual->Flags.Paging;
-    pDmaBufInfo->m_DmaBufState.m_bPreempted = pSubmitCommandVirtual->Flags.Resubmission;
+        pDmaBufInfo->m_DmaBufState.m_bPaging = pSubmitCommandVirtual->Flags.Paging;
+
+        pDmaBufInfo->m_DmaBufStallDuration = 0;
+    }
+
+    NT_ASSERT(pDmaBufInfo->m_DmaBufState.m_bPreempted == pSubmitCommandVirtual->Flags.Resubmission);
 
     //
     // TODO : Using flattened parameters for QueueDmaBuffer()
