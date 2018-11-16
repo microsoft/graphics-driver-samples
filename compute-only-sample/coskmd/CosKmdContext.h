@@ -32,6 +32,12 @@ public:
         DdiDestroyContext(
             IN_CONST_HANDLE     hContext);
 
+    static NTSTATUS
+        __stdcall
+        DdiFormatHistoryBuffer(
+            IN_CONST_HANDLE                 hContext,
+            IN DXGKARG_FORMATHISTORYBUFFER* pFormatData);
+
 protected:
     CosKmDevice           *m_pDevice;
     UINT                    m_Node;
@@ -75,10 +81,6 @@ public:
         return rosKmContext;
     }
 
-    NTSTATUS
-        RenderKm(
-            INOUT_PDXGKARG_RENDER   pRender);
-
 #if COS_GPUVA_SUPPORT
 
     VOID
@@ -86,13 +88,6 @@ public:
             IN_CONST_PDXGKARG_SETROOTPAGETABLE  pSetPageTable);
 
 #endif
-
-public: // PAGED
-
-    _Check_return_
-    _Function_class_DXGK_(DXGKDDI_PRESENT)
-    _IRQL_requires_(PASSIVE_LEVEL)
-    NTSTATUS Present (INOUT_PDXGKARG_PRESENT Args);
 
 private:
 

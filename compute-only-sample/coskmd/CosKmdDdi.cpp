@@ -308,20 +308,6 @@ CosKmdDdi::DdiCollectDbgInfo(
 }
 
 
-NTSTATUS
-__stdcall
-CosKmdDdi::DdiQueryCurrentFence(
-    IN_CONST_HANDLE                    /* hAdapter */,
-    INOUT_PDXGKARG_QUERYCURRENTFENCE   /* pCurrentFence */)
-{
-    //
-    // Deprecated, but a stub is needed for now
-    //
-
-    return STATUS_NOT_IMPLEMENTED;
-}
-
-
 _Use_decl_annotations_
 NTSTATUS CosKmdDdi::DdiQueryDependentEngineGroup(
     HANDLE const hAdapter,
@@ -362,34 +348,6 @@ CosKmdDdi::DdiResetEngine(
     return pCosKmdAdapter->ResetEngine(pResetEngine);
 }
 
-
-NTSTATUS
-__stdcall
-CosKmdDdi::DdiControlInterrupt(
-    IN_CONST_HANDLE                 hAdapter,
-    IN_CONST_DXGK_INTERRUPT_TYPE    InterruptType,
-    IN_BOOLEAN                      EnableInterrupt)
-{
-    CosKmAdapter  *pCosKmdAdapter = CosKmAdapter::Cast(hAdapter);
-
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n", __FUNCTION__, hAdapter);
-
-    return pCosKmdAdapter->ControlInterrupt(InterruptType, EnableInterrupt);
-}
-
-
-NTSTATUS
-__stdcall
-CosKmdDdi::DdiPresent(
-    IN_CONST_HANDLE         hContext,
-    INOUT_PDXGKARG_PRESENT  pPresent)
-{
-    CosKmContext  *pCosKmdContext = CosKmContext::Cast(hContext);
-
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hContext=%lx\n", __FUNCTION__, hContext);
-
-    return pCosKmdContext->Present(pPresent);
-}
 
 #if COS_GPUVA_SUPPORT
 NTSTATUS
@@ -448,20 +406,6 @@ CosKmdDdi::DdiCalibrateGpuClock(
     DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n", __FUNCTION__, hAdapter);
 
     return pCosKmdAdapter->CalibrateGpuClock(NodeOrdinal, EngineOrdinal, pClockCalibration);
-}
-
-
-NTSTATUS
-__stdcall
-CosKmdDdi::DdiRenderKm(
-    IN_CONST_HANDLE         hContext,
-    INOUT_PDXGKARG_RENDER   pRender)
-{
-    CosKmContext  *pCosKmContext = CosKmContext::Cast(hContext);
-
-    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hContext=%lx\n", __FUNCTION__, hContext);
-
-    return pCosKmContext->RenderKm(pRender);
 }
 
 NTSTATUS
@@ -637,6 +581,21 @@ NTSTATUS CosKmdDdi::DdiOpenAllocation (
     COS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
 
     return CosKmDevice::Cast(hDevice)->OpenAllocation(ArgsPtr);
+}
+
+NTSTATUS
+CosKmdDdi::DdiSetVirtualMachineData(
+    IN_CONST_HANDLE                         hAdapter,
+    IN_CONST_PDXGKARG_SETVIRTUALMACHINEDATA Args)
+{
+    PAGED_CODE();
+    COS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
+
+    CosKmAdapter  *pCosKmdAdapter = CosKmAdapter::Cast(hAdapter);
+
+    DbgPrintEx(DPFLTR_IHVVIDEO_ID, DPFLTR_TRACE_LEVEL, "%s hAdapter=%lx\n", __FUNCTION__, hAdapter);
+
+    return pCosKmdAdapter->SetVirtualMachineData(Args);
 }
 
 #if 0

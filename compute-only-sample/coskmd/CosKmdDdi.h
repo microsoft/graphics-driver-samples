@@ -113,12 +113,6 @@ public:
 
     static NTSTATUS
         __stdcall
-        DdiQueryCurrentFence(
-            IN_CONST_HANDLE                    hAdapter,
-            INOUT_PDXGKARG_QUERYCURRENTFENCE   pCurrentFence);
-
-    static NTSTATUS
-        __stdcall
         DdiResetEngine(
             IN_CONST_HANDLE             hAdapter,
             INOUT_PDXGKARG_RESETENGINE  pResetEngine);
@@ -131,22 +125,9 @@ public:
 
     static NTSTATUS
         __stdcall
-        DdiControlInterrupt(
-            IN_CONST_HANDLE                 hAdapter,
-            IN_CONST_DXGK_INTERRUPT_TYPE    InterruptType,
-            IN_BOOLEAN                      EnableInterrupt);
-
-    static NTSTATUS
-        __stdcall
         DdiCollectDbgInfo(
             IN_CONST_HANDLE                         hAdapter,
             IN_CONST_PDXGKARG_COLLECTDBGINFO        pCollectDbgInfo);
-
-    static NTSTATUS
-        __stdcall
-        DdiPresent(
-            IN_CONST_HANDLE         hContext,
-            INOUT_PDXGKARG_PRESENT  pPresent);
 
 #if COS_GPUVA_SUPPORT
     static NTSTATUS
@@ -171,17 +152,10 @@ public:
     static NTSTATUS
         __stdcall
         DdiCalibrateGpuClock(
-            IN_CONST_HANDLE                             hAdapter,
-            IN UINT32                                   NodeOrdinal,
-            IN UINT32                                   EngineOrdinal,
-            OUT_PDXGKARG_CALIBRATEGPUCLOCK              pClockCalibration
-            );
-
-    static NTSTATUS
-        __stdcall
-        DdiRenderKm(
-            IN_CONST_HANDLE         hContext,
-            INOUT_PDXGKARG_RENDER   pRender);
+            IN_CONST_HANDLE                 hAdapter,
+            IN UINT32                       NodeOrdinal,
+            IN UINT32                       EngineOrdinal,
+            OUT_PDXGKARG_CALIBRATEGPUCLOCK  pClockCalibration);
 
     static NTSTATUS
         __stdcall
@@ -251,6 +225,10 @@ public:
         DdiResetDevice(
             IN_CONST_PVOID  MiniportDeviceContext);
 
+    static NTSTATUS
+        DdiSetVirtualMachineData(
+            IN_CONST_HANDLE                         hAdapter,
+            IN_CONST_PDXGKARG_SETVIRTUALMACHINEDATA Args);
 
 public: // PAGED
 

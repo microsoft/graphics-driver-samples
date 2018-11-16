@@ -224,6 +224,10 @@ public:
 
     void ResetDevice(void);
 
+    NTSTATUS
+        SetVirtualMachineData(
+            IN_CONST_PDXGKARG_SETVIRTUALMACHINEDATA Args);
+
 protected:
 
     CosKmAdapter(IN_CONST_PDEVICE_OBJECT PhysicalDeviceObject, OUT_PPVOID MiniportDeviceContext);
@@ -514,14 +518,6 @@ public: // PAGED
     _IRQL_requires_(PASSIVE_LEVEL)
     NTSTATUS GetScanLine (
         INOUT_PDXGKARG_GETSCANLINE pGetScanLine
-        );
-
-    _Check_return_
-    _Function_class_DXGK_(DXGKDDI_CONTROLINTERRUPT)
-    _IRQL_requires_(PASSIVE_LEVEL)
-    NTSTATUS ControlInterrupt (
-        IN_CONST_DXGK_INTERRUPT_TYPE InterruptType,
-        IN_BOOLEAN EnableInterrupt
         );
 
     _Check_return_

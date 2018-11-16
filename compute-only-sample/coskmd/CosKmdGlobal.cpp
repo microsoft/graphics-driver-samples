@@ -264,27 +264,22 @@ NTSTATUS CosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
 
 #if COS_PHYSICAL_SUPPORT
     DriverInitializationData.DxgkDdiPatch = CosKmdDdi::DdiPatch;
+    DriverInitializationData.DxgkDdiRender = CosKmContext::DdiRender;
+    DriverInitializationData.DxgkDdiSubmitCommand = CosKmdDdi::DdiSubmitCommand;
 #endif
 
-    DriverInitializationData.DxgkDdiSubmitCommand = CosKmdDdi::DdiSubmitCommand;
     DriverInitializationData.DxgkDdiBuildPagingBuffer = CosKmdDdi::DdiBuildPagingBuffer;
     DriverInitializationData.DxgkDdiPreemptCommand = CosKmdDdi::DdiPreemptCommand;
 
     DriverInitializationData.DxgkDdiDestroyDevice = CosKmDevice::DdiDestroyDevice;
 
-    DriverInitializationData.DxgkDdiRender = CosKmContext::DdiRender;
-    DriverInitializationData.DxgkDdiPresent = CosKmdDdi::DdiPresent;
     DriverInitializationData.DxgkDdiResetFromTimeout = CosKmdDdi::DdiResetFromTimeout;
     DriverInitializationData.DxgkDdiRestartFromTimeout = CosKmdDdi::DdiRestartFromTimeout;
     DriverInitializationData.DxgkDdiEscape = CosKmdDdi::DdiEscape;
     DriverInitializationData.DxgkDdiCollectDbgInfo = CosKmdDdi::DdiCollectDbgInfo;
-    DriverInitializationData.DxgkDdiQueryCurrentFence = CosKmdDdi::DdiQueryCurrentFence;
-    DriverInitializationData.DxgkDdiControlInterrupt = CosKmdDdi::DdiControlInterrupt;
 
     DriverInitializationData.DxgkDdiCreateContext = CosKmContext::DdiCreateContext;
     DriverInitializationData.DxgkDdiDestroyContext = CosKmContext::DdiDestroyContext;
-
-    DriverInitializationData.DxgkDdiRenderKm = CosKmdDdi::DdiRenderKm;
 
     //
     // Fill in DDI routines for resetting individual engine
@@ -316,7 +311,11 @@ NTSTATUS CosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
 #endif
 
     DriverInitializationData.DxgkDdiCalibrateGpuClock = CosKmdDdi::DdiCalibrateGpuClock;
+    DriverInitializationData.DxgkDdiFormatHistoryBuffer = CosKmContext::DdiFormatHistoryBuffer;
+
     DriverInitializationData.DxgkDdiSetStablePowerState = CosKmdDdi::DdiSetStablePowerState;
+
+    DriverInitializationData.DxgkDdiSetVirtualMachineData = CosKmdDdi::DdiSetVirtualMachineData;
 
     Status = DxgkInitialize(pDriverObject, pRegistryPath, &DriverInitializationData);
 

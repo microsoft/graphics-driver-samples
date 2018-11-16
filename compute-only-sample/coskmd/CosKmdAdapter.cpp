@@ -1975,6 +1975,16 @@ CosKmAdapter::ResetDevice(void)
     COS_ASSERTION("Not implemented");
 }
 
+NTSTATUS
+CosKmAdapter::SetVirtualMachineData(
+    IN_CONST_PDXGKARG_SETVIRTUALMACHINEDATA pArgs)
+{
+    pArgs;
+
+    COS_ASSERTION("Not implemented");
+    return STATUS_NOT_IMPLEMENTED;
+}
+
 #if COS_PHYSICAL_SUPPORT
 void
 CosKmAdapter::PatchDmaBuffer(
@@ -2591,22 +2601,6 @@ NTSTATUS CosKmAdapter::GetScanLine (DXGKARG_GETSCANLINE* /*GetScanLinePtr*/)
 
     COS_ASSERTION("Not implemented");
     return STATUS_NOT_IMPLEMENTED;
-}
-
-_Use_decl_annotations_
-NTSTATUS CosKmAdapter::ControlInterrupt (
-    const DXGK_INTERRUPT_TYPE InterruptType,
-    BOOLEAN EnableInterrupt
-    )
-{
-    PAGED_CODE();
-    COS_ASSERT_MAX_IRQL(PASSIVE_LEVEL);
-
-    InterruptType;
-    EnableInterrupt;
-
-    NT_ASSERT(!CosKmdGlobal::IsRenderOnly());
-    return STATUS_NOT_SUPPORTED;
 }
 
 _Use_decl_annotations_
