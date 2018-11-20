@@ -1343,9 +1343,9 @@ CosKmAdapter::QueryAdapterInfo(
         //
 
         //
-        // Indicate MCDM
+        // Indicate ComputeOnly adapter
         //
-        pDriverCaps->MiscCaps.MCDM = 1;
+        pDriverCaps->MiscCaps.ComputeOnly = 1;
     }
     break;
 
