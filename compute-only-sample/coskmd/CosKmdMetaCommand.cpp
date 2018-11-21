@@ -2,7 +2,7 @@
 #include "CosKmdMetaCommand.h"
 #include "CosKmdGlobal.h"
 
-#if MLMC
+#if COS_MLMC_RS5_SUPPORT
 
 static UINT
 CosKmGetTensorElementSize(

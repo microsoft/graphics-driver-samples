@@ -8,11 +8,11 @@
 
 #include "CosUmd12.h"
 
-#if COS_RS_2LEVEL_SUPPORT
+#if COS_GPUVA_SUPPORT
 
 int CosUmd12DescriptorHeap::CalculateSize(const D3D12DDIARG_CREATE_DESCRIPTOR_HEAP_0001 * pDesc)
 {
-    return sizeof(CosUmd12DescriptorHeap) + pDesc->NumDescriptors * sizeof(CosUmd12Descriptor);
+    return sizeof(CosUmd12DescriptorHeap);
 }
 
 HRESULT CosUmd12DescriptorHeap::Create(
@@ -23,7 +23,7 @@ HRESULT CosUmd12DescriptorHeap::Create(
     D3D12DDIARG_CREATEHEAP_0001 heapDesc = { 0 };
     UINT heapSize;
 
-    heapSize = pDesc->NumDescriptors * sizeof(GpuHWDescriptor);
+    heapSize = pDesc->NumDescriptors*sizeof(GpuHWDescriptor);
     heapSize = (heapSize + PAGE_SIZE - 1) & (~(PAGE_SIZE - 1));
 
     heapDesc.ByteSize = heapSize;
@@ -63,10 +63,8 @@ HRESULT CosUmd12DescriptorHeap::Standup()
         return hr;
     }
 
-    memset(m_pDescriptors, 0, m_desc.NumDescriptors*sizeof(CosUmd12Descriptor));
+    memset(m_pHwDescriptors, 0, m_desc.NumDescriptors*sizeof(CosUmd12Descriptor));
 
-    m_heapUniqueAddress = (((D3D12DDI_GPU_VIRTUAL_ADDRESS)m_hwDescriptorHeap.GetAllocationHandle()) << 32) | 0;
- 
     return S_OK;
 }
 
@@ -75,5 +73,5 @@ void CosUmd12DescriptorHeap::Teardown()
     m_hwDescriptorHeap.Teardown();
 }
 
-#endif  // COS_RS_2LEVEL_SUPPORT
+#endif  // COS_GPUVA_SUPPORT
 

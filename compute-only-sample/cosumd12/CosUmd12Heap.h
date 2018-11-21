@@ -44,7 +44,7 @@ public:
 
 #if COS_GPUVA_SUPPORT
 
-    D3D12DDI_GPU_VIRTUAL_ADDRESS GetGpuVa()
+    D3D12DDI_GPU_VIRTUAL_ADDRESS GetGpuVa() const
     {
         return m_gpuVa;
     }

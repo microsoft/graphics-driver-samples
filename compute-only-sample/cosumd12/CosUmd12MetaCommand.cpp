@@ -74,7 +74,7 @@ CosUmd12MetaCommandIdentity::Execute(
         (UINT)m_createDesc.BufferSize);
 }
 
-#if MLMC
+#if COS_MLMC_RS5_SUPPORT
 
 const UINT CosUmd12MetaCommandNormalization::m_numCreationParameters = 0;
 const D3D12DDIARG_META_COMMAND_PARAMETER_DESC CosUmd12MetaCommandNormalization::m_creationParametersDesc[];

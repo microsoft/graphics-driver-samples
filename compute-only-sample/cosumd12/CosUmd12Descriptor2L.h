@@ -18,13 +18,6 @@ public:
         m_uav = *pDesc;
     }
 
-#if COS_GPUVA_SUPPORT
-
-    void WriteHWDescriptor(
-        GpuHWDescriptor *   pHwDescriptor) const;
-
-#endif
-
     void WriteHWDescriptor(
         CosUmd12CommandBuffer * pCurCommandBuffer,
         UINT hwDescriptorOffset,
