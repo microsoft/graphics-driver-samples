@@ -82,7 +82,7 @@ public:
         UINT numHwDescriptors = sizeof(THwIoTable)/sizeof(D3D12_GPU_DESCRIPTOR_HANDLE);
         UINT commandSize = sizeof(GpuHwMetaCommand) + sizeof(THwMetaCommand);
         
-#if !GPUVA_NO_DH
+#if !COS_GPUVA_MLMC_NO_DESCRIPTOR_HEAP
         commandSize += sizeof(THwIoTable);
 #else
         commandSize += numHwDescriptors*sizeof(D3D12DDI_GPU_VIRTUAL_ADDRESS);
@@ -108,7 +108,7 @@ public:
         // Copy the meta command META_COMMAND_CREATE_*_DESC
         memcpy(pMetaCommand + 1, pHwMetaCommand, sizeof(THwMetaCommand));
 
-#if !GPUVA_NO_DH
+#if !COS_GPUVA_MLMC_NO_DESCRIPTOR_HEAP
 
         *(THwIoTable *)(pCommandBuf + sizeof(GpuHwMetaCommand) + sizeof(THwMetaCommand)) = *pHwIoTable;
 
@@ -144,7 +144,7 @@ public:
             }
         }
 
-#endif  // !GPUVA_NO_DH
+#endif  // !COS_GPUVA_MLMC_NO_DESCRIPTOR_HEAP
 
         // Commit the command into command buffer
         m_pCurCommandBuffer->CommitCommandBufferSpace(commandSize);

@@ -72,7 +72,7 @@ CosKmdSoftAdapter::ProcessHWRenderBuffer(
 
 #else
 
-#if RS_2LEVEL
+#if COS_RS_2LEVEL_SUPPORT
 
 void
 CosKmdSoftAdapter::ProcessHWRenderBuffer(
@@ -332,9 +332,9 @@ CosKmdSoftAdapter::ProcessHWRenderBuffer(
     }
 }
 
-#endif  // RS_2LEVEL
+#endif  // COS_RS_2LEVEL_SUPPORT
 
-#endif  // GPUVA
+#endif  // COS_GPUVA_SUPPORT
 
 #if COS_GPUVA_SUPPORT
 

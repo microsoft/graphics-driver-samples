@@ -8,7 +8,7 @@
 
 #include "CosUmd12.h"
 
-#if RS_2LEVEL
+#if COS_RS_2LEVEL_SUPPORT
 
 int CosUmd12DescriptorHeap::CalculateSize(const D3D12DDIARG_CREATE_DESCRIPTOR_HEAP_0001 * pDesc)
 {
@@ -75,5 +75,5 @@ void CosUmd12DescriptorHeap::Teardown()
     m_hwDescriptorHeap.Teardown();
 }
 
-#endif  // RS_2LEVEL
+#endif  // COS_RS_2LEVEL_SUPPORT
 

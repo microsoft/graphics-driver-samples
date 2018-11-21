@@ -8,7 +8,7 @@
 
 #include "CosUmd12.h"
 
-#if !(COS_GPUVA_SUPPORT || RS_2LEVEL)
+#if !(COS_GPUVA_SUPPORT || COS_RS_2LEVEL_SUPPORT)
 
 void 
 CosUmd12RootSignature::SetRootDescriptorTable(
@@ -325,5 +325,5 @@ void CosUmd12RootSignature::WriteHWRootSignature(
     }
 }
 
-#endif  // !(COS_GPUVA_SUPPORT || RS_2LEVEL)
+#endif  // !(COS_GPUVA_SUPPORT || COS_RS_2LEVEL_SUPPORT)
 

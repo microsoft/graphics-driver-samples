@@ -8,7 +8,7 @@
 
 #include "CosUmd12.h"
 
-#if RS_2LEVEL
+#if COS_RS_2LEVEL_SUPPORT
 
 void 
 CosUmd12RootSignature::SetRootDescriptorTable(
@@ -301,5 +301,5 @@ void CosUmd12RootSignature::WriteHWRootSignature(
     }
 }
 
-#endif  // RS_2LEVEL
+#endif  // COS_RS_2LEVEL_SUPPORT
 

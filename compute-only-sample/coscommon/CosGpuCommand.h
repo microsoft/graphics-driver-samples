@@ -1,6 +1,6 @@
 #pragma once
 
-#if MLMC
+#if COS_MLMC_RS5_SUPPORT
 
 #ifndef __d3d12_h__
 
@@ -55,7 +55,7 @@ struct GpuResourceCopy
     UINT                m_sizeBytes;
 };
 
-#if COS_GPUVA_SUPPORT || RS_2LEVEL
+#if COS_GPUVA_SUPPORT || COS_RS_2LEVEL_SUPPORT
 
 struct GpuHwQwordWrite
 {
@@ -146,7 +146,7 @@ struct GpuHWRootSignatureSet
     //
 };
 
-#endif  // RS_2LEVEL
+#endif  // COS_RS_2LEVEL_SUPPORT
 
 struct GpuHwComputeShaderDisptch
 {
@@ -167,7 +167,7 @@ struct GpuHwComputeShaderDisptch
 enum MetaCommandId
 {
     MetaCommandIdentity         = 1,    // TODO: Switch identity meta command to the new code path
-#if MLMC
+#if COS_MLMC_RS5_SUPPORT
     MetaCommandNormalization    = 100,
     MetaCommandConvolution      = 101,
     MetaCommandGEMM             = 102,
@@ -182,7 +182,7 @@ enum MetaCommandId
 #endif
 };
 
-#if MLMC
+#if COS_MLMC_RS5_SUPPORT
 
 struct HW_META_COMMAND_COPY_TENSOR
 {
@@ -207,7 +207,7 @@ struct GpuHwMetaCommand
 
     MetaCommandId   m_metaCommandId;
 
-#if MLMC
+#if COS_MLMC_RS5_SUPPORT
     //
     // Followed by THwMetaCommand structure (per type of meta command)
     //

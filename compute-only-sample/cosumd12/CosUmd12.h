@@ -55,7 +55,7 @@ void UnexpectedDdi(const char * function, const char * file, int line);
 
 #if COS_GPUVA_SUPPORT
 #include "CosUmd12RootSignatureGpuVa.h"
-#elif RS_2LEVEL
+#elif COS_RS_2LEVEL_SUPPORT
 #include "CosUmd12RootSignature2L.h"
 #else
 #include "CosUmd12RootSignature.h"
@@ -64,7 +64,7 @@ void UnexpectedDdi(const char * function, const char * file, int line);
 #include "CosUmd12PipelineState.h"
 #if COS_GPUVA_SUPPORT
 #include "CosUmd12DescriptorGpuVa.h"
-#elif RS_2LEVEL
+#elif COS_RS_2LEVEL_SUPPORT
 #include "CosUmd12Descriptor2L.h"
 #else
 #include "CosUmd12Descriptor.h"
@@ -82,7 +82,7 @@ void UnexpectedDdi(const char * function, const char * file, int line);
 
 #if COS_GPUVA_SUPPORT
 #include "CosUmd12DescriptorHeapGpuVa.h"
-#elif RS_2LEVEL
+#elif COS_RS_2LEVEL_SUPPORT
 #include "CosUmd12DescriptorHeap2L.h"
 #else
 #include "CosUmd12DescriptorHeap.h"

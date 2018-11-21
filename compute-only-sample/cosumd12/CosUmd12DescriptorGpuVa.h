@@ -28,7 +28,7 @@ public:
         m_resourceGpuAddress.QuadPart = pResource->GetGpuVa();
     }
 
-#if GPUVA_NO_DH
+#if COS_GPUVA_MLMC_NO_DESCRIPTOR_HEAP
 
     void WriteHWDescriptor(
         D3D12DDI_GPU_VIRTUAL_ADDRESS * pResourceGpuVa) const
