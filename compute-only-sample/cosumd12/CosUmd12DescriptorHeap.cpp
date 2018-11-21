@@ -8,7 +8,7 @@
 
 #include "CosUmd12.h"
 
-#if !(GPUVA || RS_2LEVEL)
+#if !(COS_GPUVA_SUPPORT || RS_2LEVEL)
 
 int CosUmd12DescriptorHeap::CalculateSize(const D3D12DDIARG_CREATE_DESCRIPTOR_HEAP_0001 * pDesc)
 {
@@ -25,5 +25,5 @@ HRESULT CosUmd12DescriptorHeap::Create(
     return S_OK;
 }
 
-#endif  // !RS_2LEVEL
+#endif  // !(COS_GPUVA_SUPPORT || RS_2LEVEL)
 

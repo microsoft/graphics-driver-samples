@@ -8,7 +8,7 @@
 
 #include "CosUmd12.h"
 
-#if GPUVA
+#if COS_GPUVA_SUPPORT
 
 void 
 CosUmd12RootSignature::SetRootDescriptorTable(
@@ -122,5 +122,5 @@ void CosUmd12RootSignature::WriteHWRootSignature(
     memcpy(pHwRootSignatureSet->m_rootValues, pRootValues, m_sizeOfRootValues);
 }
 
-#endif  // RS_2LEVEL
+#endif  // COS_GPUVA_SUPPORT
 

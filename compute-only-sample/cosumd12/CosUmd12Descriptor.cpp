@@ -50,7 +50,7 @@ void CosUmd12Descriptor::WriteHWDescriptor(
 
 #endif
 
-#if !GPUVA
+#if COS_PHYSICAL_SUPPORT
 
 void CosUmd12Descriptor::WriteHWDescriptor(
     CosUmd12CommandBuffer * pCurCommandBuffer,
