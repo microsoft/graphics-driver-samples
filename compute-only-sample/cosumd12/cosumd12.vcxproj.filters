@@ -84,6 +84,15 @@
     <ClInclude Include="CosUmd12RootSignature2L.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CosUmd12RootSignatureGpuVa.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CosUmd12DescriptorGpuVa.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CosUmd12DescriptorHeapGpuVa.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CosUmd12.cpp">
@@ -153,6 +162,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="CosUmd12RootSignature2L.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CosUmd12RootSignatureGpuVa.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CosUmd12DescriptorHeapGpuVa.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

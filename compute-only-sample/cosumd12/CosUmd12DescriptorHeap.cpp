@@ -8,7 +8,7 @@
 
 #include "CosUmd12.h"
 
-#if !RS_2LEVEL
+#if !(GPUVA || RS_2LEVEL)
 
 int CosUmd12DescriptorHeap::CalculateSize(const D3D12DDIARG_CREATE_DESCRIPTOR_HEAP_0001 * pDesc)
 {

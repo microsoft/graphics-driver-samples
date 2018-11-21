@@ -141,7 +141,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>RS_2LEVEL=0;USE_RESOURCE_BINDING_TIER_1=0;MLMC=0;_DEBUG;COSUMD12_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>RS_2LEVEL=0;USE_RESOURCE_BINDING_TIER_1=0;MLMC=0;GPUVA_NO_DH=0;_DEBUG;COSUMD12_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>
@@ -255,8 +255,10 @@
     <ClInclude Include="CosUmd12CommandQueueGpuVa.h" />
     <ClInclude Include="CosUmd12CommandRecorder.h" />
     <ClInclude Include="CosUmd12Descriptor2L.h" />
+    <ClInclude Include="CosUmd12DescriptorGpuVa.h" />
     <ClInclude Include="CosUmd12DescriptorHeap.h" />
     <ClInclude Include="CosUmd12DescriptorHeap2L.h" />
+    <ClInclude Include="CosUmd12DescriptorHeapGpuVa.h" />
     <ClInclude Include="CosUmd12Device.h" />
     <ClInclude Include="CosUmd12Fence.h" />
     <ClInclude Include="CosUmd12Heap.h" />
@@ -265,6 +267,7 @@
     <ClInclude Include="CosUmd12Resource.h" />
     <ClInclude Include="CosUmd12RootSignature.h" />
     <ClInclude Include="CosUmd12RootSignature2L.h" />
+    <ClInclude Include="CosUmd12RootSignatureGpuVa.h" />
     <ClInclude Include="CosUmd12Shader.h" />
     <ClInclude Include="CosUmd12Descriptor.h" />
   </ItemGroup>
@@ -287,6 +290,7 @@
     <ClCompile Include="CosUmd12Descriptor.cpp" />
     <ClCompile Include="CosUmd12DescriptorHeap.cpp" />
     <ClCompile Include="CosUmd12DescriptorHeap2L.cpp" />
+    <ClCompile Include="CosUmd12DescriptorHeapGpuVa.cpp" />
     <ClCompile Include="CosUmd12Device.cpp" />
     <ClCompile Include="CosUmd12DeviceDdi.cpp" />
     <ClCompile Include="CosUmd12DxgiDdi.cpp" />
@@ -296,6 +300,7 @@
     <ClCompile Include="CosUmd12Resource.cpp" />
     <ClCompile Include="CosUmd12RootSignature.cpp" />
     <ClCompile Include="CosUmd12RootSignature2L.cpp" />
+    <ClCompile Include="CosUmd12RootSignatureGpuVa.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
