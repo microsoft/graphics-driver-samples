@@ -80,7 +80,13 @@ public:
     void ExecuteMlMetaCommand(THwMetaCommand * pHwMetaCommand, THwIoTable * pHwIoTable, MetaCommandId metaCommandId)
     {
         UINT numHwDescriptors = sizeof(THwIoTable)/sizeof(D3D12_GPU_DESCRIPTOR_HANDLE);
-        UINT commandSize = sizeof(GpuHwMetaCommand) + sizeof(THwMetaCommand) + numHwDescriptors*sizeof(GpuHWDescriptor);
+        UINT commandSize = sizeof(GpuHwMetaCommand) + sizeof(THwMetaCommand);
+        
+#if !COS_GPUVA_MLMC_NO_DESCRIPTOR_HEAP
+        commandSize += sizeof(THwIoTable);
+#else
+        commandSize += numHwDescriptors*sizeof(D3D12DDI_GPU_VIRTUAL_ADDRESS);
+#endif
 
         BYTE * pCommandBuf;
 
@@ -102,29 +108,30 @@ public:
         // Copy the meta command META_COMMAND_CREATE_*_DESC
         memcpy(pMetaCommand + 1, pHwMetaCommand, sizeof(THwMetaCommand));
 
+#if !COS_GPUVA_MLMC_NO_DESCRIPTOR_HEAP
+
+        *(THwIoTable *)(pCommandBuf + sizeof(GpuHwMetaCommand) + sizeof(THwMetaCommand)) = *pHwIoTable;
+
+#else
+
+        //
+        // Copy the resources' GPU VA into the command buffer (for HW without Descriptor Heap)
+        //
+
         // Clear the resource descriptors
-        GpuHWDescriptor *   pHwDescriptors = (GpuHWDescriptor *)(pCommandBuf + sizeof(GpuHwMetaCommand) + sizeof(THwMetaCommand));
-        memset(pHwDescriptors, 0, numHwDescriptors*sizeof(GpuHWDescriptor));
+        D3D12DDI_GPU_VIRTUAL_ADDRESS *  pResouceGpuVa = (D3D12DDI_GPU_VIRTUAL_ADDRESS *)(pCommandBuf + sizeof(GpuHwMetaCommand) + sizeof(THwMetaCommand));
+        memset(pResouceGpuVa, 0, numHwDescriptors*sizeof(D3D12DDI_GPU_VIRTUAL_ADDRESS));
 
-        //
-        // TODO : Create allocation for Descriptor Heap
-        //
-
-        //
-        // Copy the resource descriptors into the command buffer
         //
         // For ML Meta Command, all resources are referenced by their (UAV) descriptors'
         // D3D12_GPU_DESCRIPTOR_HANDLE(GPU VA) (within the descriptor heap) directly.
-        //
-        // For HW with GPU VA support, this should be a simple copy of META_COMMAND_EXECUTE_*_DESC
-        //
         //
 
         D3D12_GPU_DESCRIPTOR_HANDLE *   pGpuDescriptorHandle = (D3D12_GPU_DESCRIPTOR_HANDLE *)pHwIoTable;
         CosUmd12DescriptorHeap *        pUavHeap = m_pDescriptorHeaps[D3D12DDI_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV];
         UINT                            i;
 
-        for (i = 0; i < numHwDescriptors; i++, pGpuDescriptorHandle++, pHwDescriptors++)
+        for (i = 0; i < numHwDescriptors; i++, pGpuDescriptorHandle++, pResouceGpuVa++)
         {
             if (pGpuDescriptorHandle->ptr)
             {
@@ -133,9 +140,11 @@ public:
 
                 CosUmd12Descriptor * pDescriptor = pUavHeap->GetCpuAddress() + descriptorIndex;
 
-                pDescriptor->WriteHWDescriptor(pHwDescriptors);
+                pDescriptor->WriteHWDescriptor(pResouceGpuVa);
             }
         }
+
+#endif  // !COS_GPUVA_MLMC_NO_DESCRIPTOR_HEAP
 
         // Commit the command into command buffer
         m_pCurCommandBuffer->CommitCommandBufferSpace(commandSize);
