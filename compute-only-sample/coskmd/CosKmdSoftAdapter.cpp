@@ -61,7 +61,18 @@ CosKmdSoftAdapter::ProcessRenderBuffer(
     }
 }
 
-#if RS_2LEVEL
+#if COS_GPUVA_SUPPORT
+
+void
+CosKmdSoftAdapter::ProcessHWRenderBuffer(
+    COSDMABUFSUBMISSION * pDmaBufSubmission)
+{
+    UNREFERENCED_PARAMETER(pDmaBufSubmission);
+}
+
+#else
+
+#if COS_RS_2LEVEL_SUPPORT
 
 void
 CosKmdSoftAdapter::ProcessHWRenderBuffer(
@@ -321,7 +332,9 @@ CosKmdSoftAdapter::ProcessHWRenderBuffer(
     }
 }
 
-#endif  // !RS_2LEVEL
+#endif  // COS_RS_2LEVEL_SUPPORT
+
+#endif  // COS_GPUVA_SUPPORT
 
 #if COS_GPUVA_SUPPORT
 
