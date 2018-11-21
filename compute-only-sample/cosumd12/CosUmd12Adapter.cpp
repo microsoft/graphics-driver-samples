@@ -208,7 +208,7 @@ HRESULT APIENTRY CosUmd12Adapter::GetCaps(
         assert(pCaps->DataSize == sizeof(D3D12DDI_D3D12_OPTIONS_DATA_0052));
         D3D12DDI_D3D12_OPTIONS_DATA_0052* pOptions = (D3D12DDI_D3D12_OPTIONS_DATA_0052*)pCaps->pData;
 
-#if USE_RESOURCE_BINDING_TIER_1
+#if COS_USE_RESOURCE_BINDING_TIER_1
         
         //
         // D3D12DDI_RESOURCE_BINDING_TIER_1 is the mininal requirement for

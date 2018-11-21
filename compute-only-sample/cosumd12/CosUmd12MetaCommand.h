@@ -259,7 +259,7 @@ public:
         SIZE_T executeDescSize);
 };
 
-#if MLMC
+#if COS_MLMC_RS5_SUPPORT
 
 //
 // COSD reuses :

@@ -171,7 +171,7 @@
       <WarningLevel>Level4</WarningLevel>
       <AdditionalUsingDirectories>
       </AdditionalUsingDirectories>
-      <PreprocessorDefinitions>MLMC=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>
       <SupportJustMyCode>false</SupportJustMyCode>
       <TreatSpecificWarningsAsErrors>4668;%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
@@ -196,7 +196,7 @@
       <WarningLevel>Level4</WarningLevel>
       <AdditionalUsingDirectories>
       </AdditionalUsingDirectories>
-      <PreprocessorDefinitions>RS_2LEVEL=0;ENABLE_FOR_COSTEST=0;MLMC=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>
       <SupportJustMyCode>false</SupportJustMyCode>
       <TreatSpecificWarningsAsErrors>4668;%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
