@@ -412,7 +412,10 @@ CosKmAdapter::ProcessPagingBuffer(
 
             if (pSource && pDestination)
             {
-                RtlCopyMemory(pDestination, pSource, pPagingBuffer->Transfer.TransferSize);
+                RtlCopyMemory(
+                    pDestination + pPagingBuffer->Transfer.TransferOffset,
+                    pSource + pPagingBuffer->Transfer.TransferOffset,
+                    pPagingBuffer->Transfer.TransferSize);
             }
             else
             {
