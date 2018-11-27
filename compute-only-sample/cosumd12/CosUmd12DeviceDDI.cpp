@@ -903,6 +903,17 @@ HRESULT APIENTRY CosUmd12Device_Ddi_Evict2(
     D3DDDICB_EVICT evict = {};
 
     evict.Flags = pDesc->Flags;
+
+#if 0
+
+    //
+    // For testing KMD paging operation, override EvictOnlyIfNecessary with 0
+    //
+
+    evict.Flags.EvictOnlyIfNecessary = 0;
+
+#endif
+
     evict.AllocationList = pAllocations;
 
     HRESULT hr = S_OK;
