@@ -11,7 +11,11 @@
 // Otherwise DxgkInitialize() fails and driver is unloaded.
 //
 
-#define DXGKDDI_INTERFACE_VERSION 0xA00A    // WDDM 2.5
+//
+// COSD should be built with RS5 RTM 17763 WDK/SDK or above
+//
+
+#define DXGKDDI_INTERFACE_VERSION 0xA00B    // WDDM 2.5
 
 // Defines needed due to problems in video.h when we turned on warning 4668
 #define DXGKDDI_INTERFACE_VERSION_WDDM1_3       0x4002
