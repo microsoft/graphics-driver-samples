@@ -367,6 +367,11 @@ CosKmAdapter::ProcessPagingBuffer(
         break;
         case DXGK_OPERATION_TRANSFER:
         {
+            //
+            // TODO: Improve paging operation efficiency for HW with DMA engine
+            //       for paging operation but not aperture segment.
+            //
+
             PBYTE   pSource, pDestination;
             MDL *   pMdlToRestore = NULL;
             CSHORT  savedMdlFlags = 0;
@@ -387,8 +392,9 @@ CosKmAdapter::ProcessPagingBuffer(
 
                 pKmAddrToUnmap = pSource;
 
-                // Adjust the source address by MdlOffset
-                pSource += (pPagingBuffer->Transfer.MdlOffset*PAGE_SIZE);
+                // Adjust the source address by TransferOffset % pMdl->ByteCount
+                // Handle the situation when smaller Mdl source buffer is "slided" across the destionation
+                pSource += (pPagingBuffer->Transfer.TransferOffset % pPagingBuffer->Transfer.Source.pMdl->ByteCount);
             }
 
             if (pPagingBuffer->Transfer.Destination.SegmentId == COS_SEGMENT_VIDEO_MEMORY)
@@ -406,8 +412,9 @@ CosKmAdapter::ProcessPagingBuffer(
 
                 pKmAddrToUnmap = pDestination;
 
-                // Adjust the destination address by MdlOffset
-                pDestination += (pPagingBuffer->Transfer.MdlOffset*PAGE_SIZE);
+                // Adjust the destination address by TransferOffset % pMdl->ByteCount
+                // Handle the situation when smaller Mdl destination buffer is "slided" across the source
+                pDestination += (pPagingBuffer->Transfer.TransferOffset % pPagingBuffer->Transfer.Destination.pMdl->ByteCount);
             }
 
             if (pSource && pDestination)
