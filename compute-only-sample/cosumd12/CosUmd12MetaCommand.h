@@ -128,6 +128,10 @@ public:
         return S_OK;
     }
 
+    static const UINT m_numTensorDescriptor;
+    static const UINT m_tensorDescriptorOffsets[];
+    static const UINT m_tensorDescriptorSizes[];
+
     virtual void
     GetRequiredParameterInfo(
         D3D12DDI_META_COMMAND_PARAMETER_STAGE stage,
@@ -135,6 +139,8 @@ public:
         D3D12DDIARG_META_COMMAND_REQUIRED_PARAMETER_INFO* pInfo)
     {
         ASSERT(D3D12DDI_META_COMMAND_PARAMETER_STAGE_EXECUTION == stage);
+
+#if COS_MLMC_RS5_SUPPORT
 
         //
         // When CopyTensor Meta Command is implemented, tensor resource's size
@@ -147,7 +153,75 @@ public:
         // tensor resources can be found by parameterIndex in META_COMMAND_CREATE_*_DESC
         //
 
+        if (parameterIndex >= m_numTensorDescriptor)
+        {
+            pInfo->ResourceSize = 0;
+
+            return;
+        }
+        
+        META_COMMAND_TENSOR_DESC * pTensorDesc = NULL;
+
+        if (sizeof(META_COMMAND_OPTIONAL_TENSOR_DESC) == m_tensorDescriptorSizes[parameterIndex])
+        {
+            META_COMMAND_OPTIONAL_TENSOR_DESC * pOptinalTensorDesc = (META_COMMAND_OPTIONAL_TENSOR_DESC *)(((PBYTE)&m_createDesc) + m_tensorDescriptorOffsets[parameterIndex]);
+
+            if (pOptinalTensorDesc->IsNull)
+            {
+                pInfo->ResourceSize = 0;
+
+                return;
+            }
+            else
+            {
+                pTensorDesc = (META_COMMAND_TENSOR_DESC *)pOptinalTensorDesc;
+            }
+        }
+        else
+        {
+            pTensorDesc = (META_COMMAND_TENSOR_DESC *)(((PBYTE)&m_createDesc) + m_tensorDescriptorOffsets[parameterIndex]);
+        }
+        
+        UINT    elementSize;
+
+        switch (pTensorDesc->DataType)
+        {
+        case META_COMMAND_TENSOR_DATA_TYPE_FLOAT16:
+            elementSize = 2;
+            break;
+        case META_COMMAND_TENSOR_DATA_TYPE_FLOAT32:
+        case META_COMMAND_TENSOR_DATA_TYPE_UINT32:
+            elementSize = 4;
+            break;
+        default:
+            ASSERT(false);
+            elementSize = 0;
+            break;
+        }
+
+        if (pTensorDesc->Stride[0])
+        {
+            pInfo->ResourceSize = pTensorDesc->Stride[0] * pTensorDesc->Size[0] * elementSize;
+        }
+        else
+        {
+            //
+            // Stride of 0 indicates there is only 1 element that is replicated
+            //
+
+            pInfo->ResourceSize = elementSize;
+        }
+
+        //
+        // Align the size to DWORD
+        //
+
+        pInfo->ResourceSize = (pInfo->ResourceSize + sizeof(UINT) - 1) & (~(sizeof(UINT) - 1));
+#else
+
         pInfo->ResourceSize = 0;
+
+#endif
     }
 
     virtual void
@@ -259,7 +333,7 @@ public:
         SIZE_T executeDescSize);
 };
 
-#if MLMC
+#if COS_MLMC_RS5_SUPPORT
 
 //
 // COSD reuses :

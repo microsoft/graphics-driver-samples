@@ -903,6 +903,17 @@ HRESULT APIENTRY CosUmd12Device_Ddi_Evict2(
     D3DDDICB_EVICT evict = {};
 
     evict.Flags = pDesc->Flags;
+
+#if 0
+
+    //
+    // For testing KMD paging operation, override EvictOnlyIfNecessary with 0
+    //
+
+    evict.Flags.EvictOnlyIfNecessary = 0;
+
+#endif
+
     evict.AllocationList = pAllocations;
 
     HRESULT hr = S_OK;
@@ -1393,7 +1404,7 @@ VOID APIENTRY CosUmd12Device_Ddi_DestroySchedulingGroup(
 D3D12DDIARG_META_COMMAND_DESC CosUmd12Device::m_supportedMetaCommandDescs[] =
 {
     { GUID_IDENTITY,             L"Identity",      D3D12DDI_GRAPHICS_STATE_NONE, D3D12DDI_GRAPHICS_STATE_NONE },
-#if MLMC
+#if COS_MLMC_RS5_SUPPORT
     { MetaCommand_Normalization, L"Normalization", D3D12DDI_GRAPHICS_STATE_NONE, D3D12DDI_GRAPHICS_STATE_NONE },
     { MetaCommand_Convolution,   L"Convolution",   D3D12DDI_GRAPHICS_STATE_NONE, D3D12DDI_GRAPHICS_STATE_NONE },
     { MetaCommand_GEMM,          L"GEMM",          D3D12DDI_GRAPHICS_STATE_NONE, D3D12DDI_GRAPHICS_STATE_NONE },
@@ -1437,7 +1448,7 @@ HRESULT APIENTRY CosUmd12Device_Ddi_EnumerateMetaCommandParameters(
     {
         return CosUmd12MetaCommandIdentity::EnumerateMetaCommandParameters(Stage, pParameterCount, pParameterDescs);
     }
-#if MLMC
+#if COS_MLMC_RS5_SUPPORT
     else if (IsEqualGUID(CommandId, MetaCommand_Normalization))
     {
         return CosUmd12MetaCommandNormalization::EnumerateMetaCommandParameters(Stage, pParameterCount, pParameterDescs);
@@ -1500,7 +1511,7 @@ SIZE_T APIENTRY CosUmd12Device_Ddi_CalcPrivateMetaCommandSize(
     {
         return CosUmd12MetaCommandIdentity::CalculateSize(CommandId);
     }
-#if MLMC
+#if COS_MLMC_RS5_SUPPORT
     else if (IsEqualGUID(CommandId, MetaCommand_Normalization))
     {
         return CosUmd12MetaCommandNormalization::CalculateSize(CommandId);
@@ -1574,7 +1585,7 @@ HRESULT APIENTRY CosUmd12Device_Ddi_CreateMetaCommand(
                                         CreateDescSizeInBytes,
                                         RtMetaCommand);
     }
-#if MLMC
+#if COS_MLMC_RS5_SUPPORT
     else if (IsEqualGUID(CommandId, MetaCommand_Normalization))
     {
         new (MetaCommand.pDrvPrivate) CosUmd12MetaCommandNormalization(
