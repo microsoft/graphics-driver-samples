@@ -6,23 +6,10 @@ class CosUmd12Descriptor
 {
 public:
 
-    enum Type 
-    {
-        COS_CBV = 1,
-        COS_SRV = 2,
-        COS_UAV = 3
-    };
-
     CosUmd12Descriptor(const D3D12DDI_CONSTANT_BUFFER_VIEW_DESC * pDesc)
     {
         m_type = COS_CBV;
         m_cbv = *pDesc;
-    }
-
-    CosUmd12Descriptor(const D3D12DDIARG_CREATE_SHADER_RESOURCE_VIEW_0002 * pDesc)
-    {
-        m_type = COS_SRV;
-        m_srv = *pDesc;
     }
 
     CosUmd12Descriptor(const D3D12DDIARG_CREATE_UNORDERED_ACCESS_VIEW_0002 * pDesc)
@@ -44,7 +31,10 @@ public:
         D3DDDI_PATCHLOCATIONLIST * &pPatchLocations) const;
 
 private:
-    Type    m_type;
+    friend class CosUmd12RootSignature;
+    friend class CosUmd12CommandList;
+
+    GpuHwDescriptorType m_type;
     union
     {
         D3D12DDI_CONSTANT_BUFFER_VIEW_DESC m_cbv;
@@ -52,3 +42,4 @@ private:
         D3D12DDIARG_CREATE_UNORDERED_ACCESS_VIEW_0002 m_uav;
     };
 };
+

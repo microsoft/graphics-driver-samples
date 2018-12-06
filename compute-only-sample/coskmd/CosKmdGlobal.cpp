@@ -309,10 +309,16 @@ NTSTATUS CosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
 
     DriverInitializationData.DxgkDdiGetNodeMetadata = CosKmdDdi::DdiGetNodeMetadata;
 
+#if GPUVA
+
     DriverInitializationData.DxgkDdiSubmitCommandVirtual = CosKmdDdi::DdiSubmitCommandVirtual;
+    DriverInitializationData.DxgkDdiSetRootPageTable = CosKmdDdi::DdiSetRootPageTable;
+    DriverInitializationData.DxgkDdiGetRootPageTableSize = CosKmdDdi::DdiGetRootPageTableSize;
 
     DriverInitializationData.DxgkDdiCreateProcess = CosKmdDdi::DdiCreateProcess;
     DriverInitializationData.DxgkDdiDestroyProcess = CosKmdDdi::DdiDestroyProcess;
+
+#endif
 
     DriverInitializationData.DxgkDdiCalibrateGpuClock = CosKmdDdi::DdiCalibrateGpuClock;
     DriverInitializationData.DxgkDdiSetStablePowerState = CosKmdDdi::DdiSetStablePowerState;

@@ -70,7 +70,7 @@ private:
     {
         ID3D12Device5 * pDevice;
 
-        HRESULT hr = D3D12CreateDevice(m_pAdapter, D3D_FEATURE_LEVEL_11_1, IID_PPV_ARGS(&pDevice));
+        HRESULT hr = D3D12CreateDevice(m_pAdapter, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&pDevice));
 
         bool success = (hr == S_OK);
 

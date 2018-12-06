@@ -9,11 +9,25 @@
 #include "CosKmdAllocation.h"
 #include "CosKmdContext.h"
 #include "CosKmdResource.h"
+#include "CosKmdProcess.h"
 #include "CosKmdGlobal.h"
 #include "CosKmdUtil.h"
 #include "CosGpuCommand.h"
 #include "CosKmdAcpi.h"
 #include "CosKmdUtil.h"
+
+//
+// Global variable to set in kernel debugger for triggering Preemption
+//
+
+BOOLEAN g_bTriggerPreemption = FALSE;
+
+//
+// 60 seconds : Stall duration for "preemptable" long running DMA buffer
+//
+
+#define COS_DMA_BUF_STALL_DURATION  -60*1000*1000*10L
+
 
 void * CosKmAdapter::operator new(size_t size)
 {
@@ -99,18 +113,40 @@ void CosKmAdapter::WorkerThread(void * inThis)
 void CosKmAdapter::DoWork(void)
 {
     bool done = false;
+    KEVENT dmaBufStallEvent;
+
+    KeInitializeEvent(&dmaBufStallEvent, SynchronizationEvent, FALSE);
 
     while (!done)
     {
-        NTSTATUS status = KeWaitForSingleObject(
-            &m_workerThreadEvent,
-            Executive,
-            KernelMode,
-            FALSE,
-            NULL);
+        PVOID       waitEvents[2];
+        NTSTATUS    status;
+        
+        waitEvents[0] = &m_workerThreadEvent;
+        waitEvents[1] = &m_preemptionEvent;
 
-        status;
-        NT_ASSERT(status == STATUS_SUCCESS);
+        status = KeWaitForMultipleObjects(
+                    2,
+                    waitEvents,
+                    WaitAny,
+                    Executive,
+                    KernelMode,
+                    FALSE,          // Alertable
+                    NULL,
+                    NULL);
+
+        if (STATUS_WAIT_1 == status)
+        {
+            //
+            // Notify completion of Preemption request
+            //
+
+            NotifyPreemptionCompletion();
+
+            continue;
+        }
+
+        NT_ASSERT(status == STATUS_WAIT_0);
 
         if (m_workerExit)
         {
@@ -128,6 +164,80 @@ void CosKmAdapter::DoWork(void)
 
             COSDMABUFINFO * pDmaBufInfo = pDmaBufSubmission->m_pDmaBufInfo;
 
+            if (0 != pDmaBufInfo->m_DmaBufStallDuration)
+            {
+                LARGE_INTEGER   timeout;
+                ULONG64         waitStart, waitEnd, waitTicks;
+
+                //
+                // Simulate long running DMA buffer with stall so that it can be preempted
+                //
+
+                waitEvents[0] = &dmaBufStallEvent;
+                waitEvents[1] = &m_preemptionEvent;
+
+                timeout.QuadPart = pDmaBufInfo->m_DmaBufStallDuration;
+
+                KeQueryTickCount(&waitStart);
+
+                status =  KeWaitForMultipleObjects(
+                            2,
+                            waitEvents,
+                            WaitAny,
+                            Executive,
+                            KernelMode,
+                            FALSE,          // Alertable
+                            &timeout,
+                            NULL);
+
+                KeQueryTickCount(&waitEnd);
+
+                if (STATUS_WAIT_1 == status)
+                {
+                    //
+                    // Preemption requested
+                    //
+                    // HW driver need to save progression state of the preempted DMA buffer for resumption
+                    //
+
+                    pDmaBufInfo->m_DmaBufState.m_bPreempted = 1;
+
+                    waitTicks = waitEnd - waitStart;
+                    if (0 == waitTicks)
+                    {
+                        waitTicks = 1;
+                    }
+
+                    //
+                    // Subtract the time already stalled
+                    //
+
+                    pDmaBufInfo->m_DmaBufStallDuration += waitTicks*KeQueryTimeIncrement();
+                    if (pDmaBufInfo->m_DmaBufStallDuration > 0)
+                    {
+                        pDmaBufInfo->m_DmaBufStallDuration = 0;
+                    }
+
+                    ExInterlockedInsertTailList(&m_dmaBufSubmissionFree, &pDmaBufSubmission->m_QueueEntry, &m_dmaBufQueueLock);
+
+                    //
+                    // Notify completion of Preemption request
+                    //
+
+                    NotifyPreemptionCompletion();
+
+                    break;
+                }
+                else if (STATUS_TIMEOUT == status)
+                {
+                    pDmaBufInfo->m_DmaBufStallDuration = 0;
+                }
+                else
+                {
+                    NT_ASSERT(false);
+                }
+            }
+
             if (pDmaBufInfo->m_DmaBufState.m_bPaging)
             {
                 //
@@ -137,6 +247,12 @@ void CosKmAdapter::DoWork(void)
                 ProcessPagingBuffer(pDmaBufSubmission);
 
             }
+#if GPUVA
+            else if (pDmaBufInfo->m_DmaBufState.m_bGpuVaCommandBuffer)
+            {
+                ProcessGpuVaRenderBuffer(pDmaBufSubmission);
+            }
+#endif
             else if (pDmaBufInfo->m_DmaBufState.m_bSwCommandBuffer)
             {
                 //
@@ -180,6 +296,25 @@ CosKmAdapter::DequeueDmaBuffer(
     }
 
     return CONTAINING_RECORD(pDmaEntry, COSDMABUFSUBMISSION, m_QueueEntry);
+}
+
+void
+CosKmAdapter::EmptyDmaBufferQueue()
+{
+    KIRQL                   OldIrql;
+
+    KeAcquireSpinLock(&m_dmaBufQueueLock, &OldIrql);
+
+    while (!IsListEmpty(&m_dmaBufQueue))
+    {
+        LIST_ENTRY *pQueueEntry;
+
+        pQueueEntry = RemoveHeadList(&m_dmaBufQueue);
+
+        InsertTailList(&m_dmaBufSubmissionFree, pQueueEntry);
+    }
+
+    KeReleaseSpinLock(&m_dmaBufQueueLock, OldIrql);
 }
 
 void
@@ -318,6 +453,52 @@ CosKmAdapter::NotifyDmaBufCompletion(
     {
         m_ErrorHit.m_NotifyDmaBufCompletion = 1;
     }
+
+    //
+    // Keep track of last completed fence ID for Preemption request afterward
+    //
+
+    m_lastCompletetdFenceId = pDmaBufSubmission->m_SubmissionFenceId;
+}
+
+void
+CosKmAdapter::NotifyPreemptionCompletion()
+{
+    //
+    // Remove the queued DMA buffers which will be submitted again
+    //
+
+    EmptyDmaBufferQueue();
+
+    //
+    // Notify the VidSch of the completion of the Preemption request
+    //
+
+    NTSTATUS    Status;
+
+    RtlZeroMemory(&m_interruptData, sizeof(m_interruptData));
+
+    m_interruptData.InterruptType = DXGK_INTERRUPT_DMA_PREEMPTED;
+    m_interruptData.DmaPreempted.PreemptionFenceId = m_preemptionRequest.PreemptionFenceId;
+    m_interruptData.DmaPreempted.LastCompletedFenceId = m_lastCompletetdFenceId;
+    m_interruptData.DmaPreempted.NodeOrdinal = m_preemptionRequest.NodeOrdinal;
+    m_interruptData.DmaPreempted.EngineOrdinal = m_preemptionRequest.EngineOrdinal;
+
+    BOOLEAN bRet;
+
+    Status = m_DxgkInterface.DxgkCbSynchronizeExecution(
+        m_DxgkInterface.DeviceHandle,
+        SynchronizeNotifyInterrupt,
+        this,
+        0,
+        &bRet);
+
+    if (!NT_SUCCESS(Status))
+    {
+        m_ErrorHit.m_NotifyPreemptionCompletion = 1;
+    }
+
+    m_lastCompeletedPreemptionFenceId = m_preemptionRequest.PreemptionFenceId;
 }
 
 BOOLEAN CosKmAdapter::SynchronizeNotifyInterrupt(PVOID inThis)
@@ -359,12 +540,17 @@ CosKmAdapter::Start(
     m_NumNodes = C_COSD_GPU_ENGINE_COUNT;
 
     //
-    // Initialize worker
+    // Initialize work thread and Preemption request events
     //
 
     KeInitializeEvent(&m_workerThreadEvent, SynchronizationEvent, FALSE);
+    KeInitializeEvent(&m_preemptionEvent, SynchronizationEvent, FALSE);
 
     m_workerExit = false;
+
+    //
+    // Initialize worker thread
+    //
 
     OBJECT_ATTRIBUTES   ObjectAttributes;
     HANDLE              hWorkerThread;
@@ -617,6 +803,38 @@ CosKmAdapter::BuildPagingBuffer(
     }
     break;
 
+#if GPUVA
+
+    case DXGK_OPERATION_UPDATE_PAGE_TABLE:
+    {
+        DXGK_PTE *  pHwPte = (DXGK_PTE *)pArgs->UpdatePageTable.PageTableAddress.CpuVirtual;
+        DXGK_PTE *  pOsPte = pArgs->UpdatePageTable.pPageTableEntries;
+
+        //
+        // When Repeat bit is set, HW PTEs are replicated from OS PTE
+        //
+        UINT        osPteInc = pArgs->UpdatePageTable.Flags.Repeat ? 0 : 1;
+
+        pHwPte += pArgs->UpdatePageTable.StartIndex;
+
+        for (UINT i = 0; i < pArgs->UpdatePageTable.NumPageTableEntries; i++)
+        {
+            *pHwPte = *pOsPte;
+
+            pHwPte++;
+            pOsPte += osPteInc;
+        }
+    }
+    break;
+
+    case DXGK_OPERATION_FLUSH_TLB:
+    {
+        // HW driver should flush the TLB
+    }
+    break;
+
+#endif
+
     default:
     {
         NT_ASSERT(false);
@@ -781,16 +999,35 @@ CosKmAdapter::CreateAllocation(
     pAllocationInfo->pAllocationUsageHint = NULL;
     pAllocationInfo->PhysicalAdapterIndex = 0;
     pAllocationInfo->PitchAlignedSize = 0;
-    pAllocationInfo->PreferredSegment.Value = 0;
-    pAllocationInfo->PreferredSegment.SegmentId0 = COSD_SEGMENT_VIDEO_MEMORY;
-    pAllocationInfo->PreferredSegment.Direction0 = 0;
 
     // zero-size allocations are not allowed
     NT_ASSERT(pCosAllocation->m_hwSizeBytes != 0);
     pAllocationInfo->Size = pCosAllocation->m_hwSizeBytes;
 
+#if GPUVA
+
+    //
+    // If the allocation is backed by system memory, then the driver should
+    // specify the implicit system memory segment in the allocation info.
+    //
+
+    pAllocationInfo->PreferredSegment.Value = 0;
+    pAllocationInfo->PreferredSegment.SegmentId0 = IMPLICIT_SYSTEM_MEMORY_SEGMENT_ID;
+    pAllocationInfo->PreferredSegment.Direction0 = 0;
+
+    pAllocationInfo->SupportedReadSegmentSet = 1 << (IMPLICIT_SYSTEM_MEMORY_SEGMENT_ID - 1);
+    pAllocationInfo->SupportedWriteSegmentSet = 1 << (IMPLICIT_SYSTEM_MEMORY_SEGMENT_ID - 1);
+
+#else
+
+    pAllocationInfo->PreferredSegment.Value = 0;
+    pAllocationInfo->PreferredSegment.SegmentId0 = COSD_SEGMENT_VIDEO_MEMORY;
+    pAllocationInfo->PreferredSegment.Direction0 = 0;
+
     pAllocationInfo->SupportedReadSegmentSet = 1 << (COSD_SEGMENT_VIDEO_MEMORY - 1);
     pAllocationInfo->SupportedWriteSegmentSet = 1 << (COSD_SEGMENT_VIDEO_MEMORY - 1);
+
+#endif
 
     if (pCreateAllocation->Flags.Resource && pCreateAllocation->hResource == NULL && pCosKmdResource != NULL)
     {
@@ -977,7 +1214,12 @@ CosKmAdapter::QueryAdapterInfo(
 #if 1
         pDriverCaps->MemoryManagementCaps.CrossAdapterResource = 1;
 #endif
+#if GPUVA_INIT_DDI_1
 
+        pDriverCaps->MemoryManagementCaps.VirtualAddressingSupported = 1;
+        pDriverCaps->MemoryManagementCaps.GpuMmuSupported = 1;
+
+#endif
         //
         // TODO[bhouse] GpuEngineTopology
         //
@@ -1086,6 +1328,28 @@ CosKmAdapter::QueryAdapterInfo(
             pSegmentInfo->PagingBufferSegmentId = 0;    // Use physical contiguous memory
             pSegmentInfo->PagingBufferSize = PAGE_SIZE;
 
+#if GPUVA_INIT_DDI_5
+
+            //
+            // Setup aperture segment, which is only used for allocation with AccessedPhysically
+            //
+            DXGK_SEGMENTDESCRIPTOR4 *pApertureSegmentDesc = (DXGK_SEGMENTDESCRIPTOR4 *)(pSegmentInfo->pSegmentDescriptor);
+
+            memset(pApertureSegmentDesc, 0, sizeof(*pApertureSegmentDesc));
+
+            pApertureSegmentDesc->Flags.Aperture = true;
+            pApertureSegmentDesc->Flags.CpuVisible = true;
+            pApertureSegmentDesc->Flags.CacheCoherent = true;
+            pApertureSegmentDesc->Flags.PitchAlignment = true;
+            pApertureSegmentDesc->Flags.PreservedDuringStandby = true;
+            pApertureSegmentDesc->Flags.PreservedDuringHibernate = true;
+
+            pApertureSegmentDesc->BaseAddress.QuadPart = COSD_APERTURE_SEGMENT_BASE_ADDRESS;    // Gpu base physical address
+            pApertureSegmentDesc->CpuTranslatedAddress.QuadPart = 0xFFFFFFFE00000000;           // Cpu base physical address
+            pApertureSegmentDesc->Size = COSD_APERTURE_SEGMENT_SIZE;
+
+#else
+
             //
             // Setup local video memory segment
             //
@@ -1099,6 +1363,8 @@ CosKmAdapter::QueryAdapterInfo(
             pLocalVidMemSegmentDesc->Flags.DirectFlip = true;
             pLocalVidMemSegmentDesc->CpuTranslatedAddress = CosKmdGlobal::s_videoMemoryPhysicalAddress; // cpu base physical address
             pLocalVidMemSegmentDesc->Size = CosKmdGlobal::s_videoMemorySize;
+
+#endif
         }
     }
     break;
@@ -1156,6 +1422,66 @@ CosKmAdapter::QueryAdapterInfo(
         }
     }
     break;
+
+#if GPUVA_INIT_DDI_2
+
+    case DXGKQAITYPE_GPUMMUCAPS:
+    {
+        DXGK_GPUMMUCAPS *pGpuMmuCaps = (DXGK_GPUMMUCAPS *)pQueryAdapterInfo->pOutputData;
+
+        memset(pGpuMmuCaps, 0, sizeof(DXGK_GPUMMUCAPS));
+
+        pGpuMmuCaps->ZeroInPteSupported = 1;
+        pGpuMmuCaps->CacheCoherentMemorySupported = 1;
+
+        pGpuMmuCaps->PageTableUpdateMode = DXGK_PAGETABLEUPDATE_CPU_VIRTUAL;
+
+        pGpuMmuCaps->VirtualAddressBitCount = COS_GPU_VA_BIT_COUNT;
+        pGpuMmuCaps->PageTableLevelCount = COS_PAGE_TABLE_LEVEL_COUNT;
+    }
+    break;
+
+#endif
+
+#if GPUVA_INIT_DDI_3
+
+    case DXGKQAITYPE_PAGETABLELEVELDESC:
+    {
+        //
+        // In GPUVA mode, COSD supports 1 aperture segment with SegmentId of 1.
+        // So the implicit system memory segment has the SegmentId of 2.
+        //
+        // COSD uses page table in system memory, so sets PageTableSegmentId to 2
+        //
+        // COSD reuses DXGK_PTE for page table entry, so each page table is 16K.
+        //
+
+        static DXGK_PAGE_TABLE_LEVEL_DESC s_CosPageTableLevelDesc[2] =
+        {
+            {
+                10,                     // PageTableIndexBitCount
+                2,                      // PageTableSegmentId
+                2,                      // PagingProcessPageTableSegmentId
+                COS_PAGE_TABLE_SIZE,    // PageTableSizeInBytes
+                0,                      // PageTableAlignmentInBytes
+            },
+            {
+                10,                     // PageTableIndexBitCount
+                2,                      // PageTableSegmentId
+                2,                      // PagingProcessPageTableSegmentId
+                COS_PAGE_TABLE_SIZE,    // PageTableSizeInBytes
+                0,                      // PageTableAlignmentInBytes
+            }
+        };
+
+        UINT PageTableLevel = *((UINT *)pQueryAdapterInfo->pInputData);
+        DXGK_PAGE_TABLE_LEVEL_DESC *pPageTableLevelDesc = (DXGK_PAGE_TABLE_LEVEL_DESC *)pQueryAdapterInfo->pOutputData;
+
+        *pPageTableLevelDesc = s_CosPageTableLevelDesc[PageTableLevel];
+    }
+    break;
+
+#endif
 
     case DXGKQAITYPE_HISTORYBUFFERPRECISION:
     {
@@ -1217,24 +1543,92 @@ CosKmAdapter::GetNodeMetadata(
         L"3DNode%02X",
         NodeOrdinal);
 
+#if GPUVA_INIT_DDI_4
+
+    pGetNodeMetadata->GpuMmuSupported = 1;
+
+#endif
 
     return STATUS_SUCCESS;
 }
 
+#if GPUVA
 
 NTSTATUS
 CosKmAdapter::SubmitCommandVirtual(
-    IN_CONST_PDXGKARG_SUBMITCOMMANDVIRTUAL  /*pSubmitCommandVirtual*/)
+    IN_CONST_PDXGKARG_SUBMITCOMMANDVIRTUAL  pSubmitCommandVirtual)
 {
-    COS_ASSERTION("Not implemented");
-    return STATUS_NOT_IMPLEMENTED;
+    COSDMABUFINFO * pDmaBufInfo = (COSDMABUFINFO *)pSubmitCommandVirtual->pDmaBufferPrivateData;
+
+    //
+    // m_pDmaBuffer from UMD is for debugging purpose only
+    //
+
+    pDmaBufInfo->m_DmaBufferGpuVa = pSubmitCommandVirtual->DmaBufferVirtualAddress;
+    pDmaBufInfo->m_DmaBufferSize = pSubmitCommandVirtual->DmaBufferSize;
+
+    pDmaBufInfo->m_DmaBufState.m_Value = 0;
+    pDmaBufInfo->m_DmaBufState.m_bGpuVaCommandBuffer = 1;
+
+    pDmaBufInfo->m_DmaBufState.m_bPaging = pSubmitCommandVirtual->Flags.Paging;
+    pDmaBufInfo->m_DmaBufState.m_bPreempted = pSubmitCommandVirtual->Flags.Resubmission;
+
+    //
+    // TODO : Using flattened parameters for QueueDmaBuffer()
+    //
+
+    DXGKARG_SUBMITCOMMAND   submitCommand = { 0 };
+
+    submitCommand.hContext = pSubmitCommandVirtual->hContext;
+
+    submitCommand.DmaBufferPhysicalAddress.QuadPart = pSubmitCommandVirtual->DmaBufferVirtualAddress;
+    submitCommand.DmaBufferSize = pSubmitCommandVirtual->DmaBufferSize;
+    
+    submitCommand.DmaBufferSubmissionStartOffset = 0;
+    submitCommand.DmaBufferSubmissionEndOffset = pSubmitCommandVirtual->DmaBufferSize;
+
+    submitCommand.pDmaBufferPrivateData = pDmaBufInfo;
+    submitCommand.DmaBufferPrivateDataSize = pSubmitCommandVirtual->DmaBufferPrivateDataSize;
+
+    submitCommand.SubmissionFenceId = pSubmitCommandVirtual->SubmissionFenceId;
+
+    submitCommand.Flags = pSubmitCommandVirtual->Flags;
+
+    submitCommand.EngineOrdinal = pSubmitCommandVirtual->EngineOrdinal;
+    submitCommand.NodeOrdinal = pSubmitCommandVirtual->NodeOrdinal;
+
+    QueueDmaBuffer(&submitCommand);
+
+    //
+    // Wake up the worker thread for the GPU node
+    //
+    KeSetEvent(&m_workerThreadEvent, 0, FALSE);
+
+    return S_OK;
 }
+
+#endif
 
 NTSTATUS
 CosKmAdapter::PreemptCommand(
-    IN_CONST_PDXGKARG_PREEMPTCOMMAND    /*pPreemptCommand*/)
+    IN_CONST_PDXGKARG_PREEMPTCOMMAND    pPreemptCommand)
 {
-    COS_LOG_WARNING("Not implemented");
+    //
+    // Preemption request is non-blocking
+    // It is guaranteed that there is only 1 pending preemption request
+    //
+    // HW driver should issue the request to HW and return
+    //
+    // Completion of the preemption request should be notified by interrupt
+    //
+    // Progression state of the preempted DMA buffer should be saved in
+    // DMA buffer private data or inside DMA buffer itself
+    //
+
+    m_preemptionRequest = *pPreemptCommand;
+
+    KeSetEvent(&m_preemptionEvent, 0, FALSE);
+
     return STATUS_SUCCESS;
 }
 
@@ -1249,20 +1643,12 @@ NTSTATUS
 CosKmAdapter::CancelCommand(
     IN_CONST_PDXGKARG_CANCELCOMMAND /*pCancelCommand*/)
 {
-    COS_ASSERTION("Not implemented");
-    return STATUS_NOT_IMPLEMENTED;
-}
+    //
+    // DMA buffer to be cancelled is guaranteed to be NOT queued in HW
+    //
+    // If needed, HW driver can take this opportunity to clean up DMA buffer private data
+    //
 
-NTSTATUS
-CosKmAdapter::QueryCurrentFence(
-    INOUT_PDXGKARG_QUERYCURRENTFENCE pCurrentFence)
-{
-    COS_LOG_WARNING("Not implemented");
-
-    NT_ASSERT(pCurrentFence->NodeOrdinal == 0);
-    NT_ASSERT(pCurrentFence->EngineOrdinal == 0);
-
-    pCurrentFence->CurrentFence = 0;
     return STATUS_SUCCESS;
 }
 
@@ -1284,19 +1670,40 @@ CosKmAdapter::CollectDbgInfo(
 
 NTSTATUS
 CosKmAdapter::CreateProcess(
-    IN DXGKARG_CREATEPROCESS* /*pArgs*/)
+    IN DXGKARG_CREATEPROCESS   *pArgs)
 {
-    // pArgs->hKmdProcess = 0;
+#if GPUVA_INIT_DDI_6
+
+    CosKmdProcess *  pCosKmdProcess;
+
+    pCosKmdProcess = (CosKmdProcess *)ExAllocatePoolWithTag(NonPagedPoolNx, sizeof(CosKmdProcess), 'COSD');
+    if (NULL == pCosKmdProcess)
+    {
+        return STATUS_NO_MEMORY;
+    }
+
+    pCosKmdProcess->m_dummy = 0;
+
+    pArgs->hKmdProcess = pCosKmdProcess;
+
+    return STATUS_SUCCESS;
+
+#else
+
+    pArgs->hKmdProcess = 0;
     COS_ASSERTION("Not implemented");
     return STATUS_NOT_IMPLEMENTED;
+
+#endif
 }
 
 NTSTATUS
 CosKmAdapter::DestroyProcess(
-    IN HANDLE /*KmdProcessHandle*/)
+    IN HANDLE KmdProcessHandle)
 {
-    COS_ASSERTION("Not implemented");
-    return STATUS_NOT_IMPLEMENTED;
+    ExFreePoolWithTag(KmdProcessHandle, 'COSD');
+
+    return STATUS_SUCCESS;
 }
 
 void
@@ -1451,12 +1858,12 @@ CosKmAdapter::PatchDmaBuffer(
             else
             {
                 // Patch HW command buffer
-                UINT    physicalAddress =
+                LONGLONG    physicalAddress =
                     CosKmdGlobal::s_videoMemoryPhysicalAddress.LowPart +
                     allocation->PhysicalAddress.LowPart +
                     patch->AllocationOffset;
 
-                *((UINT *)(pDmaBuf + patch->PatchOffset)) = physicalAddress;
+                *((LONGLONG *)(pDmaBuf + patch->PatchOffset)) = physicalAddress;
             }
         }
     }
@@ -1520,6 +1927,22 @@ CosKmAdapter::QueueDmaBuffer(
     if (!pDmaBufInfo->m_DmaBufState.m_bSubmittedOnce)
     {
         pDmaBufInfo->m_DmaBufState.m_bSubmittedOnce = 1;
+
+        //
+        // Trigger Preemption by emulating long running DMA buffer with stall
+        //
+
+        if ((!pDmaBufInfo->m_DmaBufState.m_bPaging) &&
+            g_bTriggerPreemption)
+        {
+            pDmaBufInfo->m_DmaBufStallDuration = COS_DMA_BUF_STALL_DURATION;
+
+            //
+            // Reset the trigger for Preemption which was set using kernel debugger
+            //
+
+            g_bTriggerPreemption = false;
+        }
     }
 
     NT_ASSERT(!IsListEmpty(&m_dmaBufSubmissionFree));
@@ -1533,6 +1956,8 @@ CosKmAdapter::QueueDmaBuffer(
     pDmaBufSubmission->m_SubmissionFenceId = pSubmitCommand->SubmissionFenceId;
 
     InsertTailList(&m_dmaBufQueue, &pDmaBufSubmission->m_QueueEntry);
+
+    m_lastSubmittedFenceId = pSubmitCommand->SubmissionFenceId;
 
     KeReleaseSpinLock(&m_dmaBufQueueLock, OldIrql);
 }

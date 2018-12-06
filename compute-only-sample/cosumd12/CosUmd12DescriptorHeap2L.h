@@ -13,7 +13,12 @@ public:
         _In_ const D3D12DDIARG_CREATE_DESCRIPTOR_HEAP_0001 *    pDesc,
         D3D12DDI_HDESCRIPTORHEAP DescriptorHeap);
 
-    explicit CosUmd12DescriptorHeap(CosUmd12Device * pDevice, const D3D12DDIARG_CREATE_DESCRIPTOR_HEAP_0001 * pDesc)
+    explicit
+    CosUmd12DescriptorHeap(
+        CosUmd12Device * pDevice,
+        const D3D12DDIARG_CREATE_DESCRIPTOR_HEAP_0001 * pDesc,
+        const D3D12DDIARG_CREATEHEAP_0001 * pHeapDesc) :
+        m_hwDescriptorHeap(pDevice, MAKE_D3D10DDI_HRTRESOURCE(NULL), pHeapDesc)
     {
         m_pDevice = pDevice;
         m_desc = *pDesc;
@@ -26,6 +31,9 @@ public:
 
         m_heapUniqueAddress = m_pDevice->AllocateUniqueAddress(sizeDescriptors);
     }
+
+    HRESULT Standup();
+    void Teardown();
 
     static int CalculateSize(const D3D12DDIARG_CREATE_DESCRIPTOR_HEAP_0001 * pArgs);
 
@@ -50,11 +58,15 @@ public:
 private:
 
     friend class CosUmd12RootSignature;
+    friend class CosUmd12CommandList;
 
     CosUmd12Device * m_pDevice;
     D3D12DDIARG_CREATE_DESCRIPTOR_HEAP_0001 m_desc;
 
     CosUmd12Descriptor * m_pDescriptors;
+
+    CosUmd12Heap m_hwDescriptorHeap;
+    GpuHWDescriptor * m_pHwDescriptors;
 
     D3D12DDI_GPU_VIRTUAL_ADDRESS m_heapUniqueAddress;
 };

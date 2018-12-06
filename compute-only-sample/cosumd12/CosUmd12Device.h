@@ -63,6 +63,9 @@ public:
 
     static D3D12DDIARG_META_COMMAND_DESC m_supportedMetaCommandDescs[];
 
+    void TrackPagingFence(UINT64 newPagingFenceValue);
+    void WaitForPagingOperation(HANDLE hContext);
+
 public:
 
     CosUmd12Adapter*                m_pAdapter;
@@ -72,7 +75,11 @@ public:
     const D3D12DDI_CORELAYER_DEVICECALLBACKS_0050*   m_pUMCallbacks;
     const D3DDDI_DEVICECALLBACKS*   m_pKMCallbacks;
 
+    D3DDDICB_CREATEPAGINGQUEUE      m_pagingQueueDesc;
+    UINT64                          m_latestPagingFenceValue;
+
     D3D12DDI_GPU_VIRTUAL_ADDRESS    m_curUniqueAddress;
+
 };
 
 inline CosUmd12Device* CosUmd12Device::CastFrom(D3D10DDI_HDEVICE hDevice)

@@ -76,6 +76,131 @@ public:
     void CopyBufferRegion(D3D12DDIARG_BUFFER_PLACEMENT& dst, D3D12DDIARG_BUFFER_PLACEMENT& src, UINT64 bytesToCopy);
     void GpuMemoryCopy(D3D12_GPU_VIRTUAL_ADDRESS dstGpuVa, D3D12_GPU_VIRTUAL_ADDRESS srcGpuVa, UINT size);
 
+#if RS_2LEVEL
+
+    template <typename THwMetaCommand, typename THwIoTable>
+    void ExecuteMlMetaCommand(THwMetaCommand * pHwMetaCommand, THwIoTable * pHwIoTable, MetaCommandId metaCommandId)
+    {
+        D3D12_GPU_DESCRIPTOR_HANDLE * pGpuDescriptorHandle = (D3D12_GPU_DESCRIPTOR_HANDLE *)pHwIoTable;
+        UINT numMetaCmdDescriptors = sizeof(THwIoTable)/sizeof(D3D12_GPU_DESCRIPTOR_HANDLE);
+        UINT numDescriptorsUsed = 0;
+
+        for (UINT i = 0; i < numMetaCmdDescriptors; i++, pGpuDescriptorHandle++)
+        {
+            if (pGpuDescriptorHandle->ptr)
+            {
+                numDescriptorsUsed++;
+            }
+        }
+
+        //
+        // 1 patch location for each descriptor and 2 for each GpuHwQwordWrite to patch the descriptor on GPU
+        //
+
+        UINT numPatchLocations = numDescriptorsUsed + numDescriptorsUsed*2;
+        UINT commandSize = numDescriptorsUsed * sizeof(GpuHwQwordWrite) +
+            sizeof(GpuHwMetaCommand) +
+            sizeof(THwMetaCommand) +
+            numMetaCmdDescriptors * sizeof(PHYSICAL_ADDRESS);
+
+        BYTE * pCommandBuf;
+        UINT curCommandOffset;
+        D3DDDI_PATCHLOCATIONLIST * pPatchLocations;
+
+        ReserveCommandBufferSpace(
+            false,                          // HW command
+            commandSize,
+            (BYTE **)&pCommandBuf,
+            numPatchLocations,
+            numPatchLocations,
+            &curCommandOffset,
+            &pPatchLocations);
+        if (NULL == pCommandBuf)
+        {
+            return;
+        }
+
+        pGpuDescriptorHandle = (D3D12_GPU_DESCRIPTOR_HANDLE *)pHwIoTable;
+        CosUmd12DescriptorHeap * pUavHeap = m_pDescriptorHeaps[D3D12DDI_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV];
+        GpuHwQwordWrite * pGpuHwQwordWrite = (GpuHwQwordWrite *)pCommandBuf;
+
+        for (UINT i = 0; i < numMetaCmdDescriptors; i++, pGpuDescriptorHandle++)
+        {
+            if (pGpuDescriptorHandle->ptr)
+            {
+                D3D12DDI_GPU_VIRTUAL_ADDRESS resourceAddressField = pGpuDescriptorHandle->ptr +
+                                                                    FIELD_OFFSET(GpuHWDescriptor, m_resourceGpuAddress);
+
+                UINT descriptorIndex = (UINT)((pGpuDescriptorHandle->ptr - pUavHeap->GetGpuAddress())/
+                                              sizeof(CosUmd12Descriptor));
+
+                CosUmd12Descriptor * pDescriptor = pUavHeap->GetCpuAddress() + descriptorIndex;
+                GpuHWDescriptor * pHwDescriptor = pUavHeap->m_pHwDescriptors + descriptorIndex;
+
+                //
+                // Set up HW descriptor from SW
+                //
+
+                ASSERT(COS_UAV == pDescriptor->m_type);
+                pHwDescriptor->m_type = COS_UAV;
+
+                pHwDescriptor->m_uav.m_format = pDescriptor->m_uav.Format;
+
+                ASSERT(D3D12DDI_RD_BUFFER == pDescriptor->m_uav.ResourceDimension);
+                pHwDescriptor->m_uav.m_resourceDimension = pDescriptor->m_uav.ResourceDimension;
+                pHwDescriptor->m_uav.m_buffer = pDescriptor->m_uav.Buffer;
+
+                pGpuHwQwordWrite->m_commandId = QwordWrite;
+
+                m_pCurCommandBuffer->RecordGpuAddressReference(
+                                        resourceAddressField,
+                                        curCommandOffset + (UINT)(((PBYTE)(&pGpuHwQwordWrite->m_gpuAddress)) - pCommandBuf),
+                                        pPatchLocations);
+
+                pDescriptor->WriteHWDescriptor(
+                                m_pCurCommandBuffer,
+                                curCommandOffset + (UINT)(((PBYTE)(&pGpuHwQwordWrite->m_data)) - pCommandBuf),
+                                pPatchLocations);
+
+                pGpuHwQwordWrite++;
+            }
+        }
+
+        GpuHwMetaCommand *  pMetaCommand = (GpuHwMetaCommand *)pGpuHwQwordWrite;
+
+        pMetaCommand->m_commandId = MetaCommandExecute;
+        pMetaCommand->m_commandSize = commandSize - numDescriptorsUsed*sizeof(GpuHwQwordWrite);
+
+        pMetaCommand->m_metaCommandId = metaCommandId;
+
+        // Copy the meta command META_COMMAND_CREATE_*_DESC
+        memcpy(pMetaCommand + 1, pHwMetaCommand, sizeof(THwMetaCommand));
+
+        // Clear the resource descriptors
+        PHYSICAL_ADDRESS * pHwDescriptorReferences = (PHYSICAL_ADDRESS *)(((BYTE *)pMetaCommand) + sizeof(GpuHwMetaCommand) + sizeof(THwMetaCommand));
+        memset(pHwDescriptorReferences, 0, numMetaCmdDescriptors * sizeof(PHYSICAL_ADDRESS));
+
+        pGpuDescriptorHandle = (D3D12_GPU_DESCRIPTOR_HANDLE *)pHwIoTable;
+
+        for (UINT i = 0; i < numMetaCmdDescriptors; i++, pGpuDescriptorHandle++)
+        {
+            if (pGpuDescriptorHandle->ptr)
+            {
+                m_pCurCommandBuffer->RecordGpuAddressReference(
+                                        pGpuDescriptorHandle->ptr,
+                                        curCommandOffset + (UINT)(((PBYTE)(pHwDescriptorReferences)) - pCommandBuf),
+                                        pPatchLocations);
+            }
+
+            pHwDescriptorReferences++;
+        }
+
+        // Commit the command into command buffer
+        m_pCurCommandBuffer->CommitCommandBufferSpace(commandSize, numPatchLocations);
+    }
+
+#else
+
     template <typename THwMetaCommand, typename THwIoTable>
     void ExecuteMlMetaCommand(THwMetaCommand * pHwMetaCommand, THwIoTable * pHwIoTable, MetaCommandId metaCommandId)
     {
@@ -132,8 +257,8 @@ public:
         {
             if (pGpuDescriptorHandle->ptr)
             {
-                UINT descriptorIndex = (UINT)((pGpuDescriptorHandle->ptr - 
-                                               pUavHeap->GetGpuAddress()))/sizeof(CosUmd12Descriptor);
+                UINT descriptorIndex = (UINT)((pGpuDescriptorHandle->ptr - pUavHeap->GetGpuAddress())/
+                                              sizeof(CosUmd12Descriptor));
 
                 CosUmd12Descriptor * pDescriptor = pUavHeap->GetCpuAddress() + descriptorIndex;
 
@@ -151,6 +276,8 @@ public:
         // Commit the command into command buffer
         m_pCurCommandBuffer->CommitCommandBufferSpace(commandSize, numPatchLocationsUsed);
     }
+
+#endif
 
     // Interface for Command Queue
     void Execute(CosUmd12CommandQueue * pCommandQueue);

@@ -59,6 +59,7 @@
     <ClInclude Include="CosKmdDevice.h" />
     <ClInclude Include="CosKmdGlobal.h" />
     <ClInclude Include="CosKmdMetaCommand.h" />
+    <ClInclude Include="CosKmdProcess.h" />
     <ClInclude Include="CosKmdResource.h" />
     <ClInclude Include="CosKmdSoftAdapter.h" />
     <ClInclude Include="CosKmdUtil.h" />
@@ -192,7 +193,7 @@
       <WarningLevel>Level4</WarningLevel>
       <AdditionalUsingDirectories>
       </AdditionalUsingDirectories>
-      <PreprocessorDefinitions>MLMC=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>RS_2LEVEL=0;ENABLE_FOR_COSTEST=0;MLMC=0;GPUVA=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalOptions>/std:c++17 %(AdditionalOptions)</AdditionalOptions>
       <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>

@@ -41,6 +41,9 @@ typedef struct _COSDMABUFSTATE
             UINT    m_bPreempted        : 1;
             UINT    m_bReset            : 1;
             UINT    m_bCompleted        : 1;
+#if GPUVA
+            UINT    m_bGpuVaCommandBuffer : 1;
+#endif
         };
 
         UINT        m_Value;
@@ -50,9 +53,17 @@ typedef struct _COSDMABUFSTATE
 typedef struct _COSDMABUFINFO
 {
     PBYTE                       m_pDmaBuffer;
-    LARGE_INTEGER               m_DmaBufferPhysicalAddress;
+    union
+    {
+#if GPUVA
+        D3DGPU_VIRTUAL_ADDRESS  m_DmaBufferGpuVa;
+#endif
+        LARGE_INTEGER           m_DmaBufferPhysicalAddress;
+    };
     UINT                        m_DmaBufferSize;
     COSDMABUFSTATE              m_DmaBufState;
+
+    LONGLONG                    m_DmaBufStallDuration;
 } COSDMABUFINFO;
 
 typedef struct _COSDMABUFSUBMISSION
@@ -127,11 +138,6 @@ public:
     NTSTATUS
         CancelCommand(
             IN_CONST_PDXGKARG_CANCELCOMMAND pCancelCommand);
-
-    NTSTATUS
-        QueryCurrentFence(
-            INOUT_PDXGKARG_QUERYCURRENTFENCE   pCurrentFence);
-
 
     NTSTATUS
         QueryEngineStatus(
@@ -286,6 +292,11 @@ protected:
 
     virtual void ProcessRenderBuffer(COSDMABUFSUBMISSION * pDmaBufSubmission) = 0;
     virtual void ProcessHWRenderBuffer(COSDMABUFSUBMISSION * pDmaBufSubmission) = 0;
+#if GPUVA
+
+    virtual void ProcessGpuVaRenderBuffer(COSDMABUFSUBMISSION * pDmaBufSubmission) = 0;
+
+#endif
 
 private:
 
@@ -293,9 +304,11 @@ private:
     void DoWork(void);
     void DpcRoutine(void);
     void NotifyDmaBufCompletion(COSDMABUFSUBMISSION * pDmaBufSubmission);
+    void NotifyPreemptionCompletion();
     static BOOLEAN SynchronizeNotifyInterrupt(PVOID SynchronizeContext);
     BOOLEAN SynchronizeNotifyInterrupt();
     COSDMABUFSUBMISSION * DequeueDmaBuffer(KSPIN_LOCK * pDmaBufQueueLock);
+    void EmptyDmaBufferQueue();
     void ProcessPagingBuffer(COSDMABUFSUBMISSION * pDmaBufSubmission);
     static void HwDmaBufCompletionDpcRoutine(KDPC *, PVOID, PVOID, PVOID);
 
@@ -372,6 +385,15 @@ protected:
 
     BYTE                        m_deviceId[MAX_DEVICE_ID_LENGTH];
     ULONG                       m_deviceIdLength;
+
+    UINT                        m_lastSubmittedFenceId;
+    UINT                        m_lastCompletetdFenceId;
+
+    UINT                        m_lastCompeletedPreemptionFenceId;
+
+    DXGKARG_PREEMPTCOMMAND      m_preemptionRequest;
+
+    KEVENT                      m_preemptionEvent;
 
 public:
 
@@ -527,3 +549,14 @@ void MoveToNextCommand(TypeCur pCurCommand, TypeNext &pNextCommand)
     pNextCommand = (TypeNext)(pCurCommand + 1);
 }
 
+#if GPUVA
+
+#define COS_GPU_VA_BIT_COUNT        0x20
+#define COS_PAGE_TABLE_LEVEL_COUNT  2
+
+#define COS_PAGE_TABLE_SIZE         (4*PAGE_SIZE)
+
+#define COSD_APERTURE_SEGMENT_BASE_ADDRESS  0xC0000000
+#define COSD_APERTURE_SEGMENT_SIZE          16*1024*1024
+
+#endif

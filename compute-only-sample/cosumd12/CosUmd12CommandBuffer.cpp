@@ -10,6 +10,8 @@
 
 #include "CosUmd12.h"
 
+#if !GPUVA
+
 CosUmd12CommandBuffer * CosUmd12CommandBuffer::Create()
 {
     UINT size;
@@ -138,7 +140,6 @@ CosUmd12CommandBuffer::CommitCommandBufferSpace(
 // so a search of the Allocation List is necessary
 //
 
-
 UINT
 CosUmd12CommandBuffer::UseResource(
     CosUmd12Resource *  pResource,
@@ -177,6 +178,25 @@ CosUmd12CommandBuffer::UseAllocation(
     return i;
 }
 
+void
+CosUmd12CommandBuffer::RecordGpuAddressReference(
+    D3D12DDI_GPU_VIRTUAL_ADDRESS resourceGpuVA,
+    UINT commandBufferOffset,
+    D3DDDI_PATCHLOCATIONLIST * &pPatchLocations)
+{
+    D3DKMT_HANDLE hAllocation = (D3DKMT_HANDLE)(resourceGpuVA >> 32);
+    UINT allocationOffset = (UINT)(resourceGpuVA & 0xFFFFFFFF);
+
+    UINT allocIndex = UseAllocation(hAllocation, true);
+
+    SetPatchLocation(
+        pPatchLocations,
+        allocIndex,
+        commandBufferOffset,
+        0,
+        allocationOffset);
+}
+
 HRESULT
 CosUmd12CommandBuffer::Execute(CosUmd12CommandQueue * pCommandQueue)
 {
@@ -194,3 +214,4 @@ CosUmd12CommandBuffer::Execute(CosUmd12CommandQueue * pCommandQueue)
                             m_patchLocationListPos);
 }
 
+#endif  // !GPUVA
