@@ -1,4 +1,5 @@
-#include <roscompiler.h>
+#include "precomp.h"
+#include "roscompiler.h"
 
 BaseDisasm::BaseDisasm()
 {

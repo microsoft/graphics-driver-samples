@@ -53,6 +53,9 @@ rosumd.dll,,,0x4000
 
 [RenderOnlySample_AddReg]
 HKR,,UserModeDriverName,%REG_MULTI_SZ%,rosumd.dll,rosumd.dll,rosumd.dll,rosumd.dll
+HKLM,"SYSTEM\CurrentControlSet\Control\GraphicsDrivers\Scheduler",EnablePreemption,%REG_DWORD%,0
+HKLM,"SYSTEM\CurrentControlSet\Control\GraphicsDrivers",TdrDebugMode,%REG_DWORD%,1
+HKLM,"SYSTEM\CurrentControlSet\Control\GraphicsDrivers\MemoryManager",DirectFlipMemoryRequirement,%REG_DWORD%,0
 
 ; Service Installation
 

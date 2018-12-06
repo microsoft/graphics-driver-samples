@@ -1,8 +1,5 @@
 #pragma once
 
-#include <windows.h>
-#include <exception>
-
 #define assert( _exp ) ( ( _exp ) ? true : (\
     OutputDebugStringW( L"Assertion Failed\n" ),\
     OutputDebugStringW( #_exp L"\n" ),\

@@ -82,7 +82,7 @@ RosKmAdapter::AddAdapter(
     status = IoGetDeviceProperty(PhysicalDeviceObject, DevicePropertyHardwareID, sizeof(deviceID), deviceID, &dataLen);
     if (!NT_SUCCESS(status))
     {
-        ROS_LOG_ERROR(
+		ROS_LOG_ERROR(
             "Failed to get DevicePropertyHardwareID from PDO. (status=%!STATUS!)",
             status);
         return status;
@@ -1615,6 +1615,10 @@ RosKmAdapter::PatchDmaBuffer(
                 {
                 case VC4_SLOT_RT_BINNING_CONFIG:
                     pDmaBufInfo->m_RenderTargetPhysicalAddress = physicalAddress;
+                    pDmaBufInfo->m_RenderTargetVirtualAddress = 
+                        static_cast<const BYTE*>(RosKmdGlobal::s_pVideoMemory) +
+                        allocation->PhysicalAddress.LowPart +
+                        patch->AllocationOffset;
                     break;
                 case VC4_SLOT_TILE_ALLOCATION_MEMORY:
                     *((UINT *)(pDmaBuf + patch->PatchOffset)) = m_tileAllocationMemoryPhysicalAddress + m_busAddressOffset;
@@ -1874,10 +1878,10 @@ NTSTATUS RosKmAdapter::GetStandardAllocationDriverData (
         allocParams->m_resourceDimension = D3D10DDIRESOURCE_TEXTURE2D;
         allocParams->m_mip0Info.TexelWidth = surfData->Width;
         allocParams->m_mip0Info.TexelHeight = surfData->Height;
-        allocParams->m_mip0Info.TexelDepth = 0;
+        allocParams->m_mip0Info.TexelDepth = 1;
         allocParams->m_mip0Info.PhysicalWidth = surfData->Width;
         allocParams->m_mip0Info.PhysicalHeight = surfData->Height;
-        allocParams->m_mip0Info.PhysicalDepth = 0;
+        allocParams->m_mip0Info.PhysicalDepth = 1;
 
         allocParams->m_usage = D3D10_DDI_USAGE_IMMUTABLE;
 

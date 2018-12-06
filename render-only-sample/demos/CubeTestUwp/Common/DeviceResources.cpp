@@ -158,8 +158,6 @@ void DX::DeviceResources::CreateDeviceResources()
 	// Create the Direct3D 11 API device object and a corresponding context.
 	ComPtr<ID3D11Device> device;
 	ComPtr<ID3D11DeviceContext> context;
-
-    Sleep(10000);
     
 	HRESULT hr = D3D11CreateDevice(
 		nullptr,					// Specify nullptr to use the default adapter.
@@ -252,7 +250,7 @@ void DX::DeviceResources::CreateWindowSizeDependentResources()
 			2, // Double-buffered swap chain.
 			lround(m_d3dRenderTargetSize.Width),
 			lround(m_d3dRenderTargetSize.Height),
-			DXGI_FORMAT_R8G8B8A8_UNORM,
+			DXGI_FORMAT_B8G8R8A8_UNORM,
 			0
 			);
 
@@ -278,7 +276,7 @@ void DX::DeviceResources::CreateWindowSizeDependentResources()
 
 		swapChainDesc.Width = lround(m_d3dRenderTargetSize.Width);		// Match the size of the window.
 		swapChainDesc.Height = lround(m_d3dRenderTargetSize.Height);
-		swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;				// This is the most common swap chain format.
+		swapChainDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;				// This is the most common swap chain format.
 		swapChainDesc.Stereo = false;
 		swapChainDesc.SampleDesc.Count = 1;								// Don't use multi-sampling.
 		swapChainDesc.SampleDesc.Quality = 0;
@@ -425,7 +423,7 @@ void DX::DeviceResources::CreateWindowSizeDependentResources()
 	D2D1_BITMAP_PROPERTIES1 bitmapProperties = 
 		D2D1::BitmapProperties1(
 			D2D1_BITMAP_OPTIONS_TARGET | D2D1_BITMAP_OPTIONS_CANNOT_DRAW,
-			D2D1::PixelFormat(DXGI_FORMAT_R8G8B8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED),
+			D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED),
 			m_dpi,
 			m_dpi
 			);

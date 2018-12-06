@@ -5,6 +5,11 @@
 // Copyright (C) Microsoft Corporation
 //
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#include "precomp.h"
+
+#include "RosUmdLogging.h"
+#include "RosUmdDevice.tmh"
+
 #include "RosUmdDevice.h"
 #include "RosUmdResource.h"
 #include "RosUmdDebug.h"
@@ -22,10 +27,6 @@
 #include "RosContext.h"
 #include "RosUmdUtil.h"
 
-#include <exception>
-#include <typeinfo>
-#include <new>
-
 #if VC4
 
 #include "Vc4Hw.h"
@@ -34,8 +35,6 @@
 // #define NV_SHADER 1
 
 #endif
-
-#include "math.h"
 
 static
 BOOLEAN _IntersectRect(RECT* CONST pDst, RECT CONST* CONST pSrc1, RECT CONST* CONST pSrc2)
@@ -78,7 +77,8 @@ RosUmdDevice::RosUmdDevice(
     m_pAdapter(pAdapter),
     m_Interface(pArgs->Interface),
     m_hRTDevice(pArgs->hRTDevice),
-    m_hRTCoreLayer(pArgs->hRTCoreLayer)
+    m_hRTCoreLayer(pArgs->hRTCoreLayer),
+    m_bPredicateValue(FALSE)
 {
     // Location of function table for runtime callbacks. Can not change these function pointers, as they are runtime-owned;
     // but the pointer should be saved. Do not cache function pointers, as the runtime may change the table entries at will.
@@ -627,7 +627,7 @@ HRESULT RosUmdDevice::Present(DXGI_DDI_ARG_PRESENT* Args)
             return E_INVALIDARG;
         }
     }
-    
+
     // Get the allocation for the source resource
     auto pSrcResource = RosUmdResource::CastFrom(Args->hSurfaceToPresent);
 
@@ -677,17 +677,17 @@ HRESULT RosUmdDevice::RotateResourceIdentities(
     assert(RosUmdDevice::CastFrom(Args->hDevice) == this);
 
     assert(Args->Resources != 0);
-    
+
     // Save the handles from the first resource
     const RosUmdResource* const firstResource = RosUmdResource::CastFrom(
             Args->pResources[0]);
     RosUmdResource* const lastResource = RosUmdResource::CastFrom(
             Args->pResources[Args->Resources - 1]);
     assert(lastResource->CanRotateFrom(firstResource));
-            
+
     D3DKMT_HANDLE firstResourceKMResource = firstResource->m_hKMResource;
     D3DKMT_HANDLE firstResourceKMAllocation = firstResource->m_hKMAllocation;
-    
+
     for (UINT i = 0; i < (Args->Resources - 1); ++i)
     {
         RosUmdResource* rotateTo = RosUmdResource::CastFrom(Args->pResources[i]);
@@ -695,7 +695,7 @@ HRESULT RosUmdDevice::RotateResourceIdentities(
                 Args->pResources[i + 1]);
 
         assert(rotateTo->CanRotateFrom(rotateFrom));
-        
+
         rotateTo->m_hKMResource = rotateFrom->m_hKMResource;
         rotateTo->m_hKMAllocation = rotateFrom->m_hKMAllocation;
     }
@@ -815,18 +815,29 @@ HRESULT RosUmdDevice::Present1(DXGI_DDI_ARG_PRESENT1* Args)
 _Use_decl_annotations_
 void RosUmdDevice::CheckDirectFlipSupport(
     D3D10DDI_HDEVICE hDevice,
-    D3D10DDI_HRESOURCE /*hResource1*/,
-    D3D10DDI_HRESOURCE /*hResource2*/,
+    D3D10DDI_HRESOURCE hResource1,
+    D3D10DDI_HRESOURCE hResource2,
     UINT CheckDirectFlipFlags,
     BOOL *pSupported
     )
 {
     assert(CastFrom(hDevice) == this);
     assert((CheckDirectFlipFlags & ~D3D11_1DDI_CHECK_DIRECT_FLIP_IMMEDIATE) == 0);
-    
-    // We can seamlessly flip video memory between an application's managed 
-    // primary allocations and the DWM's managed primary allocations
-    *pSupported = TRUE;
+
+    //
+    // We can only flip to the resource if it has the same format as the
+    // current primary since we do not support mode change in
+    // SetVidPnSourceAddress() at this point.
+    //
+    const RosUmdResource* currentResourcePtr = RosUmdResource::CastFrom(hResource1);
+    const RosUmdResource* directFlipResourcePtr = RosUmdResource::CastFrom(hResource2);
+
+    // Resources must have same dimensions and format
+    *pSupported =
+        (directFlipResourcePtr->m_mip0Info == currentResourcePtr->m_mip0Info) &&
+        (directFlipResourcePtr->m_format == currentResourcePtr->m_format) &&
+        (directFlipResourcePtr->m_hwPitchBytes == currentResourcePtr->m_hwPitchBytes) &&
+        (directFlipResourcePtr->m_hwSizeBytes == currentResourcePtr->m_hwSizeBytes);
 }
 
 //
@@ -2306,3 +2317,223 @@ void RosUmdDevice::CreateInternalBuffer(RosUmdResource * pRes, UINT size)
         MAKE_D3D10DDI_HRTRESOURCE(NULL));
 }
 
+void RosUmdDevice::SetPredication(D3D10DDI_HQUERY hQuery, BOOL bPredicateValue)
+{
+    //
+    // https://msdn.microsoft.com/en-us/library/windows/hardware/ff569547(v=vs.85).aspx
+    // per doc, hQuery can contain nullptr - supposed to save the predicate value for future use
+    //
+
+    if (nullptr == hQuery.pDrvPrivate)
+    {
+        m_bPredicateValue = bPredicateValue;
+    }
+    else
+    {
+        //
+        // TODO: Implement remaining query values other than null
+        //
+
+        assert(false);
+    }
+
+    //
+    // per MDSN Predication should set an error in the case one was seen
+    // D3D will interpret an error as critical
+    //
+    /*
+    HRESULT hr = S_OK;
+
+    if (FAILED(hr))
+    {
+    SetError(hr);
+    }
+    */
+}
+
+void RosUmdDevice::ResourceCopyRegion11_1(
+    RosUmdResource *pDestinationResource,
+    UINT DstSubresource,
+    UINT DstX,
+    UINT DstY,
+    UINT DstZ,
+    RosUmdResource * pSourceResource,
+    UINT SrcSubresource,
+    const D3D10_DDI_BOX* pSrcBox,
+    UINT copyFlags
+    )
+{
+    bool bCopy = true;
+    bool bCopyEntireSubresource = false;
+
+    //
+    // TODO: come back to philosophy if these need to be checked in FREE builds
+    //
+
+    assert(nullptr != pDestinationResource);
+    assert(nullptr != pSourceResource);
+
+    //
+    // https://msdn.microsoft.com/en-us/library/windows/hardware/hh439845(v=vs.85).aspx
+    //
+
+    if (nullptr == pSrcBox)
+    {
+        //
+        // when pSrcBox is null, copy the entire subresource
+        //
+
+        bCopyEntireSubresource = true;
+    }
+    else if (pSrcBox->left >= pSrcBox->right ||
+             pSrcBox->top >= pSrcBox->bottom ||
+             pSrcBox->front >= pSrcBox->back)
+    {
+        //
+        // pSrcBox is considered empty, don't do anything, and exit
+        //
+
+        return;
+    }
+    else
+    {
+        //
+        // TODO: the pSrcBox must not extend over the edges of the source subregion or the destination subregion
+        //
+    }
+
+    //
+    // both source and destination resources must be the same type of resource
+    //
+
+    if (pDestinationResource->m_primaryDesc.ModeDesc.Format != pSourceResource->m_primaryDesc.ModeDesc.Format)
+    {
+        return;
+    }
+
+    //
+    // both source and destination must have format types that are convertible to each other
+    //
+
+    if (pDestinationResource->m_format == pSourceResource->m_format)
+    {
+        bCopy = true;
+    }
+    else
+    {
+        bCopy = false;
+
+        //
+        // TOOD: Implement conversion check logic, or DDI for ResourceConvertRegion
+        //       ensure each source and destionation resource format in D3D11DDIARG_CREATERESOURCE.Format supports appropriate conversion
+        //
+
+        assert(false);
+    }
+
+    //
+    // the source and destination resource must not be currently mapped
+    //
+
+    if (pDestinationResource->IsMapped() || pSourceResource->IsMapped())
+    {
+        return;
+    }
+
+    //
+    // TODO: - Honor the copy flags
+    //
+
+    (copyFlags); //not used yet
+
+    //
+    // NOTE: for buffers, all coordinates are in bytes. for textures, all coordinates are in pixels
+    //
+
+    //
+    // ensure the destination resource not created with D3D10_DDI_USAGE_IMMUTABLE
+    //
+
+    if (pDestinationResource->m_usage & D3D10_DDI_USAGE_IMMUTABLE)
+    {
+        return;
+    }
+
+    //
+    // ensure either source or destination has D3D10_DDI_BIND_DEPTH_STENCIL in D3D11DDIARG_CREATERESOURCE.BindFlags OR is a multi - sampled resource :
+    //          then verify pSrcBox is NULL and DstX, DstY and DstZ are 0
+
+    if ((((pDestinationResource->m_bindFlags & D3D10_DDI_BIND_DEPTH_STENCIL) || pDestinationResource->IsMultisampled()) ||
+        ((pSourceResource->m_bindFlags & D3D10_DDI_BIND_DEPTH_STENCIL) || pSourceResource->IsMultisampled())) &&
+        (nullptr != pSrcBox || 0 != DstX || 0 != DstY || 0 != DstZ))
+    {
+        return;
+    }
+
+    //
+    // ensure sub resource indicies are in range
+    //
+
+    if (DstSubresource >= pDestinationResource->m_arraySize ||
+        SrcSubresource >= pSourceResource->m_arraySize)
+    {
+        return;
+    }
+
+    //
+    // TODO: ensure the source and destination resources are NOT part of the exact same subresource
+    //
+
+    //
+    // TODO: ensure alignment restrictions apply to coordinates
+    //
+
+    //
+    // TODO: ensure each source and desitnation resource format in D3D11DDIARG_CREATERESOURCE.Format is in the same typeless group
+    //
+
+    //
+    // ensure the source and destination resources have the same number of samples and quality level (except for single sampled resources, which only number of samples are the same)
+    //
+
+    if (pDestinationResource->m_sampleDesc.Count != pSourceResource->m_sampleDesc.Count ||
+        pDestinationResource->m_sampleDesc.Quality != pSourceResource->m_sampleDesc.Quality)
+    {
+        return;
+    }
+
+    //
+    // finally perform the copy or convert
+    //
+
+    if (bCopy)
+    {
+        //
+        // TODO: implement the copy
+        //
+
+        assert(false);
+    }
+    else
+    {
+        //
+        // TODO: convert path
+        //
+
+        assert(false);
+    }
+
+    //
+    // per MDSN ResourceCopyRegion should set an error in the case one was seen
+    // D3D will interpret an error as critical
+    //
+
+/*
+    HRESULT hr = S_OK;
+
+    if (FAILED(hr))
+    {
+        SetError(hr);
+    }
+*/
+}

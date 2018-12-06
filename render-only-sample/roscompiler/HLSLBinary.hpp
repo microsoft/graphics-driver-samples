@@ -49,6 +49,7 @@ UINT GetNumInstructionSrcOperands(D3D10_SB_OPCODE_TYPE OpCode);
 UINT GetNumInstructionDstOperands(D3D10_SB_OPCODE_TYPE OpCode);
 D3D11_SB_OPCODE_CLASS GetOpcodeClass(D3D10_SB_OPCODE_TYPE OpCode);
 TCHAR* GetOpcodeString(D3D10_SB_OPCODE_TYPE OpCode);
+void InitInstructionInfo();
 
 //*****************************************************************************
 //
