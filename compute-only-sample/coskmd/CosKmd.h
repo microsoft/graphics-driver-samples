@@ -54,7 +54,15 @@ typedef struct _COSDUMDMAPRIVATEDATA2 : public COSUMDDMAPRIVATEDATA
 
 #define COS_VERSION 2
 
+const int C_COS_GPU_ENGINE_ORDINAL_COMPUTE = 0;
+
+#if COS_GPUVA_USE_LOCAL_VIDMEM
+const int C_COS_GPU_ENGINE_COUNT = 2;
+
+const int C_COS_GPU_ENGINE_ORDINAL_COPY = 1;
+#else
 const int C_COS_GPU_ENGINE_COUNT = 1;
+#endif
 
 #if DBG
 

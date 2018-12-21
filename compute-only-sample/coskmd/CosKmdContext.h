@@ -85,6 +85,12 @@ public:
         SetRootPageTable(
             IN_CONST_PDXGKARG_SETROOTPAGETABLE  pSetPageTable);
 
+#if COS_GPUVA_USE_LOCAL_VIDMEM
+    BYTE *
+        EmulationGpuVaToCpuVa(
+            D3DGPU_VIRTUAL_ADDRESS  gpuVa);
+#endif
+
 #endif
 
 public: // PAGED
@@ -95,6 +101,13 @@ public: // PAGED
     NTSTATUS Present (INOUT_PDXGKARG_PRESENT Args);
 
 private:
+
+    BYTE *
+    EmulationGpuPaToCpuVa(
+        UINT64  segmentOffset)
+    {
+        return ((BYTE *)CosKmdGlobal::s_pVideoMemory) + segmentOffset;
+    }
 
     static const UINT32 kMagic = 'CTXT';
     UINT32 m_magic;

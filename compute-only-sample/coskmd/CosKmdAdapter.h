@@ -55,7 +55,8 @@ typedef struct _COSDMABUFINFO
     PBYTE                       m_pDmaBuffer;
 #if COS_GPUVA_SUPPORT
     D3DGPU_VIRTUAL_ADDRESS      m_DmaBufferGpuVa;
-#else
+#endif
+#if COS_PHYSICAL_SUPPORT
     LARGE_INTEGER               m_DmaBufferPhysicalAddress;
 #endif
     UINT                        m_DmaBufferSize;
@@ -64,12 +65,21 @@ typedef struct _COSDMABUFINFO
     LONGLONG                    m_DmaBufStallDuration;
 } COSDMABUFINFO;
 
+class CosKmContext;
+
 typedef struct _COSDMABUFSUBMISSION
 {
     LIST_ENTRY      m_QueueEntry;
     COSDMABUFINFO * m_pDmaBufInfo;
     UINT            m_StartOffset;
     UINT            m_EndOffset;
+#if COS_GPUVA_SUPPORT
+    CosKmContext  * m_pContext;
+#endif
+#if COS_GPUVA_USE_LOCAL_VIDMEM
+    UINT            m_EngineOrdinal;
+    UINT            m_NodeOrdinal;
+#endif
     UINT            m_SubmissionFenceId;
     bool            m_bSimulateHang;
 } COSDMABUFSUBMISSION;
@@ -557,6 +567,12 @@ void MoveToNextCommand(TypeCur pCurCommand, TypeNext &pNextCommand)
 
 #define COS_GPU_VA_BIT_COUNT        0x20
 #define COS_PAGE_TABLE_LEVEL_COUNT  2
+
+// 10 bits each level of page table
+#define COS_PT_INDEX_BIT_COUNT      10
+
+// 4K page uses 12 bits
+#define COS_PAGE_BIT_COUNT          12
 
 #define COS_PAGE_TABLE_SIZE         (4*PAGE_SIZE)
 

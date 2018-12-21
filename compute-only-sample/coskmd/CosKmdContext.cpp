@@ -228,6 +228,31 @@ CosKmContext::SetRootPageTable(
     m_numRootPageTableEntries = pSetPageTable->NumEntries;
 }
 
+
+#if COS_GPUVA_USE_LOCAL_VIDMEM
+BYTE *
+CosKmContext::EmulationGpuVaToCpuVa(
+    D3DGPU_VIRTUAL_ADDRESS  gpuVa)
+{
+    UINT    cosGpuVa = (UINT)gpuVa;
+
+    //
+    // Walk the Page Table to translate GPU VA
+    //
+
+    UINT    pageDirectoryIndex = cosGpuVa >> (COS_PT_INDEX_BIT_COUNT + COS_PAGE_BIT_COUNT);
+    UINT    pageTableIndex = (cosGpuVa >> COS_PAGE_BIT_COUNT) & ((1 << COS_PT_INDEX_BIT_COUNT) - 1);
+
+    DXGK_PTE *  pPageDirectory = (DXGK_PTE *)EmulationGpuPaToCpuVa(m_rootPageTableAddress.SegmentOffset);
+
+    DXGK_PTE *  pPageTable = (DXGK_PTE *)EmulationGpuPaToCpuVa(pPageDirectory[pageDirectoryIndex].PageTableAddress << COS_PAGE_BIT_COUNT);
+
+    UINT64 segmentOffset = (pPageTable[pageTableIndex].PageAddress << COS_PAGE_BIT_COUNT) + (cosGpuVa & ((1 << COS_PAGE_BIT_COUNT) - 1));
+
+    return EmulationGpuPaToCpuVa(segmentOffset);
+}
+#endif
+
 #endif
 
 COS_PAGED_SEGMENT_BEGIN; //===================================================

@@ -25,7 +25,7 @@ public:
         m_uav.m_buffer = pDesc->Buffer;
 
         CosUmd12Resource * pResource = CosUmd12Resource::CastFrom(pDesc->hDrvResource);
-        m_resourceGpuAddress.QuadPart = pResource->GetGpuVa();
+        m_resourceGpuAddress.QuadPart = pResource ? pResource->GetGpuVa() : 0L;
     }
 
 #if COS_GPUVA_MLMC_NO_DESCRIPTOR_HEAP

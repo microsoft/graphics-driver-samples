@@ -7,6 +7,8 @@
 #include "CosGpuCommand.h"
 #include "CosKmdMetaCommand.h"
 
+#include "CosKmdContext.h"
+
 void * CosKmdSoftAdapter::operator new(size_t size)
 {
     return ExAllocatePoolWithTag(NonPagedPoolNx, size, 'COSD');
@@ -317,7 +319,7 @@ CosKmdSoftAdapter::ProcessHWRenderBuffer(
             {
                 GpuHwMetaCommand *  pMetaCommand = (GpuHwMetaCommand *)pGpuCommand;
 
-                CosKmExecuteMetaCommand(pMetaCommand);
+                CosKmExecuteMetaCommand(NULL, pMetaCommand);
 
                 commandSize = pMetaCommand->m_commandSize;
             }
@@ -338,6 +340,165 @@ CosKmdSoftAdapter::ProcessHWRenderBuffer(
 
 #if COS_GPUVA_SUPPORT
 
+#if COS_GPUVA_USE_LOCAL_VIDMEM
+
+//
+// Clarification: 
+// 
+// When GPU VA is mapped to local video memory segment, the backing storage is
+// allocated in contiguous range. This allows the SW emulation code to easily
+// translate GPU VA back into CPU VA (without remapping of individual pages).
+//
+// But HW MMU for GPU VA support should always be page table based.
+//
+
+void
+CosKmdSoftAdapter::ProcessGpuVaRenderBuffer(
+    COSDMABUFSUBMISSION *   pDmaBufSubmission)
+{
+    COSDMABUFINFO * pDmaBufInfo = pDmaBufSubmission->m_pDmaBufInfo;
+    CosKmContext * pKmContext = pDmaBufSubmission->m_pContext;
+
+    NT_ASSERT(pDmaBufInfo->m_DmaBufState.m_bGpuVaCommandBuffer);
+
+    BYTE * pDmaBuffer = pKmContext->EmulationGpuVaToCpuVa(pDmaBufInfo->m_DmaBufferGpuVa);
+
+    BYTE * pGpuCommand = pDmaBuffer + pDmaBufSubmission->m_StartOffset;
+    BYTE * pEndofCommand = pDmaBuffer + pDmaBufSubmission->m_EndOffset;
+    UINT64 commandSize;
+
+    BOOL bDescriptorTableSet = false;
+    GpuHWDescriptor * pDescriptorTable = NULL;
+    BOOL bRootSignatureSet = false;
+    BYTE * pRootValues = NULL;
+
+    for (; pGpuCommand < pEndofCommand; pGpuCommand += commandSize)
+    {
+        switch (*((GpuCommandId *)pGpuCommand))
+        {
+        case Header:
+        case Nop:
+            commandSize = sizeof(GpuCommand);
+            break;
+        case ResourceCopy:
+            {
+                GpuResourceCopy *    pResourceCopy = &((GpuCommand *)pGpuCommand)->m_resourceCopy;
+
+                RtlCopyMemory(
+                    pKmContext->EmulationGpuVaToCpuVa(pResourceCopy->m_dstGpuAddress.QuadPart),
+                    pKmContext->EmulationGpuVaToCpuVa(pResourceCopy->m_srcGpuAddress.QuadPart),
+                    pResourceCopy->m_sizeBytes);
+
+                commandSize = sizeof(GpuCommand);
+            }
+            break;
+        case DescriptorHeapSet:
+            {
+                GpuHwDescriptorHeapSet * pDescriptorHeapSet = (GpuHwDescriptorHeapSet *)pGpuCommand;
+
+                bDescriptorTableSet = true;
+
+                pDescriptorTable = (GpuHWDescriptor *)pKmContext->EmulationGpuVaToCpuVa(pDescriptorHeapSet->m_descriptorHeapGpuAddress.QuadPart);
+
+                commandSize = sizeof(GpuHwDescriptorHeapSet);
+            }
+            break;
+        case RootSignature2LevelSet:
+            {
+                GpuHWRootSignature2LSet * pRootSignatureSet = (GpuHWRootSignature2LSet *)pGpuCommand;
+
+                bRootSignatureSet = true;
+
+                pRootValues = pRootSignatureSet->m_rootValues;
+
+                commandSize = pRootSignatureSet->m_commandSize;
+            }
+            break;
+        case ComputeShaderDispatch:
+            {
+                GpuHwComputeShaderDisptch * pCSDispatch = (GpuHwComputeShaderDisptch *)pGpuCommand;
+
+                if (bRootSignatureSet)
+                {
+                    KFLOATING_SAVE floatingSave;
+
+                    KeSaveFloatingPointState(&floatingSave);
+
+                    //
+                    // Shader compiler generates code according to Root Signature passed in at 
+                    // compilation time, so that shader code can access the root values with 
+                    // offset at the runtime.
+                    //
+
+#if ENABLE_FOR_COSTEST
+
+                    UINT numElements =  pCSDispatch->m_numThreadPerGroup*
+                                        pCSDispatch->m_threadGroupCountX*
+                                        pCSDispatch->m_threadGroupCountY*
+                                        pCSDispatch->m_threadGroupCountZ;
+
+                    UINT * pIntIn1 = (UINT *)pKmContext->EmulationGpuVaToCpuVa(*(D3DGPU_VIRTUAL_ADDRESS *)(pRootValues + 0));
+
+                    UINT * pIntIn2 = (UINT *)pKmContext->EmulationGpuVaToCpuVa(*(D3DGPU_VIRTUAL_ADDRESS *)(pRootValues + 8));
+
+                    UINT * pIntOut = (UINT *)pKmContext->EmulationGpuVaToCpuVa(*(D3DGPU_VIRTUAL_ADDRESS *)(pRootValues + 0x10));
+
+                    for (UINT i = 0; i < numElements; i++)
+                    {
+                        *pIntOut++ = *pIntIn1++ + *pIntIn2++;
+                        *((FLOAT *)pIntOut++) = *((FLOAT *)pIntIn1++) + *((FLOAT *)pIntIn2++);
+                    }
+
+#elif ENABLE_FOR_COSTEST2
+
+                    UINT numElements =  pCSDispatch->m_numThreadPerGroup*
+                                        pCSDispatch->m_threadGroupCountX*
+                                        pCSDispatch->m_threadGroupCountY*
+                                        pCSDispatch->m_threadGroupCountZ;
+
+                    UINT * pIntIn1 = (UINT *)pKmContext->EmulationGpuVaToCpuVa(*(D3DGPU_VIRTUAL_ADDRESS *)(pRootValues + 0));
+
+                    UINT * pIntIn2 = (UINT *)pKmContext->EmulationGpuVaToCpuVa(*(D3DGPU_VIRTUAL_ADDRESS *)(pRootValues + 8));
+
+                    UINT descriptorTableStart = (*((UINT *)(pRootValues + 0x10)))/sizeof(GpuHWDescriptor);
+
+                    UINT * pIntOut = (UINT *)pKmContext->EmulationGpuVaToCpuVa(pDescriptorTable[descriptorTableStart + 1].m_resourceGpuAddress.QuadPart);
+
+                    for (UINT i = 0; i < numElements; i++)
+                    {
+                        *pIntOut++ = *pIntIn1++ + *pIntIn2++;
+                        *((FLOAT *)pIntOut++) = *((FLOAT *)pIntIn1++) + *((FLOAT *)pIntIn2++);
+                    }
+
+#endif
+
+                    KeRestoreFloatingPointState(&floatingSave);
+                }
+
+                commandSize = pCSDispatch->m_commandSize;
+            }
+            break;
+        case MetaCommandExecute:
+            {
+                GpuHwMetaCommand *  pMetaCommand = (GpuHwMetaCommand *)pGpuCommand;
+
+                CosKmExecuteMetaCommand(pKmContext, pMetaCommand);
+
+                commandSize = pMetaCommand->m_commandSize;
+            }
+            break;
+        default:
+            {
+                // NT_ASSERT(false);
+                commandSize = pEndofCommand - pGpuCommand;
+            }
+            break;
+        }
+    }
+}
+
+#else
+
 void
 CosKmdSoftAdapter::ProcessGpuVaRenderBuffer(
     COSDMABUFSUBMISSION *   pDmaBufSubmission)
@@ -346,6 +507,8 @@ CosKmdSoftAdapter::ProcessGpuVaRenderBuffer(
 
     // TODO: emulate command buffer submitted with GPU VA from UMD
 }
+
+#endif  // COS_GPUVA_USE_LOCAL_VIDMEM
 
 #endif
 

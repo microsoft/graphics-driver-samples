@@ -470,8 +470,13 @@ CosKmAdapter::NotifyDmaBufCompletion(
 
     m_interruptData.InterruptType = DXGK_INTERRUPT_DMA_COMPLETED;
     m_interruptData.DmaCompleted.SubmissionFenceId = pDmaBufSubmission->m_SubmissionFenceId;
+#if COS_GPUVA_USE_LOCAL_VIDMEM
+    m_interruptData.DmaCompleted.NodeOrdinal = pDmaBufSubmission->m_NodeOrdinal;
+    m_interruptData.DmaCompleted.EngineOrdinal = pDmaBufSubmission->m_EngineOrdinal;
+#else
     m_interruptData.DmaCompleted.NodeOrdinal = 0;
     m_interruptData.DmaCompleted.EngineOrdinal = 0;
+#endif
 
     BOOLEAN bRet;
 
@@ -1057,7 +1062,7 @@ CosKmAdapter::CreateAllocation(
     NT_ASSERT(pCosAllocation->m_hwSizeBytes != 0);
     pAllocationInfo->Size = pCosAllocation->m_hwSizeBytes;
 
-#if COS_GPUVA_SUPPORT
+#if COS_GPUVA_SUPPORT && !COS_GPUVA_USE_LOCAL_VIDMEM
 
     //
     // If the allocation is backed by system memory, then the driver should
@@ -1273,6 +1278,12 @@ CosKmAdapter::QueryAdapterInfo(
         pDriverCaps->MemoryManagementCaps.VirtualAddressingSupported = 1;
         pDriverCaps->MemoryManagementCaps.GpuMmuSupported = 1;
 
+#if COS_GPUVA_USE_LOCAL_VIDMEM
+
+        pDriverCaps->MemoryManagementCaps.PagingNode = C_COS_GPU_ENGINE_ORDINAL_COPY;
+
+#endif
+
 #endif
         //
         // TODO[bhouse] GpuEngineTopology
@@ -1382,7 +1393,7 @@ CosKmAdapter::QueryAdapterInfo(
             pSegmentInfo->PagingBufferSegmentId = 0;    // Use physical contiguous memory
             pSegmentInfo->PagingBufferSize = PAGE_SIZE;
 
-#if COS_GPUVA_SUPPORT
+#if COS_GPUVA_SUPPORT && !COS_GPUVA_USE_LOCAL_VIDMEM
 
             //
             // Setup aperture segment, which is only used for allocation with AccessedPhysically
@@ -1497,6 +1508,32 @@ CosKmAdapter::QueryAdapterInfo(
 
     case DXGKQAITYPE_PAGETABLELEVELDESC:
     {
+#if COS_GPUVA_USE_LOCAL_VIDMEM
+        //
+        // In GpuVA mode with local video memory, COSD uses page table in
+        // local video memory
+        //
+        // COSD reuses DXGK_PTE for page table entry, so each page table is 16K.
+        //
+
+        static DXGK_PAGE_TABLE_LEVEL_DESC s_CosPageTableLevelDesc[2] =
+        {
+            {
+                COS_PT_INDEX_BIT_COUNT,     // PageTableIndexBitCount
+                COS_SEGMENT_VIDEO_MEMORY,   // PageTableSegmentId
+                COS_SEGMENT_VIDEO_MEMORY,   // PagingProcessPageTableSegmentId
+                COS_PAGE_TABLE_SIZE,        // PageTableSizeInBytes
+                0,                          // PageTableAlignmentInBytes
+            },
+            {
+                COS_PT_INDEX_BIT_COUNT,     // PageTableIndexBitCount
+                COS_SEGMENT_VIDEO_MEMORY,   // PageTableSegmentId
+                COS_SEGMENT_VIDEO_MEMORY,   // PagingProcessPageTableSegmentId
+                COS_PAGE_TABLE_SIZE,        // PageTableSizeInBytes
+                0,                          // PageTableAlignmentInBytes
+            }
+        };
+#else
         //
         // In GpuVA mode, COSD supports 1 aperture segment with SegmentId of 1.
         // So the implicit system memory segment has the SegmentId of 2.
@@ -1523,6 +1560,7 @@ CosKmAdapter::QueryAdapterInfo(
                 0,                      // PageTableAlignmentInBytes
             }
         };
+#endif
 
         UINT PageTableLevel = *((UINT *)pQueryAdapterInfo->pInputData);
         DXGK_PAGE_TABLE_LEVEL_DESC *pPageTableLevelDesc = (DXGK_PAGE_TABLE_LEVEL_DESC *)pQueryAdapterInfo->pOutputData;
@@ -1586,18 +1624,38 @@ CosKmAdapter::GetNodeMetadata(
 {
     RtlZeroMemory(pGetNodeMetadata, sizeof(*pGetNodeMetadata));
 
-    pGetNodeMetadata->EngineType = DXGK_ENGINE_TYPE_3D;
+    if (NodeOrdinal == C_COS_GPU_ENGINE_ORDINAL_COMPUTE)
+    {
+        pGetNodeMetadata->EngineType = DXGK_ENGINE_TYPE_3D;
 
-    RtlStringCbPrintfW(pGetNodeMetadata->FriendlyName,
-        sizeof(pGetNodeMetadata->FriendlyName),
-        L"3DNode%02X",
-        NodeOrdinal);
+        RtlStringCbPrintfW(pGetNodeMetadata->FriendlyName,
+            sizeof(pGetNodeMetadata->FriendlyName),
+            L"3DNode%02X",
+            NodeOrdinal);
 
 #if COS_GPUVA_SUPPORT
 
-    pGetNodeMetadata->GpuMmuSupported = 1;
+        pGetNodeMetadata->GpuMmuSupported = 1;
 
 #endif
+    }
+    else
+    {
+#if COS_GPUVA_USE_LOCAL_VIDMEM
+        pGetNodeMetadata->EngineType = DXGK_ENGINE_TYPE_COPY;
+
+        RtlStringCbPrintfW(pGetNodeMetadata->FriendlyName,
+            sizeof(pGetNodeMetadata->FriendlyName),
+            L"Copy%02X",
+            NodeOrdinal);
+
+        //
+        // Copy engine is used for paging operation and doesn't support GPUVA
+        //
+#else
+        return STATUS_INVALID_PARAMETER;
+#endif
+    }
 
     return STATUS_SUCCESS;
 }
@@ -2170,6 +2228,16 @@ CosKmAdapter::QueueDmaBuffer(
 
     pDmaBufSubmission->m_StartOffset = pSubmitCommand->DmaBufferSubmissionStartOffset;
     pDmaBufSubmission->m_EndOffset = pSubmitCommand->DmaBufferSubmissionEndOffset;
+
+#if COS_GPUVA_SUPPORT
+    pDmaBufSubmission->m_pContext = (CosKmContext *)pSubmitCommand->hContext;
+#endif
+
+#if COS_GPUVA_USE_LOCAL_VIDMEM
+    pDmaBufSubmission->m_EngineOrdinal = pSubmitCommand->EngineOrdinal;
+    pDmaBufSubmission->m_NodeOrdinal = pSubmitCommand->NodeOrdinal;
+#endif
+
     pDmaBufSubmission->m_SubmissionFenceId = pSubmitCommand->SubmissionFenceId;
 
     //

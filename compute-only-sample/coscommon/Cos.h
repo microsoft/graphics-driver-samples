@@ -39,12 +39,21 @@
 //
 // GPU Memory Model configuration
 //
-// COSD has only 1 engine, so COS_GPUVA_SUPPORT and COS_PHYSICAL_SUPPORT are 
-// mutually exclusive.
+// When COSD is configured to have 1 engine, it uses either COS_GPUVA_SUPPORT
+// or COS_PHYSICAL_SUPPORT.
+//
+// When Local Video Memory is used for GPUVA, COS has 1 "Compute" engine using
+// GPU VA and 1 Paging engine using Physical addressing model
 //
 
-#define COS_GPUVA_SUPPORT       0
-#define COS_PHYSICAL_SUPPORT    !(COS_GPUVA_SUPPORT)
+#define COS_GPUVA_SUPPORT       1
+#define COS_PHYSICAL_SUPPORT    1
+
+//
+// Use GPUVA mapped to Local Video Memory
+//
+
+#define COS_GPUVA_USE_LOCAL_VIDMEM  1
 
 //
 // COS_RS_2LEVEL_SUPPORT is only applicable in Physical GPU Memory Model
@@ -59,8 +68,8 @@
 #define COS_RS_2LEVEL_SUPPORT   0
 
 //
-// ENABLE_FOR_COSTEST and ENABLE_FOR_COSTEST2 are only applicable in Physical
-// GPU Memory Model.
+// ENABLE_FOR_COSTEST and ENABLE_FOR_COSTEST2 are applicable in Physical GPU
+// Memory Model or GPU VA Model with local video memory.
 //
 // They enable hard-coded shader in KMD to allow end to end testing of driver
 // bring-up tests costest.exe and costest2.exe.

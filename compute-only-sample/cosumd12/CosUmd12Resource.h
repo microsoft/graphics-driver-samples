@@ -106,7 +106,7 @@ private:
 inline CosUmd12Resource* CosUmd12Resource::CastFrom(D3D12DDI_HRESOURCE hResource)
 {
     CosUmd12Resource* pResource = static_cast< CosUmd12Resource* >(hResource.pDrvPrivate);
-    ASSERT(pResource->m_magic == kMagic);
+    ASSERT((pResource == NULL) || (pResource->m_magic == kMagic));
     return pResource;
 }
 
