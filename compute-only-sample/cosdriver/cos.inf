@@ -53,6 +53,7 @@ cosumd12.dll,,,0x4000
 [ComputeOnlySample_AddReg]
 HKR,,UserModeDriverName,%REG_MULTI_SZ%,cosumd12.dll,cosumd12.dll,cosumd12.dll,cosumd12.dll
 HKLM,"SYSTEM\CurrentControlSet\Control\GraphicsDrivers\MemoryManager",DirectFlipMemoryRequirement,%REG_DWORD%,0
+HKR,, DXAttributes,%REG_MULTI_SZ%,{248E2800-A793-4724-ABAA-23A6DE1BE090}
 
 ; Service Installation
 
