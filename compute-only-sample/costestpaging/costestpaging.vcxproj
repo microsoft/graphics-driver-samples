@@ -23,7 +23,7 @@
     <ProjectGuid>{4F8047B0-B9EC-4B0C-883C-971CFB924BD1}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>costestpaging</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.18287.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.18298.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
