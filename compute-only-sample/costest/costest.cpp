@@ -1,12 +1,14 @@
 // coscon.cpp : Defines the entry point for the console application.
 //
 
+#include <initguid.h>
 #include <windows.h>
 #include <d3d11_1.h>
 #include <dxgi1_3.h>
 #include <d3dcompiler.h>
 #include <directxmath.h>
 #include <directxcolors.h>
+#include <dxcore.h>
 #include <d3d12.h>
 
 #include <stdio.h>
@@ -14,7 +16,6 @@
 #include <exception>
 #include <memory>
 #include <list>
-
 
 template<class T> class D3DPointer
 {
@@ -41,7 +42,7 @@ class D3DDevice
 {
 public:
 
-    D3DDevice(std::wstring & driverString)
+    D3DDevice(std::string & driverString)
     {
         if (!FindAdapter(driverString)) throw std::exception("Failed to find adapter");
         if (!CreateDevice()) throw std::exception("Failed to create device");
@@ -61,7 +62,7 @@ public:
 
 private:
 
-    D3DPointer<IDXGIAdapter2>               m_pAdapter;
+    D3DPointer<IDXCoreAdapter>              m_pAdapter;
     D3DPointer<ID3D12Device>                m_pDevice;
     D3DPointer<ID3D12CommandAllocator>      m_pCommandAllocator;
     D3DPointer<ID3D12CommandQueue>          m_pCommandQueue;
@@ -70,8 +71,6 @@ private:
 
     bool CreateDevice()
     {
-        D3D12EnableExperimentalFeatures(1, &D3D12ComputeOnlyDevices, NULL, 0);
-
         ID3D12Device * pDevice;
 
         HRESULT hr = D3D12CreateDevice(m_pAdapter, D3D_FEATURE_LEVEL_1_0_CORE, IID_PPV_ARGS(&pDevice));
@@ -170,46 +169,49 @@ private:
         return success;
     }
 
-    bool FindAdapter(std::wstring & driverString)
+    bool FindAdapter(std::string & driverString)
     {
-        bool found = false;
-        IDXGIFactory2 * factory = NULL;
-        HRESULT hr = CreateDXGIFactory2(0, __uuidof(IDXGIFactory2), ((void **)&factory));
-        if (FAILED(hr)) throw std::exception("Unable to create DXGIFactor2");
+        IDXCoreAdapterFactory * factory = NULL;
+        HRESULT hr = DXCoreCreateAdapterFactory(__uuidof(IDXCoreAdapterFactory), ((void **)&factory));
+        if (FAILED(hr)) throw std::exception("Unable to create IDXCoreAdapterFactory");
 
+        const GUID guids[] = { DXCORE_ADAPTER_ATTRIBUTE_D3D_CORE_COMPUTE};
+        IDXCoreAdapterList * adapterList = NULL;
+        hr = factory->GetAdapterList(guids, 1, &adapterList);
+        if (FAILED(hr)) throw std::exception("Unable to create IDXCorAdapterList");
+
+        bool found = false;
         UINT adapterIndex = 0;
         bool done = false;
 
         while (!done && !found) {
 
-            IDXGIAdapter1 * adapter = NULL;
+            IDXCoreAdapter * adapter = NULL;
 
-            hr = factory->EnumAdapters1(adapterIndex, &adapter);
+            hr = adapterList->GetItem(adapterIndex, &adapter);
 
             if (hr == S_OK)
             {
-                IDXGIAdapter2 * adapter2 = NULL;
+                size_t descriptionSize;
+                hr = adapter->QueryPropertySize(DXCoreProperty::DriverDescription, &descriptionSize);
+                if (FAILED(hr)) throw std::exception("Unable get get adapter description size");
 
-                hr = adapter->QueryInterface(__uuidof(IDXGIAdapter2), (void **)&adapter2);
+                char * description = new char[descriptionSize];
+                if (description == nullptr) throw std::exception("Unable to allocate description storage");
 
-                if (hr == S_OK)
+                hr = adapter->QueryProperty(DXCoreProperty::DriverDescription, descriptionSize, description);
+                if (FAILED(hr)) throw std::exception("Unable get get adapter description");
+
+                found = (strcmp(driverString.c_str(), description) == 0);
+
+                if (found)
                 {
-                    DXGI_ADAPTER_DESC2 desc;
-                    adapter2->GetDesc2(&desc);
-
-                    found = (wcscmp(driverString.c_str(), desc.Description) == 0);
-
-                    if (found)
-                    {
-                        m_pAdapter = adapter2;
-                    }
-                    else
-                    {
-                        adapter2->Release();
-                    }
+                    m_pAdapter = adapter;
                 }
-
-                adapter->Release();
+                else
+                {
+                    adapter->Release();
+                }
 
                 adapterIndex++;
             }
@@ -231,11 +233,16 @@ class D3DAdapter
 {
 public:
 
-    static void GetAdapterList(std::list<std::wstring> & list)
+    static void GetAdapterList(std::list<std::string> & list)
     {
-        IDXGIFactory2 * factory = NULL;
-        HRESULT hr = CreateDXGIFactory2(0, __uuidof(IDXGIFactory2), ((void **)&factory));
-        if (FAILED(hr)) throw std::exception("Unable to create DXGIFactor2");
+        IDXCoreAdapterFactory * factory = NULL;
+        HRESULT hr = DXCoreCreateAdapterFactory(__uuidof(IDXCoreAdapterFactory), ((void **)&factory));
+        if (FAILED(hr)) throw std::exception("Unable to create IDXCoreAdapterFactory");
+
+        const GUID guids[] = { DXCORE_ADAPTER_ATTRIBUTE_D3D_CORE_COMPUTE};
+        IDXCoreAdapterList * adapterList = NULL;
+        hr = factory->GetAdapterList(guids, 1, &adapterList);
+        if (FAILED(hr)) throw std::exception("Unable to create IDXCorAdapterList");
 
         UINT adapterIndex = 0;
         bool done = false;
@@ -244,25 +251,24 @@ public:
 
         while (!done) {
 
-            IDXGIAdapter1 * adapter = NULL;
+            IDXCoreAdapter * adapter = NULL;
 
-            hr = factory->EnumAdapters1(adapterIndex, &adapter);
+            hr = adapterList->GetItem(adapterIndex, &adapter);
 
             if (hr == S_OK)
             {
-                IDXGIAdapter2 * adapter2 = NULL;
+                size_t descriptionSize;
+                hr = adapter->QueryPropertySize(DXCoreProperty::DriverDescription, &descriptionSize);
+                if (FAILED(hr)) throw std::exception("Unable get get adapter description size");
 
-                hr = adapter->QueryInterface(__uuidof(IDXGIAdapter2), (void **)&adapter2);
+                char * description = new char[descriptionSize];
+                if (description == nullptr) throw std::exception("Unable to allocate description storage");
 
-                if (hr == S_OK)
-                {
-                    DXGI_ADAPTER_DESC2 desc;
-                    adapter2->GetDesc2(&desc);
+                hr = adapter->QueryProperty(DXCoreProperty::DriverDescription, descriptionSize, description);
+                if (FAILED(hr)) throw std::exception("Unable get get adapter description");
 
-                    list.push_back(desc.Description);
-
-                    adapter2->Release();
-                }
+                list.push_back(description);
+                delete [descriptionSize] description;
 
                 adapter->Release();
 
@@ -274,6 +280,7 @@ public:
             }
         }
 
+        adapterList->Release();
         factory->Release();
     }
 };
@@ -512,36 +519,43 @@ int main()
     dbgFlags |= _CRTDBG_CHECK_ALWAYS_DF;
 
     _CrtSetDbgFlag(dbgFlags);
-    std::wstring cosDriverString = L"Compute Only Sample Driver";
-    std::wstring brdDriverString = L"Microsoft Basic Render Driver";
-    std::wstring amdDriverString = L"Radeon (TM) RX 480 Graphics";
-    std::wstring intelDriverString = L"Intel(R) HD Graphics 620";
 
-    std::list<std::wstring> adapterList;
-
-    D3DAdapter::GetAdapterList(adapterList);
-
-    printf("Found adapters:\n");
-    for (std::wstring & a : adapterList)
-        printf("  %S\n", a.c_str());
-
-    auto findIter = std::find(adapterList.begin(), adapterList.end(), brdDriverString);
-
-    if (findIter == adapterList.end()) {
-        printf("%S was not found\n", cosDriverString.c_str());
+    HRESULT hr = D3D12EnableExperimentalFeatures(1, &D3D12ComputeOnlyDevices, NULL, 0);
+    if (hr != S_OK) {
+        printf("unable to turn on experimental feature 'D3D12ComputeOnlyDevices'\n");
         return 0;
     }
 
     try {
 
-        std::wstring driverString = cosDriverString;
+        std::string cosDriverString = "Compute Only Sample Driver";
+        std::string brdDriverString = "Microsoft Basic Render Driver";
+        std::string amdDriverString = "Radeon (TM) RX 480 Graphics";
+        std::string intelDriverString = "Intel(R) HD Graphics 620";
+
+        std::list<std::string> adapterList;
+
+        D3DAdapter::GetAdapterList(adapterList);
+
+        printf("Found adapters:\n");
+        for (auto description : adapterList)
+            printf("  %s\n", description.c_str());
+
+        auto findIter = std::find(adapterList.begin(), adapterList.end(), brdDriverString);
+
+        if (findIter == adapterList.end()) {
+            printf("%s was not found\n", cosDriverString.c_str());
+            return 0;
+        }
+
+        std::string driverString = cosDriverString;
 
         findIter = std::find(adapterList.begin(), adapterList.end(), driverString);
 
         if (findIter == adapterList.end())
             driverString = brdDriverString;
 
-        printf("Creating device on %S ... ", driverString.c_str());
+        printf("Creating device on %s ... ", driverString.c_str());
         D3DDevice computeDevice(driverString);
         printf("done.\n");
 
