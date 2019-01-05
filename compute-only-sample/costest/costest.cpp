@@ -3,7 +3,12 @@
 
 #include <windows.h>
 #include <d3d11_1.h>
+#if 0
 #include <dxgi1_3.h>
+#else
+#include <initguid.h>
+#include <dxcore.h>
+#endif
 #include <d3dcompiler.h>
 #include <directxmath.h>
 #include <directxcolors.h>
@@ -27,7 +32,7 @@ public:
 
     operator bool() { return m_p != NULL; }
     operator T *() { return m_p; }
-
+    T ** operator &() { return &m_p; }
     D3DPointer<T> & operator=(T * p) { if (m_p) m_p->Release();  m_p = p; return *this; }
 
 private:
@@ -41,7 +46,7 @@ class D3DDevice
 {
 public:
 
-    D3DDevice(std::wstring & driverString)
+    D3DDevice(std::string & driverString)
     {
         if (!FindAdapter(driverString)) throw std::exception("Failed to find adapter");
         if (!CreateDevice()) throw std::exception("Failed to create device");
@@ -61,7 +66,11 @@ public:
 
 private:
 
+#if 0
     D3DPointer<IDXGIAdapter2>               m_pAdapter;
+#else
+    D3DPointer<IDXCoreAdapter>              m_pAdapter;
+#endif
     D3DPointer<ID3D12Device>                m_pDevice;
     D3DPointer<ID3D12CommandAllocator>      m_pCommandAllocator;
     D3DPointer<ID3D12CommandQueue>          m_pCommandQueue;
@@ -170,8 +179,9 @@ private:
         return success;
     }
 
-    bool FindAdapter(std::wstring & driverString)
+    bool FindAdapter(std::string & driverString)
     {
+#if 0
         bool found = false;
         IDXGIFactory2 * factory = NULL;
         HRESULT hr = CreateDXGIFactory2(0, __uuidof(IDXGIFactory2), ((void **)&factory));
@@ -222,8 +232,55 @@ private:
         factory->Release();
 
         return found;
-    }
+#else
+        bool found = false;
+        D3DPointer<IDXCoreAdapterFactory>  spFactory;
 
+        HRESULT hr = DXCoreCreateAdapterFactory(IID_PPV_ARGS(&spFactory));
+        if (FAILED(hr)) throw std::exception("Unable to create IDXCoreAdapterFactory");
+
+        D3DPointer<IDXCoreAdapterList>  spAdapterList;
+        const GUID dxGUIDs[] = { DXCORE_ADAPTER_ATTRIBUTE_D3D_CORE_COMPUTE };
+
+        hr = spFactory->GetAdapterList(dxGUIDs, ARRAYSIZE(dxGUIDs), &spAdapterList);
+        if (FAILED(hr)) throw std::exception("IDXCoreAdapterFactory::GetAdapterList() failed");
+
+        UINT adapterIndex = 0;
+        bool done = false;
+
+        while (!done && !found) {
+
+            IDXCoreAdapter * adapter = NULL;
+
+            hr = spAdapterList->GetItem(adapterIndex, &adapter);
+
+            if (hr == S_OK)
+            {
+                CHAR    driverDescription[128];
+
+                adapter->QueryProperty(DXCoreProperty::DriverDescription, sizeof(driverDescription), driverDescription);
+                found = (strcmp(driverString.c_str(), driverDescription) == 0);
+
+                if (found)
+                {
+                    m_pAdapter = adapter;
+                }
+                else
+                {
+                    adapter->Release();
+                }
+
+                adapterIndex++;
+            }
+            else
+            {
+                done = true;
+            }
+        }
+
+        return found;
+#endif
+    }
 };
 
 
@@ -231,8 +288,9 @@ class D3DAdapter
 {
 public:
 
-    static void GetAdapterList(std::list<std::wstring> & list)
+    static void GetAdapterList(std::list<std::string> & list)
     {
+#if 0
         IDXGIFactory2 * factory = NULL;
         HRESULT hr = CreateDXGIFactory2(0, __uuidof(IDXGIFactory2), ((void **)&factory));
         if (FAILED(hr)) throw std::exception("Unable to create DXGIFactor2");
@@ -275,6 +333,49 @@ public:
         }
 
         factory->Release();
+#else
+        HRESULT hr;
+
+        D3DPointer<IDXCoreAdapterFactory>  spFactory;
+
+        hr = DXCoreCreateAdapterFactory(IID_PPV_ARGS(&spFactory));
+        if (FAILED(hr)) throw std::exception("Unable to create IDXCoreAdapterFactory");
+
+        D3DPointer<IDXCoreAdapterList>  spAdapterList;
+        const GUID dxGUIDs[] = { DXCORE_ADAPTER_ATTRIBUTE_D3D_CORE_COMPUTE };
+
+        hr = spFactory->GetAdapterList(dxGUIDs, ARRAYSIZE(dxGUIDs), &spAdapterList);
+        if (FAILED(hr)) throw std::exception("IDXCoreAdapterFactory::GetAdapterList() failed");
+
+        UINT adapterIndex = 0;
+        bool done = false;
+
+        list.clear();
+
+        while (!done) {
+
+            IDXCoreAdapter * adapter = NULL;
+
+            hr = spAdapterList->GetItem(adapterIndex, &adapter);
+
+            if (hr == S_OK)
+            {
+                CHAR driverDescription[128];
+
+                adapter->QueryProperty(DXCoreProperty::DriverDescription, sizeof(driverDescription), driverDescription);
+
+                list.push_back(driverDescription);
+
+                adapter->Release();
+
+                adapterIndex++;
+            }
+            else
+            {
+                done = true;
+            }
+        }
+#endif
     }
 };
 
@@ -512,37 +613,38 @@ int main()
     dbgFlags |= _CRTDBG_CHECK_ALWAYS_DF;
 
     _CrtSetDbgFlag(dbgFlags);
-    std::wstring cosDriverString = L"Compute Only Sample Driver";
-    std::wstring brdDriverString = L"Microsoft Basic Render Driver";
-    std::wstring amdDriverString = L"Radeon (TM) RX 480 Graphics";
-    std::wstring intelDriverString = L"Intel(R) HD Graphics 620";
+    std::string cosDriverString = "Compute Only Sample Driver";
+    std::string brdDriverString = "Microsoft Basic Render Driver";
+    std::string amdDriverString = "Radeon (TM) RX 480 Graphics";
+    std::string intelDriverString = "Intel(R) HD Graphics 620";
 
-    std::list<std::wstring> adapterList;
+    std::list<std::string> adapterList;
 
     D3DAdapter::GetAdapterList(adapterList);
 
     printf("Found adapters:\n");
-    for (std::wstring & a : adapterList)
-        printf("  %S\n", a.c_str());
+    for (std::string & a : adapterList)
+        printf("  %s\n", a.c_str());
 
     auto findIter = std::find(adapterList.begin(), adapterList.end(), brdDriverString);
 
     if (findIter == adapterList.end()) {
-        printf("%S was not found\n", cosDriverString.c_str());
+        printf("%s was not found\n", cosDriverString.c_str());
         return 0;
     }
 
     try {
 
-        std::wstring driverString = cosDriverString;
+        std::string driverString = cosDriverString;
 
         findIter = std::find(adapterList.begin(), adapterList.end(), driverString);
 
         if (findIter == adapterList.end())
             driverString = brdDriverString;
 
-        printf("Creating device on %S ... ", driverString.c_str());
+        printf("Creating device on %s ... ", driverString.c_str());
         D3DDevice computeDevice(driverString);
+
         printf("done.\n");
 
         printf("Creating compute shader ... ");
