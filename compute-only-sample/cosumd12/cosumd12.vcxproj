@@ -31,7 +31,7 @@
     <ProjectGuid>{22563F11-4342-46B7-AAF7-DB4E57838879}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>cosumd12</RootNamespace>
-    <WindowsTargetPlatformVersion>$(LatestTargetPlatformVersion)</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.18298.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">

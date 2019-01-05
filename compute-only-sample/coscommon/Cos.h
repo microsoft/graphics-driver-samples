@@ -11,7 +11,7 @@
 // Otherwise DxgkInitialize() fails and driver is unloaded.
 //
 
-#define DXGKDDI_INTERFACE_VERSION 0xB003    // WDDM 2.6
+#define DXGKDDI_INTERFACE_VERSION 0xB004    // WDDM 2.6
 
 // Defines needed due to problems in video.h when we turned on warning 4668
 #define DXGKDDI_INTERFACE_VERSION_WDDM1_3       0x4002
