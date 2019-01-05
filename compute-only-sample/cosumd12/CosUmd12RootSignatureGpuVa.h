@@ -22,6 +22,7 @@ public:
         char * storage = (char *)this + sizeof(*this);
         UINT storageSize = CalculateSize(pArgs) - sizeof(*this);
         UINT valueOffset = 0;
+        UINT curDescriptorTableOffset = 0;
 
         m_pRootValueOffsets = (UINT *)storage;
         UINT size = m_rootSignature.NumParameters * sizeof(UINT);
@@ -58,6 +59,13 @@ public:
 
                     memcpy(dstDescriptorRanges, pDescriptorTable->pDescriptorRanges, size);
                     pDescriptorTable->pDescriptorRanges = dstDescriptorRanges;
+
+                    if (dstDescriptorRanges->OffsetInDescriptorsFromTableStart == D3D12DDI_DESCRIPTOR_RANGE_OFFSET_APPEND)
+                    {
+                        dstDescriptorRanges->OffsetInDescriptorsFromTableStart = curDescriptorTableOffset;
+                    }
+
+                    curDescriptorTableOffset = dstDescriptorRanges->OffsetInDescriptorsFromTableStart + dstDescriptorRanges->NumDescriptors;
                 }
                 //
                 // Offset from the start of Descriptor Heap need to be stored
