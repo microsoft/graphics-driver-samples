@@ -251,7 +251,7 @@
     <ClCompile Include="costest.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="ComputeShader.hlsl">
+    <CustomBuild Include="ComputeShader.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Compute</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">Compute</ShaderType>
       <ShaderModel Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">4.0</ShaderModel>
@@ -269,7 +269,13 @@
       <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">true</DeploymentContent>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">false</ExcludedFromBuild>
-    </None>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"$(WDKBinRoot)\$(Platform)\dxc.exe" -T cs_6_0 -E main %(Identity) &gt; $(OutDir)%(Filename).dxil
+"$(WDKBinRoot)\$(Platform)\dxc.exe" -T cs_6_0 -E main %(Identity) -Fo $(OutDir)%(Filename).cso
+</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(OutDir)%(Filename).dxil;$(OutDir)%(Filename).bc</Outputs>
+      <LinkObjects Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</LinkObjects>
+      <TreatOutputAsContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</TreatOutputAsContent>
+    </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

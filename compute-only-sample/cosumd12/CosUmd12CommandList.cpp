@@ -384,13 +384,18 @@ CosUmd12CommandList::Dispatch(
     UINT curCommandOffset;
     D3DDDI_PATCHLOCATIONLIST * pPatchLocationList;
 
+	// TODO: How should we deal with getting called when a shader is not in a good state?
+	assert(pComputeShader->m_image != nullptr);
+
+	DebugBreak();
+
     //
     // State setup and Dispatch command have to be in the same command buffer, so the space for them
     // in the command buffer is reserved at once
     //
 
     hwRootSignatureSetCommandSize = commandSize = pRootSignature->GetHwRootSignatureSize(&numPatchLocations);
-    commandSize += sizeof(GpuHwComputeShaderDisptch) + pComputeShader->m_args.pShaderCode[1] * sizeof(UINT);
+    commandSize += sizeof(GpuHwComputeShaderDisptch) + pComputeShader->m_image->GetBufferSize();
 
     ReserveCommandBufferSpace(
         false,                          // HW command
@@ -429,8 +434,8 @@ CosUmd12CommandList::Dispatch(
     pCSDispath->m_threadGroupCountY = ThreadGroupCountY;
     pCSDispath->m_threadGroupCountZ = ThreadGroupCountZ;
 
-    memcpy(pCSDispath->m_ShaderHash, pComputeShader->m_args.ShaderCodeHash.Hash, sizeof(pCSDispath->m_ShaderHash));
-    memcpy(pCSDispath + 1, pComputeShader->m_args.pShaderCode, pComputeShader->m_args.pShaderCode[1] * sizeof(UINT));
+    memcpy(pCSDispath->m_ShaderHash, pComputeShader->m_shaderCodeHash.Hash, sizeof(pCSDispath->m_ShaderHash));
+    memcpy(pCSDispath + 1, pComputeShader->m_image->GetBufferPointer(), pComputeShader->m_image->GetBufferSize());
 
     //
     // Commit both commands into the command buffer

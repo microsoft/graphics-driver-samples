@@ -2,6 +2,16 @@
 
 #include "CosUmd12.h"
 
+#if COS_GPUVA_SUPPORT
+
+#if COS_PHYSICAL_SUPPORT
+#error COS_PHYSICAL_SUPPORT should not be defined
+#endif
+
+#if COS_RS_2LEVEL_SUPPORT
+#error COS_RS_2LEVEL_SUPPORT should not be defined
+#endif
+
 class CosUmd12Descriptor : public GpuHWDescriptor
 {
 public:
@@ -45,3 +55,4 @@ private:
 
 C_ASSERT(sizeof(CosUmd12Descriptor) == sizeof(GpuHWDescriptor));
 
+#endif // COS_GPUVA_SUPPORT

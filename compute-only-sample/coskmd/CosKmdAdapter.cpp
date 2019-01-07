@@ -2049,13 +2049,14 @@ CosKmAdapter::PatchDmaBuffer(
             }
             else
             {
-                // Patch HW command buffer
-                LONGLONG    physicalAddress =
-                    CosKmdGlobal::s_videoMemoryPhysicalAddress.LowPart +
-                    allocation->PhysicalAddress.LowPart +
-                    patch->AllocationOffset;
+				UINT64 physicalOffset = (UINT64) allocation->PhysicalAddress.QuadPart + patch->AllocationOffset;
 
-                *((LONGLONG *)(pDmaBuf + patch->PatchOffset)) = physicalAddress;
+				NT_ASSERT(physicalOffset < CosKmdGlobal::s_videoMemorySize);
+
+                // Patch HW command buffer
+				UINT64    physicalAddress = (UINT64) CosKmdGlobal::s_videoMemoryPhysicalAddress.QuadPart + physicalOffset;
+
+                *((UINT64 *)(pDmaBuf + patch->PatchOffset)) = physicalAddress;
             }
         }
     }

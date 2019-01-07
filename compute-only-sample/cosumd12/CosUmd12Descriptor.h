@@ -2,6 +2,16 @@
 
 #include "CosUmd12.h"
 
+#if COS_PHYSICAL_SUPPORT
+
+#if COS_GPUVA_SUPPORT
+#error COS_GPUVA_SUPPORT should not be defined
+#endif
+
+#if COS_RS_2LEVEL_SUPPORT
+#error COS_RS_2LEVEL_SUPPORT should not be defined
+#endif
+
 class CosUmd12Descriptor
 {
 public:
@@ -52,3 +62,5 @@ private:
         D3D12DDIARG_CREATE_UNORDERED_ACCESS_VIEW_0002 m_uav;
     };
 };
+
+#endif // COS_PHYSICAL_SUPPORT

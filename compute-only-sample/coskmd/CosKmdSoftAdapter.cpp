@@ -7,6 +7,8 @@
 #include "CosGpuCommand.h"
 #include "CosKmdMetaCommand.h"
 
+#include "VpuImage.h"
+
 void * CosKmdSoftAdapter::operator new(size_t size)
 {
     return ExAllocatePoolWithTag(NonPagedPoolNx, size, 'COSD');
@@ -277,10 +279,42 @@ CosKmdSoftAdapter::ProcessHWRenderBuffer(
             break;
         case ComputeShaderDispatch:
             {
-                GpuHwComputeShaderDisptch * pCSDispatch = (GpuHwComputeShaderDisptch *)pGpuCommand;
+				GpuHwComputeShaderDisptch * pCSDispatch = (GpuHwComputeShaderDisptch *)pGpuCommand;
 
-                if (bRootSignatureSet)
-                {
+				if (bRootSignatureSet)
+				{
+					uint8_t * uav[3];
+
+					for (int i = 0; i < 3; i++) {
+						NT_ASSERT(CosKmdGlobal::s_videoMemoryPhysicalAddress.QuadPart <= pUavTable[i].m_resourceGpuAddress.QuadPart);
+						UINT64 offset = (UINT64)(pUavTable[i].m_resourceGpuAddress.QuadPart - CosKmdGlobal::s_videoMemoryPhysicalAddress.QuadPart);
+						NT_ASSERT(offset < CosKmdGlobal::s_videoMemorySize);
+						uav[i] = (uint8_t *) CosKmdGlobal::s_pVideoMemory + offset;
+					}
+
+					VpuImageHeader * image = (VpuImageHeader  *)(pCSDispatch + 1);
+
+					if (image->GetImageSize() <= CosKmdGlobal::s_vpuMemorySize) {
+						uint8_t * vpuBase = (uint8_t *)CosKmdGlobal::s_pVpuMemory;
+						image->Load(vpuBase, image->GetImageSize());
+
+						VpuThreadLocalStorage * tls = (VpuThreadLocalStorage *)(vpuBase + image->GetTlsOffset());
+						for (int i = 0; i < 3; i++) {
+							tls->m_uavs[i].m_elementSize = 8;
+							tls->m_uavs[i].m_base = (int8_t*) uav[i];
+						}
+
+						void(*shader_main)() = (void(*)(void)) (vpuBase + image->GetEntryOffset());
+
+						for (int threadId = 0; threadId < 4; threadId++)
+						{
+							tls->m_id = threadId;
+							shader_main();
+						}
+					}
+
+
+
 #if ENABLE_FOR_COSTEST
                     KFLOATING_SAVE floatingSave;
 
@@ -291,20 +325,15 @@ CosKmdSoftAdapter::ProcessHWRenderBuffer(
                                         pCSDispatch->m_threadGroupCountY*
                                         pCSDispatch->m_threadGroupCountZ;
 
-                    UINT * pIntIn1 = (UINT *)(((PBYTE)CosKmdGlobal::s_pVideoMemory) + 
-                                              (pUavTable[0].m_resourceGpuAddress.QuadPart - CosKmdGlobal::s_videoMemoryPhysicalAddress.QuadPart));
+					UINT * pIntIn1 = (UINT *)uav[0];
+					UINT * pIntIn2 = (UINT *)uav[1];
+					UINT * pIntOut = (UINT *)uav[2];
 
-                    UINT * pIntIn2 = (UINT *)(((PBYTE)CosKmdGlobal::s_pVideoMemory) + 
-                                              (pUavTable[1].m_resourceGpuAddress.QuadPart - CosKmdGlobal::s_videoMemoryPhysicalAddress.QuadPart));
-
-                    UINT * pIntOut = (UINT *)(((PBYTE)CosKmdGlobal::s_pVideoMemory) + 
-                                              (pUavTable[2].m_resourceGpuAddress.QuadPart - CosKmdGlobal::s_videoMemoryPhysicalAddress.QuadPart));
-
-                    for (UINT i = 0; i < numElements; i++)
-                    {
-                        *pIntOut++ = *pIntIn1++ + *pIntIn2++;
-                        *((FLOAT *)pIntOut++) = *((FLOAT *)pIntIn1++) + *((FLOAT *)pIntIn2++);
-                    }
+					for (UINT i = 0; i < numElements; i++)
+					{
+						*pIntOut++ = *pIntIn1++ + *pIntIn2++;
+						*((FLOAT *)pIntOut++) = *((FLOAT *)pIntIn1++) + *((FLOAT *)pIntIn2++);
+					}
 
                     KeRestoreFloatingPointState(&floatingSave);
 #endif

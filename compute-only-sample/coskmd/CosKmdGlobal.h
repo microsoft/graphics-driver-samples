@@ -24,6 +24,9 @@ public:
     static void * s_pVideoMemory;
     static PHYSICAL_ADDRESS s_videoMemoryPhysicalAddress;
 
+	static void * s_pVpuMemory;
+	static size_t s_vpuMemorySize;
+
 private:
 
     static bool s_bDoNotInstall;

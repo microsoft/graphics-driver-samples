@@ -18,6 +18,8 @@ size_t CosKmdGlobal::s_videoMemorySize = 0;
 void * CosKmdGlobal::s_pVideoMemory = NULL;
 PHYSICAL_ADDRESS CosKmdGlobal::s_videoMemoryPhysicalAddress;
 bool CosKmdGlobal::s_bRenderOnly;
+size_t CosKmdGlobal::s_vpuMemorySize = 0;
+void * CosKmdGlobal::s_pVpuMemory = NULL;
 
 void
 CosKmdGlobal::DdiUnload(
@@ -32,6 +34,13 @@ CosKmdGlobal::DdiUnload(
         s_pVideoMemory = NULL;
         s_videoMemorySize = 0;
     }
+
+	if (s_pVpuMemory != NULL)
+	{
+		ExFreePoolWithTag(s_pVpuMemory, 'cosd');
+		s_pVpuMemory = NULL;
+		s_vpuMemorySize = 0;
+	}
 
     NT_ASSERT(s_pDriverObject);
     WPP_CLEANUP(s_pDriverObject);
@@ -218,6 +227,15 @@ NTSTATUS CosKmdGlobal::DriverEntry(__in IN DRIVER_OBJECT* pDriverObject, __in IN
             // so don't stop the show.
         }
     } // RenderOnly
+
+	//
+	// Allocate vpu memory to be used to execute a shader
+	//
+
+	s_vpuMemorySize = 1024 * 1024;
+	s_pVpuMemory = ExAllocatePoolWithTag(NonPagedPoolExecute, s_vpuMemorySize, 'cosd');
+	if (s_pVpuMemory == NULL)
+		return E_OUTOFMEMORY;
 
     //
     // Fill in the DriverInitializationData structure and call DlInitialize()

@@ -170,5 +170,8 @@
     <ClCompile Include="CosUmd12DescriptorHeapGpuVa.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="CosUmd12Shader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

@@ -60,15 +60,14 @@ void UnexpectedDdi(const char * function, const char * file, int line);
 #else
 #include "CosUmd12RootSignature.h"
 #endif
+
 #include "CosUmd12Shader.h"
 #include "CosUmd12PipelineState.h"
-#if COS_GPUVA_SUPPORT
+
 #include "CosUmd12DescriptorGpuVa.h"
-#elif COS_RS_2LEVEL_SUPPORT
 #include "CosUmd12Descriptor2L.h"
-#else
 #include "CosUmd12Descriptor.h"
-#endif
+
 #include "CosUmd12CommandPool.h"
 #include "CosUmd12CommandRecorder.h"
 

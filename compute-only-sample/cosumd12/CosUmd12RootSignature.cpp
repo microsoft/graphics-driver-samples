@@ -157,16 +157,15 @@ CosUmd12RootSignature::PrepareHWRootSignature()
         }
     }
 
-    UINT numRegistersToPatch;
-
     m_hwRootSignature.m_commandId = RootSignatureSet;
-    m_hwRootSignature.m_commandSize = GetHwRootSignatureSize(&numRegistersToPatch);
+    m_hwRootSignature.m_commandSize = GetHwRootSignatureSize(nullptr);
 }
 
 UINT CosUmd12RootSignature::GetHwRootSignatureSize(
-    UINT * pNumPatchLocation)
+    UINT * pNnumRegistersToPatch)
 {
-    *pNumPatchLocation = m_numRegistersToPatch;
+	if (pNnumRegistersToPatch)
+		*pNnumRegistersToPatch = m_numRegistersToPatch;
 
     return (sizeof(m_hwRootSignature) + 
             sizeof(GpuHWConstantDescriptor)*m_hwRootSignature.m_numCbvRegisters +

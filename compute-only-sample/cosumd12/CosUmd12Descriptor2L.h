@@ -2,6 +2,16 @@
 
 #include "CosUmd12.h"
 
+#if COS_RS_2LEVEL_SUPPORT
+
+#if COS_PHYSICAL_SUPPORT
+#error COS_PHYSICAL_SUPPORT should not be defined
+#endif
+
+#if COS_GPUVA_SUPPORT
+#error COS_GPUVA_SUPPORT should not be defined
+#endif
+
 class CosUmd12Descriptor
 {
 public:
@@ -36,3 +46,4 @@ private:
     };
 };
 
+#endif // COS_RS_2LEVEL_SUPPORT

@@ -130,7 +130,7 @@
   </PropertyGroup>
   <PropertyGroup>
     <DebuggerFlavor>DbgengKernelDebugger</DebuggerFlavor>
-    <IncludePath>$(UM_IncludePath);..\coscommon;$(IncludePath)</IncludePath>
+    <IncludePath>$(UM_IncludePath);$(SolutionDir)coscommon;$(SolutionDir)vpucommon;$(IncludePath)</IncludePath>
     <ApiValidator_Enable>false</ApiValidator_Enable>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">

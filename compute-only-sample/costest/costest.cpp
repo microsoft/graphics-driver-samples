@@ -327,13 +327,14 @@ public:
 
     D3DComputeShader(D3DDevice & inDevice)
     {
+		HRESULT hr;
         ID3DBlob* pCSBlob = nullptr;
 
-        CompileShaderFromFile(L"ComputeShader.hlsl", "main", "cs_5_0", &pCSBlob);
+		hr = D3DReadFileToBlob(L"ComputeShader.cso", &pCSBlob);
+		assert(hr == S_OK);
+		D3DPointer<ID3DBlob> csBlob;
 
-        D3DPointer<ID3DBlob> csBlob;
-
-        csBlob = pCSBlob;
+		csBlob = pCSBlob;
 
         ID3D12PipelineState * pPipelineState;
         D3D12_COMPUTE_PIPELINE_STATE_DESC pipelineStateDesc;
@@ -346,7 +347,7 @@ public:
         pipelineStateDesc.Flags = D3D12_PIPELINE_STATE_FLAG_NONE;
         pipelineStateDesc.NodeMask = 0;
 
-        HRESULT hr = inDevice.GetDevice()->CreateComputePipelineState(&pipelineStateDesc, IID_PPV_ARGS(&pPipelineState));
+        hr = inDevice.GetDevice()->CreateComputePipelineState(&pipelineStateDesc, IID_PPV_ARGS(&pPipelineState));
 
         if (FAILED(hr)) throw std::exception("Failed to create compute pipeline state");
         
@@ -596,6 +597,10 @@ int main()
 
         pCommandList->SetPipelineState(pPipelineState);
         pCommandList->SetComputeRootSignature(pRootSignature);
+		
+		printf("a UAV handld = %08x allocation offset = %08x", (UINT32) (a.Get()->GetGPUVirtualAddress() >> 32), (UINT32) a.Get()->GetGPUVirtualAddress());
+		printf("b UAV handld = %08x allocation offset = %08x", (UINT32)(b.Get()->GetGPUVirtualAddress() >> 32), (UINT32) b.Get()->GetGPUVirtualAddress());
+		printf("result UAV handld = %08x allocation offset = %08x", (UINT32)(result.Get()->GetGPUVirtualAddress() >> 32), (UINT32) result.Get()->GetGPUVirtualAddress());
 
         pCommandList->SetComputeRootUnorderedAccessView(0, a.Get()->GetGPUVirtualAddress());
         pCommandList->SetComputeRootUnorderedAccessView(1, b.Get()->GetGPUVirtualAddress());
