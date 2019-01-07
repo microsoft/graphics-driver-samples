@@ -26,10 +26,6 @@
 #include <utility>
 using namespace llvm;
 
-static cl::list<std::string>
-InputFilenames(cl::Positional, cl::OneOrMore,
-    cl::desc("<input bitcode files>"));
-
 static cl::list<std::string> OverridingInputs(
     "override", cl::ZeroOrMore, cl::value_desc("filename"),
     cl::desc(
@@ -331,10 +327,14 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
 
 int llvm_linker(char * exe, char * input_a, char * input_b, char * input_c, char * output) {
 
-    InputFilenames.reset();
+    cl::list<std::string>
+        InputFilenames(cl::Positional, cl::OneOrMore,
+            cl::desc("<input bitcode files>"));
+
+    InputFilenames.empty();
     InputFilenames.addValue(input_a);
     InputFilenames.addValue(input_b);
-	InputFilenames.addValue(input_c);
+    InputFilenames.addValue(input_c);
 
 //    InitLLVM X(argc, argv);
     ExitOnErr.setBanner(std::string(exe) + ": ");

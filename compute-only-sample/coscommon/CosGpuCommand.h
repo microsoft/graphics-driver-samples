@@ -153,7 +153,9 @@ struct GpuHwComputeShaderDisptch
     GpuCommandId    m_commandId;
     UINT            m_commandSize;
 
-    UINT            m_numThreadPerGroup;
+    UINT            m_threadCountX;
+    UINT            m_threadCountY;
+    UINT            m_threadCountZ;
     UINT            m_threadGroupCountX;
     UINT            m_threadGroupCountY;
     UINT            m_threadGroupCountZ;

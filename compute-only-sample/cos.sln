@@ -8,6 +8,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cosDriver", "cosdriver\cosDriver.vcxproj", "{593E30CD-93AD-432A-B6A1-B59F85C77ACC}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cosumd12", "cosumd12\cosumd12.vcxproj", "{22563F11-4342-46B7-AAF7-DB4E57838879}"
+	ProjectSection(ProjectDependencies) = postProject
+		{3F0E4427-FD58-4757-96E3-D9704996BCDD} = {3F0E4427-FD58-4757-96E3-D9704996BCDD}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "costest", "costest\costest.vcxproj", "{74643D96-893B-4543-ABFD-B1492B277218}"
 EndProject
@@ -20,6 +23,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VpuCompiler", "vpucompiler\VpuCompiler.vcxproj", "{3F0E4427-FD58-4757-96E3-D9704996BCDD}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vputest", "vputest\vputest.vcxproj", "{72BFA2E4-4BC8-4069-8E06-05658F49ECB3}"
+	ProjectSection(ProjectDependencies) = postProject
+		{3F0E4427-FD58-4757-96E3-D9704996BCDD} = {3F0E4427-FD58-4757-96E3-D9704996BCDD}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

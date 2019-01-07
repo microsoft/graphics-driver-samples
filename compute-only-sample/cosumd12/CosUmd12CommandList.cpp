@@ -384,10 +384,8 @@ CosUmd12CommandList::Dispatch(
     UINT curCommandOffset;
     D3DDDI_PATCHLOCATIONLIST * pPatchLocationList;
 
-	// TODO: How should we deal with getting called when a shader is not in a good state?
-	assert(pComputeShader->m_image != nullptr);
-
-	DebugBreak();
+    // TODO: How should we deal with getting called when a shader is not in a good state?
+    assert(pComputeShader->m_image != nullptr);
 
     //
     // State setup and Dispatch command have to be in the same command buffer, so the space for them
@@ -429,7 +427,9 @@ CosUmd12CommandList::Dispatch(
     // TODO: Retrieve num threads per group from shader
     //
 
-    pCSDispath->m_numThreadPerGroup = 4;
+    pCSDispath->m_threadCountX = 4;
+    pCSDispath->m_threadCountY = 1;
+    pCSDispath->m_threadCountZ = 1;
     pCSDispath->m_threadGroupCountX = ThreadGroupCountX;
     pCSDispath->m_threadGroupCountY = ThreadGroupCountY;
     pCSDispath->m_threadGroupCountZ = ThreadGroupCountZ;

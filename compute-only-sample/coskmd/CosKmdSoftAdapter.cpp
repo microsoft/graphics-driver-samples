@@ -279,39 +279,44 @@ CosKmdSoftAdapter::ProcessHWRenderBuffer(
             break;
         case ComputeShaderDispatch:
             {
-				GpuHwComputeShaderDisptch * pCSDispatch = (GpuHwComputeShaderDisptch *)pGpuCommand;
+                GpuHwComputeShaderDisptch * pCSDispatch = (GpuHwComputeShaderDisptch *)pGpuCommand;
 
-				if (bRootSignatureSet)
-				{
-					uint8_t * uav[3];
+                if (bRootSignatureSet)
+                {
+                    uint8_t * uav[3];
 
-					for (int i = 0; i < 3; i++) {
-						NT_ASSERT(CosKmdGlobal::s_videoMemoryPhysicalAddress.QuadPart <= pUavTable[i].m_resourceGpuAddress.QuadPart);
-						UINT64 offset = (UINT64)(pUavTable[i].m_resourceGpuAddress.QuadPart - CosKmdGlobal::s_videoMemoryPhysicalAddress.QuadPart);
-						NT_ASSERT(offset < CosKmdGlobal::s_videoMemorySize);
-						uav[i] = (uint8_t *) CosKmdGlobal::s_pVideoMemory + offset;
-					}
+                    for (int i = 0; i < 3; i++) {
+                        NT_ASSERT(CosKmdGlobal::s_videoMemoryPhysicalAddress.QuadPart <= pUavTable[i].m_resourceGpuAddress.QuadPart);
+                        UINT64 offset = (UINT64)(pUavTable[i].m_resourceGpuAddress.QuadPart - CosKmdGlobal::s_videoMemoryPhysicalAddress.QuadPart);
+                        NT_ASSERT(offset < CosKmdGlobal::s_videoMemorySize);
+                        uav[i] = (uint8_t *) CosKmdGlobal::s_pVideoMemory + offset;
+                    }
 
-					VpuImageHeader * image = (VpuImageHeader  *)(pCSDispatch + 1);
+                    VpuImageHeader * image = (VpuImageHeader  *)(pCSDispatch + 1);
 
-					if (image->GetImageSize() <= CosKmdGlobal::s_vpuMemorySize) {
-						uint8_t * vpuBase = (uint8_t *)CosKmdGlobal::s_pVpuMemory;
-						image->Load(vpuBase, image->GetImageSize());
+                    if (image->GetImageSize() <= CosKmdGlobal::s_vpuMemorySize) {
+                        uint8_t * vpuBase = (uint8_t *)CosKmdGlobal::s_pVpuMemory;
+                        image->Load(vpuBase, image->GetImageSize());
 
-						VpuThreadLocalStorage * tls = (VpuThreadLocalStorage *)(vpuBase + image->GetTlsOffset());
-						for (int i = 0; i < 3; i++) {
-							tls->m_uavs[i].m_elementSize = 8;
-							tls->m_uavs[i].m_base = (int8_t*) uav[i];
-						}
+                        VpuThreadLocalStorage * tls = (VpuThreadLocalStorage *)(vpuBase + image->GetTlsOffset());
+                        for (int i = 0; i < 3; i++) {
+                            tls->m_uavs[i].m_elementSize = 8;
+                            tls->m_uavs[i].m_base = (int8_t*) uav[i];
+                        }
 
-						void(*shader_main)() = (void(*)(void)) (vpuBase + image->GetEntryOffset());
+                        void(*shader_main)() = (void(*)(void)) (vpuBase + image->GetEntryOffset());
 
-						for (int threadId = 0; threadId < 4; threadId++)
-						{
-							tls->m_id = threadId;
-							shader_main();
-						}
-					}
+                        int threadId = 0;
+                        for(UINT gz = 0;  gz < pCSDispatch->m_threadGroupCountZ; gz++)
+                            for(UINT gy = 0; gy < pCSDispatch->m_threadGroupCountY; gy++)
+                                for (UINT gx = 0; gx < pCSDispatch->m_threadGroupCountX; gx++)
+                                    for (UINT tz = 0; tz < pCSDispatch->m_threadCountZ; tz++)
+                                        for (UINT ty = 0; ty < pCSDispatch->m_threadCountY; ty++)
+                                            for (UINT tx = 0; tx < pCSDispatch->m_threadCountX; tx++, threadId++) {
+                                                tls->m_id = threadId;
+                                                shader_main();
+                                            }
+                    }
 
 
 
@@ -325,15 +330,15 @@ CosKmdSoftAdapter::ProcessHWRenderBuffer(
                                         pCSDispatch->m_threadGroupCountY*
                                         pCSDispatch->m_threadGroupCountZ;
 
-					UINT * pIntIn1 = (UINT *)uav[0];
-					UINT * pIntIn2 = (UINT *)uav[1];
-					UINT * pIntOut = (UINT *)uav[2];
+                    UINT * pIntIn1 = (UINT *)uav[0];
+                    UINT * pIntIn2 = (UINT *)uav[1];
+                    UINT * pIntOut = (UINT *)uav[2];
 
-					for (UINT i = 0; i < numElements; i++)
-					{
-						*pIntOut++ = *pIntIn1++ + *pIntIn2++;
-						*((FLOAT *)pIntOut++) = *((FLOAT *)pIntIn1++) + *((FLOAT *)pIntIn2++);
-					}
+                    for (UINT i = 0; i < numElements; i++)
+                    {
+                        *pIntOut++ = *pIntIn1++ + *pIntIn2++;
+                        *((FLOAT *)pIntOut++) = *((FLOAT *)pIntIn1++) + *((FLOAT *)pIntIn2++);
+                    }
 
                     KeRestoreFloatingPointState(&floatingSave);
 #endif
