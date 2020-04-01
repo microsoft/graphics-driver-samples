@@ -110,7 +110,7 @@ public:
     UINT Pitch () const
     {
         // Pitch is only valid for linear layouts
-        NT_ASSERT(m_hwLayout == RosHwLayout::Linear);
+        assert(m_hwLayout == RosHwLayout::Linear);
         // linear formats are always packed
         return m_hwWidthPixels * CPixel::BytesPerPixel(m_format);
     }
@@ -119,7 +119,7 @@ public:
     UINT WidthInTiles () const
     {
         // Only valid in tiled mode
-        NT_ASSERT(m_hwLayout == RosHwLayout::Tiled);
+        assert(m_hwLayout == RosHwLayout::Tiled);
         return AlignValue(m_mip0Info.TexelWidth, VC4_4KB_TILE_WIDTH) / 
                 VC4_4KB_TILE_WIDTH;
     }
@@ -127,20 +127,20 @@ public:
     // Width in T-format 4k tiles
     UINT HeightInTiles () const
     {
-        NT_ASSERT(m_hwLayout == RosHwLayout::Tiled);
+        assert(m_hwLayout == RosHwLayout::Tiled);
         return AlignValue(m_mip0Info.TexelHeight, VC4_4KB_TILE_HEIGHT) / 
                 VC4_4KB_TILE_HEIGHT;
     }
 
     UINT WidthInBinningTiles () const
     {
-        NT_ASSERT((m_hwWidthPixels % VC4_BINNING_TILE_PIXELS) == 0);
+        assert((m_hwWidthPixels % VC4_BINNING_TILE_PIXELS) == 0);
         return m_hwWidthPixels / VC4_BINNING_TILE_PIXELS;
     }
 
     UINT HeightInBinningTiles () const
     {
-        NT_ASSERT((m_hwHeightPixels % VC4_BINNING_TILE_PIXELS) == 0);
+        assert((m_hwHeightPixels % VC4_BINNING_TILE_PIXELS) == 0);
         return m_hwHeightPixels / VC4_BINNING_TILE_PIXELS;
     }
 

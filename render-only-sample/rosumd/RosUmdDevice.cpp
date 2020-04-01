@@ -432,7 +432,7 @@ void RosUmdDevice::ResourceCopy(
         if (pDestinationResource->m_usage == D3D10_DDI_USAGE_STAGING &&
             pSourceResource->m_usage == D3D10_DDI_USAGE_STAGING)
         {
-            NT_ASSERT(
+            assert(
                 (pSourceResource->m_hwLayout == pDestinationResource->m_hwLayout) &&
                 (pSourceResource->m_hwSizeBytes == pDestinationResource->m_hwSizeBytes));
             memcpy(destinationLock.pData, sourceLock.pData, pDestinationResource->m_hwSizeBytes);
@@ -464,10 +464,10 @@ void RosUmdDevice::ResourceCopy(
                 case RosHwLayout::Linear:
                     switch (pDestinationResource->m_hwLayout) {
                     case RosHwLayout::Tiled:
-                        NT_ASSERT(false); // not implemented
+                        assert(false); // not implemented
                         break;
                     default:
-                        NT_ASSERT(false);
+                        assert(false);
                     }
                     break;
                 case RosHwLayout::Tiled:
@@ -483,7 +483,7 @@ void RosUmdDevice::ResourceCopy(
                             pDestinationResource->m_mip0Info.TexelHeight);
                         break;
                     default:
-                        NT_ASSERT(false);
+                        assert(false);
                     }
                     break;
                 default:

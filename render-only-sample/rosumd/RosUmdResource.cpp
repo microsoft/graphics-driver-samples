@@ -120,7 +120,7 @@ void RosUmdResource::InitSharedResourceFromExistingAllocation (
     // HW specific information calculated based on the fields above
     CalculateMemoryLayout();
 
-    NT_ASSERT(
+    assert(
         (m_hwLayout == ExistingAllocationPtr->m_hwLayout) &&
         (m_hwWidthPixels == ExistingAllocationPtr->m_hwWidthPixels) &&
         (m_hwHeightPixels == ExistingAllocationPtr->m_hwHeightPixels) &&
@@ -331,7 +331,7 @@ RosUmdResource::CalculateMemoryLayout(
             m_hwHeightPixels = m_mip0Info.TexelHeight;
 
             m_hwSizeBytes = m_mip0Info.TexelWidth * CPixel::BytesPerPixel(m_format);
-            NT_ASSERT(this->Pitch() == m_hwSizeBytes);
+            assert(this->Pitch() == m_hwSizeBytes);
         }
     break;
     case D3D10DDIRESOURCE_TEXTURE2D:
@@ -560,11 +560,11 @@ void RosUmdResource::CopyTFormatToLinear (
                 static_cast<const BYTE*>(Source) +
                 tileCoord.ByteOffset() +
                 offsetWithinMicrotile;
-            NT_ASSERT((src + VC4_MICRO_TILE_WIDTH_BYTES) <= srcEnd);
+            assert((src + VC4_MICRO_TILE_WIDTH_BYTES) <= srcEnd);
             UNREFERENCED_PARAMETER(srcEnd);
 
             BYTE* dest = destRow + x;
-            NT_ASSERT((dest + VC4_MICRO_TILE_WIDTH_BYTES) <= destEnd);
+            assert((dest + VC4_MICRO_TILE_WIDTH_BYTES) <= destEnd);
             UNREFERENCED_PARAMETER(destEnd);
 
             memcpy(dest, src, VC4_MICRO_TILE_WIDTH_BYTES);
